@@ -1,0 +1,29 @@
+{
+  "name": "start-command",
+  "version": "0.1.0",
+  "description": "Gamification of coding, execute any command with ability to auto-report issues on GitHub",
+  "main": "index.js",
+  "bin": {
+    "$": "./bin/cli.js"
+  },
+  "keywords": [
+    "cli",
+    "command",
+    "gamification",
+    "github",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/link-foundation/start.git"
+  },
+  "bugs": {
+    "url": "https://github.com/link-foundation/start/issues"
+  },
+  "homepage": "https://github.com/link-foundation/start#readme"
+}
