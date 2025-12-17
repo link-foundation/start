@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `$` command is a CLI tool that wraps any shell command and provides automatic logging, error reporting, and issue creation capabilities.
+The `$` command is a CLI tool that wraps any shell command and provides automatic logging, error reporting, issue creation capabilities, and natural language command aliases.
 
 ## Core Requirements
 
@@ -11,6 +11,7 @@ The `$` command is a CLI tool that wraps any shell command and provides automati
 - Pass all arguments directly to the underlying shell (bash/powershell/sh)
 - Support all standard commands: `$ ls`, `$ cat`, `$ mkdir`, etc.
 - Preserve exit codes from wrapped commands
+- Support natural language command aliases via pattern matching
 
 ### 2. Logging Requirements
 
@@ -89,12 +90,35 @@ The `$` command is a CLI tool that wraps any shell command and provides automati
 - Print a message that log upload is skipped
 - Skip issue creation (no log link available)
 
-## Configuration Options (Future)
+### 5. Command Aliases / Substitutions
+
+#### 5.1 Pattern Matching
+- Support natural language patterns defined in `substitutions.lino`
+- Use Links Notation style with variables like `$packageName`, `$version`
+- Match input against patterns and substitute with actual commands
+- More specific patterns (more variables, longer patterns) take precedence
+- Non-matching commands pass through unchanged
+
+#### 5.2 Built-in Patterns
+- NPM: `install $packageName npm package` -> `npm install $packageName`
+- NPM with version: `install $version version of $packageName npm package` -> `npm install $packageName@$version`
+- Git clone: `clone $repository repository` -> `git clone $repository`
+- Git checkout: `checkout $branch branch` -> `git checkout $branch`
+- Common operations: `list files` -> `ls -la`, `show current directory` -> `pwd`
+
+#### 5.3 Custom Patterns
+- Support user-defined patterns in `~/.start-command/substitutions.lino`
+- User patterns take precedence over built-in patterns
+- Support custom path via `START_SUBSTITUTIONS_PATH` environment variable
+
+## Configuration Options
 
 - `START_DISABLE_AUTO_ISSUE`: Disable automatic issue creation
 - `START_DISABLE_LOG_UPLOAD`: Disable log upload
 - `START_LOG_DIR`: Custom log directory
 - `START_VERBOSE`: Enable verbose output
+- `START_DISABLE_SUBSTITUTIONS`: Disable pattern matching/aliases
+- `START_SUBSTITUTIONS_PATH`: Custom path to substitutions file
 
 ## Output Format
 
