@@ -1,5 +1,5 @@
 # Substitutions file for start-command
-# Format: (matching pattern) -> (substitution pattern)
+# Format: Each rule is a doublet link (pattern, replacement)
 # Variables: $packageName, $version, $repository, $url, $path, $branch, etc.
 #
 # This file uses Links Notation style patterns for matching natural language commands
@@ -8,205 +8,301 @@
 # === NPM Package Installation ===
 
 # install {packageName} npm package
-(install $packageName npm package)
-(npm install $packageName)
+(
+  install $packageName npm package
+  npm install $packageName
+)
 
 # install {version} version of {packageName} npm package
-(install $version version of $packageName npm package)
-(npm install $packageName@$version)
+(
+  install $version version of $packageName npm package
+  npm install $packageName@$version
+)
 
 # install {packageName} npm package globally
-(install $packageName npm package globally)
-(npm install -g $packageName)
+(
+  install $packageName npm package globally
+  npm install -g $packageName
+)
 
 # install {packageName} globally
-(install $packageName globally)
-(npm install -g $packageName)
+(
+  install $packageName globally
+  npm install -g $packageName
+)
 
 # install {version} version of {packageName} npm package globally
-(install $version version of $packageName npm package globally)
-(npm install -g $packageName@$version)
+(
+  install $version version of $packageName npm package globally
+  npm install -g $packageName@$version
+)
 
 # uninstall {packageName} npm package
-(uninstall $packageName npm package)
-(npm uninstall $packageName)
+(
+  uninstall $packageName npm package
+  npm uninstall $packageName
+)
 
 # uninstall {packageName} npm package globally
-(uninstall $packageName npm package globally)
-(npm uninstall -g $packageName)
+(
+  uninstall $packageName npm package globally
+  npm uninstall -g $packageName
+)
 
 # remove {packageName} npm package
-(remove $packageName npm package)
-(npm uninstall $packageName)
+(
+  remove $packageName npm package
+  npm uninstall $packageName
+)
 
 # update {packageName} npm package
-(update $packageName npm package)
-(npm update $packageName)
+(
+  update $packageName npm package
+  npm update $packageName
+)
 
 # === Git Repository Operations ===
 
 # clone {repository} repository
-(clone $repository repository)
-(git clone $repository)
+(
+  clone $repository repository
+  git clone $repository
+)
 
 # clone {url}
-(clone $url)
-(git clone $url)
+(
+  clone $url
+  git clone $url
+)
 
 # clone {repository} repository to {path}
-(clone $repository repository to $path)
-(git clone $repository $path)
+(
+  clone $repository repository to $path
+  git clone $repository $path
+)
 
 # clone {repository} repository into {path}
-(clone $repository repository into $path)
-(git clone $repository $path)
+(
+  clone $repository repository into $path
+  git clone $repository $path
+)
 
 # checkout {branch} branch
-(checkout $branch branch)
-(git checkout $branch)
+(
+  checkout $branch branch
+  git checkout $branch
+)
 
 # create {branch} branch
-(create $branch branch)
-(git checkout -b $branch)
+(
+  create $branch branch
+  git checkout -b $branch
+)
 
 # switch to {branch} branch
-(switch to $branch branch)
-(git checkout $branch)
+(
+  switch to $branch branch
+  git checkout $branch
+)
 
 # push to {remote}
-(push to $remote)
-(git push $remote)
+(
+  push to $remote
+  git push $remote
+)
 
 # push to {remote} {branch}
-(push to $remote $branch)
-(git push $remote $branch)
+(
+  push to $remote $branch
+  git push $remote $branch
+)
 
 # pull from {remote}
-(pull from $remote)
-(git pull $remote)
+(
+  pull from $remote
+  git pull $remote
+)
 
 # pull from {remote} {branch}
-(pull from $remote $branch)
-(git pull $remote $branch)
+(
+  pull from $remote $branch
+  git pull $remote $branch
+)
 
 # === Common Operations ===
 
 # list files
-(list files)
-(ls -la)
+(
+  list files
+  ls -la
+)
 
 # list files in {path}
-(list files in $path)
-(ls -la $path)
+(
+  list files in $path
+  ls -la $path
+)
 
 # show current directory
-(show current directory)
-(pwd)
+(
+  show current directory
+  pwd
+)
 
 # show working directory
-(show working directory)
-(pwd)
+(
+  show working directory
+  pwd
+)
 
 # create {name} directory
-(create $name directory)
-(mkdir -p $name)
+(
+  create $name directory
+  mkdir -p $name
+)
 
 # create directory {name}
-(create directory $name)
-(mkdir -p $name)
+(
+  create directory $name
+  mkdir -p $name
+)
 
 # remove {name} directory
-(remove $name directory)
-(rm -rf $name)
+(
+  remove $name directory
+  rm -rf $name
+)
 
 # delete {name} directory
-(delete $name directory)
-(rm -rf $name)
+(
+  delete $name directory
+  rm -rf $name
+)
 
 # remove {name} file
-(remove $name file)
-(rm $name)
+(
+  remove $name file
+  rm $name
+)
 
 # delete {name} file
-(delete $name file)
-(rm $name)
+(
+  delete $name file
+  rm $name
+)
 
 # show {file} contents
-(show $file contents)
-(cat $file)
+(
+  show $file contents
+  cat $file
+)
 
 # read {file}
-(read $file)
-(cat $file)
+(
+  read $file
+  cat $file
+)
 
 # === Process/System Operations ===
 
 # show running processes
-(show running processes)
-(ps aux)
+(
+  show running processes
+  ps aux
+)
 
 # find process {name}
-(find process $name)
-(ps aux | grep $name)
+(
+  find process $name
+  ps aux | grep $name
+)
 
 # kill process {pid}
-(kill process $pid)
-(kill $pid)
+(
+  kill process $pid
+  kill $pid
+)
 
 # === Docker Operations ===
 
 # list docker containers
-(list docker containers)
-(docker ps)
+(
+  list docker containers
+  docker ps
+)
 
 # list all docker containers
-(list all docker containers)
-(docker ps -a)
+(
+  list all docker containers
+  docker ps -a
+)
 
 # start {container} container
-(start $container container)
-(docker start $container)
+(
+  start $container container
+  docker start $container
+)
 
 # stop {container} container
-(stop $container container)
-(docker stop $container)
+(
+  stop $container container
+  docker stop $container
+)
 
 # remove {container} container
-(remove $container container)
-(docker rm $container)
+(
+  remove $container container
+  docker rm $container
+)
 
 # build docker image from {path}
-(build docker image from $path)
-(docker build $path)
+(
+  build docker image from $path
+  docker build $path
+)
 
 # build docker image {name} from {path}
-(build docker image $name from $path)
-(docker build -t $name $path)
+(
+  build docker image $name from $path
+  docker build -t $name $path
+)
 
 # === Python/Pip Operations ===
 
 # install {packageName} python package
-(install $packageName python package)
-(pip install $packageName)
+(
+  install $packageName python package
+  pip install $packageName
+)
 
 # install {packageName} pip package
-(install $packageName pip package)
-(pip install $packageName)
+(
+  install $packageName pip package
+  pip install $packageName
+)
 
 # install {version} version of {packageName} python package
-(install $version version of $packageName python package)
-(pip install $packageName==$version)
+(
+  install $version version of $packageName python package
+  pip install $packageName==$version
+)
 
 # uninstall {packageName} python package
-(uninstall $packageName python package)
-(pip uninstall $packageName)
+(
+  uninstall $packageName python package
+  pip uninstall $packageName
+)
 
 # === Help Patterns ===
 
 # show help
-(show help)
-($ --help)
+(
+  show help
+  $ --help
+)
 
 # help
-(help)
-($ --help)
+(
+  help
+  $ --help
+)

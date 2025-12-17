@@ -51,12 +51,16 @@ If no pattern matches, the command is executed as-is.
 
 ### Natural Language Aliases (Links Notation)
 
-Commands can be expressed in plain English using patterns defined in `substitutions.lino`. This file uses [Links Notation](https://github.com/link-foundation/links-notation) style patterns with variables:
+Commands can be expressed in plain English using patterns defined in `substitutions.lino`. This file uses [Links Notation](https://github.com/link-foundation/links-notation) style patterns with variables.
+
+Each pattern is defined as a doublet link - a pair of pattern and replacement wrapped in parentheses:
 
 ```
 # Pattern definition in substitutions.lino:
-(install $packageName npm package)
-(npm install $packageName)
+(
+  install $packageName npm package
+  npm install $packageName
+)
 
 # Usage:
 $ install express npm package
