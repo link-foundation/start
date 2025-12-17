@@ -19,7 +19,55 @@ $ npm test
 $ git status
 ```
 
+### Natural Language Commands (Aliases)
+
+You can also use natural language to execute common commands. The `$` command supports pattern-based substitutions defined in `substitutions.lino`:
+
+```bash
+# Install NPM packages
+$ install lodash npm package                    # -> npm install lodash
+$ install 4.17.21 version of lodash npm package # -> npm install lodash@4.17.21
+$ install lodash npm package globally           # -> npm install -g lodash
+
+# Clone repositories
+$ clone https://github.com/user/repo repository # -> git clone https://github.com/user/repo
+
+# Git operations
+$ checkout main branch                          # -> git checkout main
+$ create feature-x branch                       # -> git checkout -b feature-x
+
+# Common operations
+$ list files                                    # -> ls -la
+$ show current directory                        # -> pwd
+$ create my-project directory                   # -> mkdir -p my-project
+
+# Python packages
+$ install requests python package               # -> pip install requests
+```
+
+If no pattern matches, the command is executed as-is.
+
 ## Features
+
+### Natural Language Aliases (Links Notation)
+
+Commands can be expressed in plain English using patterns defined in `substitutions.lino`. This file uses [Links Notation](https://github.com/link-foundation/links-notation) style patterns with variables.
+
+Each pattern is defined as a doublet link - a pair of pattern and replacement wrapped in parentheses:
+
+```
+# Pattern definition in substitutions.lino:
+(
+  install $packageName npm package
+  npm install $packageName
+)
+
+# Usage:
+$ install express npm package
+# Executes: npm install express
+```
+
+Variables like `$packageName`, `$version`, `$repository` are captured and used in the substitution.
 
 ### Automatic Logging
 
@@ -110,6 +158,8 @@ The following environment variables can be used to customize behavior:
 | `START_DISABLE_LOG_UPLOAD` | Set to `1` or `true` to disable log upload |
 | `START_LOG_DIR` | Custom directory for log files (defaults to OS temp directory) |
 | `START_VERBOSE` | Set to `1` or `true` for verbose output |
+| `START_DISABLE_SUBSTITUTIONS` | Set to `1` or `true` to disable pattern matching/aliases |
+| `START_SUBSTITUTIONS_PATH` | Custom path to substitutions.lino file |
 
 Example:
 ```bash
@@ -118,7 +168,17 @@ START_DISABLE_AUTO_ISSUE=1 $ npm test
 
 # Use custom log directory
 START_LOG_DIR=./logs $ npm test
+
+# Disable substitutions (use raw command)
+START_DISABLE_SUBSTITUTIONS=1 $ install lodash npm package
+
+# Use custom substitutions file
+START_SUBSTITUTIONS_PATH=/path/to/my-rules.lino $ install mypackage npm package
 ```
+
+### Custom Substitutions
+
+You can create your own substitution patterns by placing a `substitutions.lino` file in `~/.start-command/substitutions.lino`. User patterns take precedence over the default ones.
 
 ## Log File Format
 

@@ -6,6 +6,9 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
+// Import substitution engine
+const { processCommand } = require('../lib/substitution');
+
 // Configuration from environment variables
 const config = {
   // Disable automatic issue creation (useful for testing)
@@ -15,7 +18,11 @@ const config = {
   // Custom log directory (defaults to OS temp)
   logDir: process.env.START_LOG_DIR || null,
   // Verbose mode
-  verbose: process.env.START_VERBOSE === '1' || process.env.START_VERBOSE === 'true'
+  verbose: process.env.START_VERBOSE === '1' || process.env.START_VERBOSE === 'true',
+  // Disable substitutions/aliases
+  disableSubstitutions: process.env.START_DISABLE_SUBSTITUTIONS === '1' || process.env.START_DISABLE_SUBSTITUTIONS === 'true',
+  // Custom substitutions file path
+  substitutionsPath: process.env.START_SUBSTITUTIONS_PATH || null
 };
 
 // Get all arguments passed after the command
@@ -29,12 +36,39 @@ if (args.length === 0) {
   console.log('  - Logs all output to temporary directory');
   console.log('  - Displays timestamps and exit codes');
   console.log('  - Auto-reports failures for NPM packages (when gh is available)');
+  console.log('  - Natural language command aliases (via substitutions.lino)');
+  console.log('');
+  console.log('Alias examples:');
+  console.log('  $ install lodash npm package           -> npm install lodash');
+  console.log('  $ install 4.17.21 version of lodash npm package -> npm install lodash@4.17.21');
+  console.log('  $ clone https://github.com/user/repo repository -> git clone https://github.com/user/repo');
   process.exit(0);
 }
 
 // Join all arguments to form the complete command
-const command = args.join(' ');
-const commandName = args[0];
+const rawCommand = args.join(' ');
+
+// Process through substitution engine (unless disabled)
+let command = rawCommand;
+let substitutionResult = null;
+
+if (!config.disableSubstitutions) {
+  substitutionResult = processCommand(rawCommand, {
+    customLinoPath: config.substitutionsPath,
+    verbose: config.verbose
+  });
+
+  if (substitutionResult.matched) {
+    command = substitutionResult.command;
+    if (config.verbose) {
+      console.log(`[Substitution] "${rawCommand}" -> "${command}"`);
+      console.log('');
+    }
+  }
+}
+
+// Get the command name (first word of the actual command to execute)
+const commandName = command.split(' ')[0];
 
 // Generate timestamp for logging
 function getTimestamp() {
@@ -64,7 +98,13 @@ const startTime = getTimestamp();
 // Log header
 logContent += `=== Start Command Log ===\n`;
 logContent += `Timestamp: ${startTime}\n`;
-logContent += `Command: ${command}\n`;
+if (substitutionResult && substitutionResult.matched) {
+  logContent += `Original Input: ${rawCommand}\n`;
+  logContent += `Substituted Command: ${command}\n`;
+  logContent += `Pattern Matched: ${substitutionResult.rule.pattern}\n`;
+} else {
+  logContent += `Command: ${command}\n`;
+}
 logContent += `Shell: ${shell}\n`;
 logContent += `Platform: ${process.platform}\n`;
 logContent += `Node Version: ${process.version}\n`;
@@ -72,7 +112,12 @@ logContent += `Working Directory: ${process.cwd()}\n`;
 logContent += `${'='.repeat(50)}\n\n`;
 
 // Print start message to console
-console.log(`[${startTime}] Starting: ${command}`);
+if (substitutionResult && substitutionResult.matched) {
+  console.log(`[${startTime}] Input: ${rawCommand}`);
+  console.log(`[${startTime}] Executing: ${command}`);
+} else {
+  console.log(`[${startTime}] Starting: ${command}`);
+}
 console.log('');
 
 // Execute the command with captured output
