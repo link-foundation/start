@@ -3,7 +3,7 @@
  * Debug script to understand regex generation
  */
 
-const { createRule, parseLinoContent } = require('../lib/substitution');
+const { createRule, parseLinoContent } = require('../src/lib/substitution');
 
 // Test creating a simple rule
 const rule = createRule('install $packageName npm package', 'npm install $packageName');

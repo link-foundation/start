@@ -211,7 +211,8 @@ function matchAndSubstitute(input, rules) {
  */
 function loadDefaultSubstitutions() {
   // Look for substitutions.lino in the package directory
-  const packageDir = path.dirname(__dirname);
+  // __dirname is src/lib, so go up two levels to reach package root
+  const packageDir = path.dirname(path.dirname(__dirname));
   const defaultLinoPath = path.join(packageDir, 'substitutions.lino');
 
   if (fs.existsSync(defaultLinoPath)) {

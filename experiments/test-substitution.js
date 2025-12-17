@@ -12,7 +12,7 @@ const {
   matchAndSubstitute,
   loadDefaultSubstitutions,
   processCommand
-} = require('../lib/substitution');
+} = require('../src/lib/substitution');
 
 const testCases = [
   // NPM install patterns

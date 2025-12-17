@@ -4,7 +4,7 @@
   "description": "Gamification of coding, execute any command with ability to auto-report issues on GitHub",
   "main": "index.js",
   "bin": {
-    "$": "./bin/cli.js"
+    "$": "./src/bin/cli.js"
   },
   "keywords": [
     "cli",
