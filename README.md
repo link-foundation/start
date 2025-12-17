@@ -121,9 +121,11 @@ The tool works in any environment:
 ## Requirements
 
 ### Required
+
 - Node.js >= 14.0.0
 
 ### Optional (for full auto-reporting)
+
 - [GitHub CLI (`gh`)](https://cli.github.com/) - For authentication and issue creation
 - [gh-upload-log](https://github.com/link-foundation/gh-upload-log) - For uploading log files
 
@@ -152,16 +154,17 @@ npm install -g gh-upload-log
 
 The following environment variables can be used to customize behavior:
 
-| Variable | Description |
-|----------|-------------|
-| `START_DISABLE_AUTO_ISSUE` | Set to `1` or `true` to disable automatic issue creation |
-| `START_DISABLE_LOG_UPLOAD` | Set to `1` or `true` to disable log upload |
-| `START_LOG_DIR` | Custom directory for log files (defaults to OS temp directory) |
-| `START_VERBOSE` | Set to `1` or `true` for verbose output |
-| `START_DISABLE_SUBSTITUTIONS` | Set to `1` or `true` to disable pattern matching/aliases |
-| `START_SUBSTITUTIONS_PATH` | Custom path to substitutions.lino file |
+| Variable                      | Description                                                    |
+| ----------------------------- | -------------------------------------------------------------- |
+| `START_DISABLE_AUTO_ISSUE`    | Set to `1` or `true` to disable automatic issue creation       |
+| `START_DISABLE_LOG_UPLOAD`    | Set to `1` or `true` to disable log upload                     |
+| `START_LOG_DIR`               | Custom directory for log files (defaults to OS temp directory) |
+| `START_VERBOSE`               | Set to `1` or `true` for verbose output                        |
+| `START_DISABLE_SUBSTITUTIONS` | Set to `1` or `true` to disable pattern matching/aliases       |
+| `START_SUBSTITUTIONS_PATH`    | Custom path to substitutions.lino file                         |
 
 Example:
+
 ```bash
 # Run without auto-issue creation
 START_DISABLE_AUTO_ISSUE=1 $ npm test

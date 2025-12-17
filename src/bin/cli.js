@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { spawn, execSync, spawnSync } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const process = require('process');
 const os = require('os');
 const fs = require('fs');
@@ -12,17 +12,24 @@ const { processCommand } = require('../lib/substitution');
 // Configuration from environment variables
 const config = {
   // Disable automatic issue creation (useful for testing)
-  disableAutoIssue: process.env.START_DISABLE_AUTO_ISSUE === '1' || process.env.START_DISABLE_AUTO_ISSUE === 'true',
+  disableAutoIssue:
+    process.env.START_DISABLE_AUTO_ISSUE === '1' ||
+    process.env.START_DISABLE_AUTO_ISSUE === 'true',
   // Disable log upload
-  disableLogUpload: process.env.START_DISABLE_LOG_UPLOAD === '1' || process.env.START_DISABLE_LOG_UPLOAD === 'true',
+  disableLogUpload:
+    process.env.START_DISABLE_LOG_UPLOAD === '1' ||
+    process.env.START_DISABLE_LOG_UPLOAD === 'true',
   // Custom log directory (defaults to OS temp)
   logDir: process.env.START_LOG_DIR || null,
   // Verbose mode
-  verbose: process.env.START_VERBOSE === '1' || process.env.START_VERBOSE === 'true',
+  verbose:
+    process.env.START_VERBOSE === '1' || process.env.START_VERBOSE === 'true',
   // Disable substitutions/aliases
-  disableSubstitutions: process.env.START_DISABLE_SUBSTITUTIONS === '1' || process.env.START_DISABLE_SUBSTITUTIONS === 'true',
+  disableSubstitutions:
+    process.env.START_DISABLE_SUBSTITUTIONS === '1' ||
+    process.env.START_DISABLE_SUBSTITUTIONS === 'true',
   // Custom substitutions file path
-  substitutionsPath: process.env.START_SUBSTITUTIONS_PATH || null
+  substitutionsPath: process.env.START_SUBSTITUTIONS_PATH || null,
 };
 
 // Get all arguments passed after the command
@@ -35,13 +42,19 @@ if (args.length === 0) {
   console.log('Features:');
   console.log('  - Logs all output to temporary directory');
   console.log('  - Displays timestamps and exit codes');
-  console.log('  - Auto-reports failures for NPM packages (when gh is available)');
+  console.log(
+    '  - Auto-reports failures for NPM packages (when gh is available)'
+  );
   console.log('  - Natural language command aliases (via substitutions.lino)');
   console.log('');
   console.log('Alias examples:');
   console.log('  $ install lodash npm package           -> npm install lodash');
-  console.log('  $ install 4.17.21 version of lodash npm package -> npm install lodash@4.17.21');
-  console.log('  $ clone https://github.com/user/repo repository -> git clone https://github.com/user/repo');
+  console.log(
+    '  $ install 4.17.21 version of lodash npm package -> npm install lodash@4.17.21'
+  );
+  console.log(
+    '  $ clone https://github.com/user/repo repository -> git clone https://github.com/user/repo'
+  );
   process.exit(0);
 }
 
@@ -55,7 +68,7 @@ let substitutionResult = null;
 if (!config.disableSubstitutions) {
   substitutionResult = processCommand(rawCommand, {
     customLinoPath: config.substitutionsPath,
-    verbose: config.verbose
+    verbose: config.verbose,
   });
 
   if (substitutionResult.matched) {
@@ -123,7 +136,7 @@ console.log('');
 // Execute the command with captured output
 const child = spawn(shell, shellArgs, {
   stdio: ['inherit', 'pipe', 'pipe'],
-  shell: false
+  shell: false,
 });
 
 // Capture stdout
@@ -165,7 +178,13 @@ child.on('exit', async (code) => {
 
   // If command failed, try to auto-report
   if (exitCode !== 0) {
-    await handleFailure(commandName, command, exitCode, logFilePath, logContent);
+    await handleFailure(
+      commandName,
+      command,
+      exitCode,
+      logFilePath,
+      logContent
+    );
   }
 
   process.exit(exitCode);
@@ -202,7 +221,7 @@ child.on('error', async (err) => {
 /**
  * Handle command failure - detect repository, upload log, create issue
  */
-async function handleFailure(cmdName, fullCommand, exitCode, logPath, logData) {
+async function handleFailure(cmdName, fullCommand, exitCode, logPath) {
   console.log('');
 
   // Check if auto-issue is disabled
@@ -225,7 +244,9 @@ async function handleFailure(cmdName, fullCommand, exitCode, logPath, logData) {
 
   // Check if gh CLI is available and authenticated
   if (!isGhAuthenticated()) {
-    console.log('GitHub CLI not authenticated - automatic issue creation skipped');
+    console.log(
+      'GitHub CLI not authenticated - automatic issue creation skipped'
+    );
     console.log('Run "gh auth login" to enable automatic issue creation');
     return;
   }
@@ -253,7 +274,13 @@ async function handleFailure(cmdName, fullCommand, exitCode, logPath, logData) {
   }
 
   // Create issue
-  const issueUrl = await createIssue(repoInfo, fullCommand, exitCode, logUrl, logPath);
+  const issueUrl = await createIssue(
+    repoInfo,
+    fullCommand,
+    exitCode,
+    logUrl,
+    logPath
+  );
   if (issueUrl) {
     console.log(`Issue created: ${issueUrl}`);
   }
@@ -269,12 +296,17 @@ function detectRepository(cmdName) {
     let cmdPath;
 
     try {
-      cmdPath = execSync(`${whichCmd} ${cmdName}`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+      cmdPath = execSync(`${whichCmd} ${cmdName}`, {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
     } catch {
       return null;
     }
 
-    if (!cmdPath) return null;
+    if (!cmdPath) {
+      return null;
+    }
 
     // Handle Windows where command that returns multiple lines
     if (isWindows && cmdPath.includes('\n')) {
@@ -284,13 +316,16 @@ function detectRepository(cmdName) {
     // Check if it's in npm global modules
     let npmGlobalPath;
     try {
-      npmGlobalPath = execSync('npm root -g', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+      npmGlobalPath = execSync('npm root -g', {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
     } catch {
       return null;
     }
 
     // Get the npm bin directory (parent of node_modules)
-    const npmBinPath = path.dirname(npmGlobalPath) + '/bin';
+    const npmBinPath = `${path.dirname(npmGlobalPath)}/bin`;
 
     // Check if the command is located in the npm bin directory or node_modules
     let packageName = null;
@@ -303,7 +338,7 @@ function detectRepository(cmdName) {
       // Check if the real path is within node_modules
       if (realPath.includes('node_modules')) {
         isNpmPackage = true;
-        const npmPathMatch = realPath.match(/node_modules\/([^\/]+)/);
+        const npmPathMatch = realPath.match(/node_modules\/([^/]+)/);
         if (npmPathMatch) {
           packageName = npmPathMatch[1];
         }
@@ -319,11 +354,14 @@ function detectRepository(cmdName) {
         const binContent = fs.readFileSync(cmdPath, 'utf8');
 
         // Check if this is a Node.js script
-        if (binContent.startsWith('#!/usr/bin/env node') || binContent.includes('node_modules')) {
+        if (
+          binContent.startsWith('#!/usr/bin/env node') ||
+          binContent.includes('node_modules')
+        ) {
           isNpmPackage = true;
 
           // Look for package path in the script
-          const packagePathMatch = binContent.match(/node_modules\/([^\/'"]+)/);
+          const packagePathMatch = binContent.match(/node_modules\/([^/'"]+)/);
           if (packagePathMatch) {
             packageName = packagePathMatch[1];
           }
@@ -346,10 +384,13 @@ function detectRepository(cmdName) {
 
     // Try to get repository URL from npm
     try {
-      const npmInfo = execSync(`npm view ${packageName} repository.url 2>/dev/null`, {
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe']
-      }).trim();
+      const npmInfo = execSync(
+        `npm view ${packageName} repository.url 2>/dev/null`,
+        {
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+        }
+      ).trim();
 
       if (npmInfo) {
         // Parse git URL to extract owner and repo
@@ -366,7 +407,7 @@ function detectRepository(cmdName) {
     try {
       const bugsUrl = execSync(`npm view ${packageName} bugs.url 2>/dev/null`, {
         encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe']
+        stdio: ['pipe', 'pipe', 'pipe'],
       }).trim();
 
       if (bugsUrl && bugsUrl.includes('github.com')) {
@@ -389,7 +430,9 @@ function detectRepository(cmdName) {
  * Parse a git URL to extract owner, repo, and normalized URL
  */
 function parseGitUrl(url) {
-  if (!url) return null;
+  if (!url) {
+    return null;
+  }
 
   // Handle various git URL formats
   // git+https://github.com/owner/repo.git
@@ -399,14 +442,14 @@ function parseGitUrl(url) {
   // git@github.com:owner/repo.git
   // https://github.com/owner/repo/issues
 
-  let match = url.match(/github\.com[\/:]([^\/]+)\/([^\/\.]+)/);
+  const match = url.match(/github\.com[/:]([^/]+)\/([^/.]+)/);
   if (match) {
     const owner = match[1];
     const repo = match[2].replace(/\.git$/, '');
     return {
       owner,
       repo,
-      url: `https://github.com/${owner}/${repo}`
+      url: `https://github.com/${owner}/${repo}`,
     };
   }
 
@@ -445,7 +488,7 @@ async function uploadLog(logPath) {
   try {
     const result = execSync(`gh-upload-log "${logPath}" --public`, {
       encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
 
     // Extract URL from output
@@ -474,7 +517,7 @@ function canCreateIssue(owner, repo) {
   try {
     // Check if the repository exists and we have access
     execSync(`gh repo view ${owner}/${repo} --json name`, {
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
     return true;
   } catch {
@@ -485,7 +528,7 @@ function canCreateIssue(owner, repo) {
 /**
  * Create an issue in the repository
  */
-async function createIssue(repoInfo, fullCommand, exitCode, logUrl, logPath) {
+async function createIssue(repoInfo, fullCommand, exitCode, logUrl) {
   try {
     const title = `Command failed with exit code ${exitCode}: ${fullCommand.substring(0, 50)}${fullCommand.length > 50 ? '...' : ''}`;
 
@@ -507,10 +550,13 @@ async function createIssue(repoInfo, fullCommand, exitCode, logUrl, logPath) {
     body += `---\n`;
     body += `*This issue was automatically created by [start-command](https://github.com/link-foundation/start)*\n`;
 
-    const result = execSync(`gh issue create --repo ${repoInfo.owner}/${repoInfo.repo} --title "${title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`, {
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
+    const result = execSync(
+      `gh issue create --repo ${repoInfo.owner}/${repoInfo.repo} --title "${title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`,
+      {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }
+    );
 
     // Extract issue URL from output
     const urlMatch = result.match(/https:\/\/github\.com\/[^\s]+/);

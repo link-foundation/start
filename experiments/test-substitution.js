@@ -11,7 +11,7 @@ const {
   parseLinoContent,
   matchAndSubstitute,
   loadDefaultSubstitutions,
-  processCommand
+  processCommand,
 } = require('../src/lib/substitution');
 
 const testCases = [
@@ -19,86 +19,86 @@ const testCases = [
   {
     input: 'install gh-upload-log npm package',
     expected: 'npm install gh-upload-log',
-    description: 'Basic npm install'
+    description: 'Basic npm install',
   },
   {
     input: 'install 0.0.1 version of gh-upload-log npm package',
     expected: 'npm install gh-upload-log@0.0.1',
-    description: 'npm install with version'
+    description: 'npm install with version',
   },
   {
     input: 'install lodash npm package globally',
     expected: 'npm install -g lodash',
-    description: 'Global npm install'
+    description: 'Global npm install',
   },
   {
     input: 'install 4.17.21 version of lodash npm package globally',
     expected: 'npm install -g lodash@4.17.21',
-    description: 'Global npm install with version'
+    description: 'Global npm install with version',
   },
   {
     input: 'uninstall lodash npm package',
     expected: 'npm uninstall lodash',
-    description: 'npm uninstall'
+    description: 'npm uninstall',
   },
 
   // Git patterns
   {
     input: 'clone https://github.com/user/repo repository',
     expected: 'git clone https://github.com/user/repo',
-    description: 'Git clone with URL'
+    description: 'Git clone with URL',
   },
   {
     input: 'clone git@github.com:user/repo.git repository',
     expected: 'git clone git@github.com:user/repo.git',
-    description: 'Git clone with SSH URL'
+    description: 'Git clone with SSH URL',
   },
   {
     input: 'checkout main branch',
     expected: 'git checkout main',
-    description: 'Git checkout branch'
+    description: 'Git checkout branch',
   },
   {
     input: 'create feature-x branch',
     expected: 'git checkout -b feature-x',
-    description: 'Git create branch'
+    description: 'Git create branch',
   },
 
   // Common operations
   {
     input: 'list files',
     expected: 'ls -la',
-    description: 'List files'
+    description: 'List files',
   },
   {
     input: 'show current directory',
     expected: 'pwd',
-    description: 'Show working directory'
+    description: 'Show working directory',
   },
   {
     input: 'create my-project directory',
     expected: 'mkdir -p my-project',
-    description: 'Create directory'
+    description: 'Create directory',
   },
 
   // Python patterns
   {
     input: 'install requests python package',
     expected: 'pip install requests',
-    description: 'pip install'
+    description: 'pip install',
   },
 
   // Non-matching patterns (should return original)
   {
     input: 'echo hello world',
     expected: 'echo hello world',
-    description: 'Non-matching command (pass through)'
+    description: 'Non-matching command (pass through)',
   },
   {
     input: 'npm test',
     expected: 'npm test',
-    description: 'Regular npm command (pass through)'
-  }
+    description: 'Regular npm command (pass through)',
+  },
 ];
 
 console.log('=== Substitution Engine Tests ===\n');
@@ -117,7 +117,9 @@ for (const test of testCases) {
     console.log(`✓ PASS: ${test.description}`);
     console.log(`  Input:    "${test.input}"`);
     console.log(`  Output:   "${result.command}"`);
-    console.log(`  Matched:  ${result.matched ? result.rule.pattern : 'none (pass through)'}`);
+    console.log(
+      `  Matched:  ${result.matched ? result.rule.pattern : 'none (pass through)'}`
+    );
     passed++;
   } else {
     console.log(`✗ FAIL: ${test.description}`);
