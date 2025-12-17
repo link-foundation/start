@@ -6,6 +6,9 @@
   "bin": {
     "$": "./src/bin/cli.js"
   },
+  "scripts": {
+    "test": "node test/substitution.test.js"
+  },
   "keywords": [
     "cli",
     "command",
