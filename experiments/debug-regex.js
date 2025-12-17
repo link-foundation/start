@@ -6,7 +6,10 @@
 const { createRule, parseLinoContent } = require('../src/lib/substitution');
 
 // Test creating a simple rule
-const rule = createRule('install $packageName npm package', 'npm install $packageName');
+const rule = createRule(
+  'install $packageName npm package',
+  'npm install $packageName'
+);
 
 console.log('Pattern:', 'install $packageName npm package');
 console.log('Replacement:', 'npm install $packageName');
@@ -31,7 +34,16 @@ const simpleContent = `
 `;
 
 const rules = parseLinoContent(simpleContent);
-console.log('\nParsed rules:', JSON.stringify(rules, (key, value) => {
-  if (key === 'regex') return value.toString();
-  return value;
-}, 2));
+console.log(
+  '\nParsed rules:',
+  JSON.stringify(
+    rules,
+    (key, value) => {
+      if (key === 'regex') {
+        return value.toString();
+      }
+      return value;
+    },
+    2
+  )
+);

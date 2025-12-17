@@ -9,7 +9,8 @@ const fs = require('fs');
 const path = require('path');
 
 // Debug mode from environment
-const DEBUG = process.env.START_DEBUG === '1' || process.env.START_DEBUG === 'true';
+const DEBUG =
+  process.env.START_DEBUG === '1' || process.env.START_DEBUG === 'true';
 
 /**
  * Parse a .lino substitutions file
@@ -48,7 +49,11 @@ function parseLinoContent(content) {
       let pattern = null;
       while (i < lines.length) {
         const patternLine = lines[i].trim();
-        if (patternLine && !patternLine.startsWith('#') && patternLine !== ')') {
+        if (
+          patternLine &&
+          !patternLine.startsWith('#') &&
+          patternLine !== ')'
+        ) {
           pattern = patternLine;
           i++;
           break;
@@ -60,7 +65,11 @@ function parseLinoContent(content) {
       let replacement = null;
       while (i < lines.length) {
         const replacementLine = lines[i].trim();
-        if (replacementLine && !replacementLine.startsWith('#') && replacementLine !== ')') {
+        if (
+          replacementLine &&
+          !replacementLine.startsWith('#') &&
+          replacementLine !== ')'
+        ) {
           replacement = replacementLine;
           i++;
           break;
@@ -190,8 +199,8 @@ function matchAndSubstitute(input, rules) {
       return {
         matched: true,
         original: input,
-        command: command,
-        rule: rule
+        command,
+        rule,
       };
     }
   }
@@ -201,7 +210,7 @@ function matchAndSubstitute(input, rules) {
     matched: false,
     original: input,
     command: input,
-    rule: null
+    rule: null,
   };
 }
 
@@ -249,7 +258,11 @@ function loadUserSubstitutions(customPath) {
   // Look in home directory for .start-command/substitutions.lino
   const homeDir = process.env.HOME || process.env.USERPROFILE;
   if (homeDir) {
-    const userLinoPath = path.join(homeDir, '.start-command', 'substitutions.lino');
+    const userLinoPath = path.join(
+      homeDir,
+      '.start-command',
+      'substitutions.lino'
+    );
     if (fs.existsSync(userLinoPath)) {
       try {
         return parseLinoFile(userLinoPath);
@@ -285,7 +298,7 @@ function processCommand(input, options = {}) {
       matched: false,
       original: input,
       command: input,
-      rule: null
+      rule: null,
     };
   }
 
@@ -306,5 +319,5 @@ module.exports = {
   matchAndSubstitute,
   loadDefaultSubstitutions,
   loadUserSubstitutions,
-  processCommand
+  processCommand,
 };

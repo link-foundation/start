@@ -7,7 +7,18 @@
     "$": "./src/bin/cli.js"
   },
   "scripts": {
-    "test": "node test/substitution.test.js"
+    "test": "node --test test/",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:file-size": "node scripts/check-file-size.mjs",
+    "check": "npm run lint && npm run format:check && npm run check:file-size",
+    "prepare": "husky || true",
+    "changeset": "changeset",
+    "changeset:version": "node scripts/changeset-version.mjs",
+    "changeset:publish": "changeset publish",
+    "changeset:status": "changeset status --since=origin/main"
   },
   "keywords": [
     "cli",
@@ -19,7 +30,7 @@
   "author": "",
   "license": "MIT",
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=20.0.0"
   },
   "repository": {
     "type": "git",
@@ -28,5 +39,25 @@
   "bugs": {
     "url": "https://github.com/link-foundation/start/issues"
   },
-  "homepage": "https://github.com/link-foundation/start#readme"
+  "homepage": "https://github.com/link-foundation/start#readme",
+  "devDependencies": {
+    "@changesets/cli": "^2.29.7",
+    "eslint": "^9.38.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.6",
+    "prettier": "^3.6.2"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs}": [
+      "eslint --fix --max-warnings 6",
+      "prettier --write",
+      "prettier --check"
+    ],
+    "*.md": [
+      "prettier --write",
+      "prettier --check"
+    ]
+  }
 }
