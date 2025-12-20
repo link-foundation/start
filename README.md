@@ -109,6 +109,45 @@ Log uploaded: https://gist.github.com/user/abc123
 Issue created: https://github.com/owner/some-npm-tool/issues/42
 ```
 
+### Process Isolation
+
+Run commands in isolated environments using terminal multiplexers or containers:
+
+```bash
+# Run in tmux (attached by default)
+$ --isolated tmux -- npm start
+
+# Run in screen detached
+$ --isolated screen --detached -- npm start
+
+# Run in docker container
+$ --isolated docker --image node:20 -- npm install
+
+# Short form with custom session name
+$ -i tmux -s my-session -d npm start
+```
+
+#### Supported Backends
+
+| Backend  | Description                            | Installation                                               |
+| -------- | -------------------------------------- | ---------------------------------------------------------- |
+| `screen` | GNU Screen terminal multiplexer        | `apt install screen` / `brew install screen`               |
+| `tmux`   | Modern terminal multiplexer            | `apt install tmux` / `brew install tmux`                   |
+| `zellij` | Modern terminal workspace              | `cargo install zellij` / `brew install zellij`             |
+| `docker` | Container isolation (requires --image) | [Docker Installation](https://docs.docker.com/get-docker/) |
+
+#### Isolation Options
+
+| Option           | Description                                      |
+| ---------------- | ------------------------------------------------ |
+| `--isolated, -i` | Isolation backend (screen, tmux, docker, zellij) |
+| `--attached, -a` | Run in attached/foreground mode (default)        |
+| `--detached, -d` | Run in detached/background mode                  |
+| `--session, -s`  | Custom session/container name                    |
+| `--image`        | Docker image (required for docker isolation)     |
+
+**Note:** Using both `--attached` and `--detached` together will result in an error - you must choose one mode.
+
 ### Graceful Degradation
 
 The tool works in any environment:
@@ -117,6 +156,7 @@ The tool works in any environment:
 - **No `gh-upload-log`?** - Issue can still be created with local log reference
 - **Repository not detected?** - Command runs normally with logging
 - **No permission to create issue?** - Skipped with a clear message
+- **Isolation backend not installed?** - Clear error message with installation instructions
 
 ## Requirements
 
