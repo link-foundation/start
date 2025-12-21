@@ -126,6 +126,41 @@ The `$` command is a CLI tool that wraps any shell command and provides automati
 - User patterns take precedence over built-in patterns
 - Support custom path via `START_SUBSTITUTIONS_PATH` environment variable
 
+### 6. Process Isolation
+
+#### 6.1 Command Syntax
+
+Support two patterns for passing wrapper options:
+
+- `$ [wrapper-options] -- [command] [command-options]` (explicit separator)
+- `$ [wrapper-options] command [command-options]` (options before command)
+
+#### 6.2 Isolation Options
+
+- `--isolated, -i <backend>`: Run command in isolated environment
+- `--attached, -a`: Run in attached/foreground mode (default)
+- `--detached, -d`: Run in detached/background mode
+- `--session, -s <name>`: Custom session name
+- `--image <image>`: Docker image (required for docker backend)
+
+#### 6.3 Supported Backends
+
+- `screen`: GNU Screen terminal multiplexer
+- `tmux`: tmux terminal multiplexer
+- `zellij`: Modern terminal workspace
+- `docker`: Docker containers (requires --image option)
+
+#### 6.4 Mode Behavior
+
+- **Attached mode**: Command runs in foreground, user can interact
+- **Detached mode**: Command runs in background, session info displayed for reattachment
+- **Conflict handling**: If both --attached and --detached are specified, show error asking user to choose one
+
+#### 6.5 Graceful Degradation
+
+- If isolation backend is not installed, show informative error with installation instructions
+- If session creation fails, report error with details
+
 ## Configuration Options
 
 - `START_DISABLE_AUTO_ISSUE`: Disable automatic issue creation

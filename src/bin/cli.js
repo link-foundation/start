@@ -6,8 +6,14 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
-// Import substitution engine
+// Import modules
 const { processCommand } = require('../lib/substitution');
+const {
+  parseArgs,
+  hasIsolation,
+  getEffectiveMode,
+} = require('../lib/args-parser');
+const { runIsolated } = require('../lib/isolation');
 
 // Configuration from environment variables
 const config = {
@@ -36,8 +42,34 @@ const config = {
 const args = process.argv.slice(2);
 
 if (args.length === 0) {
-  console.log('Usage: $ <command> [args...]');
-  console.log('Example: $ echo "Hello World"');
+  printUsage();
+  process.exit(0);
+}
+
+/**
+ * Print usage information
+ */
+function printUsage() {
+  console.log('Usage: $ [options] [--] <command> [args...]');
+  console.log('       $ <command> [args...]');
+  console.log('');
+  console.log('Options:');
+  console.log(
+    '  --isolated, -i <backend>  Run in isolated environment (screen, tmux, docker, zellij)'
+  );
+  console.log('  --attached, -a            Run in attached mode (foreground)');
+  console.log('  --detached, -d            Run in detached mode (background)');
+  console.log('  --session, -s <name>      Session name for isolation');
+  console.log(
+    '  --image <image>           Docker image (required for docker isolation)'
+  );
+  console.log('');
+  console.log('Examples:');
+  console.log('  $ echo "Hello World"');
+  console.log('  $ npm test');
+  console.log('  $ --isolated tmux -- npm start');
+  console.log('  $ -i screen -d npm start');
+  console.log('  $ --isolated docker --image node:20 -- npm install');
   console.log('');
   console.log('Features:');
   console.log('  - Logs all output to temporary directory');
@@ -46,6 +78,7 @@ if (args.length === 0) {
     '  - Auto-reports failures for NPM packages (when gh is available)'
   );
   console.log('  - Natural language command aliases (via substitutions.lino)');
+  console.log('  - Process isolation via screen, tmux, zellij, or docker');
   console.log('');
   console.log('Alias examples:');
   console.log('  $ install lodash npm package           -> npm install lodash');
@@ -55,18 +88,32 @@ if (args.length === 0) {
   console.log(
     '  $ clone https://github.com/user/repo repository -> git clone https://github.com/user/repo'
   );
-  process.exit(0);
 }
 
-// Join all arguments to form the complete command
-const rawCommand = args.join(' ');
+// Parse wrapper options and command
+let parsedArgs;
+try {
+  parsedArgs = parseArgs(args);
+} catch (err) {
+  console.error(`Error: ${err.message}`);
+  process.exit(1);
+}
+
+const { wrapperOptions, command: parsedCommand } = parsedArgs;
+
+// Check if no command was provided
+if (!parsedCommand || parsedCommand.trim() === '') {
+  console.error('Error: No command provided');
+  printUsage();
+  process.exit(1);
+}
 
 // Process through substitution engine (unless disabled)
-let command = rawCommand;
+let command = parsedCommand;
 let substitutionResult = null;
 
 if (!config.disableSubstitutions) {
-  substitutionResult = processCommand(rawCommand, {
+  substitutionResult = processCommand(parsedCommand, {
     customLinoPath: config.substitutionsPath,
     verbose: config.verbose,
   });
@@ -74,14 +121,185 @@ if (!config.disableSubstitutions) {
   if (substitutionResult.matched) {
     command = substitutionResult.command;
     if (config.verbose) {
-      console.log(`[Substitution] "${rawCommand}" -> "${command}"`);
+      console.log(`[Substitution] "${parsedCommand}" -> "${command}"`);
       console.log('');
     }
   }
 }
 
-// Get the command name (first word of the actual command to execute)
-const commandName = command.split(' ')[0];
+// Main execution
+(async () => {
+  // Check if running in isolation mode
+  if (hasIsolation(wrapperOptions)) {
+    await runWithIsolation(wrapperOptions, command);
+  } else {
+    await runDirect(command);
+  }
+})();
+
+/**
+ * Run command in isolation mode
+ * @param {object} options - Wrapper options
+ * @param {string} cmd - Command to execute
+ */
+async function runWithIsolation(options, cmd) {
+  const backend = options.isolated;
+  const mode = getEffectiveMode(options);
+
+  // Log isolation info
+  console.log(`[Isolation] Backend: ${backend}, Mode: ${mode}`);
+  if (options.session) {
+    console.log(`[Isolation] Session: ${options.session}`);
+  }
+  if (options.image) {
+    console.log(`[Isolation] Image: ${options.image}`);
+  }
+  console.log(`[Isolation] Command: ${cmd}`);
+  console.log('');
+
+  // Run in isolation
+  const result = await runIsolated(backend, cmd, {
+    session: options.session,
+    image: options.image,
+    detached: mode === 'detached',
+  });
+
+  // Print result
+  console.log('');
+  console.log(result.message);
+
+  if (result.success) {
+    process.exit(result.exitCode || 0);
+  } else {
+    process.exit(1);
+  }
+}
+
+/**
+ * Run command directly (without isolation)
+ * @param {string} cmd - Command to execute
+ */
+function runDirect(cmd) {
+  // Get the command name (first word of the actual command to execute)
+  const commandName = cmd.split(' ')[0];
+
+  // Determine the shell based on the platform
+  const isWindows = process.platform === 'win32';
+  const shell = isWindows ? 'powershell.exe' : process.env.SHELL || '/bin/sh';
+  const shellArgs = isWindows ? ['-Command', cmd] : ['-c', cmd];
+
+  // Setup logging
+  const logDir = config.logDir || os.tmpdir();
+  const logFilename = generateLogFilename();
+  const logFilePath = path.join(logDir, logFilename);
+
+  let logContent = '';
+  const startTime = getTimestamp();
+
+  // Log header
+  logContent += `=== Start Command Log ===\n`;
+  logContent += `Timestamp: ${startTime}\n`;
+  if (substitutionResult && substitutionResult.matched) {
+    logContent += `Original Input: ${parsedCommand}\n`;
+    logContent += `Substituted Command: ${cmd}\n`;
+    logContent += `Pattern Matched: ${substitutionResult.rule.pattern}\n`;
+  } else {
+    logContent += `Command: ${cmd}\n`;
+  }
+  logContent += `Shell: ${shell}\n`;
+  logContent += `Platform: ${process.platform}\n`;
+  logContent += `Node Version: ${process.version}\n`;
+  logContent += `Working Directory: ${process.cwd()}\n`;
+  logContent += `${'='.repeat(50)}\n\n`;
+
+  // Print start message to console
+  if (substitutionResult && substitutionResult.matched) {
+    console.log(`[${startTime}] Input: ${parsedCommand}`);
+    console.log(`[${startTime}] Executing: ${cmd}`);
+  } else {
+    console.log(`[${startTime}] Starting: ${cmd}`);
+  }
+  console.log('');
+
+  // Execute the command with captured output
+  const child = spawn(shell, shellArgs, {
+    stdio: ['inherit', 'pipe', 'pipe'],
+    shell: false,
+  });
+
+  // Capture stdout
+  child.stdout.on('data', (data) => {
+    const text = data.toString();
+    process.stdout.write(text);
+    logContent += text;
+  });
+
+  // Capture stderr
+  child.stderr.on('data', (data) => {
+    const text = data.toString();
+    process.stderr.write(text);
+    logContent += text;
+  });
+
+  // Handle process exit
+  child.on('exit', (code) => {
+    const exitCode = code || 0;
+    const endTime = getTimestamp();
+
+    // Log footer
+    logContent += `\n${'='.repeat(50)}\n`;
+    logContent += `Finished: ${endTime}\n`;
+    logContent += `Exit Code: ${exitCode}\n`;
+
+    // Write log file
+    try {
+      fs.writeFileSync(logFilePath, logContent, 'utf8');
+    } catch (err) {
+      console.error(`\nWarning: Could not save log file: ${err.message}`);
+    }
+
+    // Print footer to console
+    console.log('');
+    console.log(`[${endTime}] Finished`);
+    console.log(`Exit code: ${exitCode}`);
+    console.log(`Log saved: ${logFilePath}`);
+
+    // If command failed, try to auto-report
+    if (exitCode !== 0) {
+      handleFailure(commandName, cmd, exitCode, logFilePath, logContent);
+    }
+
+    process.exit(exitCode);
+  });
+
+  // Handle spawn errors
+  child.on('error', (err) => {
+    const endTime = getTimestamp();
+    const errorMessage = `Error executing command: ${err.message}`;
+
+    logContent += `\n${errorMessage}\n`;
+    logContent += `\n${'='.repeat(50)}\n`;
+    logContent += `Finished: ${endTime}\n`;
+    logContent += `Exit Code: 1\n`;
+
+    // Write log file
+    try {
+      fs.writeFileSync(logFilePath, logContent, 'utf8');
+    } catch (writeErr) {
+      console.error(`\nWarning: Could not save log file: ${writeErr.message}`);
+    }
+
+    console.error(`\n${errorMessage}`);
+    console.log('');
+    console.log(`[${endTime}] Finished`);
+    console.log(`Exit code: 1`);
+    console.log(`Log saved: ${logFilePath}`);
+
+    handleFailure(commandName, cmd, 1, logFilePath, logContent);
+
+    process.exit(1);
+  });
+}
 
 // Generate timestamp for logging
 function getTimestamp() {
@@ -95,133 +313,10 @@ function generateLogFilename() {
   return `start-command-${timestamp}-${random}.log`;
 }
 
-// Determine the shell based on the platform
-const isWindows = process.platform === 'win32';
-const shell = isWindows ? 'powershell.exe' : process.env.SHELL || '/bin/sh';
-const shellArgs = isWindows ? ['-Command', command] : ['-c', command];
-
-// Setup logging
-const logDir = config.logDir || os.tmpdir();
-const logFilename = generateLogFilename();
-const logFilePath = path.join(logDir, logFilename);
-
-let logContent = '';
-const startTime = getTimestamp();
-
-// Log header
-logContent += `=== Start Command Log ===\n`;
-logContent += `Timestamp: ${startTime}\n`;
-if (substitutionResult && substitutionResult.matched) {
-  logContent += `Original Input: ${rawCommand}\n`;
-  logContent += `Substituted Command: ${command}\n`;
-  logContent += `Pattern Matched: ${substitutionResult.rule.pattern}\n`;
-} else {
-  logContent += `Command: ${command}\n`;
-}
-logContent += `Shell: ${shell}\n`;
-logContent += `Platform: ${process.platform}\n`;
-logContent += `Node Version: ${process.version}\n`;
-logContent += `Working Directory: ${process.cwd()}\n`;
-logContent += `${'='.repeat(50)}\n\n`;
-
-// Print start message to console
-if (substitutionResult && substitutionResult.matched) {
-  console.log(`[${startTime}] Input: ${rawCommand}`);
-  console.log(`[${startTime}] Executing: ${command}`);
-} else {
-  console.log(`[${startTime}] Starting: ${command}`);
-}
-console.log('');
-
-// Execute the command with captured output
-const child = spawn(shell, shellArgs, {
-  stdio: ['inherit', 'pipe', 'pipe'],
-  shell: false,
-});
-
-// Capture stdout
-child.stdout.on('data', (data) => {
-  const text = data.toString();
-  process.stdout.write(text);
-  logContent += text;
-});
-
-// Capture stderr
-child.stderr.on('data', (data) => {
-  const text = data.toString();
-  process.stderr.write(text);
-  logContent += text;
-});
-
-// Handle process exit
-child.on('exit', async (code) => {
-  const exitCode = code || 0;
-  const endTime = getTimestamp();
-
-  // Log footer
-  logContent += `\n${'='.repeat(50)}\n`;
-  logContent += `Finished: ${endTime}\n`;
-  logContent += `Exit Code: ${exitCode}\n`;
-
-  // Write log file
-  try {
-    fs.writeFileSync(logFilePath, logContent, 'utf8');
-  } catch (err) {
-    console.error(`\nWarning: Could not save log file: ${err.message}`);
-  }
-
-  // Print footer to console
-  console.log('');
-  console.log(`[${endTime}] Finished`);
-  console.log(`Exit code: ${exitCode}`);
-  console.log(`Log saved: ${logFilePath}`);
-
-  // If command failed, try to auto-report
-  if (exitCode !== 0) {
-    await handleFailure(
-      commandName,
-      command,
-      exitCode,
-      logFilePath,
-      logContent
-    );
-  }
-
-  process.exit(exitCode);
-});
-
-// Handle spawn errors
-child.on('error', async (err) => {
-  const endTime = getTimestamp();
-  const errorMessage = `Error executing command: ${err.message}`;
-
-  logContent += `\n${errorMessage}\n`;
-  logContent += `\n${'='.repeat(50)}\n`;
-  logContent += `Finished: ${endTime}\n`;
-  logContent += `Exit Code: 1\n`;
-
-  // Write log file
-  try {
-    fs.writeFileSync(logFilePath, logContent, 'utf8');
-  } catch (writeErr) {
-    console.error(`\nWarning: Could not save log file: ${writeErr.message}`);
-  }
-
-  console.error(`\n${errorMessage}`);
-  console.log('');
-  console.log(`[${endTime}] Finished`);
-  console.log(`Exit code: 1`);
-  console.log(`Log saved: ${logFilePath}`);
-
-  await handleFailure(commandName, command, 1, logFilePath, logContent);
-
-  process.exit(1);
-});
-
 /**
  * Handle command failure - detect repository, upload log, create issue
  */
-async function handleFailure(cmdName, fullCommand, exitCode, logPath) {
+function handleFailure(cmdName, fullCommand, exitCode, logPath) {
   console.log('');
 
   // Check if auto-issue is disabled
@@ -258,7 +353,7 @@ async function handleFailure(cmdName, fullCommand, exitCode, logPath) {
       console.log('Log upload disabled via START_DISABLE_LOG_UPLOAD');
     }
   } else if (isGhUploadLogAvailable()) {
-    logUrl = await uploadLog(logPath);
+    logUrl = uploadLog(logPath);
     if (logUrl) {
       console.log(`Log uploaded: ${logUrl}`);
     }
@@ -274,7 +369,7 @@ async function handleFailure(cmdName, fullCommand, exitCode, logPath) {
   }
 
   // Create issue
-  const issueUrl = await createIssue(
+  const issueUrl = createIssue(
     repoInfo,
     fullCommand,
     exitCode,
@@ -290,6 +385,8 @@ async function handleFailure(cmdName, fullCommand, exitCode, logPath) {
  * Detect repository URL for a command (currently supports NPM global packages)
  */
 function detectRepository(cmdName) {
+  const isWindows = process.platform === 'win32';
+
   try {
     // Find command location
     const whichCmd = isWindows ? 'where' : 'which';
@@ -472,6 +569,7 @@ function isGhAuthenticated() {
  * Check if gh-upload-log is available
  */
 function isGhUploadLogAvailable() {
+  const isWindows = process.platform === 'win32';
   try {
     const whichCmd = isWindows ? 'where' : 'which';
     execSync(`${whichCmd} gh-upload-log`, { stdio: ['pipe', 'pipe', 'pipe'] });
@@ -484,7 +582,7 @@ function isGhUploadLogAvailable() {
 /**
  * Upload log file using gh-upload-log
  */
-async function uploadLog(logPath) {
+function uploadLog(logPath) {
   try {
     const result = execSync(`gh-upload-log "${logPath}" --public`, {
       encoding: 'utf8',
@@ -528,7 +626,7 @@ function canCreateIssue(owner, repo) {
 /**
  * Create an issue in the repository
  */
-async function createIssue(repoInfo, fullCommand, exitCode, logUrl) {
+function createIssue(repoInfo, fullCommand, exitCode, logUrl) {
   try {
     const title = `Command failed with exit code ${exitCode}: ${fullCommand.substring(0, 50)}${fullCommand.length > 50 ? '...' : ''}`;
 

@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - issue-*
   pull_request:
     types: [opened, synchronize, reopened]
   # Manual release support - consolidated here to work with npm trusted publishing
