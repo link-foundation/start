@@ -1,0 +1,629 @@
+
+> start-command@0.5.1 test
+> node --test test/
+
+TAP version 13
+# Subtest: parseArgs
+    # Subtest: basic command parsing
+        # Subtest: should parse simple command without options
+        ok 1 - should parse simple command without options
+          ---
+          duration_ms: 0.828567
+          ...
+        # Subtest: should parse command with -- separator
+        ok 2 - should parse command with -- separator
+          ---
+          duration_ms: 0.183004
+          ...
+        # Subtest: should parse empty command correctly
+        ok 3 - should parse empty command correctly
+          ---
+          duration_ms: 0.17431
+          ...
+        1..3
+    ok 1 - basic command parsing
+      ---
+      duration_ms: 1.824885
+      type: 'suite'
+      ...
+    # Subtest: isolation options
+        # Subtest: should parse --isolated with value
+        ok 1 - should parse --isolated with value
+          ---
+          duration_ms: 0.229803
+          ...
+        # Subtest: should parse -i shorthand
+        ok 2 - should parse -i shorthand
+          ---
+          duration_ms: 0.128882
+          ...
+        # Subtest: should parse --isolated=value format
+        ok 3 - should parse --isolated=value format
+          ---
+          duration_ms: 0.189964
+          ...
+        # Subtest: should normalize backend to lowercase
+        ok 4 - should normalize backend to lowercase
+          ---
+          duration_ms: 0.156974
+          ...
+        # Subtest: should throw error for missing backend argument
+        ok 5 - should throw error for missing backend argument
+          ---
+          duration_ms: 0.350913
+          ...
+        1..5
+    ok 2 - isolation options
+      ---
+      duration_ms: 1.399689
+      type: 'suite'
+      ...
+    # Subtest: attached and detached modes
+        # Subtest: should parse --attached flag
+        ok 1 - should parse --attached flag
+          ---
+          duration_ms: 0.19495
+          ...
+        # Subtest: should parse -a shorthand
+        ok 2 - should parse -a shorthand
+          ---
+          duration_ms: 0.991821
+          ...
+        # Subtest: should parse --detached flag
+        ok 3 - should parse --detached flag
+          ---
+          duration_ms: 0.149593
+          ...
+        # Subtest: should parse -d shorthand
+        ok 4 - should parse -d shorthand
+          ---
+          duration_ms: 0.170215
+          ...
+        # Subtest: should throw error when both --attached and --detached are set
+        ok 5 - should throw error when both --attached and --detached are set
+          ---
+          duration_ms: 0.145677
+          ...
+        # Subtest: should provide helpful error message for mode conflict
+        ok 6 - should provide helpful error message for mode conflict
+          ---
+          duration_ms: 0.169312
+          ...
+        1..6
+    ok 3 - attached and detached modes
+      ---
+      duration_ms: 2.058053
+      type: 'suite'
+      ...
+    # Subtest: session option
+        # Subtest: should parse --session with value
+        ok 1 - should parse --session with value
+          ---
+          duration_ms: 0.196014
+          ...
+        # Subtest: should parse -s shorthand
+        ok 2 - should parse -s shorthand
+          ---
+          duration_ms: 0.099939
+          ...
+        # Subtest: should parse --session=value format
+        ok 3 - should parse --session=value format
+          ---
+          duration_ms: 0.0871
+          ...
+        # Subtest: should throw error for session without isolation
+        ok 4 - should throw error for session without isolation
+          ---
+          duration_ms: 0.210716
+          ...
+        1..4
+    ok 4 - session option
+      ---
+      duration_ms: 0.749158
+      type: 'suite'
+      ...
+    # Subtest: docker image option
+        # Subtest: should parse --image with value
+        ok 1 - should parse --image with value
+          ---
+          duration_ms: 0.144005
+          ...
+        # Subtest: should parse --image=value format
+        ok 2 - should parse --image=value format
+          ---
+          duration_ms: 0.109014
+          ...
+        # Subtest: should throw error for docker without image
+        ok 3 - should throw error for docker without image
+          ---
+          duration_ms: 0.107601
+          ...
+        # Subtest: should throw error for image with non-docker backend
+        ok 4 - should throw error for image with non-docker backend
+          ---
+          duration_ms: 0.099318
+          ...
+        1..4
+    ok 5 - docker image option
+      ---
+      duration_ms: 0.584883
+      type: 'suite'
+      ...
+    # Subtest: command without separator
+        # Subtest: should parse command after options without separator
+        ok 1 - should parse command after options without separator
+          ---
+          duration_ms: 0.103725
+          ...
+        # Subtest: should handle mixed options and command
+        ok 2 - should handle mixed options and command
+          ---
+          duration_ms: 0.143755
+          ...
+        1..2
+    ok 6 - command without separator
+      ---
+      duration_ms: 0.386868
+      type: 'suite'
+      ...
+    # Subtest: backend validation
+        # Subtest: should accept valid backends
+        ok 1 - should accept valid backends
+          ---
+          duration_ms: 0.172518
+          ...
+        # Subtest: should throw error for invalid backend
+        ok 2 - should throw error for invalid backend
+          ---
+          duration_ms: 0.33492
+          ...
+        # Subtest: should list valid backends in error message
+        ok 3 - should list valid backends in error message
+          ---
+          duration_ms: 0.110785
+          ...
+        1..3
+    ok 7 - backend validation
+      ---
+      duration_ms: 0.723891
+      type: 'suite'
+      ...
+    1..7
+ok 1 - parseArgs
+  ---
+  duration_ms: 8.760009
+  type: 'suite'
+  ...
+# Subtest: validateOptions
+    # Subtest: should pass for valid options
+    ok 1 - should pass for valid options
+      ---
+      duration_ms: 0.166479
+      ...
+    # Subtest: should throw for attached and detached together
+    ok 2 - should throw for attached and detached together
+      ---
+      duration_ms: 0.079849
+      ...
+    # Subtest: should pass for docker with image
+    ok 3 - should pass for docker with image
+      ---
+      duration_ms: 0.041752
+      ...
+    1..3
+ok 2 - validateOptions
+  ---
+  duration_ms: 0.358666
+  type: 'suite'
+  ...
+# Subtest: generateSessionName
+    # Subtest: should generate unique session names
+    ok 1 - should generate unique session names
+      ---
+      duration_ms: 0.138046
+      ...
+    # Subtest: should use default prefix
+    ok 2 - should use default prefix
+      ---
+      duration_ms: 0.091026
+      ...
+    # Subtest: should use custom prefix
+    ok 3 - should use custom prefix
+      ---
+      duration_ms: 0.046179
+      ...
+    # Subtest: should contain timestamp-like portion
+    ok 4 - should contain timestamp-like portion
+      ---
+      duration_ms: 0.099698
+      ...
+    1..4
+ok 3 - generateSessionName
+  ---
+  duration_ms: 0.446116
+  type: 'suite'
+  ...
+# Subtest: hasIsolation
+    # Subtest: should return true when isolated is set
+    ok 1 - should return true when isolated is set
+      ---
+      duration_ms: 0.092257
+      ...
+    # Subtest: should return false when isolated is null
+    ok 2 - should return false when isolated is null
+      ---
+      duration_ms: 0.042924
+      ...
+    1..2
+ok 4 - hasIsolation
+  ---
+  duration_ms: 0.186599
+  type: 'suite'
+  ...
+# Subtest: getEffectiveMode
+    # Subtest: should return attached by default
+    ok 1 - should return attached by default
+      ---
+      duration_ms: 0.753715
+      ...
+    # Subtest: should return attached when explicitly set
+    ok 2 - should return attached when explicitly set
+      ---
+      duration_ms: 0.079459
+      ...
+    # Subtest: should return detached when set
+    ok 3 - should return detached when set
+      ---
+      duration_ms: 0.038688
+      ...
+    1..3
+ok 5 - getEffectiveMode
+  ---
+  duration_ms: 0.943138
+  type: 'suite'
+  ...
+# Subtest: VALID_BACKENDS
+    # Subtest: should include screen
+    ok 1 - should include screen
+      ---
+      duration_ms: 0.139238
+      ...
+    # Subtest: should include tmux
+    ok 2 - should include tmux
+      ---
+      duration_ms: 0.071155
+      ...
+    # Subtest: should include docker
+    ok 3 - should include docker
+      ---
+      duration_ms: 0.152979
+      ...
+    # Subtest: should include zellij
+    ok 4 - should include zellij
+      ---
+      duration_ms: 0.081331
+      ...
+    1..4
+ok 6 - VALID_BACKENDS
+  ---
+  duration_ms: 0.629249
+  type: 'suite'
+  ...
+#   hasTTY: false
+#   screen available: true
+#   tmux available: true
+#   docker available: false
+#   zellij available: false
+#   Skipping: screen is installed
+#   Skipping: tmux is installed
+#   Skipping: docker not installed
+# Subtest: Isolation Module
+    # Subtest: isCommandAvailable
+        # Subtest: should return true for common commands (echo)
+        ok 1 - should return true for common commands (echo)
+          ---
+          duration_ms: 5.533142
+          ...
+        # Subtest: should return true for node
+        ok 2 - should return true for node
+          ---
+          duration_ms: 3.836087
+          ...
+        # Subtest: should return false for non-existent command
+        ok 3 - should return false for non-existent command
+          ---
+          duration_ms: 2.778678
+          ...
+        # Subtest: should return false for empty command
+        ok 4 - should return false for empty command
+          ---
+          duration_ms: 2.857987
+          ...
+        1..4
+    ok 1 - isCommandAvailable
+      ---
+      duration_ms: 15.863183
+      type: 'suite'
+      ...
+    # Subtest: hasTTY
+        # Subtest: should return a boolean
+        ok 1 - should return a boolean
+          ---
+          duration_ms: 0.614308
+          ...
+        # Subtest: should return false when running in test environment (no TTY)
+        ok 2 - should return false when running in test environment (no TTY)
+          ---
+          duration_ms: 1.102005
+          ...
+        1..2
+    ok 2 - hasTTY
+      ---
+      duration_ms: 2.022148
+      type: 'suite'
+      ...
+    # Subtest: isolation backend checks
+        # Subtest: should check if screen is available
+        ok 1 - should check if screen is available
+          ---
+          duration_ms: 7.924582
+          ...
+        # Subtest: should check if tmux is available
+        ok 2 - should check if tmux is available
+          ---
+          duration_ms: 3.695458
+          ...
+        # Subtest: should check if docker is available
+        ok 3 - should check if docker is available
+          ---
+          duration_ms: 3.0948
+          ...
+        # Subtest: should check if zellij is available
+        ok 4 - should check if zellij is available
+          ---
+          duration_ms: 2.681192
+          ...
+        1..4
+    ok 3 - isolation backend checks
+      ---
+      duration_ms: 17.862079
+      type: 'suite'
+      ...
+    1..3
+ok 7 - Isolation Module
+  ---
+  duration_ms: 36.664261
+  type: 'suite'
+  ...
+# Subtest: Isolation Runner Error Handling
+    # Subtest: runInScreen
+        # Subtest: should return informative error if screen is not installed
+        ok 1 - should return informative error if screen is not installed
+          ---
+          duration_ms: 2.341976
+          ...
+        1..1
+    ok 1 - runInScreen
+      ---
+      duration_ms: 2.453775
+      type: 'suite'
+      ...
+    # Subtest: runInTmux
+        # Subtest: should return informative error if tmux is not installed
+        ok 1 - should return informative error if tmux is not installed
+          ---
+          duration_ms: 2.463739
+          ...
+        1..1
+    ok 2 - runInTmux
+      ---
+      duration_ms: 2.581444
+      type: 'suite'
+      ...
+    # Subtest: runInDocker
+        # Subtest: should return informative error if docker is not installed
+        ok 1 - should return informative error if docker is not installed
+          ---
+          duration_ms: 5.262728
+          ...
+        # Subtest: should require image option
+        ok 2 - should require image option
+          ---
+          duration_ms: 2.580212
+          ...
+        1..2
+    ok 3 - runInDocker
+      ---
+      duration_ms: 8.078121
+      type: 'suite'
+      ...
+    # Subtest: runInZellij
+        # Subtest: should return informative error if zellij is not installed
+        ok 1 - should return informative error if zellij is not installed
+          ---
+          duration_ms: 5.173495
+          ...
+        1..1
+    ok 4 - runInZellij
+      ---
+      duration_ms: 5.280023
+      type: 'suite'
+      ...
+    1..4
+ok 8 - Isolation Runner Error Handling
+  ---
+  duration_ms: 18.735754
+  type: 'suite'
+  ...
+# Subtest: Isolation Runner with Available Backends
+    # Subtest: runInScreen (if available)
+        # Subtest: should run command in detached screen session
+        ok 1 - should run command in detached screen session
+          ---
+          duration_ms: 46.473317
+          ...
+# hello
+#   Captured output: "hello"
+        # Subtest: should run command in attached mode and capture output (issue \#15)
+        not ok 2 - should run command in attached mode and capture output (issue \#15)
+          ---
+          duration_ms: 155.821358
+          location: '/tmp/gh-issue-solver-1766411320790/test/isolation.test.js:216:5'
+          failureType: 'testCodeFailure'
+          error: 'Output should contain the expected message'
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected: true
+          actual: false
+          operator: '=='
+          stack: |-
+            TestContext.<anonymous> (/tmp/gh-issue-solver-1766411320790/test/isolation.test.js:234:16)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+# line1
+# line2
+# line3
+#   Captured multi-line output: "line1\\r\\nline2\\r\\nline3"
+        # Subtest: should handle multi-line output in attached mode
+        ok 3 - should handle multi-line output in attached mode
+          ---
+          duration_ms: 154.520977
+          ...
+        1..3
+    not ok 1 - runInScreen (if available)
+      ---
+      duration_ms: 357.305492
+      type: 'suite'
+      location: '/tmp/gh-issue-solver-1766411320790/test/isolation.test.js:189:3'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        async Promise.all (index 0)
+      ...
+    # Subtest: runInTmux (if available)
+        # Subtest: should run command in detached tmux session
+        ok 1 - should run command in detached tmux session
+          ---
+          duration_ms: 35.87981
+          ...
+        1..1
+    ok 2 - runInTmux (if available)
+      ---
+      duration_ms: 36.064717
+      type: 'suite'
+      ...
+    # Subtest: runIsolated dispatcher
+        # Subtest: should dispatch to correct backend
+        ok 1 - should dispatch to correct backend
+          ---
+          duration_ms: 0.505324
+          ...
+        # Subtest: should pass options to backend
+        ok 2 - should pass options to backend
+          ---
+          duration_ms: 4.480128
+          ...
+        1..2
+    ok 3 - runIsolated dispatcher
+      ---
+      duration_ms: 5.154096
+      type: 'suite'
+      ...
+    1..3
+not ok 9 - Isolation Runner with Available Backends
+  ---
+  duration_ms: 399.000423
+  type: 'suite'
+  location: '/tmp/gh-issue-solver-1766411320790/test/isolation.test.js:178:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# === Substitution Engine Unit Tests ===
+# ✓ Loaded 48 substitution rules
+# ✓ Test: loadDefaultSubstitutions() returns array of rules
+# ✓ Test: Rules have correct structure (pattern, replacement, regex)
+# === Pattern Matching Tests ===
+# ✓ PASS: Basic npm install
+#   Input:  "install gh-upload-log npm package"
+#   Output: "npm install gh-upload-log"
+# ✓ PASS: npm install with version
+#   Input:  "install 0.0.1 version of gh-upload-log npm package"
+#   Output: "npm install gh-upload-log@0.0.1"
+# ✓ PASS: Global npm install
+#   Input:  "install lodash npm package globally"
+#   Output: "npm install -g lodash"
+# ✓ PASS: Global npm install with version
+#   Input:  "install 4.17.21 version of lodash npm package globally"
+#   Output: "npm install -g lodash@4.17.21"
+# ✓ PASS: npm uninstall
+#   Input:  "uninstall lodash npm package"
+#   Output: "npm uninstall lodash"
+# ✓ PASS: Git clone with URL
+#   Input:  "clone https://github.com/user/repo repository"
+#   Output: "git clone https://github.com/user/repo"
+# ✓ PASS: Git clone with SSH URL
+#   Input:  "clone git@github.com:user/repo.git repository"
+#   Output: "git clone git@github.com:user/repo.git"
+# ✓ PASS: Git checkout branch
+#   Input:  "checkout main branch"
+#   Output: "git checkout main"
+# ✓ PASS: Git create branch
+#   Input:  "create feature-x branch"
+#   Output: "git checkout -b feature-x"
+# ✓ PASS: List files
+#   Input:  "list files"
+#   Output: "ls -la"
+# ✓ PASS: Show working directory
+#   Input:  "show current directory"
+#   Output: "pwd"
+# ✓ PASS: Create directory
+#   Input:  "create my-project directory"
+#   Output: "mkdir -p my-project"
+# ✓ PASS: pip install
+#   Input:  "install requests python package"
+#   Output: "pip install requests"
+# ✓ PASS: Non-matching command (pass through)
+#   Input:  "echo hello world"
+#   Output: "echo hello world"
+# ✓ PASS: Regular npm command (pass through)
+#   Input:  "npm test"
+#   Output: "npm test"
+# === Pattern Specificity Tests ===
+# ✓ Test: Pattern specificity works correctly
+#   Input:  "install 1.0.0 version of express npm package globally"
+#   Output: "npm install -g express@1.0.0"
+# === Variable Extraction Tests ===
+# ✓ Test: Variable extraction and substitution works correctly
+#   Pattern matched: "install $packageName npm package"
+#   Variables in pattern: [packageName]
+#   Result command: "npm install my-package"
+# === processCommand Integration Tests ===
+# ✓ Test: processCommand applies substitutions
+#   Input:  "list files"
+#   Output: "ls -la"
+#   Matched: true
+# ✓ Test: processCommand passes through non-matching commands
+#   Input:  "echo test"
+#   Output: "echo test"
+#   Matched: false
+# === Test Summary ===
+# Pattern Matching: 15/15 tests passed
+# Total Tests: 22/22 passed
+# ✓ All tests passed!
+# Subtest: /tmp/gh-issue-solver-1766411320790/test/substitution.test.js
+ok 3 - /tmp/gh-issue-solver-1766411320790/test/substitution.test.js
+  ---
+  duration_ms: 36.184134
+  ...
+1..10
+# tests 65
+# suites 26
+# pass 64
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 513.297283

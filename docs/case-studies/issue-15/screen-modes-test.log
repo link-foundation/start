@@ -1,0 +1,26 @@
+=== Testing Screen Modes ===
+
+1. Terminal check:
+   process.stdin.isTTY: undefined
+   process.stdout.isTTY: undefined
+   TERM: screen
+
+2. Testing detached mode (screen -dmS):
+   Output: hello
+   Status: SUCCESS
+
+3. Testing attached mode with spawn (current implementation):
+Must be connected to a terminal.
+   Exit code: 1
+   Status: FAILED
+
+4. Testing with script command to allocate PTY:
+   Output: hello
+   Exit code: 0
+   Status: SUCCESS
+
+5. Testing detached mode with log capture:
+   Log content: hello from screen
+   Status: SUCCESS
+
+=== Tests Complete ===

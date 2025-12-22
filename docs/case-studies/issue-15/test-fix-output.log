@@ -1,0 +1,13 @@
+[2025-12-22 13:54:57.827] Starting: echo hello
+
+[Isolation] Environment: screen, Mode: attached
+
+[DEBUG] No TTY available, using detached mode with log capture
+[DEBUG] Running screen with log capture: screen -dmS screen-1766411697833-8svf4u -L -Logfile /tmp/screen-output-screen-1766411697833-8svf4u.log /bin/bash -c echo hello
+hello
+
+Screen session "screen-1766411697833-8svf4u" exited with code 0
+
+[2025-12-22 13:54:57.977] Finished
+Exit code: 0
+Log saved: /tmp/start-command-screen-1766411697827-g8qkhy.log

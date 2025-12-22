@@ -1,0 +1,22 @@
+=== Testing Attached Mode Approaches ===
+
+Approach 1: script -q -c "screen ..." /dev/null
+   stdout: ")0[?1049h[4l[?1h=[0m(B[1;24r[H[J[H[Jhello\n[?1l>[24;1H\n[?1049l[screen is terminating]"
+   stderr: ""
+   exit: 0
+
+Approach 2: detached + log capture
+   Output: "hello from approach2"
+   Status: SUCCESS
+
+Approach 3: Run through script, inherit all stdio
+)0[?1049h[4l[?1h=[0m(B[1;24r[H[J[H[Jhello_approach3
+[?1l>[24;1H
+[?1049l[screen is terminating]
+   exit: 0
+
+Approach 4: Just spawn the shell command directly (fallback, no screen)
+   stdout: "hello_direct"
+   exit: 0
+
+=== Approaches Tested ===

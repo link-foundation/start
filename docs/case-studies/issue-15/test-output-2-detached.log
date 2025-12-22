@@ -1,0 +1,12 @@
+[2025-12-22 13:50:22.155] Starting: echo hello
+
+[Isolation] Environment: screen, Mode: detached
+
+[DEBUG] Running: screen -dmS screen-1766411422163-3x3pw3 /bin/bash -c echo hello
+
+Command started in detached screen session: screen-1766411422163-3x3pw3
+Reattach with: screen -r screen-1766411422163-3x3pw3
+
+[2025-12-22 13:50:22.184] Finished
+Exit code: 0
+Log saved: /tmp/start-command-screen-1766411422155-ef18k0.log
