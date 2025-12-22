@@ -1,5 +1,11 @@
 # start-command
 
+## 0.5.1
+
+### Patch Changes
+
+- Test patch release
+
 ## 0.5.0
 
 ### Minor Changes
