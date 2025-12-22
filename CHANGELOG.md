@@ -1,5 +1,11 @@
 # start-command
 
+## 0.4.1
+
+### Patch Changes
+
+- 73635f9: Make it bun first - update shebangs and installation docs
+
 ## 0.4.0
 
 ### Minor Changes
