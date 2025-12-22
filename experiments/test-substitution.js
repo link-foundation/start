@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Test script for the substitution engine
  * Tests pattern matching with various inputs

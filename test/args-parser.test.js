@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Unit tests for the argument parser
  * Tests wrapper options parsing, validation, and command extraction

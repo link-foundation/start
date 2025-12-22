@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Validate changeset for CI - ensures exactly one valid changeset exists

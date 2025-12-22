@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Unit tests for the substitution engine
  * Tests pattern matching, variable substitution, and rule precedence
