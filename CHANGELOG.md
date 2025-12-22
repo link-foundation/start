@@ -1,5 +1,15 @@
 # start-command
 
+## 0.5.0
+
+### Minor Changes
+
+- 95d8760: Unify output experience for isolation mode
+  - Change terminology from "Backend" to "Environment" in isolation output
+  - Add unified logging with timestamps for isolation modes (screen, tmux, docker, zellij)
+  - Save log files for all execution modes with consistent format
+  - Display start/end timestamps, exit code, and log file path uniformly across all modes
+
 ## 0.4.1
 
 ### Patch Changes
