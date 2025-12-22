@@ -1,0 +1,12 @@
+[2025-12-22 13:50:12.706] Starting: echo hello
+
+[Isolation] Environment: screen, Mode: attached
+
+[DEBUG] Running: screen -S screen-1766411412713-qm2gr7 /bin/bash -c echo hello
+Must be connected to a terminal.
+
+Screen session "screen-1766411412713-qm2gr7" exited with code 1
+
+[2025-12-22 13:50:12.735] Finished
+Exit code: 1
+Log saved: /tmp/start-command-screen-1766411412707-mc52ja.log

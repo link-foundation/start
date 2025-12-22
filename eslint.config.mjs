@@ -105,9 +105,18 @@ export default [
       '**/*.test.js',
       'experiments/**/*.js',
     ],
+    languageOptions: {
+      globals: {
+        setTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearTimeout: 'readonly',
+        clearInterval: 'readonly',
+      },
+    },
     rules: {
       'require-await': 'off', // Async functions without await are common in tests
       'no-unused-vars': 'warn', // Relax for experiments
+      'no-empty': 'off', // Empty catch blocks are common in experiments
     },
   },
   {

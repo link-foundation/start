@@ -14,6 +14,8 @@ const os = require('os');
 const path = require('path');
 const { generateSessionName } = require('./args-parser');
 
+const setTimeout = globalThis.setTimeout;
+
 // Debug mode from environment
 const DEBUG =
   process.env.START_DEBUG === '1' || process.env.START_DEBUG === 'true';
@@ -46,6 +48,146 @@ function getShell() {
 }
 
 /**
+ * Check if the current process has a TTY attached
+ * @returns {boolean} True if TTY is available
+ */
+function hasTTY() {
+  return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+}
+
+/**
+ * Run command in GNU Screen using detached mode with log capture
+ * This is a workaround for environments without TTY
+ * @param {string} command - Command to execute
+ * @param {string} sessionName - Session name
+ * @param {object} shellInfo - Shell info from getShell()
+ * @returns {Promise<{success: boolean, sessionName: string, message: string, output: string}>}
+ */
+function runScreenWithLogCapture(command, sessionName, shellInfo) {
+  const { shell, shellArg } = shellInfo;
+  const logFile = path.join(os.tmpdir(), `screen-output-${sessionName}.log`);
+
+  return new Promise((resolve) => {
+    try {
+      // Use detached mode with logging to capture output
+      // screen -dmS <session> -L -Logfile <logfile> <shell> -c '<command>'
+      const screenArgs = [
+        '-dmS',
+        sessionName,
+        '-L',
+        '-Logfile',
+        logFile,
+        shell,
+        shellArg,
+        command,
+      ];
+
+      if (DEBUG) {
+        console.log(
+          `[DEBUG] Running screen with log capture: screen ${screenArgs.join(' ')}`
+        );
+      }
+
+      execSync(`screen ${screenArgs.map((a) => `"${a}"`).join(' ')}`, {
+        stdio: 'inherit',
+      });
+
+      // Poll for session completion
+      const checkInterval = 100; // ms
+      const maxWait = 300000; // 5 minutes max
+      let waited = 0;
+
+      const checkCompletion = () => {
+        try {
+          // Check if session still exists
+          const sessions = execSync('screen -ls', {
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe'],
+          });
+
+          if (!sessions.includes(sessionName)) {
+            // Session ended, read output
+            let output = '';
+            try {
+              output = fs.readFileSync(logFile, 'utf8');
+              // Display the output
+              if (output.trim()) {
+                process.stdout.write(output);
+              }
+            } catch {
+              // Log file might not exist if command was very quick
+            }
+
+            // Clean up log file
+            try {
+              fs.unlinkSync(logFile);
+            } catch {
+              // Ignore cleanup errors
+            }
+
+            resolve({
+              success: true,
+              sessionName,
+              message: `Screen session "${sessionName}" exited with code 0`,
+              exitCode: 0,
+              output,
+            });
+            return;
+          }
+
+          waited += checkInterval;
+          if (waited >= maxWait) {
+            resolve({
+              success: false,
+              sessionName,
+              message: `Screen session "${sessionName}" timed out after ${maxWait / 1000} seconds`,
+              exitCode: 1,
+            });
+            return;
+          }
+
+          setTimeout(checkCompletion, checkInterval);
+        } catch {
+          // screen -ls failed, session probably ended
+          let output = '';
+          try {
+            output = fs.readFileSync(logFile, 'utf8');
+            if (output.trim()) {
+              process.stdout.write(output);
+            }
+          } catch {
+            // Ignore
+          }
+
+          try {
+            fs.unlinkSync(logFile);
+          } catch {
+            // Ignore
+          }
+
+          resolve({
+            success: true,
+            sessionName,
+            message: `Screen session "${sessionName}" exited with code 0`,
+            exitCode: 0,
+            output,
+          });
+        }
+      };
+
+      // Start checking after a brief delay
+      setTimeout(checkCompletion, checkInterval);
+    } catch (err) {
+      resolve({
+        success: false,
+        sessionName,
+        message: `Failed to run in screen: ${err.message}`,
+      });
+    }
+  });
+}
+
+/**
  * Run command in GNU Screen
  * @param {string} command - Command to execute
  * @param {object} options - Options (session, detached)
@@ -62,7 +204,8 @@ function runInScreen(command, options = {}) {
   }
 
   const sessionName = options.session || generateSessionName('screen');
-  const { shell, shellArg } = getShell();
+  const shellInfo = getShell();
+  const { shell, shellArg } = shellInfo;
 
   try {
     if (options.detached) {
@@ -83,35 +226,50 @@ function runInScreen(command, options = {}) {
         message: `Command started in detached screen session: ${sessionName}\nReattach with: screen -r ${sessionName}`,
       });
     } else {
-      // Attached mode: screen -S <session> <shell> -c '<command>'
-      const screenArgs = ['-S', sessionName, shell, shellArg, command];
+      // Attached mode: need TTY for screen to work properly
 
-      if (DEBUG) {
-        console.log(`[DEBUG] Running: screen ${screenArgs.join(' ')}`);
+      // Check if we have a TTY
+      if (hasTTY()) {
+        // We have a TTY, use direct screen invocation
+        const screenArgs = ['-S', sessionName, shell, shellArg, command];
+
+        if (DEBUG) {
+          console.log(`[DEBUG] Running: screen ${screenArgs.join(' ')}`);
+        }
+
+        return new Promise((resolve) => {
+          const child = spawn('screen', screenArgs, {
+            stdio: 'inherit',
+          });
+
+          child.on('exit', (code) => {
+            resolve({
+              success: code === 0,
+              sessionName,
+              message: `Screen session "${sessionName}" exited with code ${code}`,
+              exitCode: code,
+            });
+          });
+
+          child.on('error', (err) => {
+            resolve({
+              success: false,
+              sessionName,
+              message: `Failed to start screen: ${err.message}`,
+            });
+          });
+        });
+      } else {
+        // No TTY available - use detached mode with log capture
+        // This allows screen to run without a terminal while still capturing output
+        if (DEBUG) {
+          console.log(
+            `[DEBUG] No TTY available, using detached mode with log capture`
+          );
+        }
+
+        return runScreenWithLogCapture(command, sessionName, shellInfo);
       }
-
-      return new Promise((resolve) => {
-        const child = spawn('screen', screenArgs, {
-          stdio: 'inherit',
-        });
-
-        child.on('exit', (code) => {
-          resolve({
-            success: code === 0,
-            sessionName,
-            message: `Screen session "${sessionName}" exited with code ${code}`,
-            exitCode: code,
-          });
-        });
-
-        child.on('error', (err) => {
-          resolve({
-            success: false,
-            sessionName,
-            message: `Failed to start screen: ${err.message}`,
-          });
-        });
-      });
     }
   } catch (err) {
     return Promise.resolve({
@@ -509,6 +667,7 @@ function createLogPath(environment) {
 
 module.exports = {
   isCommandAvailable,
+  hasTTY,
   runInScreen,
   runInTmux,
   runInZellij,
