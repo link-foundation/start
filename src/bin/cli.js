@@ -62,7 +62,7 @@ function printUsage() {
   console.log('');
   console.log('Options:');
   console.log(
-    '  --isolated, -i <env>      Run in isolated environment (screen, tmux, docker, zellij)'
+    '  --isolated, -i <environment>      Run in isolated environment (screen, tmux, docker, zellij)'
   );
   console.log('  --attached, -a            Run in attached mode (foreground)');
   console.log('  --detached, -d            Run in detached mode (background)');
