@@ -7,7 +7,13 @@
 
 const { describe, it } = require('node:test');
 const assert = require('assert');
-const { isCommandAvailable, hasTTY } = require('../src/lib/isolation');
+const {
+  isCommandAvailable,
+  hasTTY,
+  getScreenVersion,
+  supportsLogfileOption,
+  resetScreenVersionCache,
+} = require('../src/lib/isolation');
 
 describe('Isolation Module', () => {
   describe('isCommandAvailable', () => {
@@ -75,6 +81,92 @@ describe('Isolation Module', () => {
       const result = isCommandAvailable('zellij');
       console.log(`  zellij available: ${result}`);
       assert.ok(typeof result === 'boolean');
+    });
+  });
+
+  describe('getScreenVersion', () => {
+    it('should return version object or null', () => {
+      // Reset cache before testing
+      resetScreenVersionCache();
+      const version = getScreenVersion();
+
+      if (isCommandAvailable('screen')) {
+        // If screen is installed, we should get a version object
+        assert.ok(
+          version !== null,
+          'Should return version object when screen is installed'
+        );
+        assert.ok(typeof version.major === 'number', 'major should be number');
+        assert.ok(typeof version.minor === 'number', 'minor should be number');
+        assert.ok(typeof version.patch === 'number', 'patch should be number');
+        console.log(
+          `  Detected screen version: ${version.major}.${version.minor}.${version.patch}`
+        );
+      } else {
+        // If screen is not installed, we should get null
+        assert.strictEqual(
+          version,
+          null,
+          'Should return null when screen is not installed'
+        );
+        console.log('  screen not installed, version is null');
+      }
+    });
+
+    it('should cache the version result', () => {
+      // Reset cache first
+      resetScreenVersionCache();
+
+      // Call twice
+      const version1 = getScreenVersion();
+      const version2 = getScreenVersion();
+
+      // Results should be identical (same object reference if cached)
+      assert.strictEqual(
+        version1,
+        version2,
+        'Cached version should return same object'
+      );
+    });
+  });
+
+  describe('supportsLogfileOption', () => {
+    it('should return boolean', () => {
+      // Reset cache before testing
+      resetScreenVersionCache();
+      const result = supportsLogfileOption();
+      assert.ok(typeof result === 'boolean', 'Should return a boolean');
+      console.log(`  supportsLogfileOption: ${result}`);
+    });
+
+    it('should return true for screen >= 4.5.1', () => {
+      // This tests the logic by checking the current system
+      resetScreenVersionCache();
+      const version = getScreenVersion();
+
+      if (version) {
+        const expected =
+          version.major > 4 ||
+          (version.major === 4 && version.minor > 5) ||
+          (version.major === 4 && version.minor === 5 && version.patch >= 1);
+        const result = supportsLogfileOption();
+        assert.strictEqual(
+          result,
+          expected,
+          `Version ${version.major}.${version.minor}.${version.patch} should ${expected ? 'support' : 'not support'} -Logfile`
+        );
+        console.log(
+          `  Version ${version.major}.${version.minor}.${version.patch}: -Logfile supported = ${result}`
+        );
+      } else {
+        // If no version detected, should return false (fallback to safe method)
+        const result = supportsLogfileOption();
+        assert.strictEqual(
+          result,
+          false,
+          'Should return false when version cannot be detected'
+        );
+      }
     });
   });
 });

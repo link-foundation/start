@@ -20,6 +20,83 @@ const setTimeout = globalThis.setTimeout;
 const DEBUG =
   process.env.START_DEBUG === '1' || process.env.START_DEBUG === 'true';
 
+// Cache for screen version detection
+let cachedScreenVersion = null;
+let screenVersionChecked = false;
+
+/**
+ * Get the installed screen version
+ * @returns {{major: number, minor: number, patch: number}|null} Version object or null if detection fails
+ */
+function getScreenVersion() {
+  if (screenVersionChecked) {
+    return cachedScreenVersion;
+  }
+
+  screenVersionChecked = true;
+
+  try {
+    const output = execSync('screen --version', {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    // Match patterns like "4.09.01", "4.00.03", "4.5.1"
+    const match = output.match(/(\d+)\.(\d+)\.(\d+)/);
+    if (match) {
+      cachedScreenVersion = {
+        major: parseInt(match[1], 10),
+        minor: parseInt(match[2], 10),
+        patch: parseInt(match[3], 10),
+      };
+
+      if (DEBUG) {
+        console.log(
+          `[DEBUG] Detected screen version: ${cachedScreenVersion.major}.${cachedScreenVersion.minor}.${cachedScreenVersion.patch}`
+        );
+      }
+
+      return cachedScreenVersion;
+    }
+  } catch {
+    if (DEBUG) {
+      console.log('[DEBUG] Could not detect screen version');
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check if screen supports the -Logfile option
+ * The -Logfile option was introduced in GNU Screen 4.5.1
+ * @returns {boolean} True if -Logfile is supported
+ */
+function supportsLogfileOption() {
+  const version = getScreenVersion();
+  if (!version) {
+    // If we can't detect version, assume older version and use fallback
+    return false;
+  }
+
+  // -Logfile was added in 4.5.1
+  // Compare: version >= 4.5.1
+  if (version.major > 4) {
+    return true;
+  }
+  if (version.major < 4) {
+    return false;
+  }
+  // major === 4
+  if (version.minor > 5) {
+    return true;
+  }
+  if (version.minor < 5) {
+    return false;
+  }
+  // minor === 5
+  return version.patch >= 1;
+}
+
 /**
  * Check if a command is available on the system
  * @param {string} command - Command to check
@@ -58,6 +135,11 @@ function hasTTY() {
 /**
  * Run command in GNU Screen using detached mode with log capture
  * This is a workaround for environments without TTY
+ *
+ * Supports two methods based on screen version:
+ * - screen >= 4.5.1: Uses -L -Logfile option for native log capture
+ * - screen < 4.5.1: Uses tee command within the wrapped command for output capture
+ *
  * @param {string} command - Command to execute
  * @param {string} sessionName - Session name
  * @param {object} shellInfo - Shell info from getShell()
@@ -67,25 +149,45 @@ function runScreenWithLogCapture(command, sessionName, shellInfo) {
   const { shell, shellArg } = shellInfo;
   const logFile = path.join(os.tmpdir(), `screen-output-${sessionName}.log`);
 
+  // Check if screen supports -Logfile option (added in 4.5.1)
+  const useNativeLogging = supportsLogfileOption();
+
   return new Promise((resolve) => {
     try {
-      // Use detached mode with logging to capture output
-      // screen -dmS <session> -L -Logfile <logfile> <shell> -c '<command>'
-      const screenArgs = [
-        '-dmS',
-        sessionName,
-        '-L',
-        '-Logfile',
-        logFile,
-        shell,
-        shellArg,
-        command,
-      ];
+      let screenArgs;
+      let effectiveCommand = command;
 
-      if (DEBUG) {
-        console.log(
-          `[DEBUG] Running screen with log capture: screen ${screenArgs.join(' ')}`
-        );
+      if (useNativeLogging) {
+        // Modern screen (>= 4.5.1): Use -L -Logfile option for native log capture
+        // screen -dmS <session> -L -Logfile <logfile> <shell> -c '<command>'
+        screenArgs = [
+          '-dmS',
+          sessionName,
+          '-L',
+          '-Logfile',
+          logFile,
+          shell,
+          shellArg,
+          command,
+        ];
+
+        if (DEBUG) {
+          console.log(
+            `[DEBUG] Running screen with native log capture (-Logfile): screen ${screenArgs.join(' ')}`
+          );
+        }
+      } else {
+        // Older screen (< 4.5.1, e.g., macOS bundled 4.0.3): Use tee fallback
+        // Wrap the command to capture output using tee
+        // The parentheses ensure proper grouping of the command and its stderr
+        effectiveCommand = `(${command}) 2>&1 | tee "${logFile}"`;
+        screenArgs = ['-dmS', sessionName, shell, shellArg, effectiveCommand];
+
+        if (DEBUG) {
+          console.log(
+            `[DEBUG] Running screen with tee fallback (older screen version): screen ${screenArgs.join(' ')}`
+          );
+        }
       }
 
       execSync(`screen ${screenArgs.map((a) => `"${a}"`).join(' ')}`, {
@@ -665,6 +767,14 @@ function createLogPath(environment) {
   return path.join(logDir, logFilename);
 }
 
+/**
+ * Reset screen version cache (useful for testing)
+ */
+function resetScreenVersionCache() {
+  cachedScreenVersion = null;
+  screenVersionChecked = false;
+}
+
 module.exports = {
   isCommandAvailable,
   hasTTY,
@@ -681,4 +791,8 @@ module.exports = {
   writeLogFile,
   getLogDir,
   createLogPath,
+  // Export screen version utilities for testing and debugging
+  getScreenVersion,
+  supportsLogfileOption,
+  resetScreenVersionCache,
 };
