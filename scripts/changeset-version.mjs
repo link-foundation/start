@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Custom changeset version script that ensures package-lock.json is synchronized

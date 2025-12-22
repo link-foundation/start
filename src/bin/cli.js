@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 const { spawn, execSync } = require('child_process');
 const process = require('process');

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Unit tests for the isolation module
  * Tests command availability checking and session name generation

@@ -4,6 +4,14 @@ Gamification of coding - execute any command with automatic logging and ability 
 
 ## Installation
 
+We recommend using [Bun](https://bun.sh) for the best performance:
+
+```bash
+bun install -g start-command
+```
+
+Or using npm:
+
 ```bash
 npm install -g start-command
 ```
