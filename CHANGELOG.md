@@ -1,5 +1,11 @@
 # start-command
 
+## 0.7.0
+
+### Minor Changes
+
+- 9e24fb5: Add --version flag to display comprehensive version and system information. Users can now run `$ --version` or `$ -v` to see the version of start-command, system details, and versions of isolation tools (screen, tmux, docker).
+
 ## 0.6.0
 
 ### Minor Changes
