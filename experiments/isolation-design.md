@@ -10,11 +10,10 @@ This document outlines the design for adding process isolation support to start-
 
 1. **screen** - GNU Screen, classic session manager
 2. **tmux** - Modern terminal multiplexer
-3. **zellij** - Modern, user-friendly multiplexer
 
 ### Container Isolation
 
-4. **docker** - Docker containers
+3. **docker** - Docker containers
 
 ## Command Syntax
 
@@ -31,7 +30,7 @@ $ [wrapper-options] command [command-options]
 ### Wrapper Options
 
 - `--isolated <backend>` or `-i <backend>`: Run command in isolated environment
-  - Backends: `screen`, `tmux`, `docker`, `zellij`
+  - Backends: `screen`, `tmux`, `docker`
 - `--attached` or `-a`: Run in attached mode (foreground)
 - `--detached` or `-d`: Run in detached mode (background)
 - `--session <name>` or `-s <name>`: Name for the session (optional)
@@ -56,7 +55,7 @@ $ -i tmux -d npm start
 
 ### Attached Mode (--attached)
 
-- Default for terminal multiplexers (screen, tmux, zellij)
+- Default for terminal multiplexers (screen, tmux)
 - Command runs in foreground
 - User can interact with the terminal
 - For docker: runs with -it flags
@@ -101,16 +100,6 @@ tmux new-session -s <session> '<command>'
 
 # Detached
 tmux new-session -d -s <session> '<command>'
-```
-
-#### Zellij
-
-```bash
-# Attached
-zellij run -- <command>
-
-# Detached (via layout file or action)
-zellij -s <session> action new-pane -- <command>
 ```
 
 #### Docker

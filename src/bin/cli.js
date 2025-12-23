@@ -62,7 +62,7 @@ function printUsage() {
   console.log('');
   console.log('Options:');
   console.log(
-    '  --isolated, -i <environment>      Run in isolated environment (screen, tmux, docker, zellij)'
+    '  --isolated, -i <environment>      Run in isolated environment (screen, tmux, docker)'
   );
   console.log('  --attached, -a            Run in attached mode (foreground)');
   console.log('  --detached, -d            Run in detached mode (background)');
@@ -85,7 +85,7 @@ function printUsage() {
     '  - Auto-reports failures for NPM packages (when gh is available)'
   );
   console.log('  - Natural language command aliases (via substitutions.lino)');
-  console.log('  - Process isolation via screen, tmux, zellij, or docker');
+  console.log('  - Process isolation via screen, tmux, or docker');
   console.log('');
   console.log('Alias examples:');
   console.log('  $ install lodash npm package           -> npm install lodash');
