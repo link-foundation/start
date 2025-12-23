@@ -7,7 +7,7 @@
  * - docker: Docker containers
  */
 
-const { execSync, spawn } = require('child_process');
+const { execSync, spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -189,9 +189,17 @@ function runScreenWithLogCapture(command, sessionName, shellInfo) {
         }
       }
 
-      execSync(`screen ${screenArgs.map((a) => `"${a}"`).join(' ')}`, {
+      // Use spawnSync with array arguments to avoid shell quoting issues
+      // This is critical for commands containing quotes (e.g., echo "hello")
+      // Using execSync with a constructed string would break on nested quotes
+      // See issue #25 for details
+      const result = spawnSync('screen', screenArgs, {
         stdio: 'inherit',
       });
+
+      if (result.error) {
+        throw result.error;
+      }
 
       // Poll for session completion
       const checkInterval = 100; // ms
@@ -317,9 +325,16 @@ function runInScreen(command, options = {}) {
         console.log(`[DEBUG] Running: screen ${screenArgs.join(' ')}`);
       }
 
-      execSync(`screen ${screenArgs.map((a) => `"${a}"`).join(' ')}`, {
+      // Use spawnSync with array arguments to avoid shell quoting issues
+      // This is critical for commands containing quotes (e.g., echo "hello")
+      // See issue #25 for details
+      const result = spawnSync('screen', screenArgs, {
         stdio: 'inherit',
       });
+
+      if (result.error) {
+        throw result.error;
+      }
 
       return Promise.resolve({
         success: true,
