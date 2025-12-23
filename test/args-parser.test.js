@@ -382,8 +382,4 @@ describe('VALID_BACKENDS', () => {
   it('should include docker', () => {
     assert.ok(VALID_BACKENDS.includes('docker'));
   });
-
-  it('should include zellij', () => {
-    assert.ok(VALID_BACKENDS.includes('zellij'));
-  });
 });

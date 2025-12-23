@@ -141,18 +141,17 @@ $ -i tmux -s my-session -d npm start
 | -------- | -------------------------------------- | ---------------------------------------------------------- |
 | `screen` | GNU Screen terminal multiplexer        | `apt install screen` / `brew install screen`               |
 | `tmux`   | Modern terminal multiplexer            | `apt install tmux` / `brew install tmux`                   |
-| `zellij` | Modern terminal workspace              | `cargo install zellij` / `brew install zellij`             |
 | `docker` | Container isolation (requires --image) | [Docker Installation](https://docs.docker.com/get-docker/) |
 
 #### Isolation Options
 
-| Option           | Description                                      |
-| ---------------- | ------------------------------------------------ |
-| `--isolated, -i` | Isolation backend (screen, tmux, docker, zellij) |
-| `--attached, -a` | Run in attached/foreground mode (default)        |
-| `--detached, -d` | Run in detached/background mode                  |
-| `--session, -s`  | Custom session/container name                    |
-| `--image`        | Docker image (required for docker isolation)     |
+| Option           | Description                                  |
+| ---------------- | -------------------------------------------- |
+| `--isolated, -i` | Isolation backend (screen, tmux, docker)     |
+| `--attached, -a` | Run in attached/foreground mode (default)    |
+| `--detached, -d` | Run in detached/background mode              |
+| `--session, -s`  | Custom session/container name                |
+| `--image`        | Docker image (required for docker isolation) |
 
 **Note:** Using both `--attached` and `--detached` together will result in an error - you must choose one mode.
 

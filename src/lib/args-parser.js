@@ -6,7 +6,7 @@
  * 2. $ [wrapper-options] command [command-options]
  *
  * Wrapper Options:
- * --isolated, -i <backend>  Run in isolated environment (screen, tmux, docker, zellij)
+ * --isolated, -i <backend>  Run in isolated environment (screen, tmux, docker)
  * --attached, -a            Run in attached mode (foreground)
  * --detached, -d            Run in detached mode (background)
  * --session, -s <name>      Session name for isolation
@@ -20,7 +20,7 @@ const DEBUG =
 /**
  * Valid isolation backends
  */
-const VALID_BACKENDS = ['screen', 'tmux', 'docker', 'zellij'];
+const VALID_BACKENDS = ['screen', 'tmux', 'docker'];
 
 /**
  * Parse command line arguments into wrapper options and command
@@ -29,7 +29,7 @@ const VALID_BACKENDS = ['screen', 'tmux', 'docker', 'zellij'];
  */
 function parseArgs(args) {
   const wrapperOptions = {
-    isolated: null, // Isolation backend: screen, tmux, docker, zellij
+    isolated: null, // Isolation backend: screen, tmux, docker
     attached: false, // Run in attached mode
     detached: false, // Run in detached mode
     session: null, // Session name
@@ -116,7 +116,7 @@ function parseOption(args, index, options) {
       return 2;
     } else {
       throw new Error(
-        `Option ${arg} requires a backend argument (screen, tmux, docker, zellij)`
+        `Option ${arg} requires a backend argument (screen, tmux, docker)`
       );
     }
   }

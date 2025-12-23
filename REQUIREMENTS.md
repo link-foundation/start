@@ -147,7 +147,6 @@ Support two patterns for passing wrapper options:
 
 - `screen`: GNU Screen terminal multiplexer
 - `tmux`: tmux terminal multiplexer
-- `zellij`: Modern terminal workspace
 - `docker`: Docker containers (requires --image option)
 
 #### 6.4 Mode Behavior

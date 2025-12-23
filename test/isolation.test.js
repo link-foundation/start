@@ -76,12 +76,6 @@ describe('Isolation Module', () => {
       console.log(`  docker available: ${result}`);
       assert.ok(typeof result === 'boolean');
     });
-
-    it('should check if zellij is available', () => {
-      const result = isCommandAvailable('zellij');
-      console.log(`  zellij available: ${result}`);
-      assert.ok(typeof result === 'boolean');
-    });
   });
 
   describe('getScreenVersion', () => {
@@ -178,7 +172,6 @@ describe('Isolation Runner Error Handling', () => {
     runInScreen,
     runInTmux,
     runInDocker,
-    runInZellij,
   } = require('../src/lib/isolation');
 
   describe('runInScreen', () => {
@@ -245,23 +238,6 @@ describe('Isolation Runner Error Handling', () => {
         result.message.includes('image') ||
           result.message.includes('--image') ||
           result.message.includes('Docker isolation requires')
-      );
-    });
-  });
-
-  describe('runInZellij', () => {
-    it('should return informative error if zellij is not installed', async () => {
-      // Skip if zellij is installed
-      if (isCommandAvailable('zellij')) {
-        console.log('  Skipping: zellij is installed');
-        return;
-      }
-
-      const result = await runInZellij('echo test', { detached: true });
-      assert.strictEqual(result.success, false);
-      assert.ok(result.message.includes('zellij is not installed'));
-      assert.ok(
-        result.message.includes('cargo') || result.message.includes('brew')
       );
     });
   });
