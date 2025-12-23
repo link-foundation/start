@@ -76,7 +76,7 @@ The `$` command is a CLI tool that wraps any shell command and provides automati
   - Command that was executed
   - Exit code
   - Link to uploaded log
-  - System information (OS, Node version)
+  - System information (OS, Bun/Node.js version)
   - Timestamp
 - Print the created issue URL to console
 
@@ -209,7 +209,8 @@ Repository not detected - automatic issue creation skipped
 
 ### Required
 
-- Node.js >= 14.0.0
+- **Bun >= 1.0.0** (primary runtime)
+- Alternatively: Node.js >= 20.0.0 (for compatibility)
 - `child_process` (built-in)
 - `os` (built-in)
 - `fs` (built-in)
