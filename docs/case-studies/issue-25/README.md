@@ -126,17 +126,11 @@ Node.js/Bun's `spawnSync` with array arguments:
 
 ## The Solution
 
-### Code Changes in `src/lib/isolation.js`
+The issue has two parts that were fixed:
 
-1. **Added `spawnSync` import:**
+### Part 1: Shell Quoting Issues (Already Fixed)
 
-```javascript
-const { execSync, spawn, spawnSync } = require('child_process');
-```
-
-2. **Replaced `execSync` with `spawnSync` in two locations:**
-
-**Location 1: `runScreenWithLogCapture` function (attached mode with log capture)**
+Replaced `execSync` with `spawnSync` for proper argument handling:
 
 ```javascript
 // Before (broken):
@@ -145,20 +139,33 @@ execSync(`screen ${screenArgs.map((a) => `"${a}"`).join(' ')}`, {
 });
 
 // After (fixed):
-const result = spawnSync('screen', screenArgs, {
-  stdio: 'inherit',
-});
-
-if (result.error) {
-  throw result.error;
-}
+const result = spawnSync('screen', screenArgs, { stdio: 'inherit' });
 ```
 
-**Location 2: `runInScreen` function (detached mode)**
+### Part 2: TTY Mode Output Loss (New Fix)
+
+The attached mode with TTY was using direct screen invocation which loses output for quick commands:
 
 ```javascript
-// Same pattern - replaced execSync with spawnSync
+// Before (broken) - in runInScreen attached mode with TTY:
+if (hasTTY()) {
+  const screenArgs = ['-S', sessionName, shell, shellArg, command];
+  const child = spawn('screen', screenArgs, { stdio: 'inherit' });
+  // Output goes to screen's virtual terminal, lost when session ends quickly
+}
+
+// After (fixed) - always use log capture for attached mode:
+// For attached mode, always use detached mode with log capture
+// This ensures output is captured and displayed correctly, even for quick commands
+return runScreenWithLogCapture(command, sessionName, shellInfo);
 ```
+
+**Why the TTY path was broken:**
+
+1. Screen creates a virtual terminal for the session
+2. Command output goes to that virtual terminal
+3. When the command exits quickly (like `echo "hello"`), screen shows `[screen is terminating]`
+4. The virtual terminal is destroyed and output is lost
 
 ## Testing Strategy
 

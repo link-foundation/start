@@ -342,50 +342,22 @@ function runInScreen(command, options = {}) {
         message: `Command started in detached screen session: ${sessionName}\nReattach with: screen -r ${sessionName}`,
       });
     } else {
-      // Attached mode: need TTY for screen to work properly
-
-      // Check if we have a TTY
-      if (hasTTY()) {
-        // We have a TTY, use direct screen invocation
-        const screenArgs = ['-S', sessionName, shell, shellArg, command];
-
-        if (DEBUG) {
-          console.log(`[DEBUG] Running: screen ${screenArgs.join(' ')}`);
-        }
-
-        return new Promise((resolve) => {
-          const child = spawn('screen', screenArgs, {
-            stdio: 'inherit',
-          });
-
-          child.on('exit', (code) => {
-            resolve({
-              success: code === 0,
-              sessionName,
-              message: `Screen session "${sessionName}" exited with code ${code}`,
-              exitCode: code,
-            });
-          });
-
-          child.on('error', (err) => {
-            resolve({
-              success: false,
-              sessionName,
-              message: `Failed to start screen: ${err.message}`,
-            });
-          });
-        });
-      } else {
-        // No TTY available - use detached mode with log capture
-        // This allows screen to run without a terminal while still capturing output
-        if (DEBUG) {
-          console.log(
-            `[DEBUG] No TTY available, using detached mode with log capture`
-          );
-        }
-
-        return runScreenWithLogCapture(command, sessionName, shellInfo);
+      // Attached mode: always use detached mode with log capture
+      // This ensures output is captured and displayed correctly, even for quick commands
+      // that would otherwise have their output lost in a rapidly-terminating screen session.
+      // Direct screen invocation (screen -S session shell -c command) loses output because:
+      // 1. Screen creates a virtual terminal for the session
+      // 2. Command output goes to that virtual terminal
+      // 3. When the command exits quickly, screen shows "[screen is terminating]"
+      // 4. The virtual terminal is destroyed and output is lost
+      // See issue #25 for details: https://github.com/link-foundation/start/issues/25
+      if (DEBUG) {
+        console.log(
+          `[DEBUG] Using detached mode with log capture for reliable output`
+        );
       }
+
+      return runScreenWithLogCapture(command, sessionName, shellInfo);
     }
   } catch (err) {
     return Promise.resolve({
