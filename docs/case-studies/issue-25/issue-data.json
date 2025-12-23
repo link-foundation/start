@@ -1,0 +1,21 @@
+{
+  "author": {
+    "id": "MDQ6VXNlcjE0MzE5MDQ=",
+    "is_bot": false,
+    "login": "konard",
+    "name": "Konstantin Diachenko"
+  },
+  "body": "```\nkonard@MacBook-Pro-Konstantin ~ % bun install -g start-command               \nbun add v1.2.20 (6ad208bc)\n\ninstalled start-command@0.7.2 with binaries:\n - $\n\n1 package installed [2.34s]\nkonard@MacBook-Pro-Konstantin ~ % $ --version                 \nstart-command version: 0.7.2\n\nOS: darwin\nOS Version: 15.7.2\nBun Version: 1.2.20\nArchitecture: arm64\n\nIsolation tools:\n  screen: Screen version 4.00.03 (FAU) 23-Oct-06\n  tmux: not installed\n  docker: Docker version 28.5.1, build e180ab8\nkonard@MacBook-Pro-Konstantin ~ % $ --version --              \nstart-command version: 0.7.2\n\nOS: darwin\nOS Version: 15.7.2\nBun Version: 1.2.20\nArchitecture: arm64\n\nIsolation tools:\n  screen: Screen version 4.00.03 (FAU) 23-Oct-06\n  tmux: not installed\n  docker: Docker version 28.5.1, build e180ab8\nkonard@MacBook-Pro-Konstantin ~ % $ --isolated screen --verbose -- echo \"hello\"\n[2025-12-23 20:56:28.265] Starting: echo hello\n\n[Isolation] Environment: screen, Mode: attached\n\n[screen is terminating]\n\nScreen session \"screen-1766523388276-4oecji\" exited with code 0\n\n[2025-12-23 20:56:28.362] Finished\nExit code: 0\nLog saved: /var/folders/cl/831lqjgd58v5mb_m74cfdfcw0000gn/T/start-command-screen-1766523388265-j5puqf.log\nkonard@MacBook-Pro-Konstantin ~ % $ echo \"hello\"                               \n[2025-12-23 20:56:37.680] Starting: echo hello\n\nhello\n\n[2025-12-23 20:56:37.688] Finished\nExit code: 0\nLog saved: /var/folders/cl/831lqjgd58v5mb_m74cfdfcw0000gn/T/start-command-1766523397680-fb62fx.log\nkonard@MacBook-Pro-Konstantin ~ % $ --isolated docker --image alpine -- echo \"hello\"\n[2025-12-23 20:56:45.619] Starting: echo hello\n\n[Isolation] Environment: docker, Mode: attached\n[Isolation] Image: alpine\n\nhello\n\nDocker container \"docker-1766523405627-qgv7h1\" exited with code 0\n\n[2025-12-23 20:56:47.091] Finished\nExit code: 0\nLog saved: /var/folders/cl/831lqjgd58v5mb_m74cfdfcw0000gn/T/start-command-docker-1766523405619-8izdfr.log\nkonard@MacBook-Pro-Konstantin ~ % \n```\n\nMake sure we have test on macOS that does specifically reproduces this exact error. After that it must be fixed. And that test will guarantee we will never get regression again.\n\nPlease download all logs and data related about the issue to this repository, make sure we compile that data to `./docs/case-studies/issue-{id}` folder, and use it to do deep case study analysis (also make sure to search online for additional facts and data), in which we will reconstruct timeline/sequence of events, find root causes of the problem, and propose possible solutions.",
+  "createdAt": "2025-12-23T20:57:23Z",
+  "labels": [
+    {
+      "id": "LA_kwDOP85RQM8AAAACMMqWww",
+      "name": "bug",
+      "description": "Something isn't working",
+      "color": "d73a4a"
+    }
+  ],
+  "number": 25,
+  "state": "OPEN",
+  "title": "We don't get `Hello` output from `$ --isolated screen --verbose -- echo \"hello\"` command"
+}

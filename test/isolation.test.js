@@ -330,6 +330,56 @@ describe('Isolation Runner with Available Backends', () => {
         assert.ok(result.output.includes('line3'));
       }
     });
+
+    it('should capture output from commands with quoted strings (issue #25)', async () => {
+      if (!isCommandAvailable('screen')) {
+        console.log('  Skipping: screen not installed');
+        return;
+      }
+
+      // This is the exact scenario from issue #25:
+      // $ --isolated screen --verbose -- echo "hello"
+      // Previously failed because of shell quoting issues with execSync
+      const result = await runInScreen('echo "hello"', {
+        session: `test-quoted-${Date.now()}`,
+        detached: false,
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.ok(result.sessionName);
+      assert.ok(result.message.includes('exited with code 0'));
+      if (result.output !== undefined) {
+        console.log(`  Captured quoted output: "${result.output.trim()}"`);
+        assert.ok(
+          result.output.includes('hello'),
+          'Output should contain "hello" (issue #25 regression test)'
+        );
+      }
+    });
+
+    it('should capture output from commands with complex quoted strings', async () => {
+      if (!isCommandAvailable('screen')) {
+        console.log('  Skipping: screen not installed');
+        return;
+      }
+
+      // Test more complex quoting scenarios
+      const result = await runInScreen('echo "hello from attached mode"', {
+        session: `test-complex-quote-${Date.now()}`,
+        detached: false,
+      });
+
+      assert.strictEqual(result.success, true);
+      if (result.output !== undefined) {
+        console.log(
+          `  Captured complex quote output: "${result.output.trim()}"`
+        );
+        assert.ok(
+          result.output.includes('hello from attached mode'),
+          'Output should contain the full message with spaces'
+        );
+      }
+    });
   });
 
   describe('runInTmux (if available)', () => {
