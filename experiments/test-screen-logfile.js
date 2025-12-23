@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Experiment to test screen's logfile capture functionality
  * to understand the root cause of issue #15

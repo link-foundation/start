@@ -1,7 +1,7 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Experiment to test different approaches for running screen in attached mode
- * from Node.js without a TTY
+ * from Bun without a TTY
  */
 
 const { spawn, spawnSync, execSync } = require('child_process');

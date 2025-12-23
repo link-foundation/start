@@ -38,12 +38,15 @@ describe('CLI version flag', () => {
     );
     assert.ok(result.stdout.includes('OS:'), 'Should display OS');
     assert.ok(
-      result.stdout.includes('OS Release:'),
-      'Should display OS Release'
+      result.stdout.includes('OS Version:'),
+      'Should display OS Version'
     );
+    // Check for either Bun or Node.js version depending on runtime
+    const hasBunVersion = result.stdout.includes('Bun Version:');
+    const hasNodeVersion = result.stdout.includes('Node.js Version:');
     assert.ok(
-      result.stdout.includes('Node Version:'),
-      'Should display Node Version'
+      hasBunVersion || hasNodeVersion,
+      'Should display Bun Version or Node.js Version'
     );
     assert.ok(
       result.stdout.includes('Architecture:'),

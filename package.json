@@ -7,16 +7,16 @@
     "$": "./src/bin/cli.js"
   },
   "scripts": {
-    "test": "node --test test/",
+    "test": "bun test test/",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check:file-size": "node scripts/check-file-size.mjs",
-    "check": "npm run lint && npm run format:check && npm run check:file-size",
+    "check:file-size": "bun scripts/check-file-size.mjs",
+    "check": "bun run lint && bun run format:check && bun run check:file-size",
     "prepare": "husky || true",
     "changeset": "changeset",
-    "changeset:version": "node scripts/changeset-version.mjs",
+    "changeset:version": "bun scripts/changeset-version.mjs",
     "changeset:publish": "changeset publish",
     "changeset:status": "changeset status --since=origin/main"
   },

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Experiment to test different screen invocation modes
  * This helps understand how screen behaves in different contexts
