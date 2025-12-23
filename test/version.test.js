@@ -243,6 +243,52 @@ describe('Version Flag Tests', () => {
     });
   });
 
+  describe('Verbose mode', () => {
+    it('should show verbose output with --version --verbose', () => {
+      const result = runCli(['--version', '--verbose']);
+      assert.strictEqual(result.exitCode, 0, 'Exit code should be 0');
+      assert.match(
+        result.stdout,
+        /start-command version:/,
+        'Should show start-command version'
+      );
+      assert.match(
+        result.stdout,
+        /\[verbose\]/,
+        'Should show verbose output markers'
+      );
+    });
+
+    it('should show verbose output with --version --debug', () => {
+      const result = runCli(['--version', '--debug']);
+      assert.strictEqual(result.exitCode, 0, 'Exit code should be 0');
+      assert.match(
+        result.stdout,
+        /\[verbose\]/,
+        'Should show verbose output with --debug flag'
+      );
+    });
+
+    it('should show verbose output with START_VERBOSE=1', () => {
+      const result = spawnSync('bun', [cliPath, '--version'], {
+        encoding: 'utf8',
+        timeout: 5000,
+        env: {
+          ...process.env,
+          START_VERBOSE: '1',
+          START_DISABLE_AUTO_ISSUE: '1',
+          START_DISABLE_LOG_UPLOAD: '1',
+        },
+      });
+      assert.strictEqual(result.status, 0, 'Exit code should be 0');
+      assert.match(
+        result.stdout,
+        /\[verbose\]/,
+        'Should show verbose output with START_VERBOSE=1'
+      );
+    });
+  });
+
   describe('Error cases', () => {
     it('should error with "No command provided" for $ --', () => {
       const result = runCli(['--']);
