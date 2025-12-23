@@ -49,7 +49,14 @@ const config = {
 const args = process.argv.slice(2);
 
 // Handle --version flag
-if (args.length === 1 && (args[0] === '--version' || args[0] === '-v')) {
+// Support: $ --version, $ -v, $ --version --
+// The trailing -- should be ignored for version check
+const hasVersionFlag =
+  args.length >= 1 && (args[0] === '--version' || args[0] === '-v');
+const isVersionOnly =
+  args.length === 1 || (args.length === 2 && args[1] === '--');
+
+if (hasVersionFlag && isVersionOnly) {
   printVersion();
   process.exit(0);
 }
@@ -70,10 +77,30 @@ function printVersion() {
   console.log(`start-command version: ${startCommandVersion}`);
   console.log('');
 
+  // Get runtime information (Bun or Node.js)
+  const runtime = typeof Bun !== 'undefined' ? 'Bun' : 'Node.js';
+  const runtimeVersion =
+    typeof Bun !== 'undefined' ? Bun.version : process.version;
+
   // Get OS information
   console.log(`OS: ${process.platform}`);
-  console.log(`OS Release: ${os.release()}`);
-  console.log(`Node Version: ${process.version}`);
+
+  // Get OS version (use sw_vers on macOS for user-friendly version)
+  let osVersion = os.release();
+  if (process.platform === 'darwin') {
+    try {
+      osVersion = execSync('sw_vers -productVersion', {
+        encoding: 'utf8',
+        timeout: 5000,
+      }).trim();
+    } catch {
+      // Fallback to kernel version if sw_vers fails
+      osVersion = os.release();
+    }
+  }
+
+  console.log(`OS Version: ${osVersion}`);
+  console.log(`${runtime} Version: ${runtimeVersion}`);
   console.log(`Architecture: ${process.arch}`);
   console.log('');
 
@@ -113,9 +140,10 @@ function printVersion() {
  */
 function getToolVersion(toolName, versionFlag) {
   try {
-    const result = execSync(`${toolName} ${versionFlag}`, {
+    // Redirect stderr to stdout (2>&1) to capture version info from stderr
+    // Some tools like screen output version to stderr instead of stdout
+    const result = execSync(`${toolName} ${versionFlag} 2>&1`, {
       encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe'],
       timeout: 5000,
     }).trim();
 
@@ -149,10 +177,10 @@ function printUsage() {
   console.log('');
   console.log('Examples:');
   console.log('  $ echo "Hello World"');
-  console.log('  $ npm test');
-  console.log('  $ --isolated tmux -- npm start');
-  console.log('  $ -i screen -d npm start');
-  console.log('  $ --isolated docker --image node:20 -- npm install');
+  console.log('  $ bun test');
+  console.log('  $ --isolated tmux -- bun start');
+  console.log('  $ -i screen -d bun start');
+  console.log('  $ --isolated docker --image oven/bun:latest -- bun install');
   console.log('');
   console.log('Features:');
   console.log('  - Logs all output to temporary directory');
@@ -313,6 +341,11 @@ function runDirect(cmd) {
   let logContent = '';
   const startTime = getTimestamp();
 
+  // Get runtime information
+  const runtime = typeof Bun !== 'undefined' ? 'Bun' : 'Node.js';
+  const runtimeVersion =
+    typeof Bun !== 'undefined' ? Bun.version : process.version;
+
   // Log header
   logContent += `=== Start Command Log ===\n`;
   logContent += `Timestamp: ${startTime}\n`;
@@ -325,7 +358,7 @@ function runDirect(cmd) {
   }
   logContent += `Shell: ${shell}\n`;
   logContent += `Platform: ${process.platform}\n`;
-  logContent += `Node Version: ${process.version}\n`;
+  logContent += `${runtime} Version: ${runtimeVersion}\n`;
   logContent += `Working Directory: ${process.cwd()}\n`;
   logContent += `${'='.repeat(50)}\n\n`;
 
@@ -474,7 +507,7 @@ function handleFailure(cmdName, fullCommand, exitCode, logPath) {
     }
   } else {
     console.log('gh-upload-log not installed - log upload skipped');
-    console.log('Install with: npm install -g gh-upload-log');
+    console.log('Install with: bun install -g gh-upload-log');
   }
 
   // Check if we can create issues in this repository
@@ -745,6 +778,11 @@ function createIssue(repoInfo, fullCommand, exitCode, logUrl) {
   try {
     const title = `Command failed with exit code ${exitCode}: ${fullCommand.substring(0, 50)}${fullCommand.length > 50 ? '...' : ''}`;
 
+    // Get runtime information
+    const runtime = typeof Bun !== 'undefined' ? 'Bun' : 'Node.js';
+    const runtimeVersion =
+      typeof Bun !== 'undefined' ? Bun.version : process.version;
+
     let body = `## Command Execution Failure Report\n\n`;
     body += `**Command:** \`${fullCommand}\`\n\n`;
     body += `**Exit Code:** ${exitCode}\n\n`;
@@ -752,7 +790,7 @@ function createIssue(repoInfo, fullCommand, exitCode, logUrl) {
     body += `### System Information\n\n`;
     body += `- **Platform:** ${process.platform}\n`;
     body += `- **OS Release:** ${os.release()}\n`;
-    body += `- **Node Version:** ${process.version}\n`;
+    body += `- **${runtime} Version:** ${runtimeVersion}\n`;
     body += `- **Architecture:** ${process.arch}\n\n`;
 
     if (logUrl) {
