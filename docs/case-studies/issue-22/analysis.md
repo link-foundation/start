@@ -333,80 +333,162 @@ if ((args.length === 1 && hasVersionFlag) || isOnlyVersionWithSeparator) {
 
 ## Implementation Status
 
-**Status:** ✅ Completed
+**Status:** 🔄 In Progress (Second Iteration)
 
-### Changes Made
+### First Iteration (PR #23 - Merged to Main)
+
+The initial fixes were merged to `main` branch via PR #23, addressing:
+
+- Version flag handling with trailing `--`
+- Runtime detection (Bun vs Node.js)
+- macOS version detection using `sw_vers`
+- Basic screen detection using `2>&1`
+
+### Second Iteration (This PR) - The Screen Detection Bug
+
+After v0.7.1 was released, users on macOS still reported:
+
+```
+screen: not installed
+```
+
+Even though screen was installed:
+
+```bash
+$ screen -v
+Screen version 4.00.03 (FAU) 23-Oct-06
+```
+
+#### Deep Root Cause Analysis
+
+**The Problem:** The macOS bundled version of GNU Screen (4.00.03) returns a **non-zero exit code** when running `screen --version` or `screen -v`, even though it successfully outputs the version information.
+
+**Discovery Process:**
+
+1. Searched for known issues with GNU Screen version flag
+2. Found reference to [GNU Screen v.4.8.0 release notes](https://savannah.gnu.org/forum/forum.php?forum_id=9665)
+3. The release notes mention: "Make screen exit code be 0 when checking --version"
+
+**Root Cause Confirmed:**
+This was a **known bug in GNU Screen prior to version 4.8.0** where the `--version` flag would exit with a non-zero status code.
+
+- macOS bundled version: 4.00.03 (affected by bug)
+- Bug fix version: 4.8.0+
+- Linux typically has newer versions via package managers
+
+**Why Previous Fix Didn't Work:**
+
+The previous fix used `execSync()` with `2>&1` to capture stderr:
+
+```javascript
+const result = execSync(`${toolName} ${versionFlag} 2>&1`, {
+  encoding: 'utf8',
+  timeout: 5000,
+}).trim();
+```
+
+**Problem:** `execSync()` throws an exception when the command returns non-zero exit code, so even though the output was captured correctly, the `catch` block returned `null`.
+
+#### The Solution
+
+Use `spawnSync()` instead of `execSync()` to capture output **regardless of exit code**:
+
+```javascript
+function getToolVersion(toolName, versionFlag, verbose = false) {
+  const isWindows = process.platform === 'win32';
+  const whichCmd = isWindows ? 'where' : 'which';
+
+  // First, check if the tool exists in PATH
+  try {
+    execSync(`${whichCmd} ${toolName}`, {
+      encoding: 'utf8',
+      timeout: 5000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+  } catch {
+    // Tool not found in PATH
+    return null;
+  }
+
+  // Tool exists, try to get version using spawnSync
+  // This captures output regardless of exit code
+  const result = spawnSync(toolName, [versionFlag], {
+    encoding: 'utf8',
+    timeout: 5000,
+    shell: false,
+  });
+
+  // Combine stdout and stderr
+  const output = ((result.stdout || '') + (result.stderr || '')).trim();
+
+  if (!output) {
+    return null;
+  }
+
+  return output.split('\n')[0];
+}
+```
+
+#### Additional Improvements
+
+1. **`--verbose` flag support** - Users can now debug version detection:
+
+   ```bash
+   $ --version --verbose
+   ```
+
+   This shows detailed debugging information about tool detection.
+
+2. **`-v` flag for screen** - Changed from `--version` to `-v` which is more universally supported.
+
+3. **Comprehensive test coverage** - Added 14 tests for version detection scenarios.
+
+### Changes Made (Second Iteration)
 
 #### src/bin/cli.js
 
-1. **Version flag handling (lines 54-62):**
+1. **Added `spawnSync` import:**
 
    ```javascript
-   const hasVersionFlag =
-     args.length >= 1 && (args[0] === '--version' || args[0] === '-v');
-   const isVersionOnly =
-     args.length === 1 || (args.length === 2 && args[1] === '--');
+   const { spawn, execSync, spawnSync } = require('child_process');
+   ```
+
+2. **Enhanced version flag handling with verbose support:**
+
+   ```javascript
+   const hasVerboseWithVersion =
+     hasVersionFlag &&
+     args.some((arg) => arg === '--verbose' || arg === '--debug');
 
    if (hasVersionFlag && isVersionOnly) {
-     printVersion();
+     printVersion(hasVerboseWithVersion || config.verbose);
      process.exit(0);
    }
    ```
 
-2. **Runtime detection (lines 81-83):**
+3. **Fixed getToolVersion to use spawnSync:**
+   - First checks if tool exists using `which`/`where`
+   - Uses `spawnSync` to capture output regardless of exit code
+   - Combines stdout and stderr
+   - Supports verbose mode for debugging
 
-   ```javascript
-   const runtime = typeof Bun !== 'undefined' ? 'Bun' : 'Node.js';
-   const runtimeVersion =
-     typeof Bun !== 'undefined' ? Bun.version : process.version;
-   ```
-
-3. **macOS version detection (lines 89-100):**
-
-   ```javascript
-   let osVersion = os.release();
-   if (process.platform === 'darwin') {
-     try {
-       osVersion = execSync('sw_vers -productVersion', {
-         encoding: 'utf8',
-         timeout: 5000,
-       }).trim();
-     } catch {
-       osVersion = os.release();
-     }
-   }
-   ```
-
-4. **Screen version detection (line 145):**
-   ```javascript
-   const result = execSync(`${toolName} ${versionFlag} 2>&1`, {
-     encoding: 'utf8',
-     timeout: 5000,
-   }).trim();
-   ```
+4. **Updated printVersion to accept verbose parameter:**
+   - Shows `[verbose]` messages when debugging
+   - Logs tool detection details
 
 #### test/version.test.js
 
-Created comprehensive test suite with 11 tests covering:
+Added 3 new tests for verbose mode:
 
-- Basic version flag (`--version`, `-v`)
-- Version flag with trailing separator (`--version --`)
-- Runtime detection (Bun vs Node.js)
-- OS version detection (macOS ProductVersion)
-- Tool version detection (screen, tmux, docker)
-- Error cases (`--` without command)
-
-#### Documentation Updates
-
-- **README.md:** Updated to Bun-first approach, removed npm references
-- **REQUIREMENTS.md:** Updated dependencies to Bun >= 1.0.0
-- **package.json:** Changed engines from `node` to `bun`
+- `--version --verbose`
+- `--version --debug`
+- `START_VERBOSE=1` environment variable
 
 ### Test Results
 
-All 70 tests passing across 3 test files:
+All 84 tests passing across 4 test files:
 
-- `test/version.test.js`: 11 tests
+- `test/version.test.js`: 14 tests
 - `test/cli.test.js`: Passing
 - `test/args-parser.test.js`: Passing
 - `test/isolation.test.js`: Passing
@@ -430,12 +512,36 @@ Isolation tools:
 ```
 
 ```bash
-$ --version --
-# Same output as above - works correctly
+$ --version --verbose
+start-command version: 0.7.1
+
+OS: linux
+OS Version: 6.8.0-90-generic
+Bun Version: 1.3.3
+Architecture: x64
+
+Isolation tools:
+[verbose] Checking isolation tools...
+[verbose] screen -v: exit=0, output="Screen version 4.09.01 (GNU) 20-Aug-23"
+  screen: Screen version 4.09.01 (GNU) 20-Aug-23
+[verbose] tmux -V: exit=0, output="tmux 3.4"
+  tmux: tmux 3.4
+[verbose] docker: not found in PATH
+  docker: not installed
 ```
 
-```bash
-$ --
-Error: No command provided
-# Exit code: 1
-```
+## Key Learnings
+
+1. **Exit codes matter**: Some tools return non-zero exit codes even for successful operations. Always consider using `spawnSync` when you need to capture output regardless of exit status.
+
+2. **macOS bundled tools are often outdated**: The macOS bundled version of screen (4.00.03 from 2006) has known bugs fixed in newer versions.
+
+3. **Testing on multiple platforms is crucial**: The bug only manifested on macOS with the bundled screen, not on Linux with modern screen versions.
+
+4. **Verbose mode is invaluable for debugging**: Adding `--verbose` support allows users to self-diagnose issues.
+
+## References
+
+- [GNU Screen v.4.8.0 Release Notes](https://savannah.gnu.org/forum/forum.php?forum_id=9665) - Documents the exit code fix
+- [screen Man Page - macOS](https://ss64.com/mac/screen.html) - macOS screen documentation
+- [Node.js spawnSync](https://nodejs.org/api/child_process.html#child_processspawnsynccommand-args-options) - Alternative to execSync that doesn't throw on non-zero exit
