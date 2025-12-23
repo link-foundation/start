@@ -1,5 +1,13 @@
 # start-command
 
+## 0.7.4
+
+### Patch Changes
+
+- d058c43: fix: Screen isolation output not captured for quoted commands
+
+  This fixes issue #25 where commands with quoted strings (e.g., echo "hello") would not show their output when using screen isolation. The fix uses spawnSync with array arguments instead of execSync with a constructed string to avoid shell quoting issues.
+
 ## 0.7.2
 
 ### Patch Changes
