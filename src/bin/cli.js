@@ -48,9 +48,84 @@ const config = {
 // Get all arguments passed after the command
 const args = process.argv.slice(2);
 
+// Handle --version flag
+if (args.length === 1 && (args[0] === '--version' || args[0] === '-v')) {
+  printVersion();
+  process.exit(0);
+}
+
 if (args.length === 0) {
   printUsage();
   process.exit(0);
+}
+
+/**
+ * Print version information
+ */
+function printVersion() {
+  // Get package version
+  const packageJson = require('../../package.json');
+  const startCommandVersion = packageJson.version;
+
+  console.log(`start-command version: ${startCommandVersion}`);
+  console.log('');
+
+  // Get OS information
+  console.log(`OS: ${process.platform}`);
+  console.log(`OS Release: ${os.release()}`);
+  console.log(`Node Version: ${process.version}`);
+  console.log(`Architecture: ${process.arch}`);
+  console.log('');
+
+  // Check for installed isolation tools
+  console.log('Isolation tools:');
+
+  // Check screen
+  const screenVersion = getToolVersion('screen', '--version');
+  if (screenVersion) {
+    console.log(`  screen: ${screenVersion}`);
+  } else {
+    console.log('  screen: not installed');
+  }
+
+  // Check tmux
+  const tmuxVersion = getToolVersion('tmux', '-V');
+  if (tmuxVersion) {
+    console.log(`  tmux: ${tmuxVersion}`);
+  } else {
+    console.log('  tmux: not installed');
+  }
+
+  // Check docker
+  const dockerVersion = getToolVersion('docker', '--version');
+  if (dockerVersion) {
+    console.log(`  docker: ${dockerVersion}`);
+  } else {
+    console.log('  docker: not installed');
+  }
+}
+
+/**
+ * Get version of an installed tool
+ * @param {string} toolName - Name of the tool
+ * @param {string} versionFlag - Flag to get version (e.g., '--version', '-V')
+ * @returns {string|null} Version string or null if not installed
+ */
+function getToolVersion(toolName, versionFlag) {
+  try {
+    const result = execSync(`${toolName} ${versionFlag}`, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 5000,
+    }).trim();
+
+    // Extract version number from output
+    // Most tools output version in various formats, so we'll return the first line
+    const firstLine = result.split('\n')[0];
+    return firstLine;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -70,6 +145,7 @@ function printUsage() {
   console.log(
     '  --image <image>           Docker image (required for docker isolation)'
   );
+  console.log('  --version, -v             Show version information');
   console.log('');
   console.log('Examples:');
   console.log('  $ echo "Hello World"');
