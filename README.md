@@ -4,16 +4,10 @@ Gamification of coding - execute any command with automatic logging and ability 
 
 ## Installation
 
-We recommend using [Bun](https://bun.sh) for the best performance:
+Install using [Bun](https://bun.sh):
 
 ```bash
 bun install -g start-command
-```
-
-Or using npm:
-
-```bash
-npm install -g start-command
 ```
 
 ## Usage
@@ -123,16 +117,16 @@ Run commands in isolated environments using terminal multiplexers or containers:
 
 ```bash
 # Run in tmux (attached by default)
-$ --isolated tmux -- npm start
+$ --isolated tmux -- bun start
 
 # Run in screen detached
-$ --isolated screen --detached -- npm start
+$ --isolated screen --detached -- bun start
 
 # Run in docker container
-$ --isolated docker --image node:20 -- npm install
+$ --isolated docker --image oven/bun:latest -- bun install
 
 # Short form with custom session name
-$ -i tmux -s my-session -d npm start
+$ -i tmux -s my-session -d bun start
 ```
 
 #### Supported Backends
@@ -169,7 +163,7 @@ The tool works in any environment:
 
 ### Required
 
-- Node.js >= 14.0.0
+- [Bun](https://bun.sh) >= 1.0.0
 
 ### Optional (for full auto-reporting)
 
@@ -183,7 +177,7 @@ To set up auto-reporting:
 gh auth login
 
 # Install log uploader
-npm install -g gh-upload-log
+bun install -g gh-upload-log
 ```
 
 ## How It Works
@@ -214,10 +208,10 @@ Example:
 
 ```bash
 # Run without auto-issue creation
-START_DISABLE_AUTO_ISSUE=1 $ npm test
+START_DISABLE_AUTO_ISSUE=1 $ bun test
 
 # Use custom log directory
-START_LOG_DIR=./logs $ npm test
+START_LOG_DIR=./logs $ bun test
 
 # Disable substitutions (use raw command)
 START_DISABLE_SUBSTITUTIONS=1 $ install lodash npm package
@@ -237,10 +231,10 @@ Log files are saved as `start-command-{timestamp}-{random}.log` and contain:
 ```
 === Start Command Log ===
 Timestamp: 2024-01-15 10:30:45.123
-Command: npm test
+Command: bun test
 Shell: /bin/bash
 Platform: linux
-Node Version: v18.17.0
+Bun Version: 1.2.0
 Working Directory: /home/user/project
 ==================================================
 

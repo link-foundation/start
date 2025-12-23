@@ -210,7 +210,6 @@ Repository not detected - automatic issue creation skipped
 ### Required
 
 - **Bun >= 1.0.0** (primary runtime)
-- Alternatively: Node.js >= 20.0.0 (for compatibility)
 - `child_process` (built-in)
 - `os` (built-in)
 - `fs` (built-in)
