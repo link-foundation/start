@@ -380,6 +380,33 @@ describe('Isolation Runner with Available Backends', () => {
         );
       }
     });
+
+    it('should always return output property in attached mode (issue #25 fix verification)', async () => {
+      if (!isCommandAvailable('screen')) {
+        console.log('  Skipping: screen not installed');
+        return;
+      }
+
+      // This test verifies that attached mode always uses log capture,
+      // ensuring output is never lost even for quick commands.
+      // This is the core fix for issue #25 where output was lost on macOS
+      // because screen's virtual terminal was destroyed before output could be seen.
+      const result = await runInScreen('echo "quick command output"', {
+        session: `test-output-guaranteed-${Date.now()}`,
+        detached: false,
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.ok(
+        result.output !== undefined,
+        'Attached mode should always return output property'
+      );
+      assert.ok(
+        result.output.includes('quick command output'),
+        'Output should be captured (issue #25 fix verification)'
+      );
+      console.log(`  Verified output capture: "${result.output.trim()}"`);
+    });
   });
 
   describe('runInTmux (if available)', () => {
