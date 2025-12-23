@@ -1,5 +1,11 @@
 # start-command
 
+## 0.6.0
+
+### Minor Changes
+
+- 37eb93b: Drop zellij isolation backend support, focusing on screen, tmux, and docker. Remove zellij from VALID_BACKENDS, remove runInZellij function, and update all documentation accordingly.
+
 ## 0.5.3
 
 ### Patch Changes
