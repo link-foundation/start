@@ -1,5 +1,15 @@
 # start-command
 
+## 0.7.2
+
+### Patch Changes
+
+- fa0fb23: docs: Update documentation to Bun-first approach
+  - Remove npm installation option from README.md
+  - Update examples to use bun commands instead of npm
+  - Change package.json engines from node to bun
+  - Update REQUIREMENTS.md to remove Node.js alternative
+
 ## 0.7.1
 
 ### Patch Changes
