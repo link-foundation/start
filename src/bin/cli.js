@@ -220,13 +220,16 @@ function printUsage() {
   console.log('');
   console.log('Options:');
   console.log(
-    '  --isolated, -i <environment>      Run in isolated environment (screen, tmux, docker)'
+    '  --isolated, -i <environment>      Run in isolated environment (screen, tmux, docker, ssh)'
   );
   console.log('  --attached, -a            Run in attached mode (foreground)');
   console.log('  --detached, -d            Run in detached mode (background)');
   console.log('  --session, -s <name>      Session name for isolation');
   console.log(
     '  --image <image>           Docker image (required for docker isolation)'
+  );
+  console.log(
+    '  --host <host>             SSH host (required for ssh isolation)'
   );
   console.log('  --version, -v             Show version information');
   console.log('');
@@ -236,6 +239,7 @@ function printUsage() {
   console.log('  $ --isolated tmux -- bun start');
   console.log('  $ -i screen -d bun start');
   console.log('  $ --isolated docker --image oven/bun:latest -- bun install');
+  console.log('  $ --isolated ssh --host user@remote.server -- ls -la');
   console.log('');
   console.log('Piping with $:');
   console.log('  echo "hi" | $ agent       # Preferred - pipe TO $ command');
@@ -343,6 +347,9 @@ async function runWithIsolation(options, cmd) {
   if (options.image) {
     console.log(`[Isolation] Image: ${options.image}`);
   }
+  if (options.host) {
+    console.log(`[Isolation] Host: ${options.host}`);
+  }
   console.log('');
 
   // Create log content
@@ -359,6 +366,7 @@ async function runWithIsolation(options, cmd) {
   const result = await runIsolated(environment, cmd, {
     session: options.session,
     image: options.image,
+    host: options.host,
     detached: mode === 'detached',
   });
 

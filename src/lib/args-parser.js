@@ -6,11 +6,12 @@
  * 2. $ [wrapper-options] command [command-options]
  *
  * Wrapper Options:
- * --isolated, -i <backend>  Run in isolated environment (screen, tmux, docker)
+ * --isolated, -i <backend>  Run in isolated environment (screen, tmux, docker, ssh)
  * --attached, -a            Run in attached mode (foreground)
  * --detached, -d            Run in detached mode (background)
  * --session, -s <name>      Session name for isolation
  * --image <image>           Docker image (required for docker isolation)
+ * --host <host>             SSH host (required for ssh isolation)
  */
 
 // Debug mode from environment
@@ -20,7 +21,7 @@ const DEBUG =
 /**
  * Valid isolation backends
  */
-const VALID_BACKENDS = ['screen', 'tmux', 'docker'];
+const VALID_BACKENDS = ['screen', 'tmux', 'docker', 'ssh'];
 
 /**
  * Parse command line arguments into wrapper options and command
@@ -29,11 +30,12 @@ const VALID_BACKENDS = ['screen', 'tmux', 'docker'];
  */
 function parseArgs(args) {
   const wrapperOptions = {
-    isolated: null, // Isolation backend: screen, tmux, docker
+    isolated: null, // Isolation backend: screen, tmux, docker, ssh
     attached: false, // Run in attached mode
     detached: false, // Run in detached mode
     session: null, // Session name
     image: null, // Docker image
+    host: null, // SSH host
   };
 
   let commandArgs = [];
@@ -171,6 +173,22 @@ function parseOption(args, index, options) {
     return 1;
   }
 
+  // --host (for ssh)
+  if (arg === '--host') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.host = args[index + 1];
+      return 2;
+    } else {
+      throw new Error(`Option ${arg} requires a host argument`);
+    }
+  }
+
+  // --host=<value>
+  if (arg.startsWith('--host=')) {
+    options.host = arg.split('=')[1];
+    return 1;
+  }
+
   // Not a recognized wrapper option
   return 0;
 }
@@ -202,6 +220,13 @@ function validateOptions(options) {
         'Docker isolation requires --image option to specify the container image'
       );
     }
+
+    // SSH requires --host
+    if (options.isolated === 'ssh' && !options.host) {
+      throw new Error(
+        'SSH isolation requires --host option to specify the remote server'
+      );
+    }
   }
 
   // Session name is only valid with isolation
@@ -212,6 +237,11 @@ function validateOptions(options) {
   // Image is only valid with docker
   if (options.image && options.isolated !== 'docker') {
     throw new Error('--image option is only valid with --isolated docker');
+  }
+
+  // Host is only valid with ssh
+  if (options.host && options.isolated !== 'ssh') {
+    throw new Error('--host option is only valid with --isolated ssh');
   }
 }
 
