@@ -237,6 +237,16 @@ function printUsage() {
   console.log('  $ -i screen -d bun start');
   console.log('  $ --isolated docker --image oven/bun:latest -- bun install');
   console.log('');
+  console.log('Piping with $:');
+  console.log('  echo "hi" | $ agent       # Preferred - pipe TO $ command');
+  console.log(
+    '  $ \'echo "hi" | agent\'   # Alternative - quote entire pipeline'
+  );
+  console.log('');
+  console.log('Quoting for special characters:');
+  console.log("  $ 'npm test && npm build' # Wrap for logical operators");
+  console.log("  $ 'cat file > output.txt' # Wrap for redirections");
+  console.log('');
   console.log('Features:');
   console.log('  - Logs all output to temporary directory');
   console.log('  - Displays timestamps and exit codes');

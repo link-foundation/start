@@ -21,6 +21,29 @@ $ npm test
 $ git status
 ```
 
+### Piping with `$`
+
+When piping data to a command wrapped with `$`, **put `$` on the receiving command**:
+
+```bash
+# Preferred - pipe TO the $-wrapped command
+echo "hi" | $ agent
+
+# Alternative - quote the entire pipeline (more verbose)
+$ 'echo "hi" | agent'
+```
+
+Both approaches work, but piping TO `$` is simpler and requires fewer quotes.
+
+```bash
+# More examples
+cat file.txt | $ processor
+git diff | $ reviewer
+echo "analyze this" | $ agent --verbose
+```
+
+See [docs/PIPES.md](docs/PIPES.md) for detailed guidance on piping, and [docs/USAGE.md](docs/USAGE.md) for general usage.
+
 ### Natural Language Commands (Aliases)
 
 You can also use natural language to execute common commands. The `$` command supports pattern-based substitutions defined in `substitutions.lino`:
