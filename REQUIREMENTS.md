@@ -142,6 +142,7 @@ Support two patterns for passing wrapper options:
 - `--detached, -d`: Run in detached/background mode
 - `--session, -s <name>`: Custom session name
 - `--image <image>`: Docker image (required for docker backend)
+- `--user <username>`: Run command as specified user
 
 #### 6.3 Supported Backends
 
@@ -155,10 +156,32 @@ Support two patterns for passing wrapper options:
 - **Detached mode**: Command runs in background, session info displayed for reattachment
 - **Conflict handling**: If both --attached and --detached are specified, show error asking user to choose one
 
-#### 6.5 Graceful Degradation
+#### 6.5 User Isolation
+
+- `--user <username>`: Run command as a different user
+- For screen/tmux: Wraps command with `sudo -n -u <username>`
+- For docker: Uses Docker's `--user` flag
+- Requires sudo NOPASSWD configuration for non-interactive execution
+- Can be combined with process isolation options
+
+Example usage:
+
+```bash
+# Run as specific user
+$ --user www-data -- node server.js
+
+# Combine user and process isolation
+$ --isolated screen --user john -- npm start
+
+# Docker with user mapping
+$ --isolated docker --image node:20 --user 1000:1000 -- npm install
+```
+
+#### 6.6 Graceful Degradation
 
 - If isolation backend is not installed, show informative error with installation instructions
 - If session creation fails, report error with details
+- If sudo fails due to password requirement, command will fail with sudo error
 
 ## Configuration Options
 

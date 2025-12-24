@@ -132,6 +132,22 @@ function hasTTY() {
 }
 
 /**
+ * Wrap command with sudo -u if user option is specified
+ * @param {string} command - Original command
+ * @param {string|null} user - Username to run as (or null)
+ * @returns {string} Wrapped command
+ */
+function wrapCommandWithUser(command, user) {
+  if (!user) {
+    return command;
+  }
+  // Use sudo -u to run command as specified user
+  // -E preserves environment variables
+  // -n ensures non-interactive (fails if password required)
+  return `sudo -n -u ${user} sh -c '${command.replace(/'/g, "'\\''")}'`;
+}
+
+/**
  * Run command in GNU Screen using detached mode with log capture
  * This is a workaround for environments without TTY
  *
@@ -142,9 +158,10 @@ function hasTTY() {
  * @param {string} command - Command to execute
  * @param {string} sessionName - Session name
  * @param {object} shellInfo - Shell info from getShell()
+ * @param {string|null} user - Username to run command as (optional)
  * @returns {Promise<{success: boolean, sessionName: string, message: string, output: string}>}
  */
-function runScreenWithLogCapture(command, sessionName, shellInfo) {
+function runScreenWithLogCapture(command, sessionName, shellInfo, user = null) {
   const { shell, shellArg } = shellInfo;
   const logFile = path.join(os.tmpdir(), `screen-output-${sessionName}.log`);
 
@@ -154,7 +171,8 @@ function runScreenWithLogCapture(command, sessionName, shellInfo) {
   return new Promise((resolve) => {
     try {
       let screenArgs;
-      let effectiveCommand = command;
+      // Wrap command with user switch if specified
+      let effectiveCommand = wrapCommandWithUser(command, user);
 
       if (useNativeLogging) {
         // Modern screen (>= 4.5.1): Use -L -Logfile option for native log capture
@@ -299,7 +317,7 @@ function runScreenWithLogCapture(command, sessionName, shellInfo) {
 /**
  * Run command in GNU Screen
  * @param {string} command - Command to execute
- * @param {object} options - Options (session, detached)
+ * @param {object} options - Options (session, detached, user)
  * @returns {Promise<{success: boolean, sessionName: string, message: string}>}
  */
 function runInScreen(command, options = {}) {
@@ -317,9 +335,18 @@ function runInScreen(command, options = {}) {
   const { shell, shellArg } = shellInfo;
 
   try {
+    // Wrap command with user switch if specified
+    const effectiveCommand = wrapCommandWithUser(command, options.user);
+
     if (options.detached) {
       // Detached mode: screen -dmS <session> <shell> -c '<command>'
-      const screenArgs = ['-dmS', sessionName, shell, shellArg, command];
+      const screenArgs = [
+        '-dmS',
+        sessionName,
+        shell,
+        shellArg,
+        effectiveCommand,
+      ];
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: screen ${screenArgs.join(' ')}`);
@@ -357,7 +384,12 @@ function runInScreen(command, options = {}) {
         );
       }
 
-      return runScreenWithLogCapture(command, sessionName, shellInfo);
+      return runScreenWithLogCapture(
+        command,
+        sessionName,
+        shellInfo,
+        options.user
+      );
     }
   } catch (err) {
     return Promise.resolve({
@@ -371,7 +403,7 @@ function runInScreen(command, options = {}) {
 /**
  * Run command in tmux
  * @param {string} command - Command to execute
- * @param {object} options - Options (session, detached)
+ * @param {object} options - Options (session, detached, user)
  * @returns {Promise<{success: boolean, sessionName: string, message: string}>}
  */
 function runInTmux(command, options = {}) {
@@ -385,19 +417,24 @@ function runInTmux(command, options = {}) {
   }
 
   const sessionName = options.session || generateSessionName('tmux');
+  // Wrap command with user switch if specified
+  const effectiveCommand = wrapCommandWithUser(command, options.user);
 
   try {
     if (options.detached) {
       // Detached mode: tmux new-session -d -s <session> '<command>'
       if (DEBUG) {
         console.log(
-          `[DEBUG] Running: tmux new-session -d -s "${sessionName}" "${command}"`
+          `[DEBUG] Running: tmux new-session -d -s "${sessionName}" "${effectiveCommand}"`
         );
       }
 
-      execSync(`tmux new-session -d -s "${sessionName}" "${command}"`, {
-        stdio: 'inherit',
-      });
+      execSync(
+        `tmux new-session -d -s "${sessionName}" "${effectiveCommand}"`,
+        {
+          stdio: 'inherit',
+        }
+      );
 
       return Promise.resolve({
         success: true,
@@ -408,14 +445,14 @@ function runInTmux(command, options = {}) {
       // Attached mode: tmux new-session -s <session> '<command>'
       if (DEBUG) {
         console.log(
-          `[DEBUG] Running: tmux new-session -s "${sessionName}" "${command}"`
+          `[DEBUG] Running: tmux new-session -s "${sessionName}" "${effectiveCommand}"`
         );
       }
 
       return new Promise((resolve) => {
         const child = spawn(
           'tmux',
-          ['new-session', '-s', sessionName, command],
+          ['new-session', '-s', sessionName, effectiveCommand],
           {
             stdio: 'inherit',
           }
@@ -451,7 +488,7 @@ function runInTmux(command, options = {}) {
 /**
  * Run command in Docker container
  * @param {string} command - Command to execute
- * @param {object} options - Options (image, session/name, detached)
+ * @param {object} options - Options (image, session/name, detached, user)
  * @returns {Promise<{success: boolean, containerName: string, message: string}>}
  */
 function runInDocker(command, options = {}) {
@@ -476,17 +513,15 @@ function runInDocker(command, options = {}) {
 
   try {
     if (options.detached) {
-      // Detached mode: docker run -d --name <name> <image> <shell> -c '<command>'
-      const dockerArgs = [
-        'run',
-        '-d',
-        '--name',
-        containerName,
-        options.image,
-        '/bin/sh',
-        '-c',
-        command,
-      ];
+      // Detached mode: docker run -d --name <name> [--user <user>] <image> <shell> -c '<command>'
+      const dockerArgs = ['run', '-d', '--name', containerName];
+
+      // Add --user flag if specified
+      if (options.user) {
+        dockerArgs.push('--user', options.user);
+      }
+
+      dockerArgs.push(options.image, '/bin/sh', '-c', command);
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
@@ -503,18 +538,15 @@ function runInDocker(command, options = {}) {
         message: `Command started in detached docker container: ${containerName}\nContainer ID: ${containerId.substring(0, 12)}\nAttach with: docker attach ${containerName}\nView logs: docker logs ${containerName}`,
       });
     } else {
-      // Attached mode: docker run -it --name <name> <image> <shell> -c '<command>'
-      const dockerArgs = [
-        'run',
-        '-it',
-        '--rm',
-        '--name',
-        containerName,
-        options.image,
-        '/bin/sh',
-        '-c',
-        command,
-      ];
+      // Attached mode: docker run -it --name <name> [--user <user>] <image> <shell> -c '<command>'
+      const dockerArgs = ['run', '-it', '--rm', '--name', containerName];
+
+      // Add --user flag if specified
+      if (options.user) {
+        dockerArgs.push('--user', options.user);
+      }
+
+      dockerArgs.push(options.image, '/bin/sh', '-c', command);
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
@@ -602,6 +634,7 @@ function generateLogFilename(environment) {
  * @param {string} params.mode - attached or detached
  * @param {string} params.sessionName - Session/container name
  * @param {string} [params.image] - Docker image (for docker environment)
+ * @param {string} [params.user] - User to run command as (optional)
  * @param {string} params.startTime - Start timestamp
  * @returns {string} Log header content
  */
@@ -614,6 +647,9 @@ function createLogHeader(params) {
   content += `Session: ${params.sessionName}\n`;
   if (params.image) {
     content += `Image: ${params.image}\n`;
+  }
+  if (params.user) {
+    content += `User: ${params.user}\n`;
   }
   content += `Platform: ${process.platform}\n`;
   content += `Node Version: ${process.version}\n`;
@@ -685,6 +721,7 @@ module.exports = {
   runInTmux,
   runInDocker,
   runIsolated,
+  wrapCommandWithUser,
   // Export logging utilities for unified experience
   getTimestamp,
   generateLogFilename,

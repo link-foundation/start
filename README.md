@@ -152,6 +152,23 @@ $ --isolated docker --image oven/bun:latest -- bun install
 $ -i tmux -s my-session -d bun start
 ```
 
+### User Isolation
+
+Run commands as a different user:
+
+```bash
+# Run as specific user
+$ --user www-data -- node server.js
+
+# Combine with process isolation
+$ --isolated screen --user john -- npm start
+
+# Docker with user (uses Docker's --user flag)
+$ --isolated docker --image node:20 --user 1000:1000 -- npm install
+```
+
+**Note:** User isolation with screen/tmux requires `sudo` access with NOPASSWD configuration for the target user, as it uses `sudo -n -u <user>` internally.
+
 #### Supported Backends
 
 | Backend  | Description                            | Installation                                               |
@@ -169,6 +186,7 @@ $ -i tmux -s my-session -d bun start
 | `--detached, -d` | Run in detached/background mode              |
 | `--session, -s`  | Custom session/container name                |
 | `--image`        | Docker image (required for docker isolation) |
+| `--user`         | Run command as specified user                |
 
 **Note:** Using both `--attached` and `--detached` together will result in an error - you must choose one mode.
 

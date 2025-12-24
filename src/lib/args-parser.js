@@ -34,6 +34,7 @@ function parseArgs(args) {
     detached: false, // Run in detached mode
     session: null, // Session name
     image: null, // Docker image
+    user: null, // User to run command as
   };
 
   let commandArgs = [];
@@ -171,6 +172,22 @@ function parseOption(args, index, options) {
     return 1;
   }
 
+  // --user or -u
+  if (arg === '--user') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.user = args[index + 1];
+      return 2;
+    } else {
+      throw new Error(`Option ${arg} requires a username argument`);
+    }
+  }
+
+  // --user=<value>
+  if (arg.startsWith('--user=')) {
+    options.user = arg.split('=')[1];
+    return 1;
+  }
+
   // Not a recognized wrapper option
   return 0;
 }
@@ -212,6 +229,16 @@ function validateOptions(options) {
   // Image is only valid with docker
   if (options.image && options.isolated !== 'docker') {
     throw new Error('--image option is only valid with --isolated docker');
+  }
+
+  // User validation
+  if (options.user) {
+    // Validate username format (basic check)
+    if (!/^[a-zA-Z0-9_-]+$/.test(options.user)) {
+      throw new Error(
+        `Invalid username format: "${options.user}". Username should contain only letters, numbers, hyphens, and underscores.`
+      );
+    }
   }
 }
 

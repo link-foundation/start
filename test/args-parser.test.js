@@ -383,3 +383,90 @@ describe('VALID_BACKENDS', () => {
     assert.ok(VALID_BACKENDS.includes('docker'));
   });
 });
+
+describe('user option', () => {
+  it('should parse --user with value', () => {
+    const result = parseArgs(['--user', 'john', '--', 'npm', 'test']);
+    assert.strictEqual(result.wrapperOptions.user, 'john');
+    assert.strictEqual(result.command, 'npm test');
+  });
+
+  it('should parse --user=value format', () => {
+    const result = parseArgs(['--user=www-data', '--', 'npm', 'start']);
+    assert.strictEqual(result.wrapperOptions.user, 'www-data');
+  });
+
+  it('should work with isolation options', () => {
+    const result = parseArgs([
+      '--isolated',
+      'screen',
+      '--user',
+      'john',
+      '--',
+      'npm',
+      'start',
+    ]);
+    assert.strictEqual(result.wrapperOptions.isolated, 'screen');
+    assert.strictEqual(result.wrapperOptions.user, 'john');
+    assert.strictEqual(result.command, 'npm start');
+  });
+
+  it('should work without isolation (standalone user switch)', () => {
+    const result = parseArgs(['--user', 'www-data', '--', 'node', 'server.js']);
+    assert.strictEqual(result.wrapperOptions.user, 'www-data');
+    assert.strictEqual(result.wrapperOptions.isolated, null);
+    assert.strictEqual(result.command, 'node server.js');
+  });
+
+  it('should throw error for missing user argument', () => {
+    assert.throws(() => {
+      parseArgs(['--user']);
+    }, /requires a username argument/);
+  });
+
+  it('should accept valid usernames', () => {
+    const validUsernames = [
+      'john',
+      'www-data',
+      'user123',
+      'john-doe',
+      'user_1',
+    ];
+    for (const username of validUsernames) {
+      assert.doesNotThrow(() => {
+        parseArgs(['--user', username, '--', 'echo', 'test']);
+      });
+    }
+  });
+
+  it('should reject invalid username formats', () => {
+    const invalidUsernames = [
+      'john@doe',
+      'user name',
+      'user.name',
+      'user/name',
+    ];
+    for (const username of invalidUsernames) {
+      assert.throws(() => {
+        parseArgs(['--user', username, '--', 'echo', 'test']);
+      }, /Invalid username format/);
+    }
+  });
+
+  it('should work with docker isolation', () => {
+    const result = parseArgs([
+      '--isolated',
+      'docker',
+      '--image',
+      'node:20',
+      '--user',
+      '1000:1000',
+      '--',
+      'npm',
+      'install',
+    ]);
+    assert.strictEqual(result.wrapperOptions.isolated, 'docker');
+    assert.strictEqual(result.wrapperOptions.image, 'node:20');
+    assert.strictEqual(result.wrapperOptions.user, '1000:1000');
+  });
+});

@@ -228,6 +228,7 @@ function printUsage() {
   console.log(
     '  --image <image>           Docker image (required for docker isolation)'
   );
+  console.log('  --user <username>         Run command as specified user');
   console.log('  --version, -v             Show version information');
   console.log('');
   console.log('Examples:');
@@ -236,6 +237,8 @@ function printUsage() {
   console.log('  $ --isolated tmux -- bun start');
   console.log('  $ -i screen -d bun start');
   console.log('  $ --isolated docker --image oven/bun:latest -- bun install');
+  console.log('  $ --user www-data -- node server.js');
+  console.log('  $ --isolated screen --user john -- npm start');
   console.log('');
   console.log('Piping with $:');
   console.log('  echo "hi" | $ agent       # Preferred - pipe TO $ command');
@@ -343,6 +346,9 @@ async function runWithIsolation(options, cmd) {
   if (options.image) {
     console.log(`[Isolation] Image: ${options.image}`);
   }
+  if (options.user) {
+    console.log(`[Isolation] User: ${options.user}`);
+  }
   console.log('');
 
   // Create log content
@@ -352,6 +358,7 @@ async function runWithIsolation(options, cmd) {
     mode,
     sessionName,
     image: options.image,
+    user: options.user,
     startTime,
   });
 
@@ -360,6 +367,7 @@ async function runWithIsolation(options, cmd) {
     session: options.session,
     image: options.image,
     detached: mode === 'detached',
+    user: options.user,
   });
 
   // Get exit code
