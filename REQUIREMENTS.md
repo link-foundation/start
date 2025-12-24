@@ -142,6 +142,7 @@ Support two patterns for passing wrapper options:
 - `--detached, -d`: Run in detached/background mode
 - `--session, -s <name>`: Custom session name
 - `--image <image>`: Docker image (required for docker backend)
+- `--keep-alive, -k`: Keep isolation environment alive after command exits (disabled by default)
 
 #### 6.3 Supported Backends
 
@@ -155,7 +156,18 @@ Support two patterns for passing wrapper options:
 - **Detached mode**: Command runs in background, session info displayed for reattachment
 - **Conflict handling**: If both --attached and --detached are specified, show error asking user to choose one
 
-#### 6.5 Graceful Degradation
+#### 6.5 Auto-Exit Behavior
+
+By default, all isolation environments (screen, tmux, docker) automatically exit after the target command completes execution. This ensures:
+
+- Resources are freed immediately after command execution
+- No orphaned sessions/containers remain running
+- Uniform behavior across all isolation backends
+- Command output is still captured and logged before exit
+
+The `--keep-alive` flag can be used to override this behavior and keep the isolation environment running after command completion, useful for debugging or interactive workflows.
+
+#### 6.6 Graceful Degradation
 
 - If isolation backend is not installed, show informative error with installation instructions
 - If session creation fails, report error with details
