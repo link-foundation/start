@@ -1,15 +1,19 @@
 # Issue #28 Raw Data
 
 ## Issue Title
+
 Can we somehow overcome the need of `'` quotes with `|` and `"` in a sequence?
 
 ## Issue State
+
 OPEN
 
 ## Issue Labels
+
 bug, documentation, enhancement, question
 
 ## Issue Author
+
 konard
 
 ## Issue Content
@@ -44,10 +48,7 @@ konard@MacBook-Pro-Konstantin ~ % $ 'echo "hi" | agent'
   "mode": "stdin-stream",
   "message": "Agent CLI in continuous listening mode. Accepts JSON and plain text input.",
   "hint": "Press CTRL+C to exit. Use --help for options.",
-  "acceptedFormats": [
-    "JSON object with \"message\" field",
-    "Plain text"
-  ],
+  "acceptedFormats": ["JSON object with \"message\" field", "Plain text"],
   "options": {
     "interactive": true,
     "autoMergeQueuedMessages": true,
@@ -58,6 +59,7 @@ konard@MacBook-Pro-Konstantin ~ % $ 'echo "hi" | agent'
 ```
 
 The agent then read a log file:
+
 ```
 === Start Command Log ===
 Timestamp: 2025-12-24 15:07:08.894
@@ -76,11 +78,13 @@ Exit Code: 0
 ```
 
 And responded:
+
 > "It looks like you executed the command `echo hi`, which successfully output \"hi\" with exit code 0..."
 
 ### Session 2 Output (desired behavior)
 
 The agent received "hi" directly as input and responded:
+
 > "Hello! How can I help you today?"
 
 ## User Request

@@ -13,15 +13,19 @@
 When using the `$` command (start-command) with pipe operators (`|`) and double quotes (`"`) in the command, users need to wrap the entire command in single quotes to get the expected behavior. Without the quotes, the shell parses the pipe operator **before** passing arguments to the `$` command.
 
 **Example - Undesired behavior:**
+
 ```bash
 $ echo "hi" | agent
 ```
+
 The shell interprets this as: "Run `$ echo "hi"` and pipe its output to `agent`"
 
 **Example - Desired behavior (requires single quotes):**
+
 ```bash
 $ 'echo "hi" | agent'
 ```
+
 The shell interprets this as: "Run `$` with the argument `echo "hi" | agent`"
 
 ### Environment
@@ -131,11 +135,13 @@ The shell's parsing order is:
 ### Why This Happens
 
 When you type:
+
 ```bash
 $ echo "hi" | agent
 ```
 
 The shell sees:
+
 - `$` - a command (the start-command binary)
 - `echo` - an argument to `$`
 - `"hi"` - another argument to `$` (quotes are stripped by shell)
@@ -151,11 +157,13 @@ From the [GNU Bash Reference - Quoting](https://www.gnu.org/software/bash/manual
 > "Enclosing characters in single quotes (`'`) preserves the literal value of each character within the quotes."
 
 This means:
+
 ```bash
 $ 'echo "hi" | agent'
 ```
 
 The shell sees:
+
 - `$` - a command
 - `echo "hi" | agent` - a single string argument (the `|` inside is literal, not a pipe operator)
 
@@ -172,6 +180,7 @@ From [Shell Grammar Rules](https://bargenqua.st/posts/bash-pipes/):
 ### Who Is Affected
 
 Users who want to:
+
 1. Pipe content **through** the `$` command to another command
 2. Use the `$` command to execute complex pipelines
 3. Use `$` as part of a larger shell pipeline
@@ -182,23 +191,51 @@ Users who want to:
 
 ## Proposed Solutions
 
-### Solution 1: Documentation Enhancement (Recommended)
+### Solution 1: Pipe TO `$` (Recommended - Preferred Approach)
+
+Instead of quoting, put `$` on the **receiving** command in the pipeline:
+
+```bash
+# Preferred - pipe TO the $-wrapped command
+echo "hi" | $ agent
+```
+
+This works because:
+
+1. The shell creates a pipeline: `echo "hi"` piped to `$ agent`
+2. `$ agent` receives "hi" on stdin
+3. The `$` command wraps `agent`, which processes the input correctly
+
+**Pros:**
+
+- No quoting needed
+- Simple and intuitive
+- Works naturally with shell pipelines
+
+**Cons:**
+
+- Only works when piping TO a command (not for entire pipelines)
+
+### Solution 2: Documentation Enhancement (Also Recommended)
 
 Add clear documentation explaining:
+
 1. How shell parsing affects the `$` command
 2. When to use quotes around complex commands
 3. Examples of common use cases
 
 **Pros:**
+
 - No code changes required
 - Educates users about shell behavior
 - Maintains POSIX compliance
 
 **Cons:**
+
 - Requires users to learn quoting rules
 - May still feel unintuitive
 
-### Solution 2: Use a Multi-Character Command Name
+### Solution 3: Use a Multi-Character Command Name
 
 Instead of `$`, use a multi-character name like `start` or `run`:
 
@@ -208,14 +245,16 @@ start echo "hi" | agent       # Same issue
 ```
 
 **Pros:**
+
 - Less visual confusion with shell's `$` variable syntax
 - Easier to google and document
 
 **Cons:**
+
 - Doesn't solve the fundamental issue
 - Breaks backward compatibility
 
-### Solution 3: Wrapper Script with Here-Document
+### Solution 4: Wrapper Script with Here-Document
 
 Create an alternative invocation method:
 
@@ -226,15 +265,17 @@ CMD
 ```
 
 **Pros:**
+
 - No quoting issues
 - Can handle multi-line commands
 - Clear visual separation
 
 **Cons:**
+
 - Requires new syntax
 - More verbose for simple commands
 
-### Solution 4: Shell Function Alternative
+### Solution 5: Shell Function Alternative
 
 Provide a shell function that users can source:
 
@@ -249,12 +290,14 @@ run echo "hi" | agent  # Still has the same issue!
 ```
 
 **Pros:**
+
 - More conventional naming
 
 **Cons:**
+
 - **Does not solve the problem** - shell parsing happens before function call
 
-### Solution 5: Interactive Mode Detection
+### Solution 6: Interactive Mode Detection
 
 When `$` detects it's being piped to/from, emit a warning:
 
@@ -264,14 +307,16 @@ $ echo "hi" | agent
 ```
 
 **Pros:**
+
 - Helps users understand what's happening
 - Non-breaking change
 
 **Cons:**
+
 - Adds noise to output
 - May interfere with legitimate piping use cases
 
-### Solution 6: ZSH Global Alias (ZSH Only)
+### Solution 7: ZSH Global Alias (ZSH Only)
 
 ZSH supports [global aliases](https://vonheikemen.github.io/devlog/tools/zsh-global-aliases/) that expand anywhere in the command:
 
@@ -284,26 +329,32 @@ alias -g '|$'='| $'  # Not helpful
 
 ## Recommended Approach
 
-After careful analysis, the recommended approach is a **combination of Solutions 1 and 5**:
+After careful analysis, the **recommended approach is Solution 1: Pipe TO `$`** combined with documentation enhancement:
 
-1. **Documentation Enhancement**: Clearly document the quoting requirements with examples
-2. **Optional Warning**: Add an environment variable `START_WARN_PIPE=1` that enables warnings when the command might not behave as expected
+1. **Preferred syntax**: `echo "hi" | $ agent` - pipe TO the `$`-wrapped command
+2. **Alternative**: `$ 'echo "hi" | agent'` - quote the entire pipeline when needed
+3. **Documentation**: Clear docs explaining both approaches
 
 ### Implementation Plan
 
-1. **Documentation (docs/USAGE.md)**:
-   - Add "Shell Quoting and Piping" section
-   - Include visual diagrams
-   - Provide common use case examples
+1. **Documentation (docs/PIPES.md)** - New file:
+   - Detailed explanation of pipe usage
+   - Preferred approach: piping TO `$`
+   - Alternative approach: quoting
+   - Examples and troubleshooting
 
-2. **README.md Update**:
-   - Add quoting examples to Quick Start
+2. **Documentation (docs/USAGE.md)**:
+   - Brief section on pipes with link to PIPES.md
+   - Updated examples showing preferred syntax
+
+3. **README.md Update**:
+   - Add piping examples showing preferred syntax
    - Link to detailed documentation
 
-3. **CLI Help Update**:
-   - Add a note about quoting in `$ --help`
+4. **CLI Help Update** (Future Enhancement):
+   - Add a note about piping in `$ --help`
 
-4. **Optional Warning (Future Enhancement)**:
+5. **Optional Warning** (Future Enhancement):
    - Detect if stdout is a pipe
    - Detect if command doesn't contain pipe-like patterns
    - Emit helpful warning
