@@ -11,6 +11,7 @@
  * --detached, -d            Run in detached mode (background)
  * --session, -s <name>      Session name for isolation
  * --image <image>           Docker image (required for docker isolation)
+ * --keep-alive, -k          Keep isolation environment alive after command exits
  */
 
 // Debug mode from environment
@@ -34,6 +35,7 @@ function parseArgs(args) {
     detached: false, // Run in detached mode
     session: null, // Session name
     image: null, // Docker image
+    keepAlive: false, // Keep environment alive after command exits
   };
 
   let commandArgs = [];
@@ -171,6 +173,12 @@ function parseOption(args, index, options) {
     return 1;
   }
 
+  // --keep-alive or -k
+  if (arg === '--keep-alive' || arg === '-k') {
+    options.keepAlive = true;
+    return 1;
+  }
+
   // Not a recognized wrapper option
   return 0;
 }
@@ -212,6 +220,11 @@ function validateOptions(options) {
   // Image is only valid with docker
   if (options.image && options.isolated !== 'docker') {
     throw new Error('--image option is only valid with --isolated docker');
+  }
+
+  // Keep-alive is only valid with isolation
+  if (options.keepAlive && !options.isolated) {
+    throw new Error('--keep-alive option is only valid with --isolated');
   }
 }
 
