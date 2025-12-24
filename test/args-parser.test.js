@@ -219,6 +219,67 @@ describe('parseArgs', () => {
     });
   });
 
+  describe('keep-alive option', () => {
+    it('should parse --keep-alive flag', () => {
+      const result = parseArgs([
+        '--isolated',
+        'tmux',
+        '--keep-alive',
+        '--',
+        'npm',
+        'test',
+      ]);
+      assert.strictEqual(result.wrapperOptions.keepAlive, true);
+    });
+
+    it('should parse -k shorthand', () => {
+      const result = parseArgs(['-i', 'screen', '-k', '--', 'npm', 'start']);
+      assert.strictEqual(result.wrapperOptions.keepAlive, true);
+    });
+
+    it('should default keepAlive to false', () => {
+      const result = parseArgs(['-i', 'tmux', '--', 'npm', 'test']);
+      assert.strictEqual(result.wrapperOptions.keepAlive, false);
+    });
+
+    it('should throw error for keep-alive without isolation', () => {
+      assert.throws(() => {
+        parseArgs(['--keep-alive', '--', 'npm', 'test']);
+      }, /--keep-alive option is only valid with --isolated/);
+    });
+
+    it('should work with detached mode', () => {
+      const result = parseArgs([
+        '-i',
+        'screen',
+        '-d',
+        '-k',
+        '--',
+        'npm',
+        'start',
+      ]);
+      assert.strictEqual(result.wrapperOptions.isolated, 'screen');
+      assert.strictEqual(result.wrapperOptions.detached, true);
+      assert.strictEqual(result.wrapperOptions.keepAlive, true);
+    });
+
+    it('should work with docker', () => {
+      const result = parseArgs([
+        '-i',
+        'docker',
+        '--image',
+        'node:20',
+        '-k',
+        '--',
+        'npm',
+        'test',
+      ]);
+      assert.strictEqual(result.wrapperOptions.isolated, 'docker');
+      assert.strictEqual(result.wrapperOptions.image, 'node:20');
+      assert.strictEqual(result.wrapperOptions.keepAlive, true);
+    });
+  });
+
   describe('command without separator', () => {
     it('should parse command after options without separator', () => {
       const result = parseArgs(['-i', 'tmux', '-d', 'npm', 'start']);
