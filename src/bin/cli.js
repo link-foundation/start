@@ -237,8 +237,13 @@ function printUsage() {
   console.log('  $ -i screen -d bun start');
   console.log('  $ --isolated docker --image oven/bun:latest -- bun install');
   console.log('');
-  console.log('Quoting for pipes and special characters:');
-  console.log("  $ 'echo hello | grep h'   # Wrap in single quotes for pipes");
+  console.log('Piping with $:');
+  console.log('  echo "hi" | $ agent       # Preferred - pipe TO $ command');
+  console.log(
+    '  $ \'echo "hi" | agent\'   # Alternative - quote entire pipeline'
+  );
+  console.log('');
+  console.log('Quoting for special characters:');
   console.log("  $ 'npm test && npm build' # Wrap for logical operators");
   console.log("  $ 'cat file > output.txt' # Wrap for redirections");
   console.log('');
