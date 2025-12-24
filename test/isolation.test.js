@@ -371,9 +371,23 @@ describe('Isolation Keep-Alive Behavior', () => {
   });
 
   describe('runInDocker keep-alive messages', () => {
-    it('should include auto-exit message by default in detached mode', async () => {
+    // Helper function to check if docker daemon is running
+    function isDockerRunning() {
       if (!isCommandAvailable('docker')) {
-        console.log('  Skipping: docker not installed');
+        return false;
+      }
+      try {
+        // Try to ping the docker daemon
+        execSync('docker info', { stdio: 'ignore', timeout: 5000 });
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    it('should include auto-exit message by default in detached mode', async () => {
+      if (!isDockerRunning()) {
+        console.log('  Skipping: docker not available or daemon not running');
         return;
       }
 
@@ -400,8 +414,8 @@ describe('Isolation Keep-Alive Behavior', () => {
     });
 
     it('should include keep-alive message when keepAlive is true', async () => {
-      if (!isCommandAvailable('docker')) {
-        console.log('  Skipping: docker not installed');
+      if (!isDockerRunning()) {
+        console.log('  Skipping: docker not available or daemon not running');
         return;
       }
 
