@@ -501,7 +501,7 @@ function runInTmux(command, options = {}) {
 /**
  * Run command in Docker container
  * @param {string} command - Command to execute
- * @param {object} options - Options (image, session/name, detached, keepAlive)
+ * @param {object} options - Options (image, session/name, detached, keepAlive, autoRemoveDockerContainer)
  * @returns {Promise<{success: boolean, containerName: string, message: string}>}
  */
 function runInDocker(command, options = {}) {
@@ -548,9 +548,18 @@ function runInDocker(command, options = {}) {
         effectiveCommand,
       ];
 
+      // Add --rm flag if autoRemoveDockerContainer is true
+      // Note: --rm must come before the image name
+      if (options.autoRemoveDockerContainer) {
+        dockerArgs.splice(2, 0, '--rm');
+      }
+
       if (DEBUG) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
         console.log(`[DEBUG] keepAlive: ${options.keepAlive || false}`);
+        console.log(
+          `[DEBUG] autoRemoveDockerContainer: ${options.autoRemoveDockerContainer || false}`
+        );
       }
 
       const containerId = execSync(`docker ${dockerArgs.join(' ')}`, {
@@ -563,6 +572,11 @@ function runInDocker(command, options = {}) {
         message += `\nContainer will stay alive after command completes.`;
       } else {
         message += `\nContainer will exit automatically after command completes.`;
+      }
+      if (options.autoRemoveDockerContainer) {
+        message += `\nContainer will be automatically removed after exit.`;
+      } else {
+        message += `\nContainer filesystem will be preserved after exit.`;
       }
       message += `\nAttach with: docker attach ${containerName}`;
       message += `\nView logs: docker logs ${containerName}`;
