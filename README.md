@@ -21,6 +21,22 @@ $ npm test
 $ git status
 ```
 
+### Shell Quoting for Pipes and Special Characters
+
+When using pipes (`|`), redirections (`>`), or other shell operators, wrap the entire command in **single quotes** to ensure the pipeline runs within `$`:
+
+```bash
+# Without quotes - pipe is handled by outer shell (unexpected behavior)
+$ echo "hello" | grep "h"    # grep receives $ output, not "hello"
+
+# With quotes - entire pipeline passed to $ (expected behavior)
+$ 'echo "hello" | grep "h"'  # grep receives "hello"
+$ 'npm test | tee output.log'
+$ 'cat file.txt | wc -l'
+```
+
+This is standard shell behavior - operators like `|`, `&&`, `||`, `>` are parsed by the shell before arguments reach any command. See [docs/USAGE.md](docs/USAGE.md) for detailed guidance.
+
 ### Natural Language Commands (Aliases)
 
 You can also use natural language to execute common commands. The `$` command supports pattern-based substitutions defined in `substitutions.lino`:
