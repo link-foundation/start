@@ -237,13 +237,24 @@ describe('parseArgs', () => {
   describe('backend validation', () => {
     it('should accept valid backends', () => {
       for (const backend of VALID_BACKENDS) {
-        // Docker requires image, so handle it separately
+        // Docker requires image, SSH requires host, so handle them separately
         if (backend === 'docker') {
           const result = parseArgs([
             '-i',
             backend,
             '--image',
             'alpine',
+            '--',
+            'echo',
+            'test',
+          ]);
+          assert.strictEqual(result.wrapperOptions.isolated, backend);
+        } else if (backend === 'ssh') {
+          const result = parseArgs([
+            '-i',
+            backend,
+            '--host',
+            'user@example.com',
             '--',
             'echo',
             'test',
