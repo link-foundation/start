@@ -12,6 +12,7 @@
  * --session, -s <name>             Session name for isolation
  * --image <image>                  Docker image (required for docker isolation)
  * --user <username>                Run command as specified user
+ * --create-user [username]         Create a new isolated user with same permissions as current user
  * --keep-alive, -k                 Keep isolation environment alive after command exits
  * --auto-remove-docker-container   Automatically remove docker container after exit (disabled by default)
  */
@@ -38,6 +39,8 @@ function parseArgs(args) {
     session: null, // Session name
     image: null, // Docker image
     user: null, // User to run command as
+    createUser: false, // Create a new isolated user
+    createUserName: null, // Optional custom username for created user
     keepAlive: false, // Keep environment alive after command exits
     autoRemoveDockerContainer: false, // Auto-remove docker container after exit
   };
@@ -193,6 +196,29 @@ function parseOption(args, index, options) {
     return 1;
   }
 
+  // --create-user [optional-username]
+  if (arg === '--create-user') {
+    options.createUser = true;
+    // Check if next arg is an optional username (not starting with -)
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      // Check if next arg looks like a command (not a username)
+      const nextArg = args[index + 1];
+      // If next arg contains spaces or looks like a command, don't consume it
+      if (/^[a-zA-Z0-9_-]+$/.test(nextArg) && nextArg.length <= 32) {
+        options.createUserName = nextArg;
+        return 2;
+      }
+    }
+    return 1;
+  }
+
+  // --create-user=<value>
+  if (arg.startsWith('--create-user=')) {
+    options.createUser = true;
+    options.createUserName = arg.split('=')[1];
+    return 1;
+  }
+
   // --keep-alive or -k
   if (arg === '--keep-alive' || arg === '-k') {
     options.keepAlive = true;
@@ -268,6 +294,35 @@ function validateOptions(options) {
     throw new Error(
       '--auto-remove-docker-container option is only valid with --isolated docker'
     );
+  }
+
+  // Create-user validation
+  if (options.createUser) {
+    // Cannot use both --user and --create-user
+    if (options.user) {
+      throw new Error(
+        'Cannot use both --user and --create-user. Use --create-user to create a new user with same permissions, or --user to run as an existing user.'
+      );
+    }
+    // Create-user requires isolation (screen or tmux, not docker)
+    if (options.isolated === 'docker') {
+      throw new Error(
+        '--create-user is not supported with Docker isolation. Docker uses --user for UID:GID mapping instead.'
+      );
+    }
+    // Validate custom username if provided
+    if (options.createUserName) {
+      if (!/^[a-zA-Z0-9_-]+$/.test(options.createUserName)) {
+        throw new Error(
+          `Invalid username format for --create-user: "${options.createUserName}". Username should contain only letters, numbers, hyphens, and underscores.`
+        );
+      }
+      if (options.createUserName.length > 32) {
+        throw new Error(
+          `Username too long for --create-user: "${options.createUserName}". Maximum length is 32 characters.`
+        );
+      }
+    }
   }
 }
 

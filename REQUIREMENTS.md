@@ -143,6 +143,7 @@ Support two patterns for passing wrapper options:
 - `--session, -s <name>`: Custom session name
 - `--image <image>`: Docker image (required for docker backend)
 - `--user <username>`: Run command as specified user
+- `--create-user [username]`: Create new isolated user with same group permissions as current user
 - `--keep-alive, -k`: Keep isolation environment alive after command exits (disabled by default)
 - `--auto-remove-docker-container`: Automatically remove docker container after exit (disabled by default, only valid with --isolated docker)
 
@@ -179,7 +180,40 @@ $ --isolated screen --user john -- npm start
 $ --isolated docker --image node:20 --user 1000:1000 -- npm install
 ```
 
-#### 6.6 Auto-Exit Behavior
+#### 6.6 Automatic User Creation
+
+- `--create-user [username]`: Create a new isolated user with same permissions
+- Creates user with same group memberships as current user (sudo, docker, wheel, etc.)
+- Automatically generates username if not specified
+- User is automatically deleted after command completes
+- Requires sudo NOPASSWD for useradd/userdel commands
+- Only works with screen/tmux isolation (not docker)
+- Cannot be combined with `--user` option
+
+Example usage:
+
+```bash
+# Create isolated user and run command
+$ --create-user -- npm test
+
+# Custom username for isolated user
+$ --create-user myrunner -- npm start
+
+# Combine with screen isolation
+$ --isolated screen --create-user -- npm test
+
+# Combine with tmux detached mode
+$ -i tmux -d --create-user testuser -- npm run build
+```
+
+Benefits:
+
+- Clean user environment for each run
+- Inherits sudo/docker access from current user
+- Files created during execution belong to isolated user
+- Automatic cleanup after execution
+
+#### 6.7 Auto-Exit Behavior
 
 By default, all isolation environments (screen, tmux, docker) automatically exit after the target command completes execution. This ensures:
 
@@ -202,7 +236,7 @@ The `--auto-remove-docker-container` flag enables automatic removal of the conta
 
 Note: `--auto-remove-docker-container` is only valid with `--isolated docker` and is independent of the `--keep-alive` flag.
 
-#### 6.7 Graceful Degradation
+#### 6.8 Graceful Degradation
 
 - If isolation backend is not installed, show informative error with installation instructions
 - If session creation fails, report error with details
