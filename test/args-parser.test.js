@@ -280,6 +280,75 @@ describe('parseArgs', () => {
     });
   });
 
+  describe('auto-remove-docker-container option', () => {
+    it('should parse --auto-remove-docker-container flag', () => {
+      const result = parseArgs([
+        '--isolated',
+        'docker',
+        '--image',
+        'alpine',
+        '--auto-remove-docker-container',
+        '--',
+        'npm',
+        'test',
+      ]);
+      assert.strictEqual(result.wrapperOptions.autoRemoveDockerContainer, true);
+    });
+
+    it('should default autoRemoveDockerContainer to false', () => {
+      const result = parseArgs([
+        '-i',
+        'docker',
+        '--image',
+        'alpine',
+        '--',
+        'npm',
+        'test',
+      ]);
+      assert.strictEqual(
+        result.wrapperOptions.autoRemoveDockerContainer,
+        false
+      );
+    });
+
+    it('should throw error for auto-remove-docker-container without docker isolation', () => {
+      assert.throws(() => {
+        parseArgs([
+          '-i',
+          'tmux',
+          '--auto-remove-docker-container',
+          '--',
+          'npm',
+          'test',
+        ]);
+      }, /--auto-remove-docker-container option is only valid with --isolated docker/);
+    });
+
+    it('should throw error for auto-remove-docker-container without isolation', () => {
+      assert.throws(() => {
+        parseArgs(['--auto-remove-docker-container', '--', 'npm', 'test']);
+      }, /--auto-remove-docker-container option is only valid with --isolated docker/);
+    });
+
+    it('should work with keep-alive and auto-remove-docker-container', () => {
+      const result = parseArgs([
+        '-i',
+        'docker',
+        '--image',
+        'node:20',
+        '-k',
+        '--auto-remove-docker-container',
+        '--',
+        'npm',
+        'test',
+      ]);
+      assert.strictEqual(result.wrapperOptions.isolated, 'docker');
+      assert.strictEqual(result.wrapperOptions.image, 'node:20');
+      assert.strictEqual(result.wrapperOptions.keepAlive, true);
+      assert.strictEqual(result.wrapperOptions.autoRemoveDockerContainer, true);
+    });
+  });
+
   describe('command without separator', () => {
     it('should parse command after options without separator', () => {
       const result = parseArgs(['-i', 'tmux', '-d', 'npm', 'start']);
