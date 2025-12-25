@@ -149,7 +149,7 @@ $ --isolated screen --detached -- bun start
 $ --isolated docker --image oven/bun:latest -- bun install
 
 # Run on remote server via SSH
-$ --isolated ssh --host user@remote.server -- npm test
+$ --isolated ssh --endpoint user@remote.server -- npm test
 
 # Short form with custom session name
 $ -i tmux -s my-session -d bun start
@@ -157,23 +157,23 @@ $ -i tmux -s my-session -d bun start
 
 #### Supported Backends
 
-| Backend  | Description                                | Installation                                               |
-| -------- | ------------------------------------------ | ---------------------------------------------------------- |
-| `screen` | GNU Screen terminal multiplexer            | `apt install screen` / `brew install screen`               |
-| `tmux`   | Modern terminal multiplexer                | `apt install tmux` / `brew install tmux`                   |
-| `docker` | Container isolation (requires --image)     | [Docker Installation](https://docs.docker.com/get-docker/) |
-| `ssh`    | Remote execution via SSH (requires --host) | `apt install openssh-client` / `brew install openssh`      |
+| Backend  | Description                                    | Installation                                               |
+| -------- | ---------------------------------------------- | ---------------------------------------------------------- |
+| `screen` | GNU Screen terminal multiplexer                | `apt install screen` / `brew install screen`               |
+| `tmux`   | Modern terminal multiplexer                    | `apt install tmux` / `brew install tmux`                   |
+| `docker` | Container isolation (requires --image)         | [Docker Installation](https://docs.docker.com/get-docker/) |
+| `ssh`    | Remote execution via SSH (requires --endpoint) | `apt install openssh-client` / `brew install openssh`      |
 
 #### Isolation Options
 
-| Option           | Description                                   |
-| ---------------- | --------------------------------------------- |
-| `--isolated, -i` | Isolation backend (screen, tmux, docker, ssh) |
-| `--attached, -a` | Run in attached/foreground mode (default)     |
-| `--detached, -d` | Run in detached/background mode               |
-| `--session, -s`  | Custom session/container name                 |
-| `--image`        | Docker image (required for docker isolation)  |
-| `--host`         | SSH host (required for ssh isolation)         |
+| Option           | Description                                      |
+| ---------------- | ------------------------------------------------ |
+| `--isolated, -i` | Isolation backend (screen, tmux, docker, ssh)    |
+| `--attached, -a` | Run in attached/foreground mode (default)        |
+| `--detached, -d` | Run in detached/background mode                  |
+| `--session, -s`  | Custom session/container name                    |
+| `--image`        | Docker image (required for docker isolation)     |
+| `--endpoint`     | SSH endpoint (required for ssh, e.g., user@host) |
 
 **Note:** Using both `--attached` and `--detached` together will result in an error - you must choose one mode.
 

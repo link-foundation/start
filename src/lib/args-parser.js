@@ -11,7 +11,7 @@
  * --detached, -d            Run in detached mode (background)
  * --session, -s <name>      Session name for isolation
  * --image <image>           Docker image (required for docker isolation)
- * --host <host>             SSH host (required for ssh isolation)
+ * --endpoint <endpoint>     SSH endpoint (required for ssh isolation, e.g., user@host)
  */
 
 // Debug mode from environment
@@ -35,7 +35,7 @@ function parseArgs(args) {
     detached: false, // Run in detached mode
     session: null, // Session name
     image: null, // Docker image
-    host: null, // SSH host
+    endpoint: null, // SSH endpoint (e.g., user@host)
   };
 
   let commandArgs = [];
@@ -173,19 +173,19 @@ function parseOption(args, index, options) {
     return 1;
   }
 
-  // --host (for ssh)
-  if (arg === '--host') {
+  // --endpoint (for ssh)
+  if (arg === '--endpoint') {
     if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
-      options.host = args[index + 1];
+      options.endpoint = args[index + 1];
       return 2;
     } else {
-      throw new Error(`Option ${arg} requires a host argument`);
+      throw new Error(`Option ${arg} requires an endpoint argument`);
     }
   }
 
-  // --host=<value>
-  if (arg.startsWith('--host=')) {
-    options.host = arg.split('=')[1];
+  // --endpoint=<value>
+  if (arg.startsWith('--endpoint=')) {
+    options.endpoint = arg.split('=')[1];
     return 1;
   }
 
@@ -221,10 +221,10 @@ function validateOptions(options) {
       );
     }
 
-    // SSH requires --host
-    if (options.isolated === 'ssh' && !options.host) {
+    // SSH requires --endpoint
+    if (options.isolated === 'ssh' && !options.endpoint) {
       throw new Error(
-        'SSH isolation requires --host option to specify the remote server'
+        'SSH isolation requires --endpoint option to specify the remote server (e.g., user@host)'
       );
     }
   }
@@ -239,9 +239,9 @@ function validateOptions(options) {
     throw new Error('--image option is only valid with --isolated docker');
   }
 
-  // Host is only valid with ssh
-  if (options.host && options.isolated !== 'ssh') {
-    throw new Error('--host option is only valid with --isolated ssh');
+  // Endpoint is only valid with ssh
+  if (options.endpoint && options.isolated !== 'ssh') {
+    throw new Error('--endpoint option is only valid with --isolated ssh');
   }
 }
 

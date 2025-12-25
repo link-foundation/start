@@ -122,6 +122,40 @@ jobs:
       - name: Run tests
         run: bun test
 
+      # SSH Integration Tests - Linux only (most reliable for SSH testing)
+      - name: Setup SSH server for integration tests (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          # Install openssh-server if not present
+          sudo apt-get install -y openssh-server
+
+          # Start SSH service
+          sudo systemctl start ssh
+
+          # Generate SSH key without passphrase for testing
+          ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N "" -C "ci-test-key"
+
+          # Add the public key to authorized_keys for passwordless login
+          cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
+          chmod 600 ~/.ssh/authorized_keys
+
+          # Configure SSH to accept localhost connections without prompts
+          mkdir -p ~/.ssh
+          cat >> ~/.ssh/config << 'EOF'
+          Host localhost
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            LogLevel ERROR
+          EOF
+          chmod 600 ~/.ssh/config
+
+          # Test SSH connectivity
+          ssh localhost "echo 'SSH connection successful'"
+
+      - name: Run SSH integration tests (Linux)
+        if: runner.os == 'Linux'
+        run: bun test test/ssh-integration.test.js
+
   # Release - only runs on main after tests pass (for push events)
   release:
     name: Release

@@ -219,6 +219,52 @@ describe('parseArgs', () => {
     });
   });
 
+  describe('SSH endpoint option', () => {
+    it('should parse --endpoint with value', () => {
+      const result = parseArgs([
+        '--isolated',
+        'ssh',
+        '--endpoint',
+        'user@server.com',
+        '--',
+        'npm',
+        'test',
+      ]);
+      assert.strictEqual(result.wrapperOptions.endpoint, 'user@server.com');
+    });
+
+    it('should parse --endpoint=value format', () => {
+      const result = parseArgs([
+        '--isolated',
+        'ssh',
+        '--endpoint=root@192.168.1.1',
+        '--',
+        'ls',
+      ]);
+      assert.strictEqual(result.wrapperOptions.endpoint, 'root@192.168.1.1');
+    });
+
+    it('should throw error for ssh without endpoint', () => {
+      assert.throws(() => {
+        parseArgs(['--isolated', 'ssh', '--', 'npm', 'test']);
+      }, /SSH isolation requires --endpoint option/);
+    });
+
+    it('should throw error for endpoint with non-ssh backend', () => {
+      assert.throws(() => {
+        parseArgs([
+          '--isolated',
+          'tmux',
+          '--endpoint',
+          'user@server.com',
+          '--',
+          'npm',
+          'test',
+        ]);
+      }, /--endpoint option is only valid with --isolated ssh/);
+    });
+  });
+
   describe('command without separator', () => {
     it('should parse command after options without separator', () => {
       const result = parseArgs(['-i', 'tmux', '-d', 'npm', 'start']);
@@ -253,7 +299,7 @@ describe('parseArgs', () => {
           const result = parseArgs([
             '-i',
             backend,
-            '--host',
+            '--endpoint',
             'user@example.com',
             '--',
             'echo',

@@ -451,7 +451,7 @@ function runInTmux(command, options = {}) {
 /**
  * Run command over SSH on a remote server
  * @param {string} command - Command to execute
- * @param {object} options - Options (host, session, detached)
+ * @param {object} options - Options (endpoint, session, detached)
  * @returns {Promise<{success: boolean, sessionName: string, message: string}>}
  */
 function runInSsh(command, options = {}) {
@@ -464,17 +464,17 @@ function runInSsh(command, options = {}) {
     });
   }
 
-  if (!options.host) {
+  if (!options.endpoint) {
     return Promise.resolve({
       success: false,
       sessionName: null,
       message:
-        'SSH isolation requires --host option to specify the remote server',
+        'SSH isolation requires --endpoint option to specify the remote server (e.g., user@host)',
     });
   }
 
   const sessionName = options.session || generateSessionName('ssh');
-  const sshTarget = options.host;
+  const sshTarget = options.endpoint;
 
   try {
     if (options.detached) {

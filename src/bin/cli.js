@@ -229,7 +229,7 @@ function printUsage() {
     '  --image <image>           Docker image (required for docker isolation)'
   );
   console.log(
-    '  --host <host>             SSH host (required for ssh isolation)'
+    '  --endpoint <endpoint>     SSH endpoint (required for ssh isolation, e.g., user@host)'
   );
   console.log('  --version, -v             Show version information');
   console.log('');
@@ -239,7 +239,7 @@ function printUsage() {
   console.log('  $ --isolated tmux -- bun start');
   console.log('  $ -i screen -d bun start');
   console.log('  $ --isolated docker --image oven/bun:latest -- bun install');
-  console.log('  $ --isolated ssh --host user@remote.server -- ls -la');
+  console.log('  $ --isolated ssh --endpoint user@remote.server -- ls -la');
   console.log('');
   console.log('Piping with $:');
   console.log('  echo "hi" | $ agent       # Preferred - pipe TO $ command');
@@ -347,8 +347,8 @@ async function runWithIsolation(options, cmd) {
   if (options.image) {
     console.log(`[Isolation] Image: ${options.image}`);
   }
-  if (options.host) {
-    console.log(`[Isolation] Host: ${options.host}`);
+  if (options.endpoint) {
+    console.log(`[Isolation] Endpoint: ${options.endpoint}`);
   }
   console.log('');
 
@@ -366,7 +366,7 @@ async function runWithIsolation(options, cmd) {
   const result = await runIsolated(environment, cmd, {
     session: options.session,
     image: options.image,
-    host: options.host,
+    endpoint: options.endpoint,
     detached: mode === 'detached',
   });
 

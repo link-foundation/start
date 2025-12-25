@@ -259,7 +259,7 @@ describe('Isolation Runner Error Handling', () => {
       }
 
       const result = await runInSsh('echo test', {
-        host: 'user@example.com',
+        endpoint: 'user@example.com',
         detached: true,
       });
       assert.strictEqual(result.success, false);
@@ -269,14 +269,14 @@ describe('Isolation Runner Error Handling', () => {
       );
     });
 
-    it('should require host option', async () => {
+    it('should require endpoint option', async () => {
       // This test works regardless of ssh installation
       const result = await runInSsh('echo test', { detached: true });
       assert.strictEqual(result.success, false);
-      // Message should mention host requirement
+      // Message should mention endpoint requirement
       assert.ok(
-        result.message.includes('host') ||
-          result.message.includes('--host') ||
+        result.message.includes('endpoint') ||
+          result.message.includes('--endpoint') ||
           result.message.includes('SSH isolation requires')
       );
     });
