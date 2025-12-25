@@ -2,24 +2,25 @@
 'start-command': minor
 ---
 
-Add user isolation support with --user and --create-user options
+Add user isolation support with --user and --keep-user options
 
-Implements comprehensive user isolation features that allow running commands as different users:
+Implements user isolation that creates a new isolated user to run commands:
 
-## --user option (run as existing user)
+## --user option (create isolated user with same permissions)
 
-- Add --user option to run commands as a specified existing user
-- For screen/tmux: Wraps commands with sudo -n -u <user>
-- For docker: Uses Docker's native --user flag
-- Requires sudo NOPASSWD configuration for screen/tmux
-
-## --create-user option (create isolated user with same permissions)
-
-- Add --create-user option to create a new isolated user automatically
+- Add --user, -u option to create a new isolated user automatically
 - New user inherits group memberships from current user (sudo, docker, wheel, etc.)
-- User is automatically deleted after command completes
+- User is automatically deleted after command completes (unless --keep-user)
 - Works with screen and tmux isolation backends (not docker)
-- Optional custom username via --create-user=myname
+- Optional custom username via --user=myname or -u myname
+- For screen/tmux: Wraps commands with sudo -n -u <user>
+- Requires sudo NOPASSWD configuration for useradd/userdel/sudo
+
+## --keep-user option
+
+- Add --keep-user option to prevent user deletion after command completes
+- Useful when you need to inspect files created during execution
+- User must be manually deleted with: sudo userdel -r <username>
 
 ## Other improvements
 
@@ -29,11 +30,10 @@ Implements comprehensive user isolation features that allow running commands as 
 
 Usage:
 
-- $ --user www-data -- node server.js
-- $ --isolated screen --user john -- npm start
-- $ --isolated docker --image node:20 --user 1000:1000 -- npm install
-- $ --create-user -- npm test
-- $ --create-user myrunner -- npm start
-- $ --isolated screen --create-user -- npm test
+- $ --user -- npm test # Auto-generated username, auto-deleted
+- $ --user myrunner -- npm start # Custom username
+- $ -u myrunner -- npm start # Short form
+- $ --isolated screen --user -- npm test # Combine with process isolation
+- $ --user --keep-user -- npm test # Keep user after completion
 
-Note: Both --user and --create-user with screen/tmux require sudo NOPASSWD configuration.
+Note: User isolation requires sudo NOPASSWD configuration.

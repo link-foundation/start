@@ -514,16 +514,37 @@ describe('VALID_BACKENDS', () => {
   });
 });
 
-describe('user option', () => {
-  it('should parse --user with value', () => {
-    const result = parseArgs(['--user', 'john', '--', 'npm', 'test']);
-    assert.strictEqual(result.wrapperOptions.user, 'john');
+describe('user isolation option', () => {
+  it('should parse --user without value (auto-generated username)', () => {
+    const result = parseArgs(['--user', '--', 'npm', 'test']);
+    assert.strictEqual(result.wrapperOptions.user, true);
+    assert.strictEqual(result.wrapperOptions.userName, null);
     assert.strictEqual(result.command, 'npm test');
   });
 
+  it('should parse --user with custom username', () => {
+    const result = parseArgs(['--user', 'myrunner', '--', 'npm', 'test']);
+    assert.strictEqual(result.wrapperOptions.user, true);
+    assert.strictEqual(result.wrapperOptions.userName, 'myrunner');
+    assert.strictEqual(result.command, 'npm test');
+  });
+
+  it('should parse -u shorthand', () => {
+    const result = parseArgs(['-u', '--', 'npm', 'start']);
+    assert.strictEqual(result.wrapperOptions.user, true);
+    assert.strictEqual(result.wrapperOptions.userName, null);
+  });
+
+  it('should parse -u with custom username', () => {
+    const result = parseArgs(['-u', 'testuser', '--', 'npm', 'start']);
+    assert.strictEqual(result.wrapperOptions.user, true);
+    assert.strictEqual(result.wrapperOptions.userName, 'testuser');
+  });
+
   it('should parse --user=value format', () => {
-    const result = parseArgs(['--user=www-data', '--', 'npm', 'start']);
-    assert.strictEqual(result.wrapperOptions.user, 'www-data');
+    const result = parseArgs(['--user=myrunner', '--', 'npm', 'start']);
+    assert.strictEqual(result.wrapperOptions.user, true);
+    assert.strictEqual(result.wrapperOptions.userName, 'myrunner');
   });
 
   it('should work with isolation options', () => {
@@ -531,27 +552,22 @@ describe('user option', () => {
       '--isolated',
       'screen',
       '--user',
-      'john',
+      'testuser',
       '--',
       'npm',
       'start',
     ]);
     assert.strictEqual(result.wrapperOptions.isolated, 'screen');
-    assert.strictEqual(result.wrapperOptions.user, 'john');
+    assert.strictEqual(result.wrapperOptions.user, true);
+    assert.strictEqual(result.wrapperOptions.userName, 'testuser');
     assert.strictEqual(result.command, 'npm start');
   });
 
-  it('should work without isolation (standalone user switch)', () => {
-    const result = parseArgs(['--user', 'www-data', '--', 'node', 'server.js']);
-    assert.strictEqual(result.wrapperOptions.user, 'www-data');
+  it('should work without isolation (standalone user isolation)', () => {
+    const result = parseArgs(['--user', '--', 'node', 'server.js']);
+    assert.strictEqual(result.wrapperOptions.user, true);
     assert.strictEqual(result.wrapperOptions.isolated, null);
     assert.strictEqual(result.command, 'node server.js');
-  });
-
-  it('should throw error for missing user argument', () => {
-    assert.throws(() => {
-      parseArgs(['--user']);
-    }, /requires a username argument/);
   });
 
   it('should accept valid usernames', () => {
@@ -569,34 +585,87 @@ describe('user option', () => {
     }
   });
 
-  it('should reject invalid username formats', () => {
-    const invalidUsernames = [
-      'john@doe',
-      'user name',
-      'user.name',
-      'user/name',
-    ];
+  it('should reject invalid username formats with --user=value syntax', () => {
+    const invalidUsernames = ['john@doe', 'user.name', 'user/name'];
     for (const username of invalidUsernames) {
       assert.throws(() => {
-        parseArgs(['--user', username, '--', 'echo', 'test']);
+        parseArgs([`--user=${username}`, '--', 'echo', 'test']);
       }, /Invalid username format/);
     }
   });
 
-  it('should work with docker isolation', () => {
+  it('should not consume invalid username as argument (treats as command)', () => {
+    // When --user is followed by an invalid username format, it doesn't consume it
+    // The invalid username becomes part of the command instead
+    const result = parseArgs(['--user', 'john@doe', '--', 'echo', 'test']);
+    assert.strictEqual(result.wrapperOptions.user, true);
+    assert.strictEqual(result.wrapperOptions.userName, null);
+    // john@doe is not consumed as username, but the -- separator means it's not in command either
+  });
+
+  it('should throw error for user with docker isolation', () => {
+    assert.throws(() => {
+      parseArgs([
+        '--isolated',
+        'docker',
+        '--image',
+        'node:20',
+        '--user',
+        '--',
+        'npm',
+        'install',
+      ]);
+    }, /--user is not supported with Docker isolation/);
+  });
+
+  it('should work with tmux isolation', () => {
     const result = parseArgs([
-      '--isolated',
-      'docker',
-      '--image',
-      'node:20',
+      '-i',
+      'tmux',
       '--user',
-      '1000:1000',
+      'testuser',
       '--',
       'npm',
-      'install',
+      'test',
     ]);
-    assert.strictEqual(result.wrapperOptions.isolated, 'docker');
-    assert.strictEqual(result.wrapperOptions.image, 'node:20');
-    assert.strictEqual(result.wrapperOptions.user, '1000:1000');
+    assert.strictEqual(result.wrapperOptions.isolated, 'tmux');
+    assert.strictEqual(result.wrapperOptions.user, true);
+    assert.strictEqual(result.wrapperOptions.userName, 'testuser');
+  });
+});
+
+describe('keep-user option', () => {
+  it('should parse --keep-user flag', () => {
+    const result = parseArgs(['--user', '--keep-user', '--', 'npm', 'test']);
+    assert.strictEqual(result.wrapperOptions.user, true);
+    assert.strictEqual(result.wrapperOptions.keepUser, true);
+  });
+
+  it('should default keepUser to false', () => {
+    const result = parseArgs(['--user', '--', 'npm', 'test']);
+    assert.strictEqual(result.wrapperOptions.keepUser, false);
+  });
+
+  it('should throw error for keep-user without user', () => {
+    assert.throws(() => {
+      parseArgs(['--keep-user', '--', 'npm', 'test']);
+    }, /--keep-user option is only valid with --user/);
+  });
+
+  it('should work with user and isolation options', () => {
+    const result = parseArgs([
+      '-i',
+      'screen',
+      '--user',
+      'testuser',
+      '--keep-user',
+      '--',
+      'npm',
+      'start',
+    ]);
+    assert.strictEqual(result.wrapperOptions.isolated, 'screen');
+    assert.strictEqual(result.wrapperOptions.user, true);
+    assert.strictEqual(result.wrapperOptions.userName, 'testuser');
+    assert.strictEqual(result.wrapperOptions.keepUser, true);
   });
 });

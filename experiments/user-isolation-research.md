@@ -8,134 +8,76 @@ Based on the issue description:
 
 > We need to find a way to support not only isolation in screen, but also isolation by user at the same time.
 
-This suggests that the tool should support:
+And the clarification from the user:
+
+> No, there is no way to use existing user to run the command, user isolation should mean we create user - run command using this user, after command have finished we can delete user, unless we have `--keep-user` option.
+
+This means:
 
 1. Running commands in isolated environments (screen, tmux, docker) - **ALREADY IMPLEMENTED**
-2. Running commands as different users - **NEW FEATURE NEEDED**
-3. Combining both types of isolation
+2. Creating new isolated users with same permissions as current user - **IMPLEMENTED**
+3. Automatic cleanup of isolated users after command completes - **IMPLEMENTED**
+4. Option to keep the user (`--keep-user`) - **IMPLEMENTED**
 
 ### Related Issues
 
 - Issue #31: Support ssh isolation (execute commands on remote ssh servers)
 - Issue #9: Isolation support (closed - implemented screen/tmux/docker)
 
-### Use Cases for User Isolation
+### Final Implementation
 
-1. **Running as a different local user:**
-
-   ```bash
-   $ --user john -- npm install   # Run npm install as user 'john'
-   $ --user www-data -- node server.js  # Run server as www-data
-   ```
-
-2. **Combining user isolation with screen isolation:**
-
-   ```bash
-   $ --isolated screen --user john -- npm start
-   # Run as user 'john' in a screen session
-   ```
-
-3. **Security/permission testing:**
-   ```bash
-   $ --user nobody -- ./test-unprivileged.sh
-   # Test scripts with minimal permissions
-   ```
-
-### Implementation Options
-
-#### Option 1: Using `sudo -u`
+The `--user` option creates a new isolated user with the same group memberships as the current user:
 
 ```bash
-sudo -u <username> <command>
+# Create isolated user and run command (user auto-deleted after)
+$ --user -- npm test
+
+# Custom username for isolated user
+$ --user myrunner -- npm start
+$ -u myrunner -- npm start
+
+# Combine with screen isolation
+$ --isolated screen --user -- npm test
+
+# Combine with tmux detached mode
+$ -i tmux -d --user testuser -- npm run build
+
+# Keep user after command completes
+$ --user --keep-user -- npm test
 ```
 
-Pros:
+### How It Works
 
-- Simple and widely available
-- Works on all Unix-like systems
-- Can be combined with existing isolation
+1. **User Creation**
+   - Creates new system user with same group memberships as current user
+   - Inherits sudo, docker, wheel, admin, and other groups
+   - Uses `sudo useradd` with `-G` flag for groups
 
-Cons:
+2. **Command Execution**
+   - For screen/tmux: Wraps command with `sudo -n -u <user>`
+   - For standalone (no isolation backend): Uses `sudo -n -u <user> sh -c '<command>'`
 
-- Requires sudo permissions
-- May prompt for password (unless NOPASSWD configured)
+3. **Cleanup**
+   - After command completes, user is deleted with `sudo userdel -r <user>`
+   - Unless `--keep-user` flag is specified
 
-#### Option 2: Using `su`
+### Requirements
 
-```bash
-su - <username> -c '<command>'
-```
+- `sudo` access with NOPASSWD configuration for:
+  - `useradd` - to create the isolated user
+  - `userdel` - to delete the isolated user
+  - `sudo -u` - to run commands as the isolated user
 
-Pros:
+### Benefits
 
-- Standard Unix tool
-- Fully switches user context
+- Clean user environment for each run
+- Inherits sudo/docker access from current user
+- Files created during execution belong to isolated user
+- Automatic cleanup after execution (unless --keep-user)
+- Prevents untrusted code from affecting your user's files
 
-Cons:
+### Limitations
 
-- Requires root or password
-- More complex to use programmatically
-
-#### Option 3: Using `runuser` (Linux)
-
-```bash
-runuser -u <username> -- <command>
-```
-
-Pros:
-
-- Designed for this purpose
-- No password prompts when run as root
-
-Cons:
-
-- Linux-specific
-- Still requires privileges
-
-### Proposed Design
-
-Add new options:
-
-- `--user <username>` or `-u <username>`: Run command as specified user
-- `--user-group <group>` or `-g <group>`: Also specify group (optional)
-
-Example usage:
-
-```bash
-# Simple user isolation
-$ --user john -- npm start
-
-# User isolation with screen
-$ --isolated screen --user john -- npm start
-
-# User isolation with docker (user mapping)
-$ --isolated docker --image node:20 --user 1000:1000 -- npm install
-
-# Detached screen with user isolation
-$ --isolated screen --detached --user www-data -- node server.js
-```
-
-### Implementation Strategy
-
-1. Add `--user` option to args-parser
-2. Wrap command execution with `sudo -u` when `--user` is specified
-3. Handle different isolation backends:
-   - **screen/tmux**: Wrap the command with `sudo -u <user> <original-command>`
-   - **docker**: Use Docker's `--user` flag (already supported by Docker)
-4. Add tests for user isolation
-5. Update documentation
-
-### Challenges
-
-1. **Password prompts**: Need to handle sudo password prompts gracefully
-2. **Permission requirements**: User running `$` must have sudo rights
-3. **Environment variables**: User's environment may need to be preserved/changed
-4. **Path resolution**: Different users have different PATHs
-5. **File permissions**: Log files need appropriate permissions
-
-### Questions to Answer
-
-1. Should we require NOPASSWD sudo configuration, or handle password prompts?
-2. Should we preserve the original user's environment or use the target user's environment?
-3. How should log file permissions be handled when running as different user?
-4. Should we support root user specifically, or any user?
+- Not supported with Docker isolation (Docker has its own user isolation mechanism)
+- Requires sudo NOPASSWD configuration
+- Only works on Unix-like systems (Linux, macOS)

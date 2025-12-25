@@ -142,8 +142,8 @@ Support two patterns for passing wrapper options:
 - `--detached, -d`: Run in detached/background mode
 - `--session, -s <name>`: Custom session name
 - `--image <image>`: Docker image (required for docker backend)
-- `--user <username>`: Run command as specified user
-- `--create-user [username]`: Create new isolated user with same group permissions as current user
+- `--user, -u [username]`: Create new isolated user with same group permissions as current user
+- `--keep-user`: Keep isolated user after command completes (don't delete)
 - `--keep-alive, -k`: Keep isolation environment alive after command exits (disabled by default)
 - `--auto-remove-docker-container`: Automatically remove docker container after exit (disabled by default, only valid with --isolated docker)
 
@@ -161,49 +161,38 @@ Support two patterns for passing wrapper options:
 
 #### 6.5 User Isolation
 
-- `--user <username>`: Run command as a different user
-- For screen/tmux: Wraps command with `sudo -n -u <username>`
-- For docker: Uses Docker's `--user` flag
-- Requires sudo NOPASSWD configuration for non-interactive execution
-- Can be combined with process isolation options
-
-Example usage:
-
-```bash
-# Run as specific user
-$ --user www-data -- node server.js
-
-# Combine user and process isolation
-$ --isolated screen --user john -- npm start
-
-# Docker with user mapping
-$ --isolated docker --image node:20 --user 1000:1000 -- npm install
-```
-
-#### 6.6 Automatic User Creation
-
-- `--create-user [username]`: Create a new isolated user with same permissions
+- `--user, -u [username]`: Create a new isolated user with same permissions
 - Creates user with same group memberships as current user (sudo, docker, wheel, etc.)
 - Automatically generates username if not specified
-- User is automatically deleted after command completes
+- User is automatically deleted after command completes (unless `--keep-user` is specified)
+- For screen/tmux: Wraps command with `sudo -n -u <username>`
 - Requires sudo NOPASSWD for useradd/userdel commands
-- Only works with screen/tmux isolation (not docker)
-- Cannot be combined with `--user` option
+- Works with screen and tmux isolation (not docker)
+
+#### 6.6 Keep User Option
+
+- `--keep-user`: Keep the isolated user after command completes
+- Only valid with `--user` option
+- User must be manually deleted later with `sudo userdel -r <username>`
 
 Example usage:
 
 ```bash
-# Create isolated user and run command
-$ --create-user -- npm test
+# Create isolated user and run command (user auto-deleted after)
+$ --user -- npm test
 
 # Custom username for isolated user
-$ --create-user myrunner -- npm start
+$ --user myrunner -- npm start
+$ -u myrunner -- npm start
 
 # Combine with screen isolation
-$ --isolated screen --create-user -- npm test
+$ --isolated screen --user -- npm test
 
 # Combine with tmux detached mode
-$ -i tmux -d --create-user testuser -- npm run build
+$ -i tmux -d --user testuser -- npm run build
+
+# Keep user after command completes
+$ --user --keep-user -- npm test
 ```
 
 Benefits:
@@ -211,7 +200,7 @@ Benefits:
 - Clean user environment for each run
 - Inherits sudo/docker access from current user
 - Files created during execution belong to isolated user
-- Automatic cleanup after execution
+- Automatic cleanup after execution (unless --keep-user)
 
 #### 6.7 Auto-Exit Behavior
 

@@ -154,34 +154,21 @@ $ -i tmux -s my-session -d bun start
 
 ### User Isolation
 
-Run commands as a different user:
-
-```bash
-# Run as specific user
-$ --user www-data -- node server.js
-
-# Combine with process isolation
-$ --isolated screen --user john -- npm start
-
-# Docker with user (uses Docker's --user flag)
-$ --isolated docker --image node:20 --user 1000:1000 -- npm install
-```
-
-**Note:** User isolation with screen/tmux requires `sudo` access with NOPASSWD configuration for the target user, as it uses `sudo -n -u <user>` internally.
-
-### Automatic User Creation
-
-Create a new isolated user with the same group permissions as your current user:
+Create a new isolated user with the same group permissions as your current user to run commands in complete isolation:
 
 ```bash
 # Create an isolated user with same permissions and run command
-$ --create-user -- npm test
+$ --user -- npm test
 
 # Specify custom username for the isolated user
-$ --create-user myrunner -- npm start
+$ --user myrunner -- npm start
+$ -u myrunner -- npm start
 
 # Combine with process isolation (screen or tmux)
-$ --isolated screen --create-user -- npm test
+$ --isolated screen --user -- npm test
+
+# Keep the user after command completes (don't delete)
+$ --user --keep-user -- npm start
 
 # The isolated user inherits your group memberships:
 # - sudo group (if you have it)
@@ -189,11 +176,11 @@ $ --isolated screen --create-user -- npm test
 # - wheel, admin, and other privileged groups
 ```
 
-The `--create-user` option:
+The `--user` option:
 
 - Creates a new system user with the same group memberships as your current user
 - Runs the command as that user
-- Automatically deletes the user after the command completes
+- Automatically deletes the user after the command completes (unless `--keep-user` is specified)
 - Requires sudo access without password (NOPASSWD configuration)
 - Works with screen and tmux isolation backends (not docker)
 
@@ -213,17 +200,17 @@ This is useful for:
 
 #### Isolation Options
 
-| Option                           | Description                                              |
-| -------------------------------- | -------------------------------------------------------- |
-| `--isolated, -i`                 | Isolation backend (screen, tmux, docker)                 |
-| `--attached, -a`                 | Run in attached/foreground mode (default)                |
-| `--detached, -d`                 | Run in detached/background mode                          |
-| `--session, -s`                  | Custom session/container name                            |
-| `--image`                        | Docker image (required for docker isolation)             |
-| `--user`                         | Run command as specified user                            |
-| `--create-user [name]`           | Create isolated user with same permissions (screen/tmux) |
-| `--keep-alive, -k`               | Keep session alive after command completes               |
-| `--auto-remove-docker-container` | Auto-remove docker container after exit (docker only)    |
+| Option                           | Description                                               |
+| -------------------------------- | --------------------------------------------------------- |
+| `--isolated, -i`                 | Isolation backend (screen, tmux, docker)                  |
+| `--attached, -a`                 | Run in attached/foreground mode (default)                 |
+| `--detached, -d`                 | Run in detached/background mode                           |
+| `--session, -s`                  | Custom session/container name                             |
+| `--image`                        | Docker image (required for docker isolation)              |
+| `--user, -u [name]`              | Create isolated user with same permissions (screen/tmux)  |
+| `--keep-user`                    | Keep isolated user after command completes (don't delete) |
+| `--keep-alive, -k`               | Keep session alive after command completes                |
+| `--auto-remove-docker-container` | Auto-remove docker container after exit (docker only)     |
 
 **Note:** Using both `--attached` and `--detached` together will result in an error - you must choose one mode.
 

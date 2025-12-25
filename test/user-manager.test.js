@@ -144,54 +144,54 @@ describe('user-manager', () => {
   });
 });
 
-describe('args-parser user options', () => {
+describe('args-parser user isolation options', () => {
   const { parseArgs } = require('../src/lib/args-parser');
 
-  describe('--create-user option', () => {
-    it('should parse --create-user flag', () => {
-      const result = parseArgs(['--create-user', '--', 'npm', 'test']);
-      assert.strictEqual(result.wrapperOptions.createUser, true);
-      assert.strictEqual(result.wrapperOptions.createUserName, null);
+  describe('--user option (user isolation)', () => {
+    it('should parse --user flag', () => {
+      const result = parseArgs(['--user', '--', 'npm', 'test']);
+      assert.strictEqual(result.wrapperOptions.user, true);
+      assert.strictEqual(result.wrapperOptions.userName, null);
       assert.strictEqual(result.command, 'npm test');
     });
 
-    it('should parse --create-user with custom username', () => {
-      const result = parseArgs([
-        '--create-user',
-        'myuser',
-        '--',
-        'npm',
-        'test',
-      ]);
-      assert.strictEqual(result.wrapperOptions.createUser, true);
-      assert.strictEqual(result.wrapperOptions.createUserName, 'myuser');
+    it('should parse --user with custom username', () => {
+      const result = parseArgs(['--user', 'myuser', '--', 'npm', 'test']);
+      assert.strictEqual(result.wrapperOptions.user, true);
+      assert.strictEqual(result.wrapperOptions.userName, 'myuser');
       assert.strictEqual(result.command, 'npm test');
     });
 
-    it('should parse --create-user=value format', () => {
-      const result = parseArgs(['--create-user=testuser', '--', 'npm', 'test']);
-      assert.strictEqual(result.wrapperOptions.createUser, true);
-      assert.strictEqual(result.wrapperOptions.createUserName, 'testuser');
+    it('should parse --user=value format', () => {
+      const result = parseArgs(['--user=testuser', '--', 'npm', 'test']);
+      assert.strictEqual(result.wrapperOptions.user, true);
+      assert.strictEqual(result.wrapperOptions.userName, 'testuser');
+    });
+
+    it('should parse -u shorthand', () => {
+      const result = parseArgs(['-u', '--', 'npm', 'test']);
+      assert.strictEqual(result.wrapperOptions.user, true);
+      assert.strictEqual(result.wrapperOptions.userName, null);
+    });
+
+    it('should parse -u with custom username', () => {
+      const result = parseArgs(['-u', 'myuser', '--', 'npm', 'test']);
+      assert.strictEqual(result.wrapperOptions.user, true);
+      assert.strictEqual(result.wrapperOptions.userName, 'myuser');
     });
 
     it('should work with isolation options', () => {
       const result = parseArgs([
         '--isolated',
         'screen',
-        '--create-user',
+        '--user',
         '--',
         'npm',
         'start',
       ]);
       assert.strictEqual(result.wrapperOptions.isolated, 'screen');
-      assert.strictEqual(result.wrapperOptions.createUser, true);
+      assert.strictEqual(result.wrapperOptions.user, true);
       assert.strictEqual(result.command, 'npm start');
-    });
-
-    it('should throw error when used with --user', () => {
-      assert.throws(() => {
-        parseArgs(['--user', 'john', '--create-user', '--', 'npm', 'test']);
-      }, /Cannot use both --user and --create-user/);
     });
 
     it('should throw error when used with docker isolation', () => {
@@ -201,24 +201,24 @@ describe('args-parser user options', () => {
           'docker',
           '--image',
           'node:20',
-          '--create-user',
+          '--user',
           '--',
           'npm',
           'test',
         ]);
-      }, /--create-user is not supported with Docker isolation/);
+      }, /--user is not supported with Docker isolation/);
     });
 
     it('should validate custom username format', () => {
       assert.throws(() => {
-        parseArgs(['--create-user=invalid@name', '--', 'npm', 'test']);
+        parseArgs(['--user=invalid@name', '--', 'npm', 'test']);
       }, /Invalid username format/);
     });
 
     it('should validate custom username length', () => {
       const longName = 'a'.repeat(40);
       assert.throws(() => {
-        parseArgs([`--create-user=${longName}`, '--', 'npm', 'test']);
+        parseArgs([`--user=${longName}`, '--', 'npm', 'test']);
       }, /Username too long/);
     });
 
@@ -226,7 +226,7 @@ describe('args-parser user options', () => {
       const result = parseArgs([
         '-i',
         'screen',
-        '--create-user',
+        '--user',
         'testrunner',
         '-d',
         '--',
@@ -234,22 +234,29 @@ describe('args-parser user options', () => {
         'test',
       ]);
       assert.strictEqual(result.wrapperOptions.isolated, 'screen');
-      assert.strictEqual(result.wrapperOptions.createUser, true);
-      assert.strictEqual(result.wrapperOptions.createUserName, 'testrunner');
+      assert.strictEqual(result.wrapperOptions.user, true);
+      assert.strictEqual(result.wrapperOptions.userName, 'testrunner');
       assert.strictEqual(result.wrapperOptions.detached, true);
     });
 
     it('should work with tmux isolation', () => {
-      const result = parseArgs([
-        '-i',
-        'tmux',
-        '--create-user',
-        '--',
-        'npm',
-        'start',
-      ]);
+      const result = parseArgs(['-i', 'tmux', '--user', '--', 'npm', 'start']);
       assert.strictEqual(result.wrapperOptions.isolated, 'tmux');
-      assert.strictEqual(result.wrapperOptions.createUser, true);
+      assert.strictEqual(result.wrapperOptions.user, true);
+    });
+  });
+
+  describe('--keep-user option', () => {
+    it('should parse --keep-user with --user', () => {
+      const result = parseArgs(['--user', '--keep-user', '--', 'npm', 'test']);
+      assert.strictEqual(result.wrapperOptions.user, true);
+      assert.strictEqual(result.wrapperOptions.keepUser, true);
+    });
+
+    it('should throw error when used without --user', () => {
+      assert.throws(() => {
+        parseArgs(['--keep-user', '--', 'npm', 'test']);
+      }, /--keep-user option is only valid with --user/);
     });
   });
 });

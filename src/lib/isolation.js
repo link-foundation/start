@@ -788,38 +788,6 @@ function resetScreenVersionCache() {
   screenVersionChecked = false;
 }
 
-/**
- * Run command as a specific user (without isolation backend)
- * Uses sudo -u to switch users
- * @param {string} cmd - Command to execute
- * @param {string} username - User to run as
- * @returns {Promise<{success: boolean, message: string, exitCode: number}>}
- */
-function runAsUser(cmd, username) {
-  return new Promise((resolve) => {
-    // Use sudo -n -u to run as the specified user
-    const child = spawn('sudo', ['-n', '-u', username, 'sh', '-c', cmd], {
-      stdio: 'inherit',
-    });
-
-    child.on('exit', (code) => {
-      resolve({
-        success: code === 0,
-        message: `Command completed as user "${username}" with exit code ${code}`,
-        exitCode: code || 0,
-      });
-    });
-
-    child.on('error', (err) => {
-      resolve({
-        success: false,
-        message: `Failed to run as user "${username}": ${err.message}`,
-        exitCode: 1,
-      });
-    });
-  });
-}
-
 module.exports = {
   isCommandAvailable,
   hasTTY,
@@ -827,7 +795,6 @@ module.exports = {
   runInTmux,
   runInDocker,
   runIsolated,
-  runAsUser,
   wrapCommandWithUser,
   // Export logging utilities for unified experience
   getTimestamp,

@@ -11,8 +11,8 @@
  * --detached, -d                   Run in detached mode (background)
  * --session, -s <name>             Session name for isolation
  * --image <image>                  Docker image (required for docker isolation)
- * --user <username>                Run command as specified user
- * --create-user [username]         Create a new isolated user with same permissions as current user
+ * --user, -u [username]            Create isolated user with same permissions (auto-generated name if not specified)
+ * --keep-user                      Keep isolated user after command completes (don't delete)
  * --keep-alive, -k                 Keep isolation environment alive after command exits
  * --auto-remove-docker-container   Automatically remove docker container after exit (disabled by default)
  */
@@ -38,9 +38,9 @@ function parseArgs(args) {
     detached: false, // Run in detached mode
     session: null, // Session name
     image: null, // Docker image
-    user: null, // User to run command as
-    createUser: false, // Create a new isolated user
-    createUserName: null, // Optional custom username for created user
+    user: false, // Create isolated user
+    userName: null, // Optional custom username for isolated user
+    keepUser: false, // Keep isolated user after command completes (don't delete)
     keepAlive: false, // Keep environment alive after command exits
     autoRemoveDockerContainer: false, // Auto-remove docker container after exit
   };
@@ -180,42 +180,32 @@ function parseOption(args, index, options) {
     return 1;
   }
 
-  // --user
-  if (arg === '--user') {
-    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
-      options.user = args[index + 1];
-      return 2;
-    } else {
-      throw new Error(`Option ${arg} requires a username argument`);
-    }
-  }
-
-  // --user=<value>
-  if (arg.startsWith('--user=')) {
-    options.user = arg.split('=')[1];
-    return 1;
-  }
-
-  // --create-user [optional-username]
-  if (arg === '--create-user') {
-    options.createUser = true;
+  // --user or -u [optional-username] - creates isolated user with same permissions
+  if (arg === '--user' || arg === '-u') {
+    options.user = true;
     // Check if next arg is an optional username (not starting with -)
     if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
-      // Check if next arg looks like a command (not a username)
+      // Check if next arg looks like a username (not a command)
       const nextArg = args[index + 1];
-      // If next arg contains spaces or looks like a command, don't consume it
+      // If next arg matches username format, consume it
       if (/^[a-zA-Z0-9_-]+$/.test(nextArg) && nextArg.length <= 32) {
-        options.createUserName = nextArg;
+        options.userName = nextArg;
         return 2;
       }
     }
     return 1;
   }
 
-  // --create-user=<value>
-  if (arg.startsWith('--create-user=')) {
-    options.createUser = true;
-    options.createUserName = arg.split('=')[1];
+  // --user=<value>
+  if (arg.startsWith('--user=')) {
+    options.user = true;
+    options.userName = arg.split('=')[1];
+    return 1;
+  }
+
+  // --keep-user - keep isolated user after command completes
+  if (arg === '--keep-user') {
+    options.keepUser = true;
     return 1;
   }
 
@@ -274,16 +264,6 @@ function validateOptions(options) {
     throw new Error('--image option is only valid with --isolated docker');
   }
 
-  // User validation
-  if (options.user) {
-    // Validate username format (basic check) - allow colons for docker UID:GID format
-    if (!/^[a-zA-Z0-9_:-]+$/.test(options.user)) {
-      throw new Error(
-        `Invalid username format: "${options.user}". Username should contain only letters, numbers, hyphens, underscores, and colons (for UID:GID).`
-      );
-    }
-  }
-
   // Keep-alive is only valid with isolation
   if (options.keepAlive && !options.isolated) {
     throw new Error('--keep-alive option is only valid with --isolated');
@@ -296,33 +276,32 @@ function validateOptions(options) {
     );
   }
 
-  // Create-user validation
-  if (options.createUser) {
-    // Cannot use both --user and --create-user
-    if (options.user) {
-      throw new Error(
-        'Cannot use both --user and --create-user. Use --create-user to create a new user with same permissions, or --user to run as an existing user.'
-      );
-    }
-    // Create-user requires isolation (screen or tmux, not docker)
+  // User isolation validation
+  if (options.user) {
+    // User isolation is not supported with Docker (Docker has its own user mechanism)
     if (options.isolated === 'docker') {
       throw new Error(
-        '--create-user is not supported with Docker isolation. Docker uses --user for UID:GID mapping instead.'
+        '--user is not supported with Docker isolation. Docker uses its own user namespace for isolation.'
       );
     }
     // Validate custom username if provided
-    if (options.createUserName) {
-      if (!/^[a-zA-Z0-9_-]+$/.test(options.createUserName)) {
+    if (options.userName) {
+      if (!/^[a-zA-Z0-9_-]+$/.test(options.userName)) {
         throw new Error(
-          `Invalid username format for --create-user: "${options.createUserName}". Username should contain only letters, numbers, hyphens, and underscores.`
+          `Invalid username format for --user: "${options.userName}". Username should contain only letters, numbers, hyphens, and underscores.`
         );
       }
-      if (options.createUserName.length > 32) {
+      if (options.userName.length > 32) {
         throw new Error(
-          `Username too long for --create-user: "${options.createUserName}". Maximum length is 32 characters.`
+          `Username too long for --user: "${options.userName}". Maximum length is 32 characters.`
         );
       }
     }
+  }
+
+  // Keep-user validation
+  if (options.keepUser && !options.user) {
+    throw new Error('--keep-user option is only valid with --user');
   }
 }
 

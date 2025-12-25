@@ -15,7 +15,6 @@ const {
 } = require('../lib/args-parser');
 const {
   runIsolated,
-  runAsUser,
   getTimestamp,
   createLogHeader,
   createLogFooter,
@@ -235,9 +234,11 @@ function printUsage() {
   console.log(
     '  --image <image>           Docker image (required for docker isolation)'
   );
-  console.log('  --user <username>         Run command as specified user');
   console.log(
-    '  --create-user [name]      Create isolated user with same permissions (sudo, docker groups)'
+    '  --user, -u [name]         Create isolated user with same permissions (sudo, docker groups)'
+  );
+  console.log(
+    "  --keep-user               Keep isolated user after command completes (don't delete)"
   );
   console.log(
     '  --keep-alive, -k          Keep isolation environment alive after command exits'
@@ -253,13 +254,17 @@ function printUsage() {
   console.log('  $ --isolated tmux -- bun start');
   console.log('  $ -i screen -d bun start');
   console.log('  $ --isolated docker --image oven/bun:latest -- bun install');
-  console.log('  $ --user www-data -- node server.js');
-  console.log('  $ --isolated screen --user john -- npm start');
   console.log(
-    '  $ --create-user -- npm test                # Create isolated user with same permissions'
+    '  $ --user -- npm test                      # Create isolated user with same permissions'
   );
   console.log(
-    '  $ -i screen --create-user myuser -- npm start  # Custom username'
+    '  $ -u myuser -- npm start                  # Custom username for isolated user'
+  );
+  console.log(
+    '  $ -i screen --user -- npm test            # Combine with process isolation'
+  );
+  console.log(
+    '  $ --user --keep-user -- npm start         # Keep user after command completes'
   );
   console.log('');
   console.log('Piping with $:');
@@ -331,11 +336,7 @@ if (!config.disableSubstitutions) {
 // Main execution
 (async () => {
   // Check if running in isolation mode or with user isolation
-  if (
-    hasIsolation(wrapperOptions) ||
-    wrapperOptions.createUser ||
-    wrapperOptions.user
-  ) {
+  if (hasIsolation(wrapperOptions) || wrapperOptions.user) {
     await runWithIsolation(wrapperOptions, command);
   } else {
     await runDirect(command);
@@ -360,16 +361,13 @@ async function runWithIsolation(options, cmd) {
     options.session ||
     `${environment || 'start'}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
-  // Handle --create-user option: create a new user with same permissions
+  // Handle --user option: create a new user with same permissions
   let createdUser = null;
-  let effectiveUser = options.user;
 
-  if (options.createUser) {
+  if (options.user) {
     // Check for sudo access
     if (!hasSudoAccess()) {
-      console.error(
-        'Error: --create-user requires sudo access without password.'
-      );
+      console.error('Error: --user requires sudo access without password.');
       console.error(
         'Configure NOPASSWD in sudoers or run with appropriate permissions.'
       );
@@ -390,7 +388,7 @@ async function runWithIsolation(options, cmd) {
     }
 
     // Create the isolated user
-    const userResult = createIsolatedUser(options.createUserName);
+    const userResult = createIsolatedUser(options.userName);
     if (!userResult.success) {
       console.error(
         `Error: Failed to create isolated user: ${userResult.message}`
@@ -399,12 +397,14 @@ async function runWithIsolation(options, cmd) {
     }
 
     createdUser = userResult.username;
-    effectiveUser = createdUser;
     console.log(`[User Isolation] Created user: ${createdUser}`);
     if (userResult.groups && userResult.groups.length > 0) {
       console.log(
         `[User Isolation] User groups: ${userResult.groups.join(', ')}`
       );
+    }
+    if (options.keepUser) {
+      console.log(`[User Isolation] User will be kept after command completes`);
     }
     console.log('');
   }
@@ -423,10 +423,8 @@ async function runWithIsolation(options, cmd) {
   if (options.image) {
     console.log(`[Isolation] Image: ${options.image}`);
   }
-  if (effectiveUser) {
-    console.log(
-      `[Isolation] User: ${effectiveUser}${createdUser ? ' (created)' : ''}`
-    );
+  if (createdUser) {
+    console.log(`[Isolation] User: ${createdUser} (isolated)`);
   }
   console.log('');
 
@@ -437,7 +435,7 @@ async function runWithIsolation(options, cmd) {
     mode,
     sessionName,
     image: options.image,
-    user: effectiveUser,
+    user: createdUser,
     startTime,
   });
 
@@ -449,13 +447,35 @@ async function runWithIsolation(options, cmd) {
       session: options.session,
       image: options.image,
       detached: mode === 'detached',
-      user: effectiveUser,
+      user: createdUser,
       keepAlive: options.keepAlive,
       autoRemoveDockerContainer: options.autoRemoveDockerContainer,
     });
-  } else if (effectiveUser) {
-    // Run directly as the specified/created user (no isolation backend)
-    result = await runAsUser(cmd, effectiveUser);
+  } else if (createdUser) {
+    // Run directly as the created user (no isolation backend)
+    // User isolation without process isolation uses sudo -u
+    const { spawn } = require('child_process');
+    result = await new Promise((resolve) => {
+      const child = spawn('sudo', ['-n', '-u', createdUser, 'sh', '-c', cmd], {
+        stdio: 'inherit',
+      });
+
+      child.on('exit', (code) => {
+        resolve({
+          success: code === 0,
+          message: `Command completed as user "${createdUser}" with exit code ${code}`,
+          exitCode: code || 0,
+        });
+      });
+
+      child.on('error', (err) => {
+        resolve({
+          success: false,
+          message: `Failed to run as user "${createdUser}": ${err.message}`,
+          exitCode: 1,
+        });
+      });
+    });
   } else {
     // This shouldn't happen in isolation mode, but handle gracefully
     result = { success: false, message: 'No isolation configuration provided' };
@@ -481,8 +501,8 @@ async function runWithIsolation(options, cmd) {
   console.log(`Exit code: ${exitCode}`);
   console.log(`Log saved: ${logFilePath}`);
 
-  // Cleanup: delete the created user if we created one
-  if (createdUser) {
+  // Cleanup: delete the created user if we created one (unless --keep-user)
+  if (createdUser && !options.keepUser) {
     console.log('');
     console.log(`[User Isolation] Cleaning up user: ${createdUser}`);
     const deleteResult = deleteUser(createdUser, { removeHome: true });
@@ -491,6 +511,11 @@ async function runWithIsolation(options, cmd) {
     } else {
       console.log(`[User Isolation] Warning: ${deleteResult.message}`);
     }
+  } else if (createdUser && options.keepUser) {
+    console.log('');
+    console.log(
+      `[User Isolation] Keeping user: ${createdUser} (use 'sudo userdel -r ${createdUser}' to delete)`
+    );
   }
 
   process.exit(exitCode);
