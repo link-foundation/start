@@ -1,6 +1,6 @@
 {
   "name": "start-command",
-  "version": "0.7.6",
+  "version": "0.9.0",
   "description": "Gamification of coding, execute any command with ability to auto-report issues on GitHub",
   "main": "index.js",
   "bin": {

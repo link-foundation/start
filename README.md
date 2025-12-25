@@ -179,16 +179,37 @@ $ --isolated docker --image node:20 --user 1000:1000 -- npm install
 
 #### Isolation Options
 
-| Option           | Description                                  |
-| ---------------- | -------------------------------------------- |
-| `--isolated, -i` | Isolation backend (screen, tmux, docker)     |
-| `--attached, -a` | Run in attached/foreground mode (default)    |
-| `--detached, -d` | Run in detached/background mode              |
-| `--session, -s`  | Custom session/container name                |
-| `--image`        | Docker image (required for docker isolation) |
-| `--user`         | Run command as specified user                |
+| Option                           | Description                                           |
+| -------------------------------- | ----------------------------------------------------- |
+| `--isolated, -i`                 | Isolation backend (screen, tmux, docker)              |
+| `--attached, -a`                 | Run in attached/foreground mode (default)             |
+| `--detached, -d`                 | Run in detached/background mode                       |
+| `--session, -s`                  | Custom session/container name                         |
+| `--image`                        | Docker image (required for docker isolation)          |
+| `--user`                         | Run command as specified user                         |
+| `--keep-alive, -k`               | Keep session alive after command completes            |
+| `--auto-remove-docker-container` | Auto-remove docker container after exit (docker only) |
 
 **Note:** Using both `--attached` and `--detached` together will result in an error - you must choose one mode.
+
+#### Auto-Exit Behavior
+
+By default, all isolation environments (screen, tmux, docker) automatically exit after the target command completes. This ensures resources are freed immediately and provides uniform behavior across all backends.
+
+Use `--keep-alive` (`-k`) to keep the session running after command completion:
+
+```bash
+# Default: session exits after command completes
+$ -i screen -d -- echo "hello"
+# Session will exit automatically after command completes.
+
+# With --keep-alive: session stays running for interaction
+$ -i screen -d -k -- echo "hello"
+# Session will stay alive after command completes.
+# You can reattach with: screen -r <session-name>
+```
+
+For Docker containers, by default the container filesystem is preserved (appears in `docker ps -a`) so you can re-enter it later. Use `--auto-remove-docker-container` to remove the container immediately after exit.
 
 ### Graceful Degradation
 

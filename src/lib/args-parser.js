@@ -6,11 +6,14 @@
  * 2. $ [wrapper-options] command [command-options]
  *
  * Wrapper Options:
- * --isolated, -i <backend>  Run in isolated environment (screen, tmux, docker)
- * --attached, -a            Run in attached mode (foreground)
- * --detached, -d            Run in detached mode (background)
- * --session, -s <name>      Session name for isolation
- * --image <image>           Docker image (required for docker isolation)
+ * --isolated, -i <backend>         Run in isolated environment (screen, tmux, docker)
+ * --attached, -a                   Run in attached mode (foreground)
+ * --detached, -d                   Run in detached mode (background)
+ * --session, -s <name>             Session name for isolation
+ * --image <image>                  Docker image (required for docker isolation)
+ * --user <username>                Run command as specified user
+ * --keep-alive, -k                 Keep isolation environment alive after command exits
+ * --auto-remove-docker-container   Automatically remove docker container after exit (disabled by default)
  */
 
 // Debug mode from environment
@@ -35,6 +38,8 @@ function parseArgs(args) {
     session: null, // Session name
     image: null, // Docker image
     user: null, // User to run command as
+    keepAlive: false, // Keep environment alive after command exits
+    autoRemoveDockerContainer: false, // Auto-remove docker container after exit
   };
 
   let commandArgs = [];
@@ -172,7 +177,7 @@ function parseOption(args, index, options) {
     return 1;
   }
 
-  // --user or -u
+  // --user
   if (arg === '--user') {
     if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
       options.user = args[index + 1];
@@ -185,6 +190,18 @@ function parseOption(args, index, options) {
   // --user=<value>
   if (arg.startsWith('--user=')) {
     options.user = arg.split('=')[1];
+    return 1;
+  }
+
+  // --keep-alive or -k
+  if (arg === '--keep-alive' || arg === '-k') {
+    options.keepAlive = true;
+    return 1;
+  }
+
+  // --auto-remove-docker-container
+  if (arg === '--auto-remove-docker-container') {
+    options.autoRemoveDockerContainer = true;
     return 1;
   }
 
@@ -233,12 +250,24 @@ function validateOptions(options) {
 
   // User validation
   if (options.user) {
-    // Validate username format (basic check)
-    if (!/^[a-zA-Z0-9_-]+$/.test(options.user)) {
+    // Validate username format (basic check) - allow colons for docker UID:GID format
+    if (!/^[a-zA-Z0-9_:-]+$/.test(options.user)) {
       throw new Error(
-        `Invalid username format: "${options.user}". Username should contain only letters, numbers, hyphens, and underscores.`
+        `Invalid username format: "${options.user}". Username should contain only letters, numbers, hyphens, underscores, and colons (for UID:GID).`
       );
     }
+  }
+
+  // Keep-alive is only valid with isolation
+  if (options.keepAlive && !options.isolated) {
+    throw new Error('--keep-alive option is only valid with --isolated');
+  }
+
+  // Auto-remove-docker-container is only valid with docker isolation
+  if (options.autoRemoveDockerContainer && options.isolated !== 'docker') {
+    throw new Error(
+      '--auto-remove-docker-container option is only valid with --isolated docker'
+    );
   }
 }
 

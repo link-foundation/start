@@ -1,5 +1,15 @@
 # start-command
 
+## 0.9.0
+
+### Minor Changes
+
+- c484149: Add --keep-alive option for isolation environments
+  - All isolation environments (screen, tmux, docker) now automatically exit after command completion by default
+  - New --keep-alive (-k) flag keeps the isolation environment running after command completes
+  - Add ARCHITECTURE.md documentation describing system design
+  - Update REQUIREMENTS.md with new option and auto-exit behavior documentation
+
 ## 0.7.6
 
 ### Patch Changes
