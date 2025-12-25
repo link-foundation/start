@@ -228,6 +228,12 @@ function printUsage() {
   console.log(
     '  --image <image>           Docker image (required for docker isolation)'
   );
+  console.log(
+    '  --keep-alive, -k          Keep isolation environment alive after command exits'
+  );
+  console.log(
+    '  --auto-remove-docker-container  Automatically remove docker container after exit (disabled by default)'
+  );
   console.log('  --version, -v             Show version information');
   console.log('');
   console.log('Examples:');
@@ -360,6 +366,8 @@ async function runWithIsolation(options, cmd) {
     session: options.session,
     image: options.image,
     detached: mode === 'detached',
+    keepAlive: options.keepAlive,
+    autoRemoveDockerContainer: options.autoRemoveDockerContainer,
   });
 
   // Get exit code

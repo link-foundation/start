@@ -299,7 +299,7 @@ function runScreenWithLogCapture(command, sessionName, shellInfo) {
 /**
  * Run command in GNU Screen
  * @param {string} command - Command to execute
- * @param {object} options - Options (session, detached)
+ * @param {object} options - Options (session, detached, keepAlive)
  * @returns {Promise<{success: boolean, sessionName: string, message: string}>}
  */
 function runInScreen(command, options = {}) {
@@ -319,10 +319,28 @@ function runInScreen(command, options = {}) {
   try {
     if (options.detached) {
       // Detached mode: screen -dmS <session> <shell> -c '<command>'
-      const screenArgs = ['-dmS', sessionName, shell, shellArg, command];
+      // By default (keepAlive=false), the session will exit after command completes
+      // With keepAlive=true, we start a shell that runs the command but stays alive
+      let effectiveCommand = command;
+
+      if (options.keepAlive) {
+        // With keep-alive: run command, then keep shell open
+        // Use exec to replace the shell, but first run command
+        effectiveCommand = `${command}; exec ${shell}`;
+      }
+      // Without keep-alive: command runs and session exits naturally when done
+
+      const screenArgs = [
+        '-dmS',
+        sessionName,
+        shell,
+        shellArg,
+        effectiveCommand,
+      ];
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: screen ${screenArgs.join(' ')}`);
+        console.log(`[DEBUG] keepAlive: ${options.keepAlive || false}`);
       }
 
       // Use spawnSync with array arguments to avoid shell quoting issues
@@ -336,10 +354,18 @@ function runInScreen(command, options = {}) {
         throw result.error;
       }
 
+      let message = `Command started in detached screen session: ${sessionName}`;
+      if (options.keepAlive) {
+        message += `\nSession will stay alive after command completes.`;
+      } else {
+        message += `\nSession will exit automatically after command completes.`;
+      }
+      message += `\nReattach with: screen -r ${sessionName}`;
+
       return Promise.resolve({
         success: true,
         sessionName,
-        message: `Command started in detached screen session: ${sessionName}\nReattach with: screen -r ${sessionName}`,
+        message,
       });
     } else {
       // Attached mode: always use detached mode with log capture
@@ -371,7 +397,7 @@ function runInScreen(command, options = {}) {
 /**
  * Run command in tmux
  * @param {string} command - Command to execute
- * @param {object} options - Options (session, detached)
+ * @param {object} options - Options (session, detached, keepAlive)
  * @returns {Promise<{success: boolean, sessionName: string, message: string}>}
  */
 function runInTmux(command, options = {}) {
@@ -385,24 +411,48 @@ function runInTmux(command, options = {}) {
   }
 
   const sessionName = options.session || generateSessionName('tmux');
+  const shellInfo = getShell();
+  const { shell } = shellInfo;
 
   try {
     if (options.detached) {
       // Detached mode: tmux new-session -d -s <session> '<command>'
+      // By default (keepAlive=false), the session will exit after command completes
+      // With keepAlive=true, we keep the shell alive after the command
+      let effectiveCommand = command;
+
+      if (options.keepAlive) {
+        // With keep-alive: run command, then keep shell open
+        effectiveCommand = `${command}; exec ${shell}`;
+      }
+      // Without keep-alive: command runs and session exits naturally when done
+
       if (DEBUG) {
         console.log(
-          `[DEBUG] Running: tmux new-session -d -s "${sessionName}" "${command}"`
+          `[DEBUG] Running: tmux new-session -d -s "${sessionName}" "${effectiveCommand}"`
         );
+        console.log(`[DEBUG] keepAlive: ${options.keepAlive || false}`);
       }
 
-      execSync(`tmux new-session -d -s "${sessionName}" "${command}"`, {
-        stdio: 'inherit',
-      });
+      execSync(
+        `tmux new-session -d -s "${sessionName}" "${effectiveCommand}"`,
+        {
+          stdio: 'inherit',
+        }
+      );
+
+      let message = `Command started in detached tmux session: ${sessionName}`;
+      if (options.keepAlive) {
+        message += `\nSession will stay alive after command completes.`;
+      } else {
+        message += `\nSession will exit automatically after command completes.`;
+      }
+      message += `\nReattach with: tmux attach -t ${sessionName}`;
 
       return Promise.resolve({
         success: true,
         sessionName,
-        message: `Command started in detached tmux session: ${sessionName}\nReattach with: tmux attach -t ${sessionName}`,
+        message,
       });
     } else {
       // Attached mode: tmux new-session -s <session> '<command>'
@@ -451,7 +501,7 @@ function runInTmux(command, options = {}) {
 /**
  * Run command in Docker container
  * @param {string} command - Command to execute
- * @param {object} options - Options (image, session/name, detached)
+ * @param {object} options - Options (image, session/name, detached, keepAlive, autoRemoveDockerContainer)
  * @returns {Promise<{success: boolean, containerName: string, message: string}>}
  */
 function runInDocker(command, options = {}) {
@@ -477,6 +527,16 @@ function runInDocker(command, options = {}) {
   try {
     if (options.detached) {
       // Detached mode: docker run -d --name <name> <image> <shell> -c '<command>'
+      // By default (keepAlive=false), the container exits after command completes
+      // With keepAlive=true, we keep the container running with a shell
+      let effectiveCommand = command;
+
+      if (options.keepAlive) {
+        // With keep-alive: run command, then keep shell alive
+        effectiveCommand = `${command}; exec /bin/sh`;
+      }
+      // Without keep-alive: container exits naturally when command completes
+
       const dockerArgs = [
         'run',
         '-d',
@@ -485,22 +545,47 @@ function runInDocker(command, options = {}) {
         options.image,
         '/bin/sh',
         '-c',
-        command,
+        effectiveCommand,
       ];
+
+      // Add --rm flag if autoRemoveDockerContainer is true
+      // Note: --rm must come before the image name
+      if (options.autoRemoveDockerContainer) {
+        dockerArgs.splice(2, 0, '--rm');
+      }
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
+        console.log(`[DEBUG] keepAlive: ${options.keepAlive || false}`);
+        console.log(
+          `[DEBUG] autoRemoveDockerContainer: ${options.autoRemoveDockerContainer || false}`
+        );
       }
 
       const containerId = execSync(`docker ${dockerArgs.join(' ')}`, {
         encoding: 'utf8',
       }).trim();
 
+      let message = `Command started in detached docker container: ${containerName}`;
+      message += `\nContainer ID: ${containerId.substring(0, 12)}`;
+      if (options.keepAlive) {
+        message += `\nContainer will stay alive after command completes.`;
+      } else {
+        message += `\nContainer will exit automatically after command completes.`;
+      }
+      if (options.autoRemoveDockerContainer) {
+        message += `\nContainer will be automatically removed after exit.`;
+      } else {
+        message += `\nContainer filesystem will be preserved after exit.`;
+      }
+      message += `\nAttach with: docker attach ${containerName}`;
+      message += `\nView logs: docker logs ${containerName}`;
+
       return Promise.resolve({
         success: true,
         containerName,
         containerId,
-        message: `Command started in detached docker container: ${containerName}\nContainer ID: ${containerId.substring(0, 12)}\nAttach with: docker attach ${containerName}\nView logs: docker logs ${containerName}`,
+        message,
       });
     } else {
       // Attached mode: docker run -it --name <name> <image> <shell> -c '<command>'

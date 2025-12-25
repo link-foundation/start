@@ -6,11 +6,13 @@
  * 2. $ [wrapper-options] command [command-options]
  *
  * Wrapper Options:
- * --isolated, -i <backend>  Run in isolated environment (screen, tmux, docker)
- * --attached, -a            Run in attached mode (foreground)
- * --detached, -d            Run in detached mode (background)
- * --session, -s <name>      Session name for isolation
- * --image <image>           Docker image (required for docker isolation)
+ * --isolated, -i <backend>         Run in isolated environment (screen, tmux, docker)
+ * --attached, -a                   Run in attached mode (foreground)
+ * --detached, -d                   Run in detached mode (background)
+ * --session, -s <name>             Session name for isolation
+ * --image <image>                  Docker image (required for docker isolation)
+ * --keep-alive, -k                 Keep isolation environment alive after command exits
+ * --auto-remove-docker-container   Automatically remove docker container after exit (disabled by default)
  */
 
 // Debug mode from environment
@@ -34,6 +36,8 @@ function parseArgs(args) {
     detached: false, // Run in detached mode
     session: null, // Session name
     image: null, // Docker image
+    keepAlive: false, // Keep environment alive after command exits
+    autoRemoveDockerContainer: false, // Auto-remove docker container after exit
   };
 
   let commandArgs = [];
@@ -171,6 +175,18 @@ function parseOption(args, index, options) {
     return 1;
   }
 
+  // --keep-alive or -k
+  if (arg === '--keep-alive' || arg === '-k') {
+    options.keepAlive = true;
+    return 1;
+  }
+
+  // --auto-remove-docker-container
+  if (arg === '--auto-remove-docker-container') {
+    options.autoRemoveDockerContainer = true;
+    return 1;
+  }
+
   // Not a recognized wrapper option
   return 0;
 }
@@ -212,6 +228,18 @@ function validateOptions(options) {
   // Image is only valid with docker
   if (options.image && options.isolated !== 'docker') {
     throw new Error('--image option is only valid with --isolated docker');
+  }
+
+  // Keep-alive is only valid with isolation
+  if (options.keepAlive && !options.isolated) {
+    throw new Error('--keep-alive option is only valid with --isolated');
+  }
+
+  // Auto-remove-docker-container is only valid with docker isolation
+  if (options.autoRemoveDockerContainer && options.isolated !== 'docker') {
+    throw new Error(
+      '--auto-remove-docker-container option is only valid with --isolated docker'
+    );
   }
 }
 

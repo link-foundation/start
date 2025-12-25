@@ -243,6 +243,206 @@ describe('Isolation Runner Error Handling', () => {
   });
 });
 
+describe('Isolation Keep-Alive Behavior', () => {
+  // Tests for the --keep-alive option behavior
+  // These test the message output and options handling
+
+  const {
+    runInScreen,
+    runInTmux,
+    runInDocker,
+  } = require('../src/lib/isolation');
+  const { execSync } = require('child_process');
+
+  describe('runInScreen keep-alive messages', () => {
+    it('should include auto-exit message by default in detached mode', async () => {
+      if (!isCommandAvailable('screen')) {
+        console.log('  Skipping: screen not installed');
+        return;
+      }
+
+      const result = await runInScreen('echo test', {
+        session: `test-autoexit-${Date.now()}`,
+        detached: true,
+        keepAlive: false,
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.ok(
+        result.message.includes('exit automatically'),
+        'Message should indicate auto-exit behavior'
+      );
+
+      // Clean up
+      try {
+        execSync(`screen -S ${result.sessionName} -X quit`, {
+          stdio: 'ignore',
+        });
+      } catch {
+        // Session may have already exited
+      }
+    });
+
+    it('should include keep-alive message when keepAlive is true', async () => {
+      if (!isCommandAvailable('screen')) {
+        console.log('  Skipping: screen not installed');
+        return;
+      }
+
+      const result = await runInScreen('echo test', {
+        session: `test-keepalive-${Date.now()}`,
+        detached: true,
+        keepAlive: true,
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.ok(
+        result.message.includes('stay alive'),
+        'Message should indicate keep-alive behavior'
+      );
+
+      // Clean up
+      try {
+        execSync(`screen -S ${result.sessionName} -X quit`, {
+          stdio: 'ignore',
+        });
+      } catch {
+        // Ignore cleanup errors
+      }
+    });
+  });
+
+  describe('runInTmux keep-alive messages', () => {
+    it('should include auto-exit message by default in detached mode', async () => {
+      if (!isCommandAvailable('tmux')) {
+        console.log('  Skipping: tmux not installed');
+        return;
+      }
+
+      const result = await runInTmux('echo test', {
+        session: `test-autoexit-${Date.now()}`,
+        detached: true,
+        keepAlive: false,
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.ok(
+        result.message.includes('exit automatically'),
+        'Message should indicate auto-exit behavior'
+      );
+
+      // Clean up
+      try {
+        execSync(`tmux kill-session -t ${result.sessionName}`, {
+          stdio: 'ignore',
+        });
+      } catch {
+        // Session may have already exited
+      }
+    });
+
+    it('should include keep-alive message when keepAlive is true', async () => {
+      if (!isCommandAvailable('tmux')) {
+        console.log('  Skipping: tmux not installed');
+        return;
+      }
+
+      const result = await runInTmux('echo test', {
+        session: `test-keepalive-${Date.now()}`,
+        detached: true,
+        keepAlive: true,
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.ok(
+        result.message.includes('stay alive'),
+        'Message should indicate keep-alive behavior'
+      );
+
+      // Clean up
+      try {
+        execSync(`tmux kill-session -t ${result.sessionName}`, {
+          stdio: 'ignore',
+        });
+      } catch {
+        // Ignore cleanup errors
+      }
+    });
+  });
+
+  describe('runInDocker keep-alive messages', () => {
+    // Helper function to check if docker daemon is running
+    function isDockerRunning() {
+      if (!isCommandAvailable('docker')) {
+        return false;
+      }
+      try {
+        // Try to ping the docker daemon
+        execSync('docker info', { stdio: 'ignore', timeout: 5000 });
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    it('should include auto-exit message by default in detached mode', async () => {
+      if (!isDockerRunning()) {
+        console.log('  Skipping: docker not available or daemon not running');
+        return;
+      }
+
+      const containerName = `test-autoexit-${Date.now()}`;
+      const result = await runInDocker('echo test', {
+        image: 'alpine:latest',
+        session: containerName,
+        detached: true,
+        keepAlive: false,
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.ok(
+        result.message.includes('exit automatically'),
+        'Message should indicate auto-exit behavior'
+      );
+
+      // Clean up
+      try {
+        execSync(`docker rm -f ${containerName}`, { stdio: 'ignore' });
+      } catch {
+        // Container may have already been removed
+      }
+    });
+
+    it('should include keep-alive message when keepAlive is true', async () => {
+      if (!isDockerRunning()) {
+        console.log('  Skipping: docker not available or daemon not running');
+        return;
+      }
+
+      const containerName = `test-keepalive-${Date.now()}`;
+      const result = await runInDocker('echo test', {
+        image: 'alpine:latest',
+        session: containerName,
+        detached: true,
+        keepAlive: true,
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.ok(
+        result.message.includes('stay alive'),
+        'Message should indicate keep-alive behavior'
+      );
+
+      // Clean up
+      try {
+        execSync(`docker rm -f ${containerName}`, { stdio: 'ignore' });
+      } catch {
+        // Ignore cleanup errors
+      }
+    });
+  });
+});
+
 describe('Isolation Runner with Available Backends', () => {
   // Integration-style tests that run if backends are available
   // These test actual execution in detached mode (quick and non-blocking)

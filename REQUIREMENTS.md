@@ -142,6 +142,8 @@ Support two patterns for passing wrapper options:
 - `--detached, -d`: Run in detached/background mode
 - `--session, -s <name>`: Custom session name
 - `--image <image>`: Docker image (required for docker backend)
+- `--keep-alive, -k`: Keep isolation environment alive after command exits (disabled by default)
+- `--auto-remove-docker-container`: Automatically remove docker container after exit (disabled by default, only valid with --isolated docker)
 
 #### 6.3 Supported Backends
 
@@ -155,7 +157,30 @@ Support two patterns for passing wrapper options:
 - **Detached mode**: Command runs in background, session info displayed for reattachment
 - **Conflict handling**: If both --attached and --detached are specified, show error asking user to choose one
 
-#### 6.5 Graceful Degradation
+#### 6.5 Auto-Exit Behavior
+
+By default, all isolation environments (screen, tmux, docker) automatically exit after the target command completes execution. This ensures:
+
+- Resources are freed immediately after command execution
+- No orphaned sessions/containers remain running
+- Uniform behavior across all isolation backends
+- Command output is still captured and logged before exit
+
+The `--keep-alive` flag can be used to override this behavior and keep the isolation environment running after command completion, useful for debugging or interactive workflows.
+
+**Docker Container Filesystem Preservation:**
+By default, when using Docker isolation, the container filesystem is preserved after the container exits. This allows you to re-enter the container and access any files created during command execution, which is useful for retrieving additional output files or debugging. The container appears in `docker ps -a` in an "exited" state but is not removed.
+
+The `--auto-remove-docker-container` flag enables automatic removal of the container after exit, which is useful when you don't need to preserve the container filesystem and want to clean up resources completely. When this flag is enabled:
+
+- The container is removed immediately after exiting (using docker's `--rm` flag)
+- The container will not appear in `docker ps -a` after command completion
+- You cannot re-enter the container to access files
+- Resources are freed more aggressively
+
+Note: `--auto-remove-docker-container` is only valid with `--isolated docker` and is independent of the `--keep-alive` flag.
+
+#### 6.6 Graceful Degradation
 
 - If isolation backend is not installed, show informative error with installation instructions
 - If session creation fails, report error with details
