@@ -15,6 +15,7 @@ const {
 } = require('../lib/args-parser');
 const {
   runIsolated,
+  runAsIsolatedUser,
   getTimestamp,
   createLogHeader,
   createLogFooter,
@@ -217,55 +218,33 @@ function getToolVersion(toolName, versionFlag, verbose = false) {
   return firstLine || null;
 }
 
-/**
- * Print usage information
- */
+/** Print usage information */
 function printUsage() {
-  console.log('Usage: $ [options] [--] <command> [args...]');
-  console.log('       $ <command> [args...]');
-  console.log('');
-  console.log('Options:');
-  console.log(
-    '  --isolated, -i <environment>      Run in isolated environment (screen, tmux, docker)'
-  );
-  console.log('  --attached, -a            Run in attached mode (foreground)');
-  console.log('  --detached, -d            Run in detached mode (background)');
-  console.log('  --session, -s <name>      Session name for isolation');
-  console.log(
-    '  --image <image>           Docker image (required for docker isolation)'
-  );
-  console.log(
-    '  --user, -u [name]         Create isolated user with same permissions (sudo, docker groups)'
-  );
-  console.log(
-    "  --keep-user               Keep isolated user after command completes (don't delete)"
-  );
-  console.log(
-    '  --keep-alive, -k          Keep isolation environment alive after command exits'
-  );
-  console.log(
-    '  --auto-remove-docker-container  Automatically remove docker container after exit (disabled by default)'
-  );
-  console.log('  --version, -v             Show version information');
-  console.log('');
-  console.log('Examples:');
-  console.log('  $ echo "Hello World"');
-  console.log('  $ bun test');
-  console.log('  $ --isolated tmux -- bun start');
-  console.log('  $ -i screen -d bun start');
-  console.log('  $ --isolated docker --image oven/bun:latest -- bun install');
-  console.log(
-    '  $ --user -- npm test                      # Create isolated user with same permissions'
-  );
-  console.log(
-    '  $ -u myuser -- npm start                  # Custom username for isolated user'
-  );
-  console.log(
-    '  $ -i screen --user -- npm test            # Combine with process isolation'
-  );
-  console.log(
-    '  $ --user --keep-user -- npm start         # Keep user after command completes'
-  );
+  console.log(`Usage: $ [options] [--] <command> [args...]
+       $ <command> [args...]
+
+Options:
+  --isolated, -i <env>  Run in isolated environment (screen, tmux, docker)
+  --attached, -a        Run in attached mode (foreground)
+  --detached, -d        Run in detached mode (background)
+  --session, -s <name>  Session name for isolation
+  --image <image>       Docker image (required for docker isolation)
+  --user, -u [name]     Create isolated user with same permissions
+  --keep-user           Keep isolated user after command completes
+  --keep-alive, -k      Keep isolation environment alive after command exits
+  --auto-remove-docker-container  Auto-remove docker container after exit
+  --version, -v         Show version information
+
+Examples:
+  $ echo "Hello World"
+  $ bun test
+  $ --isolated tmux -- bun start
+  $ -i screen -d bun start
+  $ --isolated docker --image oven/bun:latest -- bun install
+  $ --user -- npm test            # Create isolated user
+  $ -u myuser -- npm start        # Custom username
+  $ -i screen --user -- npm test  # Combine with process isolation
+  $ --user --keep-user -- npm start`);
   console.log('');
   console.log('Piping with $:');
   console.log('  echo "hi" | $ agent       # Preferred - pipe TO $ command');
@@ -453,29 +432,7 @@ async function runWithIsolation(options, cmd) {
     });
   } else if (createdUser) {
     // Run directly as the created user (no isolation backend)
-    // User isolation without process isolation uses sudo -u
-    const { spawn } = require('child_process');
-    result = await new Promise((resolve) => {
-      const child = spawn('sudo', ['-n', '-u', createdUser, 'sh', '-c', cmd], {
-        stdio: 'inherit',
-      });
-
-      child.on('exit', (code) => {
-        resolve({
-          success: code === 0,
-          message: `Command completed as user "${createdUser}" with exit code ${code}`,
-          exitCode: code || 0,
-        });
-      });
-
-      child.on('error', (err) => {
-        resolve({
-          success: false,
-          message: `Failed to run as user "${createdUser}": ${err.message}`,
-          exitCode: 1,
-        });
-      });
-    });
+    result = await runAsIsolatedUser(cmd, createdUser);
   } else {
     // This shouldn't happen in isolation mode, but handle gracefully
     result = { success: false, message: 'No isolation configuration provided' };
