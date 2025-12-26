@@ -16,6 +16,39 @@ const {
 } = require('../src/lib/isolation');
 
 describe('Isolation Module', () => {
+  describe('wrapCommandWithUser', () => {
+    const { wrapCommandWithUser } = require('../src/lib/isolation');
+
+    it('should return command unchanged when user is null', () => {
+      const command = 'echo hello';
+      const result = wrapCommandWithUser(command, null);
+      assert.strictEqual(result, command);
+    });
+
+    it('should wrap command with sudo when user is specified', () => {
+      const command = 'echo hello';
+      const result = wrapCommandWithUser(command, 'john');
+      assert.ok(result.includes('sudo'));
+      assert.ok(result.includes('-u john'));
+      assert.ok(result.includes('echo hello'));
+    });
+
+    it('should escape single quotes in command', () => {
+      const command = "echo 'hello'";
+      const result = wrapCommandWithUser(command, 'www-data');
+      // Should escape quotes properly for shell
+      assert.ok(result.includes('sudo'));
+      assert.ok(result.includes('-u www-data'));
+    });
+
+    it('should use non-interactive sudo', () => {
+      const command = 'npm start';
+      const result = wrapCommandWithUser(command, 'john');
+      // Should include -n flag for non-interactive
+      assert.ok(result.includes('sudo -n'));
+    });
+  });
+
   describe('isCommandAvailable', () => {
     it('should return true for common commands (echo)', () => {
       // echo is available on all platforms

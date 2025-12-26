@@ -142,6 +142,8 @@ Support two patterns for passing wrapper options:
 - `--detached, -d`: Run in detached/background mode
 - `--session, -s <name>`: Custom session name
 - `--image <image>`: Docker image (required for docker backend)
+- `--isolated-user, -u [username]`: Create new isolated user with same group permissions as current user
+- `--keep-user`: Keep isolated user after command completes (don't delete)
 - `--keep-alive, -k`: Keep isolation environment alive after command exits (disabled by default)
 - `--auto-remove-docker-container`: Automatically remove docker container after exit (disabled by default, only valid with --isolated docker)
 
@@ -157,7 +159,50 @@ Support two patterns for passing wrapper options:
 - **Detached mode**: Command runs in background, session info displayed for reattachment
 - **Conflict handling**: If both --attached and --detached are specified, show error asking user to choose one
 
-#### 6.5 Auto-Exit Behavior
+#### 6.5 User Isolation
+
+- `--isolated-user, -u [username]`: Create a new isolated user with same permissions
+- Creates user with same group memberships as current user (sudo, docker, wheel, etc.)
+- Automatically generates username if not specified
+- User is automatically deleted after command completes (unless `--keep-user` is specified)
+- For screen/tmux: Wraps command with `sudo -n -u <username>`
+- Requires sudo NOPASSWD for useradd/userdel commands
+- Works with screen and tmux isolation (not docker)
+
+#### 6.6 Keep User Option
+
+- `--keep-user`: Keep the isolated user after command completes
+- Only valid with `--isolated-user` option
+- User must be manually deleted later with `sudo userdel -r <username>`
+
+Example usage:
+
+```bash
+# Create isolated user and run command (user auto-deleted after)
+$ --isolated-user -- npm test
+
+# Custom username for isolated user
+$ --isolated-user myrunner -- npm start
+$ -u myrunner -- npm start
+
+# Combine with screen isolation
+$ --isolated screen --isolated-user -- npm test
+
+# Combine with tmux detached mode
+$ -i tmux -d --isolated-user testuser -- npm run build
+
+# Keep user after command completes
+$ --isolated-user --keep-user -- npm test
+```
+
+Benefits:
+
+- Clean user environment for each run
+- Inherits sudo/docker access from current user
+- Files created during execution belong to isolated user
+- Automatic cleanup after execution (unless --keep-user)
+
+#### 6.7 Auto-Exit Behavior
 
 By default, all isolation environments (screen, tmux, docker) automatically exit after the target command completes execution. This ensures:
 
@@ -180,10 +225,11 @@ The `--auto-remove-docker-container` flag enables automatic removal of the conta
 
 Note: `--auto-remove-docker-container` is only valid with `--isolated docker` and is independent of the `--keep-alive` flag.
 
-#### 6.6 Graceful Degradation
+#### 6.8 Graceful Degradation
 
 - If isolation backend is not installed, show informative error with installation instructions
 - If session creation fails, report error with details
+- If sudo fails due to password requirement, command will fail with sudo error
 
 ## Configuration Options
 

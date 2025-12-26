@@ -11,6 +11,8 @@
  * --detached, -d                   Run in detached mode (background)
  * --session, -s <name>             Session name for isolation
  * --image <image>                  Docker image (required for docker isolation)
+ * --isolated-user, -u [username]   Create isolated user with same permissions (auto-generated name if not specified)
+ * --keep-user                      Keep isolated user after command completes (don't delete)
  * --keep-alive, -k                 Keep isolation environment alive after command exits
  * --auto-remove-docker-container   Automatically remove docker container after exit (disabled by default)
  */
@@ -36,6 +38,9 @@ function parseArgs(args) {
     detached: false, // Run in detached mode
     session: null, // Session name
     image: null, // Docker image
+    user: false, // Create isolated user
+    userName: null, // Optional custom username for isolated user
+    keepUser: false, // Keep isolated user after command completes (don't delete)
     keepAlive: false, // Keep environment alive after command exits
     autoRemoveDockerContainer: false, // Auto-remove docker container after exit
   };
@@ -175,6 +180,35 @@ function parseOption(args, index, options) {
     return 1;
   }
 
+  // --isolated-user or -u [optional-username] - creates isolated user with same permissions
+  if (arg === '--isolated-user' || arg === '-u') {
+    options.user = true;
+    // Check if next arg is an optional username (not starting with -)
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      // Check if next arg looks like a username (not a command)
+      const nextArg = args[index + 1];
+      // If next arg matches username format, consume it
+      if (/^[a-zA-Z0-9_-]+$/.test(nextArg) && nextArg.length <= 32) {
+        options.userName = nextArg;
+        return 2;
+      }
+    }
+    return 1;
+  }
+
+  // --isolated-user=<value>
+  if (arg.startsWith('--isolated-user=')) {
+    options.user = true;
+    options.userName = arg.split('=')[1];
+    return 1;
+  }
+
+  // --keep-user - keep isolated user after command completes
+  if (arg === '--keep-user') {
+    options.keepUser = true;
+    return 1;
+  }
+
   // --keep-alive or -k
   if (arg === '--keep-alive' || arg === '-k') {
     options.keepAlive = true;
@@ -240,6 +274,34 @@ function validateOptions(options) {
     throw new Error(
       '--auto-remove-docker-container option is only valid with --isolated docker'
     );
+  }
+
+  // User isolation validation
+  if (options.user) {
+    // User isolation is not supported with Docker (Docker has its own user mechanism)
+    if (options.isolated === 'docker') {
+      throw new Error(
+        '--isolated-user is not supported with Docker isolation. Docker uses its own user namespace for isolation.'
+      );
+    }
+    // Validate custom username if provided
+    if (options.userName) {
+      if (!/^[a-zA-Z0-9_-]+$/.test(options.userName)) {
+        throw new Error(
+          `Invalid username format for --isolated-user: "${options.userName}". Username should contain only letters, numbers, hyphens, and underscores.`
+        );
+      }
+      if (options.userName.length > 32) {
+        throw new Error(
+          `Username too long for --isolated-user: "${options.userName}". Maximum length is 32 characters.`
+        );
+      }
+    }
+  }
+
+  // Keep-user validation
+  if (options.keepUser && !options.user) {
+    throw new Error('--keep-user option is only valid with --isolated-user');
   }
 }
 

@@ -152,6 +152,44 @@ $ --isolated docker --image oven/bun:latest -- bun install
 $ -i tmux -s my-session -d bun start
 ```
 
+### User Isolation
+
+Create a new isolated user with the same group permissions as your current user to run commands in complete isolation:
+
+```bash
+# Create an isolated user with same permissions and run command
+$ --isolated-user -- npm test
+
+# Specify custom username for the isolated user
+$ --isolated-user myrunner -- npm start
+$ -u myrunner -- npm start
+
+# Combine with process isolation (screen or tmux)
+$ --isolated screen --isolated-user -- npm test
+
+# Keep the user after command completes (don't delete)
+$ --isolated-user --keep-user -- npm start
+
+# The isolated user inherits your group memberships:
+# - sudo group (if you have it)
+# - docker group (if you have it)
+# - wheel, admin, and other privileged groups
+```
+
+The `--isolated-user` option:
+
+- Creates a new system user with the same group memberships as your current user
+- Runs the command as that user
+- Automatically deletes the user after the command completes (unless `--keep-user` is specified)
+- Requires sudo access without password (NOPASSWD configuration)
+- Works with screen and tmux isolation backends (not docker)
+
+This is useful for:
+
+- Running untrusted code in isolation
+- Testing with a clean user environment
+- Ensuring commands don't affect your user's files
+
 #### Supported Backends
 
 | Backend  | Description                            | Installation                                               |
@@ -162,15 +200,17 @@ $ -i tmux -s my-session -d bun start
 
 #### Isolation Options
 
-| Option                           | Description                                           |
-| -------------------------------- | ----------------------------------------------------- |
-| `--isolated, -i`                 | Isolation backend (screen, tmux, docker)              |
-| `--attached, -a`                 | Run in attached/foreground mode (default)             |
-| `--detached, -d`                 | Run in detached/background mode                       |
-| `--session, -s`                  | Custom session/container name                         |
-| `--image`                        | Docker image (required for docker isolation)          |
-| `--keep-alive, -k`               | Keep session alive after command completes            |
-| `--auto-remove-docker-container` | Auto-remove docker container after exit (docker only) |
+| Option                           | Description                                               |
+| -------------------------------- | --------------------------------------------------------- |
+| `--isolated, -i`                 | Isolation backend (screen, tmux, docker)                  |
+| `--attached, -a`                 | Run in attached/foreground mode (default)                 |
+| `--detached, -d`                 | Run in detached/background mode                           |
+| `--session, -s`                  | Custom session/container name                             |
+| `--image`                        | Docker image (required for docker isolation)              |
+| `--isolated-user, -u [name]`     | Create isolated user with same permissions (screen/tmux)  |
+| `--keep-user`                    | Keep isolated user after command completes (don't delete) |
+| `--keep-alive, -k`               | Keep session alive after command completes                |
+| `--auto-remove-docker-container` | Auto-remove docker container after exit (docker only)     |
 
 **Note:** Using both `--attached` and `--detached` together will result in an error - you must choose one mode.
 
