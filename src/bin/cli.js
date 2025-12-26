@@ -229,7 +229,7 @@ Options:
   --detached, -d        Run in detached mode (background)
   --session, -s <name>  Session name for isolation
   --image <image>       Docker image (required for docker isolation)
-  --user, -u [name]     Create isolated user with same permissions
+  --isolated-user, -u [name]  Create isolated user with same permissions
   --keep-user           Keep isolated user after command completes
   --keep-alive, -k      Keep isolation environment alive after command exits
   --auto-remove-docker-container  Auto-remove docker container after exit
@@ -241,10 +241,10 @@ Examples:
   $ --isolated tmux -- bun start
   $ -i screen -d bun start
   $ --isolated docker --image oven/bun:latest -- bun install
-  $ --user -- npm test            # Create isolated user
-  $ -u myuser -- npm start        # Custom username
-  $ -i screen --user -- npm test  # Combine with process isolation
-  $ --user --keep-user -- npm start`);
+  $ --isolated-user -- npm test            # Create isolated user
+  $ -u myuser -- npm start                 # Custom username
+  $ -i screen --isolated-user -- npm test  # Combine with process isolation
+  $ --isolated-user --keep-user -- npm start`);
   console.log('');
   console.log('Piping with $:');
   console.log('  echo "hi" | $ agent       # Preferred - pipe TO $ command');
@@ -340,13 +340,15 @@ async function runWithIsolation(options, cmd) {
     options.session ||
     `${environment || 'start'}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
-  // Handle --user option: create a new user with same permissions
+  // Handle --isolated-user option: create a new user with same permissions
   let createdUser = null;
 
   if (options.user) {
     // Check for sudo access
     if (!hasSudoAccess()) {
-      console.error('Error: --user requires sudo access without password.');
+      console.error(
+        'Error: --isolated-user requires sudo access without password.'
+      );
       console.error(
         'Configure NOPASSWD in sudoers or run with appropriate permissions.'
       );

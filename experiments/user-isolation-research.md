@@ -26,24 +26,24 @@ This means:
 
 ### Final Implementation
 
-The `--user` option creates a new isolated user with the same group memberships as the current user:
+The `--isolated-user` option creates a new isolated user with the same group memberships as the current user:
 
 ```bash
 # Create isolated user and run command (user auto-deleted after)
-$ --user -- npm test
+$ --isolated-user -- npm test
 
 # Custom username for isolated user
-$ --user myrunner -- npm start
+$ --isolated-user myrunner -- npm start
 $ -u myrunner -- npm start
 
 # Combine with screen isolation
-$ --isolated screen --user -- npm test
+$ --isolated screen --isolated-user -- npm test
 
 # Combine with tmux detached mode
-$ -i tmux -d --user testuser -- npm run build
+$ -i tmux -d --isolated-user testuser -- npm run build
 
 # Keep user after command completes
-$ --user --keep-user -- npm test
+$ --isolated-user --keep-user -- npm test
 ```
 
 ### How It Works

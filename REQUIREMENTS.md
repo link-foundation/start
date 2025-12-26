@@ -142,7 +142,7 @@ Support two patterns for passing wrapper options:
 - `--detached, -d`: Run in detached/background mode
 - `--session, -s <name>`: Custom session name
 - `--image <image>`: Docker image (required for docker backend)
-- `--user, -u [username]`: Create new isolated user with same group permissions as current user
+- `--isolated-user, -u [username]`: Create new isolated user with same group permissions as current user
 - `--keep-user`: Keep isolated user after command completes (don't delete)
 - `--keep-alive, -k`: Keep isolation environment alive after command exits (disabled by default)
 - `--auto-remove-docker-container`: Automatically remove docker container after exit (disabled by default, only valid with --isolated docker)
@@ -161,7 +161,7 @@ Support two patterns for passing wrapper options:
 
 #### 6.5 User Isolation
 
-- `--user, -u [username]`: Create a new isolated user with same permissions
+- `--isolated-user, -u [username]`: Create a new isolated user with same permissions
 - Creates user with same group memberships as current user (sudo, docker, wheel, etc.)
 - Automatically generates username if not specified
 - User is automatically deleted after command completes (unless `--keep-user` is specified)
@@ -172,27 +172,27 @@ Support two patterns for passing wrapper options:
 #### 6.6 Keep User Option
 
 - `--keep-user`: Keep the isolated user after command completes
-- Only valid with `--user` option
+- Only valid with `--isolated-user` option
 - User must be manually deleted later with `sudo userdel -r <username>`
 
 Example usage:
 
 ```bash
 # Create isolated user and run command (user auto-deleted after)
-$ --user -- npm test
+$ --isolated-user -- npm test
 
 # Custom username for isolated user
-$ --user myrunner -- npm start
+$ --isolated-user myrunner -- npm start
 $ -u myrunner -- npm start
 
 # Combine with screen isolation
-$ --isolated screen --user -- npm test
+$ --isolated screen --isolated-user -- npm test
 
 # Combine with tmux detached mode
-$ -i tmux -d --user testuser -- npm run build
+$ -i tmux -d --isolated-user testuser -- npm run build
 
 # Keep user after command completes
-$ --user --keep-user -- npm test
+$ --isolated-user --keep-user -- npm test
 ```
 
 Benefits:

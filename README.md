@@ -158,17 +158,17 @@ Create a new isolated user with the same group permissions as your current user 
 
 ```bash
 # Create an isolated user with same permissions and run command
-$ --user -- npm test
+$ --isolated-user -- npm test
 
 # Specify custom username for the isolated user
-$ --user myrunner -- npm start
+$ --isolated-user myrunner -- npm start
 $ -u myrunner -- npm start
 
 # Combine with process isolation (screen or tmux)
-$ --isolated screen --user -- npm test
+$ --isolated screen --isolated-user -- npm test
 
 # Keep the user after command completes (don't delete)
-$ --user --keep-user -- npm start
+$ --isolated-user --keep-user -- npm start
 
 # The isolated user inherits your group memberships:
 # - sudo group (if you have it)
@@ -176,7 +176,7 @@ $ --user --keep-user -- npm start
 # - wheel, admin, and other privileged groups
 ```
 
-The `--user` option:
+The `--isolated-user` option:
 
 - Creates a new system user with the same group memberships as your current user
 - Runs the command as that user
@@ -207,7 +207,7 @@ This is useful for:
 | `--detached, -d`                 | Run in detached/background mode                           |
 | `--session, -s`                  | Custom session/container name                             |
 | `--image`                        | Docker image (required for docker isolation)              |
-| `--user, -u [name]`              | Create isolated user with same permissions (screen/tmux)  |
+| `--isolated-user, -u [name]`     | Create isolated user with same permissions (screen/tmux)  |
 | `--keep-user`                    | Keep isolated user after command completes (don't delete) |
 | `--keep-alive, -k`               | Keep session alive after command completes                |
 | `--auto-remove-docker-container` | Auto-remove docker container after exit (docker only)     |

@@ -147,23 +147,34 @@ describe('user-manager', () => {
 describe('args-parser user isolation options', () => {
   const { parseArgs } = require('../src/lib/args-parser');
 
-  describe('--user option (user isolation)', () => {
-    it('should parse --user flag', () => {
-      const result = parseArgs(['--user', '--', 'npm', 'test']);
+  describe('--isolated-user option (user isolation)', () => {
+    it('should parse --isolated-user flag', () => {
+      const result = parseArgs(['--isolated-user', '--', 'npm', 'test']);
       assert.strictEqual(result.wrapperOptions.user, true);
       assert.strictEqual(result.wrapperOptions.userName, null);
       assert.strictEqual(result.command, 'npm test');
     });
 
-    it('should parse --user with custom username', () => {
-      const result = parseArgs(['--user', 'myuser', '--', 'npm', 'test']);
+    it('should parse --isolated-user with custom username', () => {
+      const result = parseArgs([
+        '--isolated-user',
+        'myuser',
+        '--',
+        'npm',
+        'test',
+      ]);
       assert.strictEqual(result.wrapperOptions.user, true);
       assert.strictEqual(result.wrapperOptions.userName, 'myuser');
       assert.strictEqual(result.command, 'npm test');
     });
 
-    it('should parse --user=value format', () => {
-      const result = parseArgs(['--user=testuser', '--', 'npm', 'test']);
+    it('should parse --isolated-user=value format', () => {
+      const result = parseArgs([
+        '--isolated-user=testuser',
+        '--',
+        'npm',
+        'test',
+      ]);
       assert.strictEqual(result.wrapperOptions.user, true);
       assert.strictEqual(result.wrapperOptions.userName, 'testuser');
     });
@@ -184,7 +195,7 @@ describe('args-parser user isolation options', () => {
       const result = parseArgs([
         '--isolated',
         'screen',
-        '--user',
+        '--isolated-user',
         '--',
         'npm',
         'start',
@@ -201,24 +212,24 @@ describe('args-parser user isolation options', () => {
           'docker',
           '--image',
           'node:20',
-          '--user',
+          '--isolated-user',
           '--',
           'npm',
           'test',
         ]);
-      }, /--user is not supported with Docker isolation/);
+      }, /--isolated-user is not supported with Docker isolation/);
     });
 
     it('should validate custom username format', () => {
       assert.throws(() => {
-        parseArgs(['--user=invalid@name', '--', 'npm', 'test']);
+        parseArgs(['--isolated-user=invalid@name', '--', 'npm', 'test']);
       }, /Invalid username format/);
     });
 
     it('should validate custom username length', () => {
       const longName = 'a'.repeat(40);
       assert.throws(() => {
-        parseArgs([`--user=${longName}`, '--', 'npm', 'test']);
+        parseArgs([`--isolated-user=${longName}`, '--', 'npm', 'test']);
       }, /Username too long/);
     });
 
@@ -226,7 +237,7 @@ describe('args-parser user isolation options', () => {
       const result = parseArgs([
         '-i',
         'screen',
-        '--user',
+        '--isolated-user',
         'testrunner',
         '-d',
         '--',
@@ -240,23 +251,36 @@ describe('args-parser user isolation options', () => {
     });
 
     it('should work with tmux isolation', () => {
-      const result = parseArgs(['-i', 'tmux', '--user', '--', 'npm', 'start']);
+      const result = parseArgs([
+        '-i',
+        'tmux',
+        '--isolated-user',
+        '--',
+        'npm',
+        'start',
+      ]);
       assert.strictEqual(result.wrapperOptions.isolated, 'tmux');
       assert.strictEqual(result.wrapperOptions.user, true);
     });
   });
 
   describe('--keep-user option', () => {
-    it('should parse --keep-user with --user', () => {
-      const result = parseArgs(['--user', '--keep-user', '--', 'npm', 'test']);
+    it('should parse --keep-user with --isolated-user', () => {
+      const result = parseArgs([
+        '--isolated-user',
+        '--keep-user',
+        '--',
+        'npm',
+        'test',
+      ]);
       assert.strictEqual(result.wrapperOptions.user, true);
       assert.strictEqual(result.wrapperOptions.keepUser, true);
     });
 
-    it('should throw error when used without --user', () => {
+    it('should throw error when used without --isolated-user', () => {
       assert.throws(() => {
         parseArgs(['--keep-user', '--', 'npm', 'test']);
-      }, /--keep-user option is only valid with --user/);
+      }, /--keep-user option is only valid with --isolated-user/);
     });
   });
 });

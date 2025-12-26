@@ -11,7 +11,7 @@
  * --detached, -d                   Run in detached mode (background)
  * --session, -s <name>             Session name for isolation
  * --image <image>                  Docker image (required for docker isolation)
- * --user, -u [username]            Create isolated user with same permissions (auto-generated name if not specified)
+ * --isolated-user, -u [username]   Create isolated user with same permissions (auto-generated name if not specified)
  * --keep-user                      Keep isolated user after command completes (don't delete)
  * --keep-alive, -k                 Keep isolation environment alive after command exits
  * --auto-remove-docker-container   Automatically remove docker container after exit (disabled by default)
@@ -180,8 +180,8 @@ function parseOption(args, index, options) {
     return 1;
   }
 
-  // --user or -u [optional-username] - creates isolated user with same permissions
-  if (arg === '--user' || arg === '-u') {
+  // --isolated-user or -u [optional-username] - creates isolated user with same permissions
+  if (arg === '--isolated-user' || arg === '-u') {
     options.user = true;
     // Check if next arg is an optional username (not starting with -)
     if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
@@ -196,8 +196,8 @@ function parseOption(args, index, options) {
     return 1;
   }
 
-  // --user=<value>
-  if (arg.startsWith('--user=')) {
+  // --isolated-user=<value>
+  if (arg.startsWith('--isolated-user=')) {
     options.user = true;
     options.userName = arg.split('=')[1];
     return 1;
@@ -281,19 +281,19 @@ function validateOptions(options) {
     // User isolation is not supported with Docker (Docker has its own user mechanism)
     if (options.isolated === 'docker') {
       throw new Error(
-        '--user is not supported with Docker isolation. Docker uses its own user namespace for isolation.'
+        '--isolated-user is not supported with Docker isolation. Docker uses its own user namespace for isolation.'
       );
     }
     // Validate custom username if provided
     if (options.userName) {
       if (!/^[a-zA-Z0-9_-]+$/.test(options.userName)) {
         throw new Error(
-          `Invalid username format for --user: "${options.userName}". Username should contain only letters, numbers, hyphens, and underscores.`
+          `Invalid username format for --isolated-user: "${options.userName}". Username should contain only letters, numbers, hyphens, and underscores.`
         );
       }
       if (options.userName.length > 32) {
         throw new Error(
-          `Username too long for --user: "${options.userName}". Maximum length is 32 characters.`
+          `Username too long for --isolated-user: "${options.userName}". Maximum length is 32 characters.`
         );
       }
     }
@@ -301,7 +301,7 @@ function validateOptions(options) {
 
   // Keep-user validation
   if (options.keepUser && !options.user) {
-    throw new Error('--keep-user option is only valid with --user');
+    throw new Error('--keep-user option is only valid with --isolated-user');
   }
 }
 
