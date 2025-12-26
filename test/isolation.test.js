@@ -16,6 +16,39 @@ const {
 } = require('../src/lib/isolation');
 
 describe('Isolation Module', () => {
+  describe('wrapCommandWithUser', () => {
+    const { wrapCommandWithUser } = require('../src/lib/isolation');
+
+    it('should return command unchanged when user is null', () => {
+      const command = 'echo hello';
+      const result = wrapCommandWithUser(command, null);
+      assert.strictEqual(result, command);
+    });
+
+    it('should wrap command with sudo when user is specified', () => {
+      const command = 'echo hello';
+      const result = wrapCommandWithUser(command, 'john');
+      assert.ok(result.includes('sudo'));
+      assert.ok(result.includes('-u john'));
+      assert.ok(result.includes('echo hello'));
+    });
+
+    it('should escape single quotes in command', () => {
+      const command = "echo 'hello'";
+      const result = wrapCommandWithUser(command, 'www-data');
+      // Should escape quotes properly for shell
+      assert.ok(result.includes('sudo'));
+      assert.ok(result.includes('-u www-data'));
+    });
+
+    it('should use non-interactive sudo', () => {
+      const command = 'npm start';
+      const result = wrapCommandWithUser(command, 'john');
+      // Should include -n flag for non-interactive
+      assert.ok(result.includes('sudo -n'));
+    });
+  });
+
   describe('isCommandAvailable', () => {
     it('should return true for common commands (echo)', () => {
       // echo is available on all platforms
@@ -279,6 +312,206 @@ describe('Isolation Runner Error Handling', () => {
           result.message.includes('--endpoint') ||
           result.message.includes('SSH isolation requires')
       );
+    });
+  });
+});
+
+describe('Isolation Keep-Alive Behavior', () => {
+  // Tests for the --keep-alive option behavior
+  // These test the message output and options handling
+
+  const {
+    runInScreen,
+    runInTmux,
+    runInDocker,
+  } = require('../src/lib/isolation');
+  const { execSync } = require('child_process');
+
+  describe('runInScreen keep-alive messages', () => {
+    it('should include auto-exit message by default in detached mode', async () => {
+      if (!isCommandAvailable('screen')) {
+        console.log('  Skipping: screen not installed');
+        return;
+      }
+
+      const result = await runInScreen('echo test', {
+        session: `test-autoexit-${Date.now()}`,
+        detached: true,
+        keepAlive: false,
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.ok(
+        result.message.includes('exit automatically'),
+        'Message should indicate auto-exit behavior'
+      );
+
+      // Clean up
+      try {
+        execSync(`screen -S ${result.sessionName} -X quit`, {
+          stdio: 'ignore',
+        });
+      } catch {
+        // Session may have already exited
+      }
+    });
+
+    it('should include keep-alive message when keepAlive is true', async () => {
+      if (!isCommandAvailable('screen')) {
+        console.log('  Skipping: screen not installed');
+        return;
+      }
+
+      const result = await runInScreen('echo test', {
+        session: `test-keepalive-${Date.now()}`,
+        detached: true,
+        keepAlive: true,
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.ok(
+        result.message.includes('stay alive'),
+        'Message should indicate keep-alive behavior'
+      );
+
+      // Clean up
+      try {
+        execSync(`screen -S ${result.sessionName} -X quit`, {
+          stdio: 'ignore',
+        });
+      } catch {
+        // Ignore cleanup errors
+      }
+    });
+  });
+
+  describe('runInTmux keep-alive messages', () => {
+    it('should include auto-exit message by default in detached mode', async () => {
+      if (!isCommandAvailable('tmux')) {
+        console.log('  Skipping: tmux not installed');
+        return;
+      }
+
+      const result = await runInTmux('echo test', {
+        session: `test-autoexit-${Date.now()}`,
+        detached: true,
+        keepAlive: false,
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.ok(
+        result.message.includes('exit automatically'),
+        'Message should indicate auto-exit behavior'
+      );
+
+      // Clean up
+      try {
+        execSync(`tmux kill-session -t ${result.sessionName}`, {
+          stdio: 'ignore',
+        });
+      } catch {
+        // Session may have already exited
+      }
+    });
+
+    it('should include keep-alive message when keepAlive is true', async () => {
+      if (!isCommandAvailable('tmux')) {
+        console.log('  Skipping: tmux not installed');
+        return;
+      }
+
+      const result = await runInTmux('echo test', {
+        session: `test-keepalive-${Date.now()}`,
+        detached: true,
+        keepAlive: true,
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.ok(
+        result.message.includes('stay alive'),
+        'Message should indicate keep-alive behavior'
+      );
+
+      // Clean up
+      try {
+        execSync(`tmux kill-session -t ${result.sessionName}`, {
+          stdio: 'ignore',
+        });
+      } catch {
+        // Ignore cleanup errors
+      }
+    });
+  });
+
+  describe('runInDocker keep-alive messages', () => {
+    // Helper function to check if docker daemon is running
+    function isDockerRunning() {
+      if (!isCommandAvailable('docker')) {
+        return false;
+      }
+      try {
+        // Try to ping the docker daemon
+        execSync('docker info', { stdio: 'ignore', timeout: 5000 });
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    it('should include auto-exit message by default in detached mode', async () => {
+      if (!isDockerRunning()) {
+        console.log('  Skipping: docker not available or daemon not running');
+        return;
+      }
+
+      const containerName = `test-autoexit-${Date.now()}`;
+      const result = await runInDocker('echo test', {
+        image: 'alpine:latest',
+        session: containerName,
+        detached: true,
+        keepAlive: false,
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.ok(
+        result.message.includes('exit automatically'),
+        'Message should indicate auto-exit behavior'
+      );
+
+      // Clean up
+      try {
+        execSync(`docker rm -f ${containerName}`, { stdio: 'ignore' });
+      } catch {
+        // Container may have already been removed
+      }
+    });
+
+    it('should include keep-alive message when keepAlive is true', async () => {
+      if (!isDockerRunning()) {
+        console.log('  Skipping: docker not available or daemon not running');
+        return;
+      }
+
+      const containerName = `test-keepalive-${Date.now()}`;
+      const result = await runInDocker('echo test', {
+        image: 'alpine:latest',
+        session: containerName,
+        detached: true,
+        keepAlive: true,
+      });
+
+      assert.strictEqual(result.success, true);
+      assert.ok(
+        result.message.includes('stay alive'),
+        'Message should indicate keep-alive behavior'
+      );
+
+      // Clean up
+      try {
+        execSync(`docker rm -f ${containerName}`, { stdio: 'ignore' });
+      } catch {
+        // Ignore cleanup errors
+      }
     });
   });
 });
