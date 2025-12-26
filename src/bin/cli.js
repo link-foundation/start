@@ -224,11 +224,12 @@ function printUsage() {
        $ <command> [args...]
 
 Options:
-  --isolated, -i <env>  Run in isolated environment (screen, tmux, docker)
+  --isolated, -i <env>  Run in isolated environment (screen, tmux, docker, ssh)
   --attached, -a        Run in attached mode (foreground)
   --detached, -d        Run in detached mode (background)
   --session, -s <name>  Session name for isolation
   --image <image>       Docker image (required for docker isolation)
+  --endpoint <endpoint> SSH endpoint (required for ssh isolation, e.g., user@host)
   --isolated-user, -u [name]  Create isolated user with same permissions
   --keep-user           Keep isolated user after command completes
   --keep-alive, -k      Keep isolation environment alive after command exits
@@ -241,6 +242,7 @@ Examples:
   $ --isolated tmux -- bun start
   $ -i screen -d bun start
   $ --isolated docker --image oven/bun:latest -- bun install
+  $ --isolated ssh --endpoint user@remote.server -- ls -la
   $ --isolated-user -- npm test            # Create isolated user
   $ -u myuser -- npm start                 # Custom username
   $ -i screen --isolated-user -- npm test  # Combine with process isolation
@@ -404,6 +406,9 @@ async function runWithIsolation(options, cmd) {
   if (options.image) {
     console.log(`[Isolation] Image: ${options.image}`);
   }
+  if (options.endpoint) {
+    console.log(`[Isolation] Endpoint: ${options.endpoint}`);
+  }
   if (createdUser) {
     console.log(`[Isolation] User: ${createdUser} (isolated)`);
   }
@@ -423,10 +428,11 @@ async function runWithIsolation(options, cmd) {
   let result;
 
   if (environment) {
-    // Run in isolation backend (screen, tmux, docker)
+    // Run in isolation backend (screen, tmux, docker, ssh)
     result = await runIsolated(environment, cmd, {
       session: options.session,
       image: options.image,
+      endpoint: options.endpoint,
       detached: mode === 'detached',
       user: createdUser,
       keepAlive: options.keepAlive,

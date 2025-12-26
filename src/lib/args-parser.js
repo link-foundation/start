@@ -6,11 +6,12 @@
  * 2. $ [wrapper-options] command [command-options]
  *
  * Wrapper Options:
- * --isolated, -i <backend>         Run in isolated environment (screen, tmux, docker)
+ * --isolated, -i <backend>         Run in isolated environment (screen, tmux, docker, ssh)
  * --attached, -a                   Run in attached mode (foreground)
  * --detached, -d                   Run in detached mode (background)
  * --session, -s <name>             Session name for isolation
  * --image <image>                  Docker image (required for docker isolation)
+ * --endpoint <endpoint>            SSH endpoint (required for ssh isolation, e.g., user@host)
  * --isolated-user, -u [username]   Create isolated user with same permissions (auto-generated name if not specified)
  * --keep-user                      Keep isolated user after command completes (don't delete)
  * --keep-alive, -k                 Keep isolation environment alive after command exits
@@ -24,7 +25,7 @@ const DEBUG =
 /**
  * Valid isolation backends
  */
-const VALID_BACKENDS = ['screen', 'tmux', 'docker'];
+const VALID_BACKENDS = ['screen', 'tmux', 'docker', 'ssh'];
 
 /**
  * Parse command line arguments into wrapper options and command
@@ -33,11 +34,12 @@ const VALID_BACKENDS = ['screen', 'tmux', 'docker'];
  */
 function parseArgs(args) {
   const wrapperOptions = {
-    isolated: null, // Isolation backend: screen, tmux, docker
+    isolated: null, // Isolation backend: screen, tmux, docker, ssh
     attached: false, // Run in attached mode
     detached: false, // Run in detached mode
     session: null, // Session name
     image: null, // Docker image
+    endpoint: null, // SSH endpoint (e.g., user@host)
     user: false, // Create isolated user
     userName: null, // Optional custom username for isolated user
     keepUser: false, // Keep isolated user after command completes (don't delete)
@@ -180,6 +182,22 @@ function parseOption(args, index, options) {
     return 1;
   }
 
+  // --endpoint (for ssh)
+  if (arg === '--endpoint') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.endpoint = args[index + 1];
+      return 2;
+    } else {
+      throw new Error(`Option ${arg} requires an endpoint argument`);
+    }
+  }
+
+  // --endpoint=<value>
+  if (arg.startsWith('--endpoint=')) {
+    options.endpoint = arg.split('=')[1];
+    return 1;
+  }
+
   // --isolated-user or -u [optional-username] - creates isolated user with same permissions
   if (arg === '--isolated-user' || arg === '-u') {
     options.user = true;
@@ -252,6 +270,13 @@ function validateOptions(options) {
         'Docker isolation requires --image option to specify the container image'
       );
     }
+
+    // SSH requires --endpoint
+    if (options.isolated === 'ssh' && !options.endpoint) {
+      throw new Error(
+        'SSH isolation requires --endpoint option to specify the remote server (e.g., user@host)'
+      );
+    }
   }
 
   // Session name is only valid with isolation
@@ -262,6 +287,11 @@ function validateOptions(options) {
   // Image is only valid with docker
   if (options.image && options.isolated !== 'docker') {
     throw new Error('--image option is only valid with --isolated docker');
+  }
+
+  // Endpoint is only valid with ssh
+  if (options.endpoint && options.isolated !== 'ssh') {
+    throw new Error('--endpoint option is only valid with --isolated ssh');
   }
 
   // Keep-alive is only valid with isolation

@@ -109,6 +109,12 @@ describe('Isolation Module', () => {
       console.log(`  docker available: ${result}`);
       assert.ok(typeof result === 'boolean');
     });
+
+    it('should check if ssh is available', () => {
+      const result = isCommandAvailable('ssh');
+      console.log(`  ssh available: ${result}`);
+      assert.ok(typeof result === 'boolean');
+    });
   });
 
   describe('getScreenVersion', () => {
@@ -271,6 +277,40 @@ describe('Isolation Runner Error Handling', () => {
         result.message.includes('image') ||
           result.message.includes('--image') ||
           result.message.includes('Docker isolation requires')
+      );
+    });
+  });
+
+  describe('runInSsh', () => {
+    const { runInSsh } = require('../src/lib/isolation');
+
+    it('should return informative error if ssh is not installed', async () => {
+      // Skip if ssh is installed
+      if (isCommandAvailable('ssh')) {
+        console.log('  Skipping: ssh is installed');
+        return;
+      }
+
+      const result = await runInSsh('echo test', {
+        endpoint: 'user@example.com',
+        detached: true,
+      });
+      assert.strictEqual(result.success, false);
+      assert.ok(result.message.includes('ssh is not installed'));
+      assert.ok(
+        result.message.includes('apt-get') || result.message.includes('brew')
+      );
+    });
+
+    it('should require endpoint option', async () => {
+      // This test works regardless of ssh installation
+      const result = await runInSsh('echo test', { detached: true });
+      assert.strictEqual(result.success, false);
+      // Message should mention endpoint requirement
+      assert.ok(
+        result.message.includes('endpoint') ||
+          result.message.includes('--endpoint') ||
+          result.message.includes('SSH isolation requires')
       );
     });
   });

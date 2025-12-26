@@ -525,6 +525,99 @@ function runInTmux(command, options = {}) {
 }
 
 /**
+ * Run command over SSH on a remote server
+ * @param {string} command - Command to execute
+ * @param {object} options - Options (endpoint, session, detached)
+ * @returns {Promise<{success: boolean, sessionName: string, message: string}>}
+ */
+function runInSsh(command, options = {}) {
+  if (!isCommandAvailable('ssh')) {
+    return Promise.resolve({
+      success: false,
+      sessionName: null,
+      message:
+        'ssh is not installed. Install it with: sudo apt-get install openssh-client (Debian/Ubuntu) or brew install openssh (macOS)',
+    });
+  }
+
+  if (!options.endpoint) {
+    return Promise.resolve({
+      success: false,
+      sessionName: null,
+      message:
+        'SSH isolation requires --endpoint option to specify the remote server (e.g., user@host)',
+    });
+  }
+
+  const sessionName = options.session || generateSessionName('ssh');
+  const sshTarget = options.endpoint;
+
+  try {
+    if (options.detached) {
+      // Detached mode: Run command in background on remote server using nohup
+      // The command will continue running even after SSH connection closes
+      const remoteCommand = `nohup ${command} > /tmp/${sessionName}.log 2>&1 &`;
+      const sshArgs = [sshTarget, remoteCommand];
+
+      if (DEBUG) {
+        console.log(`[DEBUG] Running: ssh ${sshArgs.join(' ')}`);
+      }
+
+      const result = spawnSync('ssh', sshArgs, {
+        stdio: 'inherit',
+      });
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      return Promise.resolve({
+        success: true,
+        sessionName,
+        message: `Command started in detached SSH session on ${sshTarget}\nSession: ${sessionName}\nView logs: ssh ${sshTarget} "tail -f /tmp/${sessionName}.log"`,
+      });
+    } else {
+      // Attached mode: Run command interactively over SSH
+      // This creates a direct SSH connection and runs the command
+      const sshArgs = [sshTarget, command];
+
+      if (DEBUG) {
+        console.log(`[DEBUG] Running: ssh ${sshArgs.join(' ')}`);
+      }
+
+      return new Promise((resolve) => {
+        const child = spawn('ssh', sshArgs, {
+          stdio: 'inherit',
+        });
+
+        child.on('exit', (code) => {
+          resolve({
+            success: code === 0,
+            sessionName,
+            message: `SSH session "${sessionName}" on ${sshTarget} exited with code ${code}`,
+            exitCode: code,
+          });
+        });
+
+        child.on('error', (err) => {
+          resolve({
+            success: false,
+            sessionName,
+            message: `Failed to start SSH: ${err.message}`,
+          });
+        });
+      });
+    }
+  } catch (err) {
+    return Promise.resolve({
+      success: false,
+      sessionName,
+      message: `Failed to run over SSH: ${err.message}`,
+    });
+  }
+}
+
+/**
  * Run command in Docker container
  * @param {string} command - Command to execute
  * @param {object} options - Options (image, session/name, detached, user, keepAlive, autoRemoveDockerContainer)
@@ -660,7 +753,7 @@ function runInDocker(command, options = {}) {
 
 /**
  * Run command in the specified isolation backend
- * @param {string} backend - Isolation backend (screen, tmux, docker)
+ * @param {string} backend - Isolation backend (screen, tmux, docker, ssh)
  * @param {string} command - Command to execute
  * @param {object} options - Options
  * @returns {Promise<{success: boolean, message: string}>}
@@ -673,6 +766,8 @@ function runIsolated(backend, command, options = {}) {
       return runInTmux(command, options);
     case 'docker':
       return runInDocker(command, options);
+    case 'ssh':
+      return runInSsh(command, options);
     default:
       return Promise.resolve({
         success: false,
@@ -825,6 +920,7 @@ module.exports = {
   runInScreen,
   runInTmux,
   runInDocker,
+  runInSsh,
   runIsolated,
   runAsIsolatedUser,
   wrapCommandWithUser,

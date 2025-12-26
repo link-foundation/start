@@ -219,6 +219,52 @@ describe('parseArgs', () => {
     });
   });
 
+  describe('SSH endpoint option', () => {
+    it('should parse --endpoint with value', () => {
+      const result = parseArgs([
+        '--isolated',
+        'ssh',
+        '--endpoint',
+        'user@server.com',
+        '--',
+        'npm',
+        'test',
+      ]);
+      assert.strictEqual(result.wrapperOptions.endpoint, 'user@server.com');
+    });
+
+    it('should parse --endpoint=value format', () => {
+      const result = parseArgs([
+        '--isolated',
+        'ssh',
+        '--endpoint=root@192.168.1.1',
+        '--',
+        'ls',
+      ]);
+      assert.strictEqual(result.wrapperOptions.endpoint, 'root@192.168.1.1');
+    });
+
+    it('should throw error for ssh without endpoint', () => {
+      assert.throws(() => {
+        parseArgs(['--isolated', 'ssh', '--', 'npm', 'test']);
+      }, /SSH isolation requires --endpoint option/);
+    });
+
+    it('should throw error for endpoint with non-ssh backend', () => {
+      assert.throws(() => {
+        parseArgs([
+          '--isolated',
+          'tmux',
+          '--endpoint',
+          'user@server.com',
+          '--',
+          'npm',
+          'test',
+        ]);
+      }, /--endpoint option is only valid with --isolated ssh/);
+    });
+  });
+
   describe('keep-alive option', () => {
     it('should parse --keep-alive flag', () => {
       const result = parseArgs([
@@ -367,13 +413,24 @@ describe('parseArgs', () => {
   describe('backend validation', () => {
     it('should accept valid backends', () => {
       for (const backend of VALID_BACKENDS) {
-        // Docker requires image, so handle it separately
+        // Docker requires image, SSH requires host, so handle them separately
         if (backend === 'docker') {
           const result = parseArgs([
             '-i',
             backend,
             '--image',
             'alpine',
+            '--',
+            'echo',
+            'test',
+          ]);
+          assert.strictEqual(result.wrapperOptions.isolated, backend);
+        } else if (backend === 'ssh') {
+          const result = parseArgs([
+            '-i',
+            backend,
+            '--endpoint',
+            'user@example.com',
             '--',
             'echo',
             'test',
