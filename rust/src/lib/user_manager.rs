@@ -496,6 +496,10 @@ mod tests {
 
     #[test]
     fn test_get_current_user_groups() {
+        // The groups command is Unix-specific, skip on Windows
+        if cfg!(windows) {
+            return;
+        }
         let groups = get_current_user_groups();
         // Should have at least one group (the user's primary group)
         assert!(!groups.is_empty());
@@ -532,11 +536,18 @@ mod tests {
 
     #[test]
     fn test_group_exists() {
-        // On most Unix systems, root or wheel group exists
+        // On most Unix systems, at least one of these groups should exist
         if !cfg!(windows) {
-            let root_exists = group_exists("root");
-            let wheel_exists = group_exists("wheel");
-            assert!(root_exists || wheel_exists || group_exists("sudo"));
+            // Linux typically has root/sudo, macOS has wheel/admin/staff
+            let found_group = group_exists("root")
+                || group_exists("wheel")
+                || group_exists("sudo")
+                || group_exists("admin")
+                || group_exists("staff");
+            assert!(
+                found_group,
+                "Expected at least one common group (root/wheel/sudo/admin/staff) to exist"
+            );
         }
     }
 }
