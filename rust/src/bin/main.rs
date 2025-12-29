@@ -59,7 +59,7 @@ impl Config {
 }
 
 fn env_bool(name: &str) -> bool {
-    env::var(name).map_or(false, |v| v == "1" || v == "true")
+    env::var(name).is_ok_and(|v| v == "1" || v == "true")
 }
 
 fn main() {
@@ -270,7 +270,7 @@ Features:
 
 /// Run command with isolation
 fn run_with_isolation(
-    config: &Config,
+    _config: &Config,
     wrapper_options: &start_command::WrapperOptions,
     command: &str,
     _use_command_stream: bool,

@@ -18,6 +18,7 @@ use crate::args_parser::generate_session_name;
 
 /// Result of an isolation run
 #[derive(Debug)]
+#[derive(Default)]
 pub struct IsolationResult {
     /// Whether the run succeeded
     pub success: bool,
@@ -33,18 +34,6 @@ pub struct IsolationResult {
     pub output: Option<String>,
 }
 
-impl Default for IsolationResult {
-    fn default() -> Self {
-        Self {
-            success: false,
-            session_name: None,
-            container_id: None,
-            message: String::new(),
-            exit_code: None,
-            output: None,
-        }
-    }
-}
 
 /// Options for isolation
 #[derive(Debug, Default, Clone)]
@@ -761,7 +750,7 @@ pub fn create_log_path(environment: &str) -> PathBuf {
 }
 
 fn is_debug() -> bool {
-    env::var("START_DEBUG").map_or(false, |v| v == "1" || v == "true")
+    env::var("START_DEBUG").is_ok_and(|v| v == "1" || v == "true")
 }
 
 // Stub for atty crate functionality

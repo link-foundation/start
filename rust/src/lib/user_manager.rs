@@ -10,6 +10,7 @@ use std::process::Command;
 
 /// Result of a user operation
 #[derive(Debug)]
+#[derive(Default)]
 pub struct UserOperationResult {
     /// Whether the operation succeeded
     pub success: bool,
@@ -23,17 +24,6 @@ pub struct UserOperationResult {
     pub already_exists: bool,
 }
 
-impl Default for UserOperationResult {
-    fn default() -> Self {
-        Self {
-            success: false,
-            message: String::new(),
-            username: None,
-            groups: None,
-            already_exists: false,
-        }
-    }
-}
 
 /// User information
 #[derive(Debug, Default)]
@@ -76,7 +66,6 @@ pub fn get_current_user_groups() -> Vec<String> {
             let parts: Vec<&str> = output_str.split(':').collect();
             let groups_part = if parts.len() > 1 { parts[1] } else { parts[0] };
             return groups_part
-                .trim()
                 .split_whitespace()
                 .filter(|s| !s.is_empty())
                 .map(String::from)
@@ -455,10 +444,9 @@ pub fn get_user_info(username: &str) -> UserInfo {
     if let Ok(output) = Command::new("groups").arg(username).output() {
         if output.status.success() {
             let output_str = String::from_utf8_lossy(&output.stdout);
-            let groups_part = output_str.split(':').last().unwrap_or(&output_str);
+            let groups_part = output_str.split(':').next_back().unwrap_or(&output_str);
             info.groups = Some(
                 groups_part
-                    .trim()
                     .split_whitespace()
                     .filter(|s| !s.is_empty())
                     .map(String::from)
@@ -494,7 +482,7 @@ pub fn has_sudo_access() -> bool {
 }
 
 fn is_debug() -> bool {
-    env::var("START_DEBUG").map_or(false, |v| v == "1" || v == "true")
+    env::var("START_DEBUG").is_ok_and(|v| v == "1" || v == "true")
 }
 
 #[cfg(test)]

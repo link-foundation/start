@@ -115,7 +115,7 @@ fn parse_wrapper_args(args: &[String], options: &mut WrapperOptions) -> Result<(
         match parse_option(args, i, options)? {
             0 => {
                 // Unknown wrapper option - just skip in debug mode
-                if env::var("START_DEBUG").map_or(false, |v| v == "1" || v == "true") {
+                if env::var("START_DEBUG").is_ok_and(|v| v == "1" || v == "true") {
                     eprintln!("Unknown wrapper option: {}", args[i]);
                 }
                 i += 1;

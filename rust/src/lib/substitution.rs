@@ -231,13 +231,11 @@ pub fn load_default_substitutions() -> Vec<Rule> {
         Some(std::path::PathBuf::from("js/src/lib/substitutions.lino")),
     ];
 
-    for path_opt in &possible_paths {
-        if let Some(path) = path_opt {
-            if path.exists() {
-                let rules = parse_lino_file(path);
-                if !rules.is_empty() {
-                    return rules;
-                }
+    for path in possible_paths.iter().flatten() {
+        if path.exists() {
+            let rules = parse_lino_file(path);
+            if !rules.is_empty() {
+                return rules;
             }
         }
     }
@@ -309,7 +307,7 @@ pub fn process_command(input: &str, options: &ProcessOptions) -> SubstitutionRes
 }
 
 fn is_debug() -> bool {
-    env::var("START_DEBUG").map_or(false, |v| v == "1" || v == "true")
+    env::var("START_DEBUG").is_ok_and(|v| v == "1" || v == "true")
 }
 
 #[cfg(test)]

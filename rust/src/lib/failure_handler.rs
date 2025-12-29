@@ -124,7 +124,7 @@ pub fn detect_repository(cmd_name: &str) -> Option<RepoInfo> {
     };
 
     // Check if it's in npm global modules
-    let npm_global_path = Command::new("npm")
+    let _npm_global_path = Command::new("npm")
         .args(["root", "-g"])
         .output()
         .ok()
