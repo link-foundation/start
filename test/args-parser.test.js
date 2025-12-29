@@ -708,6 +708,39 @@ describe('user isolation option', () => {
   });
 });
 
+describe('use-command-stream option', () => {
+  it('should parse --use-command-stream flag', () => {
+    const result = parseArgs(['--use-command-stream', '--', 'npm', 'test']);
+    assert.strictEqual(result.wrapperOptions.useCommandStream, true);
+    assert.strictEqual(result.command, 'npm test');
+  });
+
+  it('should default useCommandStream to false', () => {
+    const result = parseArgs(['npm', 'test']);
+    assert.strictEqual(result.wrapperOptions.useCommandStream, false);
+  });
+
+  it('should work with other options', () => {
+    const result = parseArgs([
+      '-i',
+      'screen',
+      '--use-command-stream',
+      '--',
+      'npm',
+      'test',
+    ]);
+    assert.strictEqual(result.wrapperOptions.isolated, 'screen');
+    assert.strictEqual(result.wrapperOptions.useCommandStream, true);
+    assert.strictEqual(result.command, 'npm test');
+  });
+
+  it('should work without other options', () => {
+    const result = parseArgs(['--use-command-stream', 'echo', 'hello']);
+    assert.strictEqual(result.wrapperOptions.useCommandStream, true);
+    assert.strictEqual(result.command, 'echo hello');
+  });
+});
+
 describe('keep-user option', () => {
   it('should parse --keep-user flag', () => {
     const result = parseArgs([

@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "start-command",
+      "dependencies": {
+        "command-stream": "^0.8.3",
+      },
       "devDependencies": {
         "@changesets/cli": "^2.29.7",
         "eslint": "^9.38.0",
@@ -141,6 +144,8 @@
     "color-name": ["color-name@1.1.4", "", {}, "sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA=="],
 
     "colorette": ["colorette@2.0.20", "", {}, "sha512-IfEDxwoWIjkeXL1eXcDiow4UbKjhLdq6/EuSVR9GMN7KVH3r9gQ83e73hsz1Nd1T3ijd5xv1wcWRYO+D6kCI2w=="],
+
+    "command-stream": ["command-stream@0.8.3", "", {}, "sha512-vwNf5AWLhD4awaYSIyjHEu7JrAMTu8BaJg1LIpE4HqTXFYtgzSTN/j1VnwHDTNz8sAG7zvZgtKYm9lmi4+0Z7Q=="],
 
     "commander": ["commander@14.0.2", "", {}, "sha512-TywoWNNRbhoD0BXs1P3ZEScW8W5iKrnbithIl0YH+uCmBd0QpPOA8yc82DS3BIE5Ma6FnBVUsJ7wVUDz4dvOWQ=="],
 

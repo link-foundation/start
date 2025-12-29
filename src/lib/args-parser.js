@@ -16,6 +16,7 @@
  * --keep-user                      Keep isolated user after command completes (don't delete)
  * --keep-alive, -k                 Keep isolation environment alive after command exits
  * --auto-remove-docker-container   Automatically remove docker container after exit (disabled by default)
+ * --use-command-stream             Use command-stream library for command execution (experimental)
  */
 
 // Debug mode from environment
@@ -45,6 +46,7 @@ function parseArgs(args) {
     keepUser: false, // Keep isolated user after command completes (don't delete)
     keepAlive: false, // Keep environment alive after command exits
     autoRemoveDockerContainer: false, // Auto-remove docker container after exit
+    useCommandStream: false, // Use command-stream library for command execution
   };
 
   let commandArgs = [];
@@ -236,6 +238,12 @@ function parseOption(args, index, options) {
   // --auto-remove-docker-container
   if (arg === '--auto-remove-docker-container') {
     options.autoRemoveDockerContainer = true;
+    return 1;
+  }
+
+  // --use-command-stream
+  if (arg === '--use-command-stream') {
+    options.useCommandStream = true;
     return 1;
   }
 
