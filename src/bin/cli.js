@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-// Note: spawn imported for potential future use, currently using command-stream for execution
+const { spawn, execSync, spawnSync } = require('child_process');
 const process = require('process');
 const os = require('os');
 const fs = require('fs');
@@ -28,11 +28,6 @@ const {
   hasSudoAccess,
   getCurrentUserGroups,
 } = require('../lib/user-manager');
-const {
-  execCommand,
-  getToolVersion: getToolVersionAsync,
-  getCommandStream,
-} = require('../lib/command-stream');
 
 // Configuration from environment variables
 const config = {
@@ -55,6 +50,10 @@ const config = {
     process.env.START_DISABLE_SUBSTITUTIONS === 'true',
   // Custom substitutions file path
   substitutionsPath: process.env.START_SUBSTITUTIONS_PATH || null,
+  // Use command-stream library for command execution (experimental)
+  useCommandStream:
+    process.env.START_USE_COMMAND_STREAM === '1' ||
+    process.env.START_USE_COMMAND_STREAM === 'true',
 };
 
 // Get all arguments passed after the command
@@ -81,70 +80,81 @@ const isVersionOnly =
     (arg) => versionRelatedArgs.includes(arg) || arg === args[0] // Allow the version flag itself
   );
 
-// Main entry point - handles all execution paths
-(async () => {
-  // Handle version flag
-  if (hasVersionFlag && isVersionOnly) {
-    await printVersion(hasVerboseWithVersion || config.verbose);
-    process.exit(0);
-  }
+if (hasVersionFlag && isVersionOnly) {
+  printVersion(hasVerboseWithVersion || config.verbose);
+  process.exit(0);
+}
 
-  // Handle no arguments
-  if (args.length === 0) {
-    printUsage();
-    process.exit(0);
-  }
+if (args.length === 0) {
+  printUsage();
+  process.exit(0);
+}
 
-  // Parse wrapper options and command
-  let parsedArgs;
-  try {
-    parsedArgs = parseArgs(args);
-  } catch (err) {
-    console.error(`Error: ${err.message}`);
-    process.exit(1);
-  }
+// Parse wrapper options and command
+let parsedArgs;
+try {
+  parsedArgs = parseArgs(args);
+} catch (err) {
+  console.error(`Error: ${err.message}`);
+  process.exit(1);
+}
 
-  const { wrapperOptions, command: parsedCommand } = parsedArgs;
+const { wrapperOptions, command: parsedCommand } = parsedArgs;
 
-  // Check if no command was provided
-  if (!parsedCommand || parsedCommand.trim() === '') {
-    console.error('Error: No command provided');
-    printUsage();
-    process.exit(1);
-  }
+// Check if no command was provided
+if (!parsedCommand || parsedCommand.trim() === '') {
+  console.error('Error: No command provided');
+  printUsage();
+  process.exit(1);
+}
 
-  // Process through substitution engine (unless disabled)
-  let command = parsedCommand;
-  let substitutionResult = null;
+// Process through substitution engine (unless disabled)
+let command = parsedCommand;
+let substitutionResult = null;
 
-  if (!config.disableSubstitutions) {
-    substitutionResult = processCommand(parsedCommand, {
-      customLinoPath: config.substitutionsPath,
-      verbose: config.verbose,
-    });
+if (!config.disableSubstitutions) {
+  substitutionResult = processCommand(parsedCommand, {
+    customLinoPath: config.substitutionsPath,
+    verbose: config.verbose,
+  });
 
-    if (substitutionResult.matched) {
-      command = substitutionResult.command;
-      if (config.verbose) {
-        console.log(`[Substitution] "${parsedCommand}" -> "${command}"`);
-        console.log('');
-      }
+  if (substitutionResult.matched) {
+    command = substitutionResult.command;
+    if (config.verbose) {
+      console.log(`[Substitution] "${parsedCommand}" -> "${command}"`);
+      console.log('');
     }
   }
+}
 
+// Determine if we should use command-stream
+// Can be enabled via --use-command-stream flag or START_USE_COMMAND_STREAM env var
+const useCommandStream =
+  wrapperOptions.useCommandStream || config.useCommandStream;
+
+// Main execution
+(async () => {
   // Check if running in isolation mode or with user isolation
   if (hasIsolation(wrapperOptions) || wrapperOptions.user) {
-    await runWithIsolation(wrapperOptions, command);
+    await runWithIsolation(wrapperOptions, command, useCommandStream);
   } else {
-    await runDirect(command, parsedCommand, substitutionResult);
+    if (useCommandStream) {
+      await runDirectWithCommandStream(
+        command,
+        parsedCommand,
+        substitutionResult
+      );
+    } else {
+      await runDirect(command);
+    }
   }
 })();
 
 /**
- * Print version information (async to use command-stream)
+ * Print version information
  * @param {boolean} verbose - Whether to show verbose debugging info
  */
-async function printVersion(verbose = false) {
+function printVersion(verbose = false) {
   // Get package version
   const packageJson = require('../../package.json');
   const startCommandVersion = packageJson.version;
@@ -163,13 +173,15 @@ async function printVersion(verbose = false) {
   // Get OS version (use sw_vers on macOS for user-friendly version)
   let osVersion = os.release();
   if (process.platform === 'darwin') {
-    const result = await execCommand('sw_vers -productVersion');
-    if (result.code === 0 && result.stdout) {
-      osVersion = result.stdout;
+    try {
+      osVersion = execSync('sw_vers -productVersion', {
+        encoding: 'utf8',
+        timeout: 5000,
+      }).trim();
       if (verbose) {
         console.log(`[verbose] macOS version from sw_vers: ${osVersion}`);
       }
-    } else {
+    } catch {
       // Fallback to kernel version if sw_vers fails
       osVersion = os.release();
       if (verbose) {
@@ -193,7 +205,7 @@ async function printVersion(verbose = false) {
   }
 
   // Check screen (use -v flag for compatibility with older versions)
-  const screenVersion = await getToolVersionAsync('screen', '-v', verbose);
+  const screenVersion = getToolVersion('screen', '-v', verbose);
   if (screenVersion) {
     console.log(`  screen: ${screenVersion}`);
   } else {
@@ -201,7 +213,7 @@ async function printVersion(verbose = false) {
   }
 
   // Check tmux
-  const tmuxVersion = await getToolVersionAsync('tmux', '-V', verbose);
+  const tmuxVersion = getToolVersion('tmux', '-V', verbose);
   if (tmuxVersion) {
     console.log(`  tmux: ${tmuxVersion}`);
   } else {
@@ -209,16 +221,65 @@ async function printVersion(verbose = false) {
   }
 
   // Check docker
-  const dockerVersion = await getToolVersionAsync(
-    'docker',
-    '--version',
-    verbose
-  );
+  const dockerVersion = getToolVersion('docker', '--version', verbose);
   if (dockerVersion) {
     console.log(`  docker: ${dockerVersion}`);
   } else {
     console.log('  docker: not installed');
   }
+}
+
+/**
+ * Get version of an installed tool
+ * @param {string} toolName - Name of the tool
+ * @param {string} versionFlag - Flag to get version (e.g., '--version', '-V')
+ * @param {boolean} verbose - Whether to log verbose information
+ * @returns {string|null} Version string or null if not installed
+ */
+function getToolVersion(toolName, versionFlag, verbose = false) {
+  const isWindows = process.platform === 'win32';
+  const whichCmd = isWindows ? 'where' : 'which';
+
+  // First, check if the tool exists in PATH
+  try {
+    execSync(`${whichCmd} ${toolName}`, {
+      encoding: 'utf8',
+      timeout: 5000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+  } catch {
+    // Tool not found in PATH
+    if (verbose) {
+      console.log(`[verbose] ${toolName}: not found in PATH`);
+    }
+    return null;
+  }
+
+  // Tool exists, try to get version using spawnSync
+  // This captures output regardless of exit code (some tools like older screen
+  // versions return non-zero exit code even when showing version successfully)
+  const result = spawnSync(toolName, [versionFlag], {
+    encoding: 'utf8',
+    timeout: 5000,
+    shell: false,
+  });
+
+  // Combine stdout and stderr (some tools output version to stderr)
+  const output = ((result.stdout || '') + (result.stderr || '')).trim();
+
+  if (verbose) {
+    console.log(
+      `[verbose] ${toolName} ${versionFlag}: exit=${result.status}, output="${output.substring(0, 100)}"`
+    );
+  }
+
+  if (!output) {
+    return null;
+  }
+
+  // Return the first line of output
+  const firstLine = output.split('\n')[0];
+  return firstLine || null;
 }
 
 /** Print usage information */
@@ -237,6 +298,7 @@ Options:
   --keep-user           Keep isolated user after command completes
   --keep-alive, -k      Keep isolation environment alive after command exits
   --auto-remove-docker-container  Auto-remove docker container after exit
+  --use-command-stream  Use command-stream library for execution (experimental)
   --version, -v         Show version information
 
 Examples:
@@ -249,7 +311,8 @@ Examples:
   $ --isolated-user -- npm test            # Create isolated user
   $ -u myuser -- npm start                 # Custom username
   $ -i screen --isolated-user -- npm test  # Combine with process isolation
-  $ --isolated-user --keep-user -- npm start`);
+  $ --isolated-user --keep-user -- npm start
+  $ --use-command-stream echo "Hello"      # Use command-stream library`);
   console.log('');
   console.log('Piping with $:');
   console.log('  echo "hi" | $ agent       # Preferred - pipe TO $ command');
@@ -284,8 +347,9 @@ Examples:
  * Run command in isolation mode
  * @param {object} options - Wrapper options
  * @param {string} cmd - Command to execute
+ * @param {boolean} useCommandStream - Whether to use command-stream for isolation
  */
-async function runWithIsolation(options, cmd) {
+async function runWithIsolation(options, cmd, useCommandStream = false) {
   const environment = options.isolated;
   const mode = getEffectiveMode(options);
   const startTime = getTimestamp();
@@ -368,6 +432,9 @@ async function runWithIsolation(options, cmd) {
   if (createdUser) {
     console.log(`[Isolation] User: ${createdUser} (isolated)`);
   }
+  if (useCommandStream) {
+    console.log(`[Isolation] Using command-stream library`);
+  }
   console.log('');
 
   // Create log content
@@ -385,6 +452,8 @@ async function runWithIsolation(options, cmd) {
 
   if (environment) {
     // Run in isolation backend (screen, tmux, docker, ssh)
+    // Note: Isolation backends currently use native spawn/execSync
+    // Future: Add command-stream support with raw() function for multiplexers
     result = await runIsolated(environment, cmd, {
       session: options.session,
       image: options.image,
@@ -443,21 +512,17 @@ async function runWithIsolation(options, cmd) {
 }
 
 /**
- * Run command directly (without isolation) using command-stream
+ * Run command directly (without isolation) - original synchronous version
  * @param {string} cmd - Command to execute
- * @param {string} parsedCommand - Original parsed command
- * @param {object} substitutionResult - Result from substitution engine
  */
-async function runDirect(cmd, parsedCommand, substitutionResult) {
-  // Get command-stream $ function
-  const { $ } = await getCommandStream();
-
+function runDirect(cmd) {
   // Get the command name (first word of the actual command to execute)
   const commandName = cmd.split(' ')[0];
 
   // Determine the shell based on the platform
   const isWindows = process.platform === 'win32';
   const shell = isWindows ? 'powershell.exe' : process.env.SHELL || '/bin/sh';
+  const shellArgs = isWindows ? ['-Command', cmd] : ['-c', cmd];
 
   // Setup logging
   const logDir = config.logDir || os.tmpdir();
@@ -497,13 +562,154 @@ async function runDirect(cmd, parsedCommand, substitutionResult) {
   }
   console.log('');
 
+  // Execute the command with captured output
+  const child = spawn(shell, shellArgs, {
+    stdio: ['inherit', 'pipe', 'pipe'],
+    shell: false,
+  });
+
+  // Capture stdout
+  child.stdout.on('data', (data) => {
+    const text = data.toString();
+    process.stdout.write(text);
+    logContent += text;
+  });
+
+  // Capture stderr
+  child.stderr.on('data', (data) => {
+    const text = data.toString();
+    process.stderr.write(text);
+    logContent += text;
+  });
+
+  // Handle process exit
+  child.on('exit', (code) => {
+    const exitCode = code || 0;
+    const endTime = getTimestamp();
+
+    // Log footer
+    logContent += `\n${'='.repeat(50)}\n`;
+    logContent += `Finished: ${endTime}\n`;
+    logContent += `Exit Code: ${exitCode}\n`;
+
+    // Write log file
+    try {
+      fs.writeFileSync(logFilePath, logContent, 'utf8');
+    } catch (err) {
+      console.error(`\nWarning: Could not save log file: ${err.message}`);
+    }
+
+    // Print footer to console
+    console.log('');
+    console.log(`[${endTime}] Finished`);
+    console.log(`Exit code: ${exitCode}`);
+    console.log(`Log saved: ${logFilePath}`);
+
+    // If command failed, try to auto-report
+    if (exitCode !== 0) {
+      handleFailure(commandName, cmd, exitCode, logFilePath, logContent);
+    }
+
+    process.exit(exitCode);
+  });
+
+  // Handle spawn errors
+  child.on('error', (err) => {
+    const endTime = getTimestamp();
+    const errorMessage = `Error executing command: ${err.message}`;
+
+    logContent += `\n${errorMessage}\n`;
+    logContent += `\n${'='.repeat(50)}\n`;
+    logContent += `Finished: ${endTime}\n`;
+    logContent += `Exit Code: 1\n`;
+
+    // Write log file
+    try {
+      fs.writeFileSync(logFilePath, logContent, 'utf8');
+    } catch (writeErr) {
+      console.error(`\nWarning: Could not save log file: ${writeErr.message}`);
+    }
+
+    console.error(`\n${errorMessage}`);
+    console.log('');
+    console.log(`[${endTime}] Finished`);
+    console.log(`Exit code: 1`);
+    console.log(`Log saved: ${logFilePath}`);
+
+    handleFailure(commandName, cmd, 1, logFilePath, logContent);
+
+    process.exit(1);
+  });
+}
+
+/**
+ * Run command directly using command-stream library (experimental)
+ * @param {string} cmd - Command to execute
+ * @param {string} parsedCmd - Original parsed command
+ * @param {object} subResult - Result from substitution engine
+ */
+async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
+  // Lazy load command-stream
+  const { getCommandStream } = require('../lib/command-stream');
+  const { $, raw } = await getCommandStream();
+
+  // Get the command name (first word of the actual command to execute)
+  const commandName = cmd.split(' ')[0];
+
+  // Determine the shell based on the platform
+  const isWindows = process.platform === 'win32';
+  const shell = isWindows ? 'powershell.exe' : process.env.SHELL || '/bin/sh';
+
+  // Setup logging
+  const logDir = config.logDir || os.tmpdir();
+  const logFilename = generateLogFilename();
+  const logFilePath = path.join(logDir, logFilename);
+
+  let logContent = '';
+  const startTime = getTimestamp();
+
+  // Get runtime information
+  const runtime = typeof Bun !== 'undefined' ? 'Bun' : 'Node.js';
+  const runtimeVersion =
+    typeof Bun !== 'undefined' ? Bun.version : process.version;
+
+  // Log header
+  logContent += `=== Start Command Log ===\n`;
+  logContent += `Timestamp: ${startTime}\n`;
+  logContent += `Execution Mode: command-stream\n`;
+  if (subResult && subResult.matched) {
+    logContent += `Original Input: ${parsedCmd}\n`;
+    logContent += `Substituted Command: ${cmd}\n`;
+    logContent += `Pattern Matched: ${subResult.rule.pattern}\n`;
+  } else {
+    logContent += `Command: ${cmd}\n`;
+  }
+  logContent += `Shell: ${shell}\n`;
+  logContent += `Platform: ${process.platform}\n`;
+  logContent += `${runtime} Version: ${runtimeVersion}\n`;
+  logContent += `Working Directory: ${process.cwd()}\n`;
+  logContent += `${'='.repeat(50)}\n\n`;
+
+  // Print start message to console
+  if (subResult && subResult.matched) {
+    console.log(`[${startTime}] Input: ${parsedCmd}`);
+    console.log(`[${startTime}] Executing: ${cmd}`);
+  } else {
+    console.log(`[${startTime}] Starting: ${cmd}`);
+  }
+  console.log('[command-stream] Using command-stream library');
+  console.log('');
+
   // Execute the command using command-stream with real-time output
   // Using mirror: true to show output in real-time, capture: true to collect it
+  // Using raw() to avoid auto-escaping that might interfere with complex shell commands
   const $cmd = $({ mirror: true, capture: true });
 
   let exitCode = 0;
   try {
-    const result = await $cmd`${cmd}`;
+    // Use raw() to pass the command without auto-escaping
+    // This is important for complex commands with pipes, redirects, etc.
+    const result = await $cmd`${raw(cmd)}`;
     exitCode = result.code || 0;
 
     // Collect output for log
@@ -514,7 +720,7 @@ async function runDirect(cmd, parsedCommand, substitutionResult) {
       logContent += result.stderr;
     }
   } catch (err) {
-    exitCode = 1;
+    exitCode = err.code || 1;
     const errorMessage = `Error executing command: ${err.message}`;
     logContent += `\n${errorMessage}\n`;
     console.error(`\n${errorMessage}`);
@@ -542,7 +748,13 @@ async function runDirect(cmd, parsedCommand, substitutionResult) {
 
   // If command failed, try to auto-report
   if (exitCode !== 0) {
-    await handleFailure(commandName, cmd, exitCode, logFilePath, logContent);
+    await handleFailureAsync(
+      commandName,
+      cmd,
+      exitCode,
+      logFilePath,
+      logContent
+    );
   }
 
   process.exit(exitCode);
@@ -560,9 +772,9 @@ function generateLogFilename() {
 
 /**
  * Handle command failure - detect repository, upload log, create issue
- * Now async to use command-stream
+ * Synchronous version for original execution mode
  */
-async function handleFailure(cmdName, fullCommand, exitCode, logPath) {
+function handleFailure(cmdName, fullCommand, exitCode, logPath) {
   console.log('');
 
   // Check if auto-issue is disabled
@@ -574,7 +786,7 @@ async function handleFailure(cmdName, fullCommand, exitCode, logPath) {
   }
 
   // Try to detect repository for the command
-  const repoInfo = await detectRepository(cmdName);
+  const repoInfo = detectRepository(cmdName);
 
   if (!repoInfo) {
     console.log('Repository not detected - automatic issue creation skipped');
@@ -584,7 +796,7 @@ async function handleFailure(cmdName, fullCommand, exitCode, logPath) {
   console.log(`Detected repository: ${repoInfo.url}`);
 
   // Check if gh CLI is available and authenticated
-  if (!(await isGhAuthenticated())) {
+  if (!isGhAuthenticated()) {
     console.log(
       'GitHub CLI not authenticated - automatic issue creation skipped'
     );
@@ -598,8 +810,8 @@ async function handleFailure(cmdName, fullCommand, exitCode, logPath) {
     if (config.verbose) {
       console.log('Log upload disabled via START_DISABLE_LOG_UPLOAD');
     }
-  } else if (await isGhUploadLogAvailable()) {
-    logUrl = await uploadLog(logPath);
+  } else if (isGhUploadLogAvailable()) {
+    logUrl = uploadLog(logPath);
     if (logUrl) {
       console.log(`Log uploaded: ${logUrl}`);
     }
@@ -609,13 +821,13 @@ async function handleFailure(cmdName, fullCommand, exitCode, logPath) {
   }
 
   // Check if we can create issues in this repository
-  if (!(await canCreateIssue(repoInfo.owner, repoInfo.repo))) {
+  if (!canCreateIssue(repoInfo.owner, repoInfo.repo)) {
     console.log('Cannot create issue in repository - skipping issue creation');
     return;
   }
 
   // Create issue
-  const issueUrl = await createIssue(
+  const issueUrl = createIssue(
     repoInfo,
     fullCommand,
     exitCode,
@@ -628,22 +840,36 @@ async function handleFailure(cmdName, fullCommand, exitCode, logPath) {
 }
 
 /**
- * Detect repository URL for a command (currently supports NPM global packages)
- * Now async to use command-stream
+ * Handle command failure - async version for command-stream mode
+ * Note: Currently uses sync version for simplicity - failure handling doesn't require async
  */
-async function detectRepository(cmdName) {
+function handleFailureAsync(cmdName, fullCommand, exitCode, logPath) {
+  handleFailure(cmdName, fullCommand, exitCode, logPath);
+}
+
+/**
+ * Detect repository URL for a command (currently supports NPM global packages)
+ */
+function detectRepository(cmdName) {
   const isWindows = process.platform === 'win32';
 
   try {
     // Find command location
     const whichCmd = isWindows ? 'where' : 'which';
-    const whichResult = await execCommand(`${whichCmd} ${cmdName}`);
+    let cmdPath;
 
-    if (whichResult.code !== 0 || !whichResult.stdout) {
+    try {
+      cmdPath = execSync(`${whichCmd} ${cmdName}`, {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
+    } catch {
       return null;
     }
 
-    let cmdPath = whichResult.stdout;
+    if (!cmdPath) {
+      return null;
+    }
 
     // Handle Windows where command that returns multiple lines
     if (isWindows && cmdPath.includes('\n')) {
@@ -651,12 +877,15 @@ async function detectRepository(cmdName) {
     }
 
     // Check if it's in npm global modules
-    const npmRootResult = await execCommand('npm root -g');
-    if (npmRootResult.code !== 0 || !npmRootResult.stdout) {
+    let npmGlobalPath;
+    try {
+      npmGlobalPath = execSync('npm root -g', {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
+    } catch {
       return null;
     }
-
-    const npmGlobalPath = npmRootResult.stdout;
 
     // Get the npm bin directory (parent of node_modules)
     const npmBinPath = `${path.dirname(npmGlobalPath)}/bin`;
@@ -717,31 +946,41 @@ async function detectRepository(cmdName) {
     }
 
     // Try to get repository URL from npm
-    const npmViewResult = await execCommand(
-      `npm view ${packageName} repository.url 2>/dev/null`
-    );
+    try {
+      const npmInfo = execSync(
+        `npm view ${packageName} repository.url 2>/dev/null`,
+        {
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+        }
+      ).trim();
 
-    if (npmViewResult.code === 0 && npmViewResult.stdout) {
-      // Parse git URL to extract owner and repo
-      const parsed = parseGitUrl(npmViewResult.stdout);
-      if (parsed) {
-        return parsed;
+      if (npmInfo) {
+        // Parse git URL to extract owner and repo
+        const parsed = parseGitUrl(npmInfo);
+        if (parsed) {
+          return parsed;
+        }
       }
+    } catch {
+      // npm view failed, package might not exist or have no repository
     }
 
     // Try to get homepage or bugs URL as fallback
-    const bugsResult = await execCommand(
-      `npm view ${packageName} bugs.url 2>/dev/null`
-    );
+    try {
+      const bugsUrl = execSync(`npm view ${packageName} bugs.url 2>/dev/null`, {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
 
-    if (bugsResult.code === 0 && bugsResult.stdout) {
-      const bugsUrl = bugsResult.stdout;
-      if (bugsUrl.includes('github.com')) {
+      if (bugsUrl && bugsUrl.includes('github.com')) {
         const parsed = parseGitUrl(bugsUrl);
         if (parsed) {
           return parsed;
         }
       }
+    } catch {
+      // Fallback also failed
     }
 
     return null;
@@ -781,102 +1020,122 @@ function parseGitUrl(url) {
 }
 
 /**
- * Check if GitHub CLI is authenticated (async)
+ * Check if GitHub CLI is authenticated
  */
-async function isGhAuthenticated() {
-  const result = await execCommand('gh auth status');
-  return result.code === 0;
+function isGhAuthenticated() {
+  try {
+    execSync('gh auth status', { stdio: ['pipe', 'pipe', 'pipe'] });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
- * Check if gh-upload-log is available (async)
+ * Check if gh-upload-log is available
  */
-async function isGhUploadLogAvailable() {
+function isGhUploadLogAvailable() {
   const isWindows = process.platform === 'win32';
-  const whichCmd = isWindows ? 'where' : 'which';
-  const result = await execCommand(`${whichCmd} gh-upload-log`);
-  return result.code === 0;
+  try {
+    const whichCmd = isWindows ? 'where' : 'which';
+    execSync(`${whichCmd} gh-upload-log`, { stdio: ['pipe', 'pipe', 'pipe'] });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
- * Upload log file using gh-upload-log (async)
+ * Upload log file using gh-upload-log
  */
-async function uploadLog(logPath) {
-  const result = await execCommand(`gh-upload-log "${logPath}" --public`);
+function uploadLog(logPath) {
+  try {
+    const result = execSync(`gh-upload-log "${logPath}" --public`, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
 
-  if (result.code !== 0) {
-    console.log(`Warning: Log upload failed - ${result.stderr}`);
+    // Extract URL from output
+    const urlMatch = result.match(/https:\/\/gist\.github\.com\/[^\s]+/);
+    if (urlMatch) {
+      return urlMatch[0];
+    }
+
+    // Try other URL patterns
+    const repoUrlMatch = result.match(/https:\/\/github\.com\/[^\s]+/);
+    if (repoUrlMatch) {
+      return repoUrlMatch[0];
+    }
+
+    return null;
+  } catch (err) {
+    console.log(`Warning: Log upload failed - ${err.message}`);
     return null;
   }
-
-  const output = result.stdout;
-
-  // Extract URL from output
-  const urlMatch = output.match(/https:\/\/gist\.github\.com\/[^\s]+/);
-  if (urlMatch) {
-    return urlMatch[0];
-  }
-
-  // Try other URL patterns
-  const repoUrlMatch = output.match(/https:\/\/github\.com\/[^\s]+/);
-  if (repoUrlMatch) {
-    return repoUrlMatch[0];
-  }
-
-  return null;
 }
 
 /**
- * Check if we can create an issue in a repository (async)
+ * Check if we can create an issue in a repository
  */
-async function canCreateIssue(owner, repo) {
-  const result = await execCommand(`gh repo view ${owner}/${repo} --json name`);
-  return result.code === 0;
+function canCreateIssue(owner, repo) {
+  try {
+    // Check if the repository exists and we have access
+    execSync(`gh repo view ${owner}/${repo} --json name`, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
- * Create an issue in the repository (async)
+ * Create an issue in the repository
  */
-async function createIssue(repoInfo, fullCommand, exitCode, logUrl) {
-  const title = `Command failed with exit code ${exitCode}: ${fullCommand.substring(0, 50)}${fullCommand.length > 50 ? '...' : ''}`;
+function createIssue(repoInfo, fullCommand, exitCode, logUrl) {
+  try {
+    const title = `Command failed with exit code ${exitCode}: ${fullCommand.substring(0, 50)}${fullCommand.length > 50 ? '...' : ''}`;
 
-  // Get runtime information
-  const runtime = typeof Bun !== 'undefined' ? 'Bun' : 'Node.js';
-  const runtimeVersion =
-    typeof Bun !== 'undefined' ? Bun.version : process.version;
+    // Get runtime information
+    const runtime = typeof Bun !== 'undefined' ? 'Bun' : 'Node.js';
+    const runtimeVersion =
+      typeof Bun !== 'undefined' ? Bun.version : process.version;
 
-  let body = `## Command Execution Failure Report\n\n`;
-  body += `**Command:** \`${fullCommand}\`\n\n`;
-  body += `**Exit Code:** ${exitCode}\n\n`;
-  body += `**Timestamp:** ${getTimestamp()}\n\n`;
-  body += `### System Information\n\n`;
-  body += `- **Platform:** ${process.platform}\n`;
-  body += `- **OS Release:** ${os.release()}\n`;
-  body += `- **${runtime} Version:** ${runtimeVersion}\n`;
-  body += `- **Architecture:** ${process.arch}\n\n`;
+    let body = `## Command Execution Failure Report\n\n`;
+    body += `**Command:** \`${fullCommand}\`\n\n`;
+    body += `**Exit Code:** ${exitCode}\n\n`;
+    body += `**Timestamp:** ${getTimestamp()}\n\n`;
+    body += `### System Information\n\n`;
+    body += `- **Platform:** ${process.platform}\n`;
+    body += `- **OS Release:** ${os.release()}\n`;
+    body += `- **${runtime} Version:** ${runtimeVersion}\n`;
+    body += `- **Architecture:** ${process.arch}\n\n`;
 
-  if (logUrl) {
-    body += `### Log File\n\n`;
-    body += `Full log available at: ${logUrl}\n\n`;
-  }
+    if (logUrl) {
+      body += `### Log File\n\n`;
+      body += `Full log available at: ${logUrl}\n\n`;
+    }
 
-  body += `---\n`;
-  body += `*This issue was automatically created by [start-command](https://github.com/link-foundation/start)*\n`;
+    body += `---\n`;
+    body += `*This issue was automatically created by [start-command](https://github.com/link-foundation/start)*\n`;
 
-  const result = await execCommand(
-    `gh issue create --repo ${repoInfo.owner}/${repoInfo.repo} --title "${title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`
-  );
+    const result = execSync(
+      `gh issue create --repo ${repoInfo.owner}/${repoInfo.repo} --title "${title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`,
+      {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }
+    );
 
-  if (result.code !== 0) {
-    console.log(`Warning: Issue creation failed - ${result.stderr}`);
+    // Extract issue URL from output
+    const urlMatch = result.match(/https:\/\/github\.com\/[^\s]+/);
+    if (urlMatch) {
+      return urlMatch[0];
+    }
+
+    return null;
+  } catch (err) {
+    console.log(`Warning: Issue creation failed - ${err.message}`);
     return null;
   }
-
-  // Extract issue URL from output
-  const urlMatch = result.stdout.match(/https:\/\/github\.com\/[^\s]+/);
-  if (urlMatch) {
-    return urlMatch[0];
-  }
-
-  return null;
 }

@@ -122,6 +122,24 @@ jobs:
       - name: Run tests
         run: bun test
 
+      # Test both execution modes (default and command-stream)
+      - name: Test default execution mode
+        run: |
+          bun run src/bin/cli.js echo "Testing default mode"
+          echo "Default mode test passed"
+
+      - name: Test command-stream execution mode
+        run: |
+          bun run src/bin/cli.js --use-command-stream echo "Testing command-stream mode"
+          echo "Command-stream mode test passed"
+
+      - name: Test command-stream via env variable
+        env:
+          START_USE_COMMAND_STREAM: "1"
+        run: |
+          bun run src/bin/cli.js echo "Testing env var mode"
+          echo "Env var mode test passed"
+
       # SSH Integration Tests - Linux only (most reliable for SSH testing)
       - name: Setup SSH server for integration tests (Linux)
         if: runner.os == 'Linux'
