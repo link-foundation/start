@@ -62,7 +62,7 @@ jobs:
           fi
 
           # Run changeset validation script
-          bun scripts/validate-changeset.mjs
+          bun js/scripts/validate-changeset.mjs
 
   # Linting and formatting - runs after changeset check on PRs, immediately on main
   lint:
@@ -88,7 +88,7 @@ jobs:
         run: bun run format:check
 
       - name: Check file size limit
-        run: bun scripts/check-file-size.mjs
+        run: bun js/scripts/check-file-size.mjs
 
   # Test with Bun only - 3 OS (Ubuntu, macOS, Windows)
   test:
@@ -125,19 +125,19 @@ jobs:
       # Test both execution modes (default and command-stream)
       - name: Test default execution mode
         run: |
-          bun run src/bin/cli.js echo "Testing default mode"
+          bun run js/src/bin/cli.js echo "Testing default mode"
           echo "Default mode test passed"
 
       - name: Test command-stream execution mode
         run: |
-          bun run src/bin/cli.js --use-command-stream echo "Testing command-stream mode"
+          bun run js/src/bin/cli.js --use-command-stream echo "Testing command-stream mode"
           echo "Command-stream mode test passed"
 
       - name: Test command-stream via env variable
         env:
           START_USE_COMMAND_STREAM: '1'
         run: |
-          bun run src/bin/cli.js echo "Testing env var mode"
+          bun run js/src/bin/cli.js echo "Testing env var mode"
           echo "Env var mode test passed"
 
       # SSH Integration Tests - Linux only (most reliable for SSH testing)
@@ -172,7 +172,7 @@ jobs:
 
       - name: Run SSH integration tests (Linux)
         if: runner.os == 'Linux'
-        run: bun test test/ssh-integration.test.js
+        run: bun test js/test/ssh-integration.test.js
 
   # Release - only runs on main after tests pass (for push events)
   release:
@@ -207,7 +207,7 @@ jobs:
         run: bun install
 
       - name: Update npm for OIDC trusted publishing
-        run: bun scripts/setup-npm.mjs
+        run: bun js/scripts/setup-npm.mjs
 
       - name: Check for changesets
         id: check_changesets
@@ -220,25 +220,25 @@ jobs:
       - name: Version packages and commit to main
         if: steps.check_changesets.outputs.has_changesets == 'true'
         id: version
-        run: bun scripts/version-and-commit.mjs --mode changeset
+        run: bun js/scripts/version-and-commit.mjs --mode changeset
 
       - name: Publish to npm
         # Run if version was committed OR if a previous attempt already committed (for re-runs)
         if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
         id: publish
-        run: bun scripts/publish-to-npm.mjs --should-pull
+        run: bun js/scripts/publish-to-npm.mjs --should-pull
 
       - name: Create GitHub Release
         if: steps.publish.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bun scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}"
+        run: bun js/scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}"
 
       - name: Format GitHub release notes
         if: steps.publish.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bun scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}"
+        run: bun js/scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}"
 
   # Manual Instant Release - triggered via workflow_dispatch with instant mode
   # This job is in release.yml because npm trusted publishing
@@ -272,29 +272,29 @@ jobs:
         run: bun install
 
       - name: Update npm for OIDC trusted publishing
-        run: bun scripts/setup-npm.mjs
+        run: bun js/scripts/setup-npm.mjs
 
       - name: Version packages and commit to main
         id: version
-        run: bun scripts/version-and-commit.mjs --mode instant --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}"
+        run: bun js/scripts/version-and-commit.mjs --mode instant --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}"
 
       - name: Publish to npm
         # Run if version was committed OR if a previous attempt already committed (for re-runs)
         if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
         id: publish
-        run: bun scripts/publish-to-npm.mjs
+        run: bun js/scripts/publish-to-npm.mjs
 
       - name: Create GitHub Release
         if: steps.publish.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bun scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}"
+        run: bun js/scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}"
 
       - name: Format GitHub release notes
         if: steps.publish.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bun scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}"
+        run: bun js/scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}"
 
   # Manual Changeset PR - creates a pull request with the changeset for review
   changeset-pr:
@@ -318,7 +318,7 @@ jobs:
         run: bun install
 
       - name: Create changeset file
-        run: bun scripts/create-manual-changeset.mjs --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}"
+        run: bun js/scripts/create-manual-changeset.mjs --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}"
 
       - name: Format changeset with Prettier
         run: |
