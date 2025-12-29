@@ -2,21 +2,21 @@
   "name": "start-command",
   "version": "0.12.0",
   "description": "Gamification of coding, execute any command with ability to auto-report issues on GitHub",
-  "main": "index.js",
+  "main": "js/src/bin/cli.js",
   "bin": {
-    "$": "./src/bin/cli.js"
+    "$": "./js/src/bin/cli.js"
   },
   "scripts": {
-    "test": "bun test test/",
+    "test": "bun test js/test/",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check:file-size": "bun scripts/check-file-size.mjs",
+    "check:file-size": "bun js/scripts/check-file-size.mjs",
     "check": "bun run lint && bun run format:check && bun run check:file-size",
     "prepare": "husky || true",
     "changeset": "changeset",
-    "changeset:version": "bun scripts/changeset-version.mjs",
+    "changeset:version": "bun js/scripts/changeset-version.mjs",
     "changeset:publish": "changeset publish",
     "changeset:status": "changeset status --since=origin/main"
   },

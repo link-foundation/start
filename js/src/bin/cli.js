@@ -157,7 +157,7 @@ const useCommandStream =
  */
 function printVersion(verbose = false) {
   // Get package version
-  const packageJson = require('../../package.json');
+  const packageJson = require('../../../../package.json');
   const startCommandVersion = packageJson.version;
 
   console.log(`start-command version: ${startCommandVersion}`);
