@@ -65,9 +65,7 @@ pub fn parse_lino_content(content: &str) -> Vec<Rule> {
             let mut pattern: Option<&str> = None;
             while i < lines.len() {
                 let pattern_line = lines[i].trim();
-                if !pattern_line.is_empty()
-                    && !pattern_line.starts_with('#')
-                    && pattern_line != ")"
+                if !pattern_line.is_empty() && !pattern_line.starts_with('#') && pattern_line != ")"
                 {
                     pattern = Some(pattern_line);
                     i += 1;
@@ -352,7 +350,11 @@ mod tests {
 
     #[test]
     fn test_match_and_substitute_basic() {
-        let rules = vec![create_rule("install $packageName npm package", "npm install $packageName").unwrap()];
+        let rules = vec![create_rule(
+            "install $packageName npm package",
+            "npm install $packageName",
+        )
+        .unwrap()];
 
         let result = match_and_substitute("install lodash npm package", &rules);
         assert!(result.matched);
@@ -374,7 +376,11 @@ mod tests {
 
     #[test]
     fn test_match_and_substitute_no_match() {
-        let rules = vec![create_rule("install $packageName npm package", "npm install $packageName").unwrap()];
+        let rules = vec![create_rule(
+            "install $packageName npm package",
+            "npm install $packageName",
+        )
+        .unwrap()];
 
         let result = match_and_substitute("echo hello", &rules);
         assert!(!result.matched);

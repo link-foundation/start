@@ -89,8 +89,7 @@ pub fn handle_failure(
     }
 
     // Create issue
-    if let Some(issue_url) = create_issue(&repo_info, full_command, exit_code, log_url.as_deref())
-    {
+    if let Some(issue_url) = create_issue(&repo_info, full_command, exit_code, log_url.as_deref()) {
         println!("Issue created: {}", issue_url);
     }
 }
@@ -114,7 +113,12 @@ pub fn detect_repository(cmd_name: &str) -> Option<RepoInfo> {
 
     // Handle Windows where command that returns multiple lines
     let cmd_path = if is_windows {
-        cmd_path.lines().next().unwrap_or(&cmd_path).trim().to_string()
+        cmd_path
+            .lines()
+            .next()
+            .unwrap_or(&cmd_path)
+            .trim()
+            .to_string()
     } else {
         cmd_path
     };
@@ -283,7 +287,13 @@ pub fn upload_log(log_path: &str) -> Option<String> {
 /// Check if we can create an issue in a repository
 pub fn can_create_issue(owner: &str, repo: &str) -> bool {
     Command::new("gh")
-        .args(["repo", "view", &format!("{}/{}", owner, repo), "--json", "name"])
+        .args([
+            "repo",
+            "view",
+            &format!("{}/{}", owner, repo),
+            "--json",
+            "name",
+        ])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
@@ -315,7 +325,10 @@ pub fn create_issue(
     body.push_str("### System Information\n\n");
     body.push_str(&format!("- **Platform:** {}\n", std::env::consts::OS));
     body.push_str(&format!("- **{} Version:** {}\n", runtime, runtime_version));
-    body.push_str(&format!("- **Architecture:** {}\n\n", std::env::consts::ARCH));
+    body.push_str(&format!(
+        "- **Architecture:** {}\n\n",
+        std::env::consts::ARCH
+    ));
 
     if let Some(url) = log_url {
         body.push_str("### Log File\n\n");

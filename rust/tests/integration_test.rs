@@ -73,13 +73,17 @@ mod args_parser_integration_tests {
 
     #[test]
     fn test_docker_with_image() {
-        let args =
-            to_string_vec(&["--isolated", "docker", "--image", "node:20", "--", "npm", "test"]);
+        let args = to_string_vec(&[
+            "--isolated",
+            "docker",
+            "--image",
+            "node:20",
+            "--",
+            "npm",
+            "test",
+        ]);
         let parsed = parse_args(&args).unwrap();
-        assert_eq!(
-            parsed.wrapper_options.isolated.as_deref(),
-            Some("docker")
-        );
+        assert_eq!(parsed.wrapper_options.isolated.as_deref(), Some("docker"));
         assert_eq!(parsed.wrapper_options.image.as_deref(), Some("node:20"));
     }
 }

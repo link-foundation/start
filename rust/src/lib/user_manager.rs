@@ -468,10 +468,7 @@ pub fn get_user_info(username: &str) -> UserInfo {
     }
 
     // Get home and shell from getent passwd
-    if let Ok(output) = Command::new("getent")
-        .args(["passwd", username])
-        .output()
-    {
+    if let Ok(output) = Command::new("getent").args(["passwd", username]).output() {
         if output.status.success() {
             let output_str = String::from_utf8_lossy(&output.stdout);
             let parts: Vec<&str> = output_str.trim().split(':').collect();

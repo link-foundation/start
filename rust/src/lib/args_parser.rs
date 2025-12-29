@@ -130,7 +130,11 @@ fn parse_wrapper_args(args: &[String], options: &mut WrapperOptions) -> Result<(
 
 /// Parse a single option from args array
 /// Returns number of arguments consumed (0 if not recognized)
-fn parse_option(args: &[String], index: usize, options: &mut WrapperOptions) -> Result<usize, String> {
+fn parse_option(
+    args: &[String],
+    index: usize,
+    options: &mut WrapperOptions,
+) -> Result<usize, String> {
     let arg = &args[index];
 
     // --isolated or -i
@@ -487,10 +491,18 @@ mod tests {
 
     #[test]
     fn test_docker_with_image() {
-        let args: Vec<String> = vec!["--isolated", "docker", "--image", "node:20", "--", "npm", "test"]
-            .into_iter()
-            .map(String::from)
-            .collect();
+        let args: Vec<String> = vec![
+            "--isolated",
+            "docker",
+            "--image",
+            "node:20",
+            "--",
+            "npm",
+            "test",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
         let result = parse_args(&args).unwrap();
         assert_eq!(result.wrapper_options.isolated, Some("docker".to_string()));
         assert_eq!(result.wrapper_options.image, Some("node:20".to_string()));
@@ -513,7 +525,10 @@ mod tests {
             .collect();
         let result = parse_args(&args).unwrap();
         assert_eq!(result.wrapper_options.isolated, Some("ssh".to_string()));
-        assert_eq!(result.wrapper_options.endpoint, Some("user@host".to_string()));
+        assert_eq!(
+            result.wrapper_options.endpoint,
+            Some("user@host".to_string())
+        );
     }
 
     #[test]

@@ -68,10 +68,8 @@ fn main() {
 
     // Handle --version flag
     let has_version_flag = !args.is_empty() && (args[0] == "--version" || args[0] == "-v");
-    let has_verbose_with_version = has_version_flag
-        && args
-            .iter()
-            .any(|a| a == "--verbose" || a == "--debug");
+    let has_verbose_with_version =
+        has_version_flag && args.iter().any(|a| a == "--verbose" || a == "--debug");
 
     let version_related_args = ["--version", "-v", "--", "--verbose", "--debug"];
     let is_version_only = has_version_flag
@@ -285,9 +283,10 @@ fn run_with_isolation(
     let log_file_path = create_log_path(environment.unwrap_or("direct"));
 
     // Get session name
-    let session_name = wrapper_options.session.clone().unwrap_or_else(|| {
-        generate_session_name(Some(environment.unwrap_or("start")))
-    });
+    let session_name = wrapper_options
+        .session
+        .clone()
+        .unwrap_or_else(|| generate_session_name(Some(environment.unwrap_or("start"))));
 
     // Handle --isolated-user option
     let mut created_user: Option<String> = None;
@@ -323,7 +322,10 @@ fn run_with_isolation(
         );
 
         if !user_result.success {
-            eprintln!("Error: Failed to create isolated user: {}", user_result.message);
+            eprintln!(
+                "Error: Failed to create isolated user: {}",
+                user_result.message
+            );
             process::exit(1);
         }
 
@@ -400,7 +402,9 @@ fn run_with_isolation(
     };
 
     // Get exit code
-    let exit_code = result.exit_code.unwrap_or(if result.success { 0 } else { 1 });
+    let exit_code = result
+        .exit_code
+        .unwrap_or(if result.success { 0 } else { 1 });
     let end_time = get_timestamp();
 
     // Add result to log

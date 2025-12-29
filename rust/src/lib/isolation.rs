@@ -106,10 +106,7 @@ pub fn wrap_command_with_user(command: &str, user: Option<&str>) -> String {
 
 /// Get the installed screen version
 pub fn get_screen_version() -> Option<(u32, u32, u32)> {
-    let output = Command::new("screen")
-        .arg("--version")
-        .output()
-        .ok()?;
+    let output = Command::new("screen").arg("--version").output().ok()?;
 
     let output_str = String::from_utf8_lossy(&output.stdout);
     let stderr_str = String::from_utf8_lossy(&output.stderr);
@@ -256,9 +253,7 @@ fn run_screen_with_log_capture(
         eprintln!("[DEBUG] Running: screen {:?}", screen_args);
     }
 
-    let status = Command::new("screen")
-        .args(&screen_args)
-        .status();
+    let status = Command::new("screen").args(&screen_args).status();
 
     if status.is_err() {
         return IsolationResult {
@@ -356,10 +351,8 @@ pub fn run_in_tmux(command: &str, options: &IsolationOptions) -> IsolationResult
 
         match status {
             Ok(s) if s.success() => {
-                let mut message = format!(
-                    "Command started in detached tmux session: {}",
-                    session_name
-                );
+                let mut message =
+                    format!("Command started in detached tmux session: {}", session_name);
                 if options.keep_alive {
                     message.push_str("\nSession will stay alive after command completes.");
                 } else {
@@ -462,9 +455,7 @@ pub fn run_in_ssh(command: &str, options: &IsolationOptions) -> IsolationResult 
         }
     } else {
         // Attached mode
-        let status = Command::new("ssh")
-            .args([&endpoint, command])
-            .status();
+        let status = Command::new("ssh").args([&endpoint, command]).status();
 
         match status {
             Ok(s) => IsolationResult {
@@ -494,7 +485,9 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
     if !is_command_available("docker") {
         return IsolationResult {
             success: false,
-            message: "docker is not installed. Install Docker from https://docs.docker.com/get-docker/".to_string(),
+            message:
+                "docker is not installed. Install Docker from https://docs.docker.com/get-docker/"
+                    .to_string(),
             ..Default::default()
         };
     }
@@ -543,9 +536,7 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
 
         match Command::new("docker").args(&args).output() {
             Ok(output) if output.status.success() => {
-                let container_id = String::from_utf8_lossy(&output.stdout)
-                    .trim()
-                    .to_string();
+                let container_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
                 let mut message = format!(
                     "Command started in detached docker container: {}",
@@ -558,7 +549,8 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                 if options.keep_alive {
                     message.push_str("\nContainer will stay alive after command completes.");
                 } else {
-                    message.push_str("\nContainer will exit automatically after command completes.");
+                    message
+                        .push_str("\nContainer will exit automatically after command completes.");
                 }
                 if options.auto_remove_docker_container {
                     message.push_str("\nContainer will be automatically removed after exit.");
@@ -726,7 +718,10 @@ pub fn create_log_header(params: &LogHeaderParams) -> String {
         content.push_str(&format!("User: {}\n", user));
     }
     content.push_str(&format!("Platform: {}\n", std::env::consts::OS));
-    content.push_str(&format!("Working Directory: {}\n", env::current_dir().unwrap_or_default().display()));
+    content.push_str(&format!(
+        "Working Directory: {}\n",
+        env::current_dir().unwrap_or_default().display()
+    ));
     content.push_str(&format!("{}\n\n", "=".repeat(50)));
     content
 }
