@@ -1,14 +1,19 @@
-name: Checks and release
+name: JavaScript CI/CD
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'js/**'
+      - 'scripts/**'
+      - '.github/workflows/js.yml'
   pull_request:
     types: [opened, synchronize, reopened]
-  # Manual release support - consolidated here to work with npm trusted publishing
-  # npm only allows ONE workflow file as trusted publisher, so all publishing
-  # must go through this workflow (release.yml)
+    paths:
+      - 'js/**'
+      - 'scripts/**'
+      - '.github/workflows/js.yml'
   workflow_dispatch:
     inputs:
       release_mode:
@@ -32,14 +37,47 @@ on:
         required: false
         type: string
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+concurrency:
+  group: js-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # Changeset check - only runs on PRs
+  # === DETECT CHANGES ===
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch'
+    outputs:
+      js-changed: ${{ steps.changes.outputs.js-changed }}
+      mjs-changed: ${{ steps.changes.outputs.mjs-changed }}
+      package-changed: ${{ steps.changes.outputs.package-changed }}
+      docs-changed: ${{ steps.changes.outputs.docs-changed }}
+      workflow-changed: ${{ steps.changes.outputs.workflow-changed }}
+      any-js-code-changed: ${{ steps.changes.outputs.any-js-code-changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Detect changes
+        id: changes
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/detect-code-changes.mjs
+
+  # === CHANGESET CHECK ===
   changeset-check:
     name: Check for Changesets
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    needs: [detect-changes]
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.any-js-code-changed == 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -55,7 +93,10 @@ jobs:
         run: bun install
 
       - name: Check for changesets
-        working-directory: js
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+          GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           # Skip changeset check for automated version PRs
           if [[ "${{ github.head_ref }}" == "changeset-release/"* ]]; then
@@ -64,14 +105,21 @@ jobs:
           fi
 
           # Run changeset validation script
-          bun scripts/validate-changeset.mjs
+          node scripts/validate-changeset.mjs
 
-  # Linting and formatting - runs after changeset check on PRs, immediately on main
+  # === LINT AND FORMAT CHECK ===
   lint:
     name: Lint and Format Check
     runs-on: ubuntu-latest
-    needs: [changeset-check]
-    if: always() && (github.event_name == 'push' || needs.changeset-check.result == 'success')
+    needs: [detect-changes]
+    if: |
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      needs.detect-changes.outputs.js-changed == 'true' ||
+      needs.detect-changes.outputs.mjs-changed == 'true' ||
+      needs.detect-changes.outputs.package-changed == 'true' ||
+      needs.detect-changes.outputs.docs-changed == 'true' ||
+      needs.detect-changes.outputs.workflow-changed == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -93,15 +141,14 @@ jobs:
         run: bun run format:check
 
       - name: Check file size limit
-        working-directory: js
-        run: bun scripts/check-file-size.mjs
+        run: node scripts/check-file-size.mjs
 
-  # Test with Bun only - 3 OS (Ubuntu, macOS, Windows)
+  # === TEST ===
   test:
     name: Test (Bun on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    needs: [changeset-check]
-    if: always() && (github.event_name == 'push' || needs.changeset-check.result == 'success')
+    needs: [detect-changes, changeset-check]
+    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changeset-check.result == 'success' || needs.changeset-check.result == 'skipped')
     strategy:
       fail-fast: false
       matrix:
@@ -151,24 +198,15 @@ jobs:
           bun run src/bin/cli.js echo "Testing env var mode"
           echo "Env var mode test passed"
 
-      # SSH Integration Tests - Linux only (most reliable for SSH testing)
+      # SSH Integration Tests - Linux only
       - name: Setup SSH server for integration tests (Linux)
         if: runner.os == 'Linux'
         run: |
-          # Install openssh-server if not present
           sudo apt-get install -y openssh-server
-
-          # Start SSH service
           sudo systemctl start ssh
-
-          # Generate SSH key without passphrase for testing
           ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N "" -C "ci-test-key"
-
-          # Add the public key to authorized_keys for passwordless login
           cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
           chmod 600 ~/.ssh/authorized_keys
-
-          # Configure SSH to accept localhost connections without prompts
           mkdir -p ~/.ssh
           cat >> ~/.ssh/config << 'EOF'
           Host localhost
@@ -177,8 +215,6 @@ jobs:
             LogLevel ERROR
           EOF
           chmod 600 ~/.ssh/config
-
-          # Test SSH connectivity
           ssh localhost "echo 'SSH connection successful'"
 
       - name: Run SSH integration tests (Linux)
@@ -186,15 +222,12 @@ jobs:
         working-directory: js
         run: bun test test/ssh-integration.test.js
 
-  # Release - only runs on main after tests pass (for push events)
+  # === RELEASE ===
   release:
     name: Release
     needs: [lint, test]
-    # Use always() to ensure this job runs even if changeset-check was skipped
-    # This is needed because lint/test jobs have a transitive dependency on changeset-check
     if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint.result == 'success' && needs.test.result == 'success'
     runs-on: ubuntu-latest
-    # Permissions required for npm OIDC trusted publishing
     permissions:
       contents: write
       pull-requests: write
@@ -220,52 +253,47 @@ jobs:
         run: bun install
 
       - name: Update npm for OIDC trusted publishing
-        working-directory: js
-        run: bun scripts/setup-npm.mjs
+        run: node scripts/setup-npm.mjs
 
       - name: Check for changesets
         id: check_changesets
         run: |
-          # Count changeset files (excluding README.md and config.json)
           CHANGESET_COUNT=$(find js/.changeset -name "*.md" ! -name "README.md" | wc -l)
           echo "Found $CHANGESET_COUNT changeset file(s)"
           echo "has_changesets=$([[ $CHANGESET_COUNT -gt 0 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          echo "changeset_count=$CHANGESET_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Merge multiple changesets
+        if: steps.check_changesets.outputs.has_changesets == 'true' && steps.check_changesets.outputs.changeset_count > 1
+        run: node scripts/merge-changesets.mjs
 
       - name: Version packages and commit to main
         if: steps.check_changesets.outputs.has_changesets == 'true'
         id: version
-        working-directory: js
-        run: bun scripts/version-and-commit.mjs --mode changeset
+        run: node scripts/version-and-commit.mjs --mode changeset --working-dir js
 
       - name: Publish to npm
-        # Run if version was committed OR if a previous attempt already committed (for re-runs)
         if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
         id: publish
-        working-directory: js
-        run: bun scripts/publish-to-npm.mjs --should-pull
+        run: node scripts/publish-to-npm.mjs --should-pull --working-dir js
 
       - name: Create GitHub Release
         if: steps.publish.outputs.published == 'true'
-        working-directory: js
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bun scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}"
+        run: node scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --prefix "js-"
 
       - name: Format GitHub release notes
         if: steps.publish.outputs.published == 'true'
-        working-directory: js
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bun scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}"
+        run: node scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --prefix "js-"
 
-  # Manual Instant Release - triggered via workflow_dispatch with instant mode
-  # This job is in release.yml because npm trusted publishing
-  # only allows one workflow file to be registered as a trusted publisher
+  # === MANUAL INSTANT RELEASE ===
   instant-release:
     name: Instant Release
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant'
     runs-on: ubuntu-latest
-    # Permissions required for npm OIDC trusted publishing
     permissions:
       contents: write
       pull-requests: write
@@ -291,36 +319,30 @@ jobs:
         run: bun install
 
       - name: Update npm for OIDC trusted publishing
-        working-directory: js
-        run: bun scripts/setup-npm.mjs
+        run: node scripts/setup-npm.mjs
 
       - name: Version packages and commit to main
         id: version
-        working-directory: js
-        run: bun scripts/version-and-commit.mjs --mode instant --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}"
+        run: node scripts/version-and-commit.mjs --mode instant --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}" --working-dir js
 
       - name: Publish to npm
-        # Run if version was committed OR if a previous attempt already committed (for re-runs)
         if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
         id: publish
-        working-directory: js
-        run: bun scripts/publish-to-npm.mjs
+        run: node scripts/publish-to-npm.mjs --working-dir js
 
       - name: Create GitHub Release
         if: steps.publish.outputs.published == 'true'
-        working-directory: js
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bun scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}"
+        run: node scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --prefix "js-"
 
       - name: Format GitHub release notes
         if: steps.publish.outputs.published == 'true'
-        working-directory: js
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bun scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}"
+        run: node scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --prefix "js-"
 
-  # Manual Changeset PR - creates a pull request with the changeset for review
+  # === MANUAL CHANGESET PR ===
   changeset-pr:
     name: Create Changeset PR
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changeset-pr'
@@ -333,37 +355,24 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
-
-      - name: Install dependencies
-        working-directory: js
-        run: bun install
+          node-version: '20.x'
 
       - name: Create changeset file
-        working-directory: js
-        run: bun scripts/create-manual-changeset.mjs --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}"
-
-      - name: Format changeset with Prettier
-        working-directory: js
-        run: |
-          # Run Prettier on the changeset file to ensure it matches project style
-          bun x prettier --write ".changeset/*.md" || true
-
-          echo "Formatted changeset files"
+        run: node scripts/create-manual-changeset.mjs --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}" --working-dir js
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore: add changeset for manual ${{ github.event.inputs.bump_type }} release'
-          branch: changeset-manual-release-${{ github.run_id }}
+          commit-message: 'chore(js): add changeset for manual ${{ github.event.inputs.bump_type }} release'
+          branch: changeset-js-manual-release-${{ github.run_id }}
           delete-branch: true
-          title: 'chore: manual ${{ github.event.inputs.bump_type }} release'
+          title: 'chore(js): manual ${{ github.event.inputs.bump_type }} release'
           body: |
-            ## Manual Release Request
+            ## Manual JavaScript Release Request
 
             This PR was created by a manual workflow trigger to prepare a **${{ github.event.inputs.bump_type }}** release.
 
@@ -375,5 +384,4 @@ jobs:
             ### Next Steps
             1. Review the changeset in this PR
             2. Merge this PR to main
-            3. The automated release workflow will create a version PR
-            4. Merge the version PR to publish to npm and create a GitHub release
+            3. The automated release workflow will publish to npm and create a GitHub release

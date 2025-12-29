@@ -1,7 +1,9 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 /**
  * Validate changeset for CI - ensures exactly one valid changeset exists
+ *
+ * Usage: node scripts/validate-changeset.mjs [--working-dir <dir>]
  *
  * IMPORTANT: Update the package name below to match your package.json
  */
@@ -9,12 +11,23 @@
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
+// Parse command line arguments
+const args = process.argv.slice(2);
+let workingDir = 'js'; // Default to js folder
+
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--working-dir' && args[i + 1]) {
+    workingDir = args[i + 1];
+    i++;
+  }
+}
+
 // TODO: Update this to match your package name in package.json
 const PACKAGE_NAME = 'start-command';
 
 try {
   // Count changeset files (excluding README.md and config.json)
-  const changesetDir = '.changeset';
+  const changesetDir = join(workingDir, '.changeset');
   const changesetFiles = readdirSync(changesetDir).filter(
     (file) => file.endsWith('.md') && file !== 'README.md'
   );

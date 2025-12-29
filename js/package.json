@@ -12,11 +12,11 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check:file-size": "bun scripts/check-file-size.mjs",
+    "check:file-size": "bun ../scripts/check-file-size.mjs",
     "check": "bun run lint && bun run format:check && bun run check:file-size",
     "prepare": "cd .. && husky .husky || true",
     "changeset": "changeset",
-    "changeset:version": "bun scripts/changeset-version.mjs",
+    "changeset:version": "bun ../scripts/changeset-version.mjs",
     "changeset:publish": "changeset publish",
     "changeset:status": "changeset status --since=origin/main"
   },

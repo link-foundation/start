@@ -1,15 +1,39 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 /**
  * Check for files exceeding the maximum allowed line count
  * Exits with error code 1 if any files exceed the limit
+ *
+ * Usage: node scripts/check-file-size.mjs [--type <js|rust>]
  */
 
 import { readdir, readFile } from 'fs/promises';
 import { join, relative } from 'path';
 
+// Parse command line arguments
+const args = process.argv.slice(2);
+let checkType = 'all'; // Default to checking all
+
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--type' && args[i + 1]) {
+    checkType = args[i + 1];
+    i++;
+  }
+}
+
 const MAX_LINES = 1000;
-const FILE_EXTENSIONS = ['.js', '.mjs', '.cjs'];
+const JS_EXTENSIONS = ['.js', '.mjs', '.cjs'];
+const RUST_EXTENSIONS = ['.rs'];
+
+// Determine which extensions to check
+let FILE_EXTENSIONS;
+if (checkType === 'js') {
+  FILE_EXTENSIONS = JS_EXTENSIONS;
+} else if (checkType === 'rust') {
+  FILE_EXTENSIONS = RUST_EXTENSIONS;
+} else {
+  FILE_EXTENSIONS = [...JS_EXTENSIONS, ...RUST_EXTENSIONS];
+}
 
 /**
  * Recursively find all JavaScript files in a directory
@@ -58,10 +82,11 @@ async function countLines(filePath) {
  * Main function
  */
 async function main() {
-  const excludePatterns = ['node_modules', 'coverage', 'dist', '.git', 'build'];
+  const excludePatterns = ['node_modules', 'coverage', 'dist', '.git', 'build', 'target'];
 
+  const fileTypesStr = checkType === 'all' ? 'JavaScript and Rust' : checkType === 'js' ? 'JavaScript' : 'Rust';
   console.log(
-    `\nChecking JavaScript files for maximum ${MAX_LINES} lines...\n`
+    `\nChecking ${fileTypesStr} files for maximum ${MAX_LINES} lines...\n`
   );
 
   const files = await findJavaScriptFiles(process.cwd(), excludePatterns);
