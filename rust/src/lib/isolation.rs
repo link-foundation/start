@@ -17,8 +17,7 @@ use std::time::Duration;
 use crate::args_parser::generate_session_name;
 
 /// Result of an isolation run
-#[derive(Debug)]
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct IsolationResult {
     /// Whether the run succeeded
     pub success: bool,
@@ -33,7 +32,6 @@ pub struct IsolationResult {
     /// Captured output
     pub output: Option<String>,
 }
-
 
 /// Options for isolation
 #[derive(Debug, Default, Clone)]

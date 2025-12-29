@@ -9,8 +9,7 @@ use std::env;
 use std::process::Command;
 
 /// Result of a user operation
-#[derive(Debug)]
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct UserOperationResult {
     /// Whether the operation succeeded
     pub success: bool,
@@ -23,7 +22,6 @@ pub struct UserOperationResult {
     /// Whether the user already existed
     pub already_exists: bool,
 }
-
 
 /// User information
 #[derive(Debug, Default)]
