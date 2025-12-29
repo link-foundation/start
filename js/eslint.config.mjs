@@ -100,10 +100,10 @@ export default [
   {
     // Test files and experiments have different requirements
     files: [
-      'js/test/**/*.js',
-      'js/tests/**/*.js',
+      'test/**/*.js',
+      'tests/**/*.js',
       '**/*.test.js',
-      'js/experiments/**/*.js',
+      'experiments/**/*.js',
     ],
     languageOptions: {
       globals: {
