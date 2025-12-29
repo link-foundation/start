@@ -90,13 +90,31 @@ pub fn user_exists(username: &str) -> bool {
 
 /// Check if a group exists on the system
 pub fn group_exists(groupname: &str) -> bool {
-    Command::new("getent")
+    // Try getent first (Linux)
+    if let Ok(status) = Command::new("getent")
         .args(["group", groupname])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    {
+        if status.success() {
+            return true;
+        }
+    }
+
+    // Fallback to dscl for macOS
+    if let Ok(status) = Command::new("dscl")
+        .args([".", "-read", &format!("/Groups/{}", groupname)])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+    {
+        if status.success() {
+            return true;
+        }
+    }
+
+    false
 }
 
 /// Generate a unique username for isolation
