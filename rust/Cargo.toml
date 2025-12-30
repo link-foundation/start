@@ -1,0 +1,31 @@
+[package]
+name = "start-command"
+version = "0.12.0"
+edition = "2021"
+authors = ["Link Foundation"]
+description = "Gamification of coding, execute any command with ability to auto-report issues on GitHub"
+license = "MIT"
+repository = "https://github.com/link-foundation/start"
+homepage = "https://github.com/link-foundation/start#readme"
+keywords = ["cli", "command", "gamification", "github", "automation"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "start"
+path = "src/bin/main.rs"
+
+[lib]
+name = "start_command"
+path = "src/lib/mod.rs"
+
+[dependencies]
+chrono = "0.4"
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+tempfile = "3"

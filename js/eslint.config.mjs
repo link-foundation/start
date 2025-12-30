@@ -115,7 +115,7 @@ export default [
     },
     rules: {
       'require-await': 'off', // Async functions without await are common in tests
-      'no-unused-vars': 'warn', // Relax for experiments
+      'no-unused-vars': 'off', // Disable for tests and experiments
       'no-empty': 'off', // Empty catch blocks are common in experiments
     },
   },
