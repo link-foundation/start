@@ -82,7 +82,7 @@ jobs:
       - name: Check for changelog fragments
         run: |
           # Get list of fragment files (excluding README and template)
-          FRAGMENTS=$(find changelog.d -name "*.md" ! -name "README.md" 2>/dev/null | wc -l)
+          FRAGMENTS=$(find rust/changelog.d -name "*.md" ! -name "README.md" 2>/dev/null | wc -l)
 
           # Get changed files in PR
           CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
@@ -91,12 +91,12 @@ jobs:
           SOURCE_CHANGED=$(echo "$CHANGED_FILES" | grep -E "^rust/(src/|tests/|Cargo\.toml)" | wc -l)
 
           if [ "$SOURCE_CHANGED" -gt 0 ] && [ "$FRAGMENTS" -eq 0 ]; then
-            echo "::warning::No changelog fragment found. Please add a changelog entry in changelog.d/"
+            echo "::warning::No changelog fragment found. Please add a changelog entry in rust/changelog.d/"
             echo ""
             echo "To create a changelog fragment:"
-            echo "  Create a new .md file in changelog.d/ with your changes"
+            echo "  Create a new .md file in rust/changelog.d/ with your changes"
             echo ""
-            echo "See changelog.d/README.md for more information."
+            echo "See rust/changelog.d/README.md for more information."
             exit 0
           fi
 
@@ -328,7 +328,7 @@ jobs:
 
       - name: Collect changelog fragments
         run: |
-          FRAGMENTS=$(find changelog.d -name "*.md" ! -name "README.md" 2>/dev/null | wc -l)
+          FRAGMENTS=$(find rust/changelog.d -name "*.md" ! -name "README.md" 2>/dev/null | wc -l)
           if [ "$FRAGMENTS" -gt 0 ]; then
             echo "Found $FRAGMENTS changelog fragment(s), collecting..."
             node scripts/collect-changelog.mjs

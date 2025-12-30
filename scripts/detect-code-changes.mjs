@@ -13,7 +13,7 @@
  *
  * Excluded from code changes (don't require changelog fragments):
  * - Markdown files (*.md) in any folder
- * - changelog.d/ folder (changelog fragments)
+ * - rust/changelog.d/ folder (changelog fragments)
  * - .changeset/ folder (JS changesets)
  * - docs/ folder (documentation)
  * - experiments/ folder (experimental scripts)
@@ -37,7 +37,7 @@
  *   - workflow-changed: 'true' if any .github/workflows/ files changed
  *   - any-rust-code-changed: 'true' if any Rust code files changed
  *   - any-js-code-changed: 'true' if any JS code files changed
- *   - any-code-changed: 'true' if any code files changed (excludes docs, changelog.d, experiments, examples)
+ *   - any-code-changed: 'true' if any code files changed (excludes docs, rust/changelog.d, experiments, examples)
  */
 
 import { execSync } from 'child_process';
@@ -126,7 +126,7 @@ function isExcludedFromCodeChanges(filePath) {
 
   // Exclude specific folders from code changes
   const excludedFolders = [
-    'changelog.d/',
+    'rust/changelog.d/',
     '.changeset/',
     'js/.changeset/',
     'docs/',
@@ -199,7 +199,7 @@ function detectChanges() {
   );
   setOutput('workflow-changed', workflowChanged ? 'true' : 'false');
 
-  // Detect code changes (excluding docs, changelog.d, experiments, examples folders, and markdown files)
+  // Detect code changes (excluding docs, rust/changelog.d, experiments, examples folders, and markdown files)
   const codeChangedFiles = changedFiles.filter(
     (file) => !isExcludedFromCodeChanges(file)
   );
