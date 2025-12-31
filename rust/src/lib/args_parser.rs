@@ -694,15 +694,10 @@ mod tests {
 
     #[test]
     fn test_status_with_links_notation() {
-        let args: Vec<String> = vec![
-            "--status",
-            "uuid-here",
-            "--output-format",
-            "links-notation",
-        ]
-        .into_iter()
-        .map(String::from)
-        .collect();
+        let args: Vec<String> = vec!["--status", "uuid-here", "--output-format", "links-notation"]
+            .into_iter()
+            .map(String::from)
+            .collect();
         let result = parse_args(&args).unwrap();
         assert_eq!(
             result.wrapper_options.output_format,
@@ -751,10 +746,7 @@ mod tests {
 
     #[test]
     fn test_status_requires_uuid() {
-        let args: Vec<String> = vec!["--status"]
-            .into_iter()
-            .map(String::from)
-            .collect();
+        let args: Vec<String> = vec!["--status"].into_iter().map(String::from).collect();
         assert!(parse_args(&args).is_err());
     }
 
