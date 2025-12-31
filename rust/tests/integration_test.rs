@@ -181,9 +181,9 @@ mod public_exports_tests {
     #[test]
     fn test_is_clink_installed_export() {
         // Verify is_clink_installed is exported and callable
-        let result = is_clink_installed();
-        // Just verify it returns a boolean without crashing
-        assert!(result || !result);
+        // The function should return a boolean without panicking
+        let _result: bool = is_clink_installed();
+        // If we reach here, the function is exported and callable
     }
 
     #[test]
