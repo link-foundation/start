@@ -64,8 +64,7 @@ const config = {
     process.env.START_DISABLE_TRACKING === 'true',
   // Custom app folder for storing execution records (defaults to ~/.start-command)
   appFolder:
-    process.env.START_APP_FOLDER ||
-    path.join(os.homedir(), '.start-command'),
+    process.env.START_APP_FOLDER || path.join(os.homedir(), '.start-command'),
 };
 
 // Global execution store instance (initialized lazily)
@@ -174,7 +173,12 @@ const sessionId = wrapperOptions.sessionId || generateUUID();
 (async () => {
   // Check if running in isolation mode or with user isolation
   if (hasIsolation(wrapperOptions) || wrapperOptions.user) {
-    await runWithIsolation(wrapperOptions, command, useCommandStream, sessionId);
+    await runWithIsolation(
+      wrapperOptions,
+      command,
+      useCommandStream,
+      sessionId
+    );
   } else {
     if (useCommandStream) {
       await runDirectWithCommandStream(
@@ -401,7 +405,12 @@ Examples:
  * @param {boolean} useCommandStream - Whether to use command-stream for isolation
  * @param {string} sessionId - Session UUID for tracking
  */
-async function runWithIsolation(options, cmd, useCommandStream = false, sessionId) {
+async function runWithIsolation(
+  options,
+  cmd,
+  useCommandStream = false,
+  sessionId
+) {
   const environment = options.isolated;
   const mode = getEffectiveMode(options);
   const startTime = getTimestamp();
@@ -844,7 +853,12 @@ function runDirect(cmd, sessionId) {
  * @param {object} subResult - Result from substitution engine
  * @param {string} sessionId - Session UUID for tracking
  */
-async function runDirectWithCommandStream(cmd, parsedCmd, subResult, sessionId) {
+async function runDirectWithCommandStream(
+  cmd,
+  parsedCmd,
+  subResult,
+  sessionId
+) {
   // Lazy load command-stream
   const { getCommandStream } = require('../lib/command-stream');
   const { $, raw } = await getCommandStream();
