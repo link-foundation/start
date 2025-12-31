@@ -12,7 +12,6 @@ const {
   parseArgs,
   hasIsolation,
   getEffectiveMode,
-  VALID_OUTPUT_FORMATS,
 } = require('../lib/args-parser');
 const {
   runIsolated,
