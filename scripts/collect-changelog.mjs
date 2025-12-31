@@ -2,7 +2,7 @@
 
 /**
  * Collect changelog fragments into CHANGELOG.md
- * This script collects all .md files from changelog.d/ (except README.md)
+ * This script collects all .md files from rust/changelog.d/ (except README.md)
  * and prepends them to CHANGELOG.md, then removes the processed fragments.
  *
  * Uses link-foundation libraries:
@@ -18,7 +18,7 @@ import {
 } from 'fs';
 import { join } from 'path';
 
-const CHANGELOG_DIR = 'changelog.d';
+const CHANGELOG_DIR = 'rust/changelog.d';
 const CHANGELOG_FILE = 'CHANGELOG.md';
 const INSERT_MARKER = '<!-- changelog-insert-here -->';
 
@@ -27,7 +27,7 @@ const INSERT_MARKER = '<!-- changelog-insert-here -->';
  * @returns {string}
  */
 function getVersionFromCargo() {
-  const cargoToml = readFileSync('Cargo.toml', 'utf-8');
+  const cargoToml = readFileSync('rust/Cargo.toml', 'utf-8');
   const match = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
 
   if (!match) {

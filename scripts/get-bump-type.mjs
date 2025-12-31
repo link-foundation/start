@@ -3,7 +3,7 @@
 /**
  * Parse changelog fragments and determine version bump type
  *
- * This script reads changeset fragments from changelog.d/ and determines
+ * This script reads changeset fragments from rust/changelog.d/ and determines
  * the version bump type based on the frontmatter in each fragment.
  *
  * Fragment format:
@@ -46,7 +46,7 @@ const config = makeConfig({
 
 const { default: defaultBump } = config;
 
-const CHANGELOG_DIR = 'changelog.d';
+const CHANGELOG_DIR = 'rust/changelog.d';
 
 // Bump type priority (higher = more significant)
 const BUMP_PRIORITY = {
