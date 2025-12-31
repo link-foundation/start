@@ -258,7 +258,6 @@ impl LockManager {
     /// Check if lock is stale
     fn is_lock_stale(&self, lock_data: &Value) -> bool {
         let timestamp = lock_data.get("timestamp").and_then(|t| t.as_u64());
-        let pid = lock_data.get("pid").and_then(|p| p.as_u64());
 
         // Check if lock is too old
         if let Some(ts) = timestamp {
@@ -273,13 +272,16 @@ impl LockManager {
             return true;
         }
 
-        // Check if the process that holds the lock is still running
+        // Check if the process that holds the lock is still running (Unix only)
         #[cfg(unix)]
-        if let Some(p) = pid {
-            // Check if process exists using kill(pid, 0)
-            let result = unsafe { libc::kill(p as i32, 0) };
-            if result != 0 {
-                return true; // Process doesn't exist
+        {
+            let pid = lock_data.get("pid").and_then(|p| p.as_u64());
+            if let Some(p) = pid {
+                // Check if process exists using kill(pid, 0)
+                let result = unsafe { libc::kill(p as i32, 0) };
+                if result != 0 {
+                    return true; // Process doesn't exist
+                }
             }
         }
 
