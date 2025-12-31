@@ -19,6 +19,7 @@ use start_command::{
     failure_handler::{handle_failure, Config as FailureConfig},
     get_timestamp,
     isolation::{run_as_isolated_user, run_isolated, IsolationOptions},
+    status_formatter::query_status,
     substitution::{process_command, ProcessOptions},
     user_manager::{
         create_isolated_user, delete_user, get_current_user_groups, has_sudo_access,
@@ -120,6 +121,12 @@ fn main() {
 
     let wrapper_options = parsed.wrapper_options;
     let parsed_command = parsed.command.clone();
+
+    // Handle --status flag
+    if let Some(ref uuid) = wrapper_options.status {
+        handle_status_query(&config, uuid, wrapper_options.output_format.as_deref());
+        process::exit(0);
+    }
 
     // Check if no command was provided
     if parsed_command.is_empty() {
@@ -250,11 +257,29 @@ fn get_tool_version(tool_name: &str, version_flag: &str, verbose: bool) -> Optio
     combined.lines().next().map(String::from)
 }
 
+/// Handle status query
+fn handle_status_query(config: &Config, uuid: &str, output_format: Option<&str>) {
+    let store = config.create_execution_store();
+    let result = query_status(store.as_ref(), uuid, output_format);
+
+    if result.success {
+        if let Some(output) = result.output {
+            println!("{}", output);
+        }
+    } else {
+        if let Some(error) = result.error {
+            eprintln!("Error: {}", error);
+        }
+        process::exit(1);
+    }
+}
+
 /// Print usage information
 fn print_usage() {
     println!(
         r#"Usage: start [options] [--] <command> [args...]
        start <command> [args...]
+       start --status <uuid> [--output-format <format>]
 
 Options:
   --isolated, -i <env>  Run in isolated environment (screen, tmux, docker, ssh)
@@ -268,6 +293,8 @@ Options:
   --keep-alive, -k      Keep isolation environment alive after command exits
   --auto-remove-docker-container  Auto-remove docker container after exit
   --use-command-stream  Use command-stream library for execution (experimental)
+  --status <uuid>       Show status of execution by UUID
+  --output-format <fmt> Output format for status (links-notation, json, text)
   --version, -v         Show version information
 
 Examples:
@@ -280,6 +307,8 @@ Examples:
   start --isolated-user -- npm test
   start -u myuser -- npm start
   start -i screen --isolated-user -- npm test
+  start --status a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  start --status a1b2c3d4 --output-format json
 
 Features:
   - Logs all output to temporary directory

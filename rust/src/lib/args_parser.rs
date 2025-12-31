@@ -21,6 +21,9 @@ use std::env;
 /// Valid isolation backends
 pub const VALID_BACKENDS: [&str; 4] = ["screen", "tmux", "docker", "ssh"];
 
+/// Valid output formats for --status
+pub const VALID_OUTPUT_FORMATS: [&str; 3] = ["links-notation", "json", "text"];
+
 /// Wrapper options parsed from command line
 #[derive(Debug, Clone, Default)]
 pub struct WrapperOptions {
@@ -48,6 +51,10 @@ pub struct WrapperOptions {
     pub auto_remove_docker_container: bool,
     /// Use command-stream library for command execution
     pub use_command_stream: bool,
+    /// UUID to query status for
+    pub status: Option<String>,
+    /// Output format for status (links-notation, json, text)
+    pub output_format: Option<String>,
 }
 
 /// Result of parsing arguments
@@ -263,6 +270,38 @@ fn parse_option(
         return Ok(1);
     }
 
+    // --status <uuid>
+    if arg == "--status" {
+        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
+            options.status = Some(args[index + 1].clone());
+            return Ok(2);
+        } else {
+            return Err(format!("Option {} requires a UUID argument", arg));
+        }
+    }
+
+    // --status=<value>
+    if arg.starts_with("--status=") {
+        options.status = Some(arg.split('=').nth(1).unwrap_or("").to_string());
+        return Ok(1);
+    }
+
+    // --output-format <format>
+    if arg == "--output-format" {
+        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
+            options.output_format = Some(args[index + 1].to_lowercase());
+            return Ok(2);
+        } else {
+            return Err(format!("Option {} requires a format argument", arg));
+        }
+    }
+
+    // --output-format=<value>
+    if arg.starts_with("--output-format=") {
+        options.output_format = Some(arg.split('=').nth(1).unwrap_or("").to_lowercase());
+        return Ok(1);
+    }
+
     // Not a recognized wrapper option
     Ok(0)
 }
@@ -362,6 +401,22 @@ pub fn validate_options(options: &WrapperOptions) -> Result<(), String> {
     // Keep-user validation
     if options.keep_user && !options.user {
         return Err("--keep-user option is only valid with --isolated-user".to_string());
+    }
+
+    // Validate output format
+    if let Some(ref format) = options.output_format {
+        if !VALID_OUTPUT_FORMATS.contains(&format.as_str()) {
+            return Err(format!(
+                "Invalid output format: \"{}\". Valid options are: {}",
+                format,
+                VALID_OUTPUT_FORMATS.join(", ")
+            ));
+        }
+    }
+
+    // Output format is only valid with --status
+    if options.output_format.is_some() && options.status.is_none() {
+        return Err("--output-format option is only valid with --status".to_string());
     }
 
     Ok(())
@@ -600,5 +655,133 @@ mod tests {
             .collect();
         let result = parse_args(&args).unwrap();
         assert!(result.wrapper_options.use_command_stream);
+    }
+
+    #[test]
+    fn test_status_option() {
+        let args: Vec<String> = vec!["--status", "a1b2c3d4-e5f6-7890-abcd-ef1234567890"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let result = parse_args(&args).unwrap();
+        assert_eq!(
+            result.wrapper_options.status,
+            Some("a1b2c3d4-e5f6-7890-abcd-ef1234567890".to_string())
+        );
+    }
+
+    #[test]
+    fn test_status_with_output_format() {
+        let args: Vec<String> = vec![
+            "--status",
+            "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+            "--output-format",
+            "json",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+        let result = parse_args(&args).unwrap();
+        assert_eq!(
+            result.wrapper_options.status,
+            Some("a1b2c3d4-e5f6-7890-abcd-ef1234567890".to_string())
+        );
+        assert_eq!(
+            result.wrapper_options.output_format,
+            Some("json".to_string())
+        );
+    }
+
+    #[test]
+    fn test_status_with_links_notation() {
+        let args: Vec<String> = vec![
+            "--status",
+            "uuid-here",
+            "--output-format",
+            "links-notation",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+        let result = parse_args(&args).unwrap();
+        assert_eq!(
+            result.wrapper_options.output_format,
+            Some("links-notation".to_string())
+        );
+    }
+
+    #[test]
+    fn test_status_with_text_format() {
+        let args: Vec<String> = vec!["--status", "uuid-here", "--output-format", "text"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let result = parse_args(&args).unwrap();
+        assert_eq!(
+            result.wrapper_options.output_format,
+            Some("text".to_string())
+        );
+    }
+
+    #[test]
+    fn test_status_equals_syntax() {
+        let args: Vec<String> = vec!["--status=my-uuid-here"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let result = parse_args(&args).unwrap();
+        assert_eq!(
+            result.wrapper_options.status,
+            Some("my-uuid-here".to_string())
+        );
+    }
+
+    #[test]
+    fn test_output_format_equals_syntax() {
+        let args: Vec<String> = vec!["--status=my-uuid", "--output-format=json"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let result = parse_args(&args).unwrap();
+        assert_eq!(
+            result.wrapper_options.output_format,
+            Some("json".to_string())
+        );
+    }
+
+    #[test]
+    fn test_status_requires_uuid() {
+        let args: Vec<String> = vec!["--status"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert!(parse_args(&args).is_err());
+    }
+
+    #[test]
+    fn test_output_format_requires_format() {
+        let args: Vec<String> = vec!["--status", "uuid", "--output-format"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert!(parse_args(&args).is_err());
+    }
+
+    #[test]
+    fn test_invalid_output_format() {
+        let args: Vec<String> = vec!["--status", "uuid", "--output-format", "invalid"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert!(parse_args(&args).is_err());
+    }
+
+    #[test]
+    fn test_output_format_without_status() {
+        let args: Vec<String> = vec!["--output-format", "json", "--", "npm", "test"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert!(parse_args(&args).is_err());
     }
 }
