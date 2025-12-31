@@ -215,7 +215,9 @@ mod public_exports_tests {
         // Complete record
         let mut updated_record = record.clone();
         updated_record.complete(0);
-        store.save(&updated_record).expect("Failed to update record");
+        store
+            .save(&updated_record)
+            .expect("Failed to update record");
 
         // Verify completion
         let completed = store.get(&updated_record.uuid);
