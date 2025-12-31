@@ -8,13 +8,18 @@
  */
 
 /**
- * Format execution record as Links Notation
+ * Format execution record as Links Notation (indented style)
  * @param {Object} record - The execution record with toObject() method
- * @returns {string} Links Notation formatted string
+ * @returns {string} Links Notation formatted string in indented style
+ *
+ * Output format:
+ * <uuid>
+ *   <key> "<value>"
+ *   ...
  */
 function formatRecordAsLinksNotation(record) {
   const obj = record.toObject();
-  const lines = [];
+  const lines = [record.uuid];
 
   for (const [key, value] of Object.entries(obj)) {
     if (value !== null && value !== undefined) {
@@ -27,7 +32,7 @@ function formatRecordAsLinksNotation(record) {
       }
       // Escape quotes in the value
       const escapedValue = formattedValue.replace(/"/g, '\\"');
-      lines.push(`(${record.uuid}.${key}: ${key} "${escapedValue}")`);
+      lines.push(`  ${key} "${escapedValue}"`);
     }
   }
 

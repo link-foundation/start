@@ -76,16 +76,16 @@ describe('--status query functionality', () => {
   });
 
   describe('links-notation format (default)', () => {
-    it('should output status in links-notation format by default', () => {
+    it('should output status in links-notation indented format by default', () => {
       const result = runCli(['--status', testRecord.uuid]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain(`(${testRecord.uuid}.uuid:`);
-      expect(result.stdout).toContain('uuid "');
-      expect(result.stdout).toContain(`(${testRecord.uuid}.status:`);
-      expect(result.stdout).toContain('status "executed"');
-      expect(result.stdout).toContain(`(${testRecord.uuid}.command:`);
-      expect(result.stdout).toContain('command "echo hello world"');
+      // Should start with UUID on its own line
+      expect(result.stdout).toMatch(new RegExp(`^${testRecord.uuid}\\n`));
+      // Should have indented properties
+      expect(result.stdout).toContain(`  uuid "${testRecord.uuid}"`);
+      expect(result.stdout).toContain('  status "executed"');
+      expect(result.stdout).toContain('  command "echo hello world"');
     });
 
     it('should output status in links-notation format with explicit flag', () => {
@@ -97,7 +97,9 @@ describe('--status query functionality', () => {
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain(`(${testRecord.uuid}.uuid:`);
+      // Should start with UUID on its own line
+      expect(result.stdout).toMatch(new RegExp(`^${testRecord.uuid}\\n`));
+      expect(result.stdout).toContain(`  uuid "${testRecord.uuid}"`);
     });
   });
 

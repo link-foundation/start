@@ -8,12 +8,17 @@
 use crate::execution_store::{ExecutionRecord, ExecutionStore};
 use serde_json::Value;
 
-/// Format execution record as Links Notation
-/// Each property is output as a link doublet:
-/// `(uuid.property: property "value")`
+/// Format execution record as Links Notation (indented style)
+///
+/// Output format:
+/// ```text
+/// <uuid>
+///   <key> "<value>"
+///   ...
+/// ```
 pub fn format_record_as_links_notation(record: &ExecutionRecord) -> String {
     let json = record.to_json();
-    let mut lines = Vec::new();
+    let mut lines = vec![record.uuid.clone()];
 
     if let Value::Object(map) = json {
         for (key, value) in map {
@@ -27,10 +32,7 @@ pub fn format_record_as_links_notation(record: &ExecutionRecord) -> String {
                     other => other.to_string(),
                 };
                 let escaped_value = formatted_value.replace('"', "\\\"");
-                lines.push(format!(
-                    "({}.{}: {} \"{}\")",
-                    record.uuid, key, key, escaped_value
-                ));
+                lines.push(format!("  {} \"{}\"", key, escaped_value));
             }
         }
     }
@@ -142,22 +144,20 @@ mod tests {
     use tempfile::TempDir;
 
     fn create_test_record() -> ExecutionRecord {
-        ExecutionRecord::with_options(
-            "echo hello",
-            ExecutionRecordOptions {
-                uuid: Some("test-uuid-1234".to_string()),
-                pid: Some(12345),
-                status: Some(ExecutionStatus::Executed),
-                exit_code: Some(0),
-                log_path: Some("/tmp/test.log".to_string()),
-                start_time: Some("2025-01-01T00:00:00Z".to_string()),
-                end_time: Some("2025-01-01T00:00:01Z".to_string()),
-                working_directory: Some("/home/user".to_string()),
-                shell: Some("/bin/bash".to_string()),
-                platform: Some("linux".to_string()),
-                ..Default::default()
-            },
-        )
+        ExecutionRecord::with_options(ExecutionRecordOptions {
+            command: "echo hello".to_string(),
+            uuid: Some("test-uuid-1234".to_string()),
+            pid: Some(12345),
+            status: Some(ExecutionStatus::Executed),
+            exit_code: Some(0),
+            log_path: Some("/tmp/test.log".to_string()),
+            start_time: Some("2025-01-01T00:00:00Z".to_string()),
+            end_time: Some("2025-01-01T00:00:01Z".to_string()),
+            working_directory: Some("/home/user".to_string()),
+            shell: Some("/bin/bash".to_string()),
+            platform: Some("linux".to_string()),
+            ..Default::default()
+        })
     }
 
     #[test]
@@ -165,11 +165,12 @@ mod tests {
         let record = create_test_record();
         let output = format_record_as_links_notation(&record);
 
-        assert!(output.contains("test-uuid-1234.uuid:"));
-        assert!(output.contains("test-uuid-1234.status:"));
-        assert!(output.contains("test-uuid-1234.command:"));
-        assert!(output.contains("echo hello"));
-        assert!(output.contains("executed"));
+        // Should start with the UUID on its own line
+        assert!(output.starts_with("test-uuid-1234\n"));
+        // Should contain indented properties
+        assert!(output.contains("  uuid \"test-uuid-1234\""));
+        assert!(output.contains("  status \"executed\""));
+        assert!(output.contains("  command \"echo hello\""));
     }
 
     #[test]
@@ -264,12 +265,13 @@ mod tests {
         let record = create_test_record();
         store.save(&record).unwrap();
 
-        // Default format should be links-notation
+        // Default format should be links-notation (indented style)
         let result = query_status(Some(&store), "test-uuid-1234", None);
         assert!(result.success);
         let output = result.output.unwrap();
 
-        // Should be in links-notation format
-        assert!(output.contains("test-uuid-1234.uuid:"));
+        // Should be in links-notation indented format
+        assert!(output.starts_with("test-uuid-1234\n"));
+        assert!(output.contains("  uuid \"test-uuid-1234\""));
     }
 }

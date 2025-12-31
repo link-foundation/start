@@ -12,8 +12,8 @@ pub mod user_manager;
 
 // Re-export commonly used items
 pub use args_parser::{
-    get_effective_mode, has_isolation, parse_args, validate_options, ParsedArgs, WrapperOptions,
-    VALID_BACKENDS, VALID_OUTPUT_FORMATS,
+    generate_session_name, generate_uuid, get_effective_mode, has_isolation, is_valid_uuid,
+    parse_args, validate_options, ParsedArgs, WrapperOptions, VALID_BACKENDS, VALID_OUTPUT_FORMATS,
 };
 pub use execution_store::{
     is_clink_installed, ExecutionRecord, ExecutionRecordOptions, ExecutionStats, ExecutionStatus,

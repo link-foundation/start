@@ -24,6 +24,21 @@ pub const VALID_BACKENDS: [&str; 4] = ["screen", "tmux", "docker", "ssh"];
 /// Valid output formats for --status
 pub const VALID_OUTPUT_FORMATS: [&str; 3] = ["links-notation", "json", "text"];
 
+/// UUID v4 regex pattern for validation
+const UUID_REGEX: &str = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$";
+
+/// Check if a string is a valid UUID v4
+pub fn is_valid_uuid(s: &str) -> bool {
+    regex::Regex::new(UUID_REGEX)
+        .map(|re| re.is_match(&s.to_lowercase()))
+        .unwrap_or(false)
+}
+
+/// Generate a UUID v4
+pub fn generate_uuid() -> String {
+    uuid::Uuid::new_v4().to_string()
+}
+
 /// Wrapper options parsed from command line
 #[derive(Debug, Clone, Default)]
 pub struct WrapperOptions {
@@ -35,6 +50,8 @@ pub struct WrapperOptions {
     pub detached: bool,
     /// Session name
     pub session: Option<String>,
+    /// Session ID (UUID) for tracking - auto-generated if not provided
+    pub session_id: Option<String>,
     /// Docker image
     pub image: Option<String>,
     /// SSH endpoint (e.g., user@host)
@@ -270,6 +287,22 @@ fn parse_option(
         return Ok(1);
     }
 
+    // --session-id or --session-name (alias) <uuid>
+    if arg == "--session-id" || arg == "--session-name" {
+        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
+            options.session_id = Some(args[index + 1].clone());
+            return Ok(2);
+        } else {
+            return Err(format!("Option {} requires a UUID argument", arg));
+        }
+    }
+
+    // --session-id=<value> or --session-name=<value>
+    if arg.starts_with("--session-id=") || arg.starts_with("--session-name=") {
+        options.session_id = Some(arg.split('=').nth(1).unwrap_or("").to_string());
+        return Ok(1);
+    }
+
     // --status <uuid>
     if arg == "--status" {
         if index + 1 < args.len() && !args[index + 1].starts_with('-') {
@@ -417,6 +450,16 @@ pub fn validate_options(options: &WrapperOptions) -> Result<(), String> {
     // Output format is only valid with --status
     if options.output_format.is_some() && options.status.is_none() {
         return Err("--output-format option is only valid with --status".to_string());
+    }
+
+    // Validate session ID is a valid UUID if provided
+    if let Some(ref session_id) = options.session_id {
+        if !is_valid_uuid(session_id) {
+            return Err(format!(
+                "Invalid session ID: \"{}\". Session ID must be a valid UUID v4.",
+                session_id
+            ));
+        }
     }
 
     Ok(())

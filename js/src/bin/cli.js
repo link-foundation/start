@@ -12,6 +12,7 @@ const {
   parseArgs,
   hasIsolation,
   getEffectiveMode,
+  generateUUID,
 } = require('../lib/args-parser');
 const {
   runIsolated,
@@ -61,8 +62,10 @@ const config = {
   disableTracking:
     process.env.START_DISABLE_TRACKING === '1' ||
     process.env.START_DISABLE_TRACKING === 'true',
-  // Custom app folder for storing execution records
-  appFolder: process.env.START_APP_FOLDER || null,
+  // Custom app folder for storing execution records (defaults to ~/.start-command)
+  appFolder:
+    process.env.START_APP_FOLDER ||
+    path.join(os.homedir(), '.start-command'),
 };
 
 // Global execution store instance (initialized lazily)
@@ -164,20 +167,24 @@ if (!config.disableSubstitutions) {
 const useCommandStream =
   wrapperOptions.useCommandStream || config.useCommandStream;
 
+// Generate session ID if not provided (auto-generate UUID)
+const sessionId = wrapperOptions.sessionId || generateUUID();
+
 // Main execution
 (async () => {
   // Check if running in isolation mode or with user isolation
   if (hasIsolation(wrapperOptions) || wrapperOptions.user) {
-    await runWithIsolation(wrapperOptions, command, useCommandStream);
+    await runWithIsolation(wrapperOptions, command, useCommandStream, sessionId);
   } else {
     if (useCommandStream) {
       await runDirectWithCommandStream(
         command,
         parsedCommand,
-        substitutionResult
+        substitutionResult,
+        sessionId
       );
     } else {
-      await runDirect(command);
+      await runDirect(command, sessionId);
     }
   }
 })();
@@ -333,6 +340,8 @@ Options:
   --attached, -a        Run in attached mode (foreground)
   --detached, -d        Run in detached mode (background)
   --session, -s <name>  Session name for isolation
+  --session-id <uuid>   Session UUID for tracking (auto-generated if not provided)
+  --session-name <uuid> Alias for --session-id
   --image <image>       Docker image (required for docker isolation)
   --endpoint <endpoint> SSH endpoint (required for ssh isolation, e.g., user@host)
   --isolated-user, -u [name]  Create isolated user with same permissions
@@ -390,8 +399,9 @@ Examples:
  * @param {object} options - Wrapper options
  * @param {string} cmd - Command to execute
  * @param {boolean} useCommandStream - Whether to use command-stream for isolation
+ * @param {string} sessionId - Session UUID for tracking
  */
-async function runWithIsolation(options, cmd, useCommandStream = false) {
+async function runWithIsolation(options, cmd, useCommandStream = false, sessionId) {
   const environment = options.isolated;
   const mode = getEffectiveMode(options);
   const startTime = getTimestamp();
@@ -408,11 +418,12 @@ async function runWithIsolation(options, cmd, useCommandStream = false) {
   const isWindows = process.platform === 'win32';
   const shell = isWindows ? 'powershell.exe' : process.env.SHELL || '/bin/sh';
 
-  // Create execution record for tracking
+  // Create execution record for tracking with provided session ID
   let executionRecord = null;
   const store = getExecutionStore();
   if (store) {
     executionRecord = new ExecutionRecord({
+      uuid: sessionId, // Use the provided session ID
       command: cmd,
       logPath: logFilePath,
       shell,
@@ -429,6 +440,10 @@ async function runWithIsolation(options, cmd, useCommandStream = false) {
       },
     });
   }
+
+  // Print session UUID at start
+  console.log(sessionId);
+  console.log('');
 
   // Handle --isolated-user option: create a new user with same permissions
   let createdUser = null;
@@ -482,9 +497,6 @@ async function runWithIsolation(options, cmd, useCommandStream = false) {
 
   // Print start message (unified format)
   console.log(`[${startTime}] Starting: ${cmd}`);
-  if (executionRecord && config.verbose) {
-    console.log(`[Tracking] Execution ID: ${executionRecord.uuid}`);
-  }
   console.log('');
 
   // Log isolation info
@@ -614,14 +626,19 @@ async function runWithIsolation(options, cmd, useCommandStream = false) {
     );
   }
 
+  // Print session UUID at end
+  console.log('');
+  console.log(sessionId);
+
   process.exit(exitCode);
 }
 
 /**
  * Run command directly (without isolation) - original synchronous version
  * @param {string} cmd - Command to execute
+ * @param {string} sessionId - Session UUID for tracking
  */
-function runDirect(cmd) {
+function runDirect(cmd, sessionId) {
   // Get the command name (first word of the actual command to execute)
   const commandName = cmd.split(' ')[0];
 
@@ -643,11 +660,12 @@ function runDirect(cmd) {
   const runtimeVersion =
     typeof Bun !== 'undefined' ? Bun.version : process.version;
 
-  // Create execution record for tracking
+  // Create execution record for tracking with provided session ID
   let executionRecord = null;
   const store = getExecutionStore();
   if (store) {
     executionRecord = new ExecutionRecord({
+      uuid: sessionId, // Use the provided session ID
       command: cmd,
       logPath: logFilePath,
       shell,
@@ -664,9 +682,7 @@ function runDirect(cmd) {
   // Log header
   logContent += `=== Start Command Log ===\n`;
   logContent += `Timestamp: ${startTime}\n`;
-  if (executionRecord) {
-    logContent += `Execution ID: ${executionRecord.uuid}\n`;
-  }
+  logContent += `Session ID: ${sessionId}\n`;
   if (substitutionResult && substitutionResult.matched) {
     logContent += `Original Input: ${parsedCommand}\n`;
     logContent += `Substituted Command: ${cmd}\n`;
@@ -680,15 +696,16 @@ function runDirect(cmd) {
   logContent += `Working Directory: ${process.cwd()}\n`;
   logContent += `${'='.repeat(50)}\n\n`;
 
+  // Print session UUID at start
+  console.log(sessionId);
+  console.log('');
+
   // Print start message to console
   if (substitutionResult && substitutionResult.matched) {
     console.log(`[${startTime}] Input: ${parsedCommand}`);
     console.log(`[${startTime}] Executing: ${cmd}`);
   } else {
     console.log(`[${startTime}] Starting: ${cmd}`);
-  }
-  if (executionRecord && config.verbose) {
-    console.log(`[Tracking] Execution ID: ${executionRecord.uuid}`);
   }
   console.log('');
 
@@ -762,6 +779,9 @@ function runDirect(cmd) {
     console.log(`[${endTime}] Finished`);
     console.log(`Exit code: ${exitCode}`);
     console.log(`Log saved: ${logFilePath}`);
+    console.log('');
+    // Print session UUID at end
+    console.log(sessionId);
 
     // If command failed, try to auto-report
     if (exitCode !== 0) {
@@ -807,6 +827,9 @@ function runDirect(cmd) {
     console.log(`[${endTime}] Finished`);
     console.log(`Exit code: 1`);
     console.log(`Log saved: ${logFilePath}`);
+    console.log('');
+    // Print session UUID at end
+    console.log(sessionId);
 
     handleFailure(config, commandName, cmd, 1, logFilePath);
 
@@ -819,8 +842,9 @@ function runDirect(cmd) {
  * @param {string} cmd - Command to execute
  * @param {string} parsedCmd - Original parsed command
  * @param {object} subResult - Result from substitution engine
+ * @param {string} sessionId - Session UUID for tracking
  */
-async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
+async function runDirectWithCommandStream(cmd, parsedCmd, subResult, sessionId) {
   // Lazy load command-stream
   const { getCommandStream } = require('../lib/command-stream');
   const { $, raw } = await getCommandStream();
@@ -845,11 +869,12 @@ async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
   const runtimeVersion =
     typeof Bun !== 'undefined' ? Bun.version : process.version;
 
-  // Create execution record for tracking
+  // Create execution record for tracking with provided session ID
   let executionRecord = null;
   const store = getExecutionStore();
   if (store) {
     executionRecord = new ExecutionRecord({
+      uuid: sessionId, // Use the provided session ID
       command: cmd,
       logPath: logFilePath,
       shell,
@@ -867,9 +892,7 @@ async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
   // Log header
   logContent += `=== Start Command Log ===\n`;
   logContent += `Timestamp: ${startTime}\n`;
-  if (executionRecord) {
-    logContent += `Execution ID: ${executionRecord.uuid}\n`;
-  }
+  logContent += `Session ID: ${sessionId}\n`;
   logContent += `Execution Mode: command-stream\n`;
   if (subResult && subResult.matched) {
     logContent += `Original Input: ${parsedCmd}\n`;
@@ -884,6 +907,10 @@ async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
   logContent += `Working Directory: ${process.cwd()}\n`;
   logContent += `${'='.repeat(50)}\n\n`;
 
+  // Print session UUID at start
+  console.log(sessionId);
+  console.log('');
+
   // Print start message to console
   if (subResult && subResult.matched) {
     console.log(`[${startTime}] Input: ${parsedCmd}`);
@@ -892,9 +919,6 @@ async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
     console.log(`[${startTime}] Starting: ${cmd}`);
   }
   console.log('[command-stream] Using command-stream library');
-  if (executionRecord && config.verbose) {
-    console.log(`[Tracking] Execution ID: ${executionRecord.uuid}`);
-  }
   console.log('');
 
   // Save initial execution record (PID will be updated later if available)
@@ -974,6 +998,9 @@ async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
   console.log(`[${endTime}] Finished`);
   console.log(`Exit code: ${exitCode}`);
   console.log(`Log saved: ${logFilePath}`);
+  console.log('');
+  // Print session UUID at end
+  console.log(sessionId);
 
   // If command failed, try to auto-report
   if (exitCode !== 0) {
