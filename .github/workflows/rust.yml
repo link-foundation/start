@@ -6,12 +6,14 @@ on:
       - main
     paths:
       - 'rust/**'
+      - 'lib/**'
       - 'scripts/**'
       - '.github/workflows/rust.yml'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'rust/**'
+      - 'lib/**'
       - 'scripts/**'
       - '.github/workflows/rust.yml'
   workflow_dispatch:
@@ -184,6 +186,36 @@ jobs:
       - name: Run doc tests
         working-directory: rust
         run: cargo test --doc --verbose
+
+      # Build the binary for execution tracking tests
+      - name: Build release
+        working-directory: rust
+        run: cargo build --release
+
+      # Test execution tracking (Unix)
+      - name: Test execution tracking (Unix)
+        if: runner.os != 'Windows'
+        working-directory: rust
+        env:
+          START_VERBOSE: '1'
+        run: |
+          ./target/release/start echo "Testing execution tracking"
+          ls -la ~/.start-command/
+          cat ~/.start-command/executions.lino
+          echo "Execution tracking test passed"
+
+      # Test execution tracking (Windows)
+      - name: Test execution tracking (Windows)
+        if: runner.os == 'Windows'
+        working-directory: rust
+        env:
+          START_VERBOSE: '1'
+        shell: bash
+        run: |
+          ./target/release/start.exe echo "Testing execution tracking"
+          ls -la "$USERPROFILE/.start-command/"
+          cat "$USERPROFILE/.start-command/executions.lino"
+          echo "Execution tracking test passed"
 
   # === BUILD ===
   build:

@@ -1,0 +1,16 @@
+[package]
+name = "lino-objects-codec"
+version = "0.1.0"
+edition = "2021"
+authors = ["Link Foundation"]
+description = "A Rust library to encode/decode objects to/from links notation"
+license = "Unlicense"
+repository = "https://github.com/link-foundation/start"
+keywords = ["links-notation", "serialization", "codec", "object-graph"]
+
+[dependencies]
+base64 = "0.22"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]

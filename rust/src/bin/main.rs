@@ -15,6 +15,7 @@ use std::process::{self, Command, Stdio};
 use start_command::{
     args_parser::{generate_session_name, get_effective_mode, has_isolation, parse_args},
     create_log_footer, create_log_header, create_log_path,
+    execution_store::{ExecutionRecord, ExecutionStore, ExecutionStoreOptions},
     failure_handler::{handle_failure, Config as FailureConfig},
     get_timestamp,
     isolation::{run_as_isolated_user, run_isolated, IsolationOptions},
@@ -42,6 +43,10 @@ struct Config {
     substitutions_path: Option<String>,
     /// Use command-stream library for execution
     use_command_stream: bool,
+    /// Disable execution tracking
+    disable_tracking: bool,
+    /// Custom app folder for execution tracking
+    app_folder: Option<String>,
 }
 
 impl Config {
@@ -54,7 +59,24 @@ impl Config {
             disable_substitutions: env_bool("START_DISABLE_SUBSTITUTIONS"),
             substitutions_path: env::var("START_SUBSTITUTIONS_PATH").ok(),
             use_command_stream: env_bool("START_USE_COMMAND_STREAM"),
+            disable_tracking: env_bool("START_DISABLE_TRACKING"),
+            app_folder: env::var("START_APP_FOLDER").ok(),
         }
+    }
+
+    /// Create an execution store based on config
+    fn create_execution_store(&self) -> Option<ExecutionStore> {
+        if self.disable_tracking {
+            return None;
+        }
+
+        let options = ExecutionStoreOptions {
+            verbose: self.verbose,
+            app_folder: self.app_folder.as_ref().map(PathBuf::from),
+            ..ExecutionStoreOptions::default()
+        };
+
+        Some(ExecutionStore::with_options(options))
     }
 }
 
@@ -500,6 +522,26 @@ fn run_direct(
     let mut log_content = String::new();
     let start_time = get_timestamp();
 
+    // Create execution tracking record
+    let execution_store = config.create_execution_store();
+    let mut execution_record = ExecutionRecord::new(command);
+    execution_record.log_path = log_file_path.to_string_lossy().to_string();
+    execution_record.pid = Some(process::id());
+
+    // Save initial execution record
+    if let Some(ref store) = execution_store {
+        if let Err(e) = store.save(&execution_record) {
+            if config.verbose {
+                eprintln!(
+                    "[ExecutionStore] Warning: Failed to save initial record: {}",
+                    e
+                );
+            }
+        } else if config.verbose {
+            println!("[ExecutionStore] Execution ID: {}", execution_record.uuid);
+        }
+    }
+
     // Log header
     log_content.push_str("=== Start Command Log ===\n");
     log_content.push_str(&format!("Timestamp: {}\n", start_time));
@@ -581,6 +623,19 @@ fn run_direct(
     println!("[{}] Finished", end_time);
     println!("Exit code: {}", exit_code);
     println!("Log saved: {}", log_file_path.display());
+
+    // Update execution record with completion status
+    if let Some(ref store) = execution_store {
+        execution_record.complete(exit_code);
+        if let Err(e) = store.save(&execution_record) {
+            if config.verbose {
+                eprintln!(
+                    "[ExecutionStore] Warning: Failed to save completion record: {}",
+                    e
+                );
+            }
+        }
+    }
 
     // If command failed, try to auto-report
     if exit_code != 0 {

@@ -3,6 +3,7 @@
 //! Provides command execution with isolation, substitution, and failure handling.
 
 pub mod args_parser;
+pub mod execution_store;
 pub mod failure_handler;
 pub mod isolation;
 pub mod substitution;
@@ -12,6 +13,10 @@ pub mod user_manager;
 pub use args_parser::{
     get_effective_mode, has_isolation, parse_args, validate_options, ParsedArgs, WrapperOptions,
     VALID_BACKENDS,
+};
+pub use execution_store::{
+    is_clink_installed, ExecutionRecord, ExecutionRecordOptions, ExecutionStats, ExecutionStatus,
+    ExecutionStore, ExecutionStoreOptions,
 };
 pub use failure_handler::{handle_failure, Config as FailureConfig};
 pub use isolation::{
