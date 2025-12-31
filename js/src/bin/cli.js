@@ -12,6 +12,7 @@ const {
   parseArgs,
   hasIsolation,
   getEffectiveMode,
+  VALID_OUTPUT_FORMATS,
 } = require('../lib/args-parser');
 const {
   runIsolated,
@@ -126,6 +127,12 @@ try {
 
 const { wrapperOptions, command: parsedCommand } = parsedArgs;
 
+// Handle --status flag - show status of a previous execution
+if (wrapperOptions.status) {
+  handleStatusQuery(wrapperOptions.status, wrapperOptions.outputFormat);
+  process.exit(0);
+}
+
 // Check if no command was provided
 if (!parsedCommand || parsedCommand.trim() === '') {
   console.error('Error: No command provided');
@@ -174,6 +181,104 @@ const useCommandStream =
     }
   }
 })();
+
+/**
+ * Handle --status query to show execution status
+ * @param {string} uuid - UUID of the execution to query
+ * @param {string|null} outputFormat - Output format (links-notation, json, text)
+ */
+function handleStatusQuery(uuid, outputFormat) {
+  const store = getExecutionStore();
+
+  if (!store) {
+    console.error(
+      'Error: Execution tracking is disabled. Cannot query status.'
+    );
+    process.exit(1);
+  }
+
+  const record = store.get(uuid);
+
+  if (!record) {
+    console.error(`Error: No execution found with UUID: ${uuid}`);
+    process.exit(1);
+  }
+
+  // Default format is links-notation
+  const format = outputFormat || 'links-notation';
+
+  switch (format) {
+    case 'links-notation':
+      console.log(formatRecordAsLinksNotation(record));
+      break;
+    case 'json':
+      console.log(JSON.stringify(record.toObject(), null, 2));
+      break;
+    case 'text':
+      console.log(formatRecordAsText(record));
+      break;
+    default:
+      console.error(`Error: Unknown output format: ${format}`);
+      process.exit(1);
+  }
+}
+
+/**
+ * Format execution record as Links Notation
+ * @param {ExecutionRecord} record - The execution record
+ * @returns {string} Links Notation formatted string
+ */
+function formatRecordAsLinksNotation(record) {
+  const obj = record.toObject();
+  const lines = [];
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== null && value !== undefined) {
+      // Format value based on type
+      let formattedValue;
+      if (typeof value === 'object') {
+        formattedValue = JSON.stringify(value);
+      } else {
+        formattedValue = String(value);
+      }
+      // Escape quotes in the value
+      const escapedValue = formattedValue.replace(/"/g, '\\"');
+      lines.push(`(${record.uuid}.${key}: ${key} "${escapedValue}")`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Format execution record as human-readable text
+ * @param {ExecutionRecord} record - The execution record
+ * @returns {string} Human-readable text
+ */
+function formatRecordAsText(record) {
+  const obj = record.toObject();
+  const lines = [
+    `Execution Status`,
+    `${'='.repeat(50)}`,
+    `UUID:              ${obj.uuid}`,
+    `Status:            ${obj.status}`,
+    `Command:           ${obj.command}`,
+    `Exit Code:         ${obj.exitCode !== null ? obj.exitCode : 'N/A'}`,
+    `PID:               ${obj.pid !== null ? obj.pid : 'N/A'}`,
+    `Working Directory: ${obj.workingDirectory}`,
+    `Shell:             ${obj.shell}`,
+    `Platform:          ${obj.platform}`,
+    `Start Time:        ${obj.startTime}`,
+    `End Time:          ${obj.endTime || 'N/A'}`,
+    `Log Path:          ${obj.logPath}`,
+  ];
+
+  if (Object.keys(obj.options).length > 0) {
+    lines.push(`Options:           ${JSON.stringify(obj.options)}`);
+  }
+
+  return lines.join('\n');
+}
 
 /**
  * Print version information
@@ -311,6 +416,7 @@ function getToolVersion(toolName, versionFlag, verbose = false) {
 function printUsage() {
   console.log(`Usage: $ [options] [--] <command> [args...]
        $ <command> [args...]
+       $ --status <uuid> [--output-format <format>]
 
 Options:
   --isolated, -i <env>  Run in isolated environment (screen, tmux, docker, ssh)
@@ -324,6 +430,8 @@ Options:
   --keep-alive, -k      Keep isolation environment alive after command exits
   --auto-remove-docker-container  Auto-remove docker container after exit
   --use-command-stream  Use command-stream library for execution (experimental)
+  --status <uuid>       Show status of a previous execution by UUID
+  --output-format <fmt> Output format for --status (links-notation, json, text)
   --version, -v         Show version information
 
 Examples:
@@ -337,7 +445,9 @@ Examples:
   $ -u myuser -- npm start                 # Custom username
   $ -i screen --isolated-user -- npm test  # Combine with process isolation
   $ --isolated-user --keep-user -- npm start
-  $ --use-command-stream echo "Hello"      # Use command-stream library`);
+  $ --use-command-stream echo "Hello"      # Use command-stream library
+  $ --status <uuid>                        # Show status in Links Notation
+  $ --status <uuid> --output-format json   # Show status in JSON format`);
   console.log('');
   console.log('Piping with $:');
   console.log('  echo "hi" | $ agent       # Preferred - pipe TO $ command');

@@ -13,6 +13,7 @@ const {
   hasIsolation,
   getEffectiveMode,
   VALID_BACKENDS,
+  VALID_OUTPUT_FORMATS,
 } = require('../src/lib/args-parser');
 
 describe('parseArgs', () => {
@@ -780,5 +781,111 @@ describe('keep-user option', () => {
     assert.strictEqual(result.wrapperOptions.user, true);
     assert.strictEqual(result.wrapperOptions.userName, 'testuser');
     assert.strictEqual(result.wrapperOptions.keepUser, true);
+  });
+});
+
+describe('status option', () => {
+  it('should parse --status with UUID', () => {
+    const uuid = '12345678-1234-1234-1234-123456789abc';
+    const result = parseArgs(['--status', uuid]);
+    assert.strictEqual(result.wrapperOptions.status, uuid);
+    assert.strictEqual(result.command, '');
+  });
+
+  it('should parse --status=value format', () => {
+    const uuid = '12345678-1234-1234-1234-123456789abc';
+    const result = parseArgs([`--status=${uuid}`]);
+    assert.strictEqual(result.wrapperOptions.status, uuid);
+  });
+
+  it('should throw error for missing UUID argument', () => {
+    assert.throws(() => {
+      parseArgs(['--status']);
+    }, /requires a UUID argument/);
+  });
+
+  it('should throw error for --status with -flag as next argument', () => {
+    assert.throws(() => {
+      parseArgs(['--status', '--output-format']);
+    }, /requires a UUID argument/);
+  });
+
+  it('should default status to null', () => {
+    const result = parseArgs(['echo', 'hello']);
+    assert.strictEqual(result.wrapperOptions.status, null);
+  });
+});
+
+describe('output-format option', () => {
+  it('should parse --output-format with --status', () => {
+    const uuid = '12345678-1234-1234-1234-123456789abc';
+    const result = parseArgs([
+      '--status',
+      uuid,
+      '--output-format',
+      'links-notation',
+    ]);
+    assert.strictEqual(result.wrapperOptions.status, uuid);
+    assert.strictEqual(result.wrapperOptions.outputFormat, 'links-notation');
+  });
+
+  it('should parse --output-format=value format', () => {
+    const uuid = '12345678-1234-1234-1234-123456789abc';
+    const result = parseArgs(['--status', uuid, '--output-format=json']);
+    assert.strictEqual(result.wrapperOptions.outputFormat, 'json');
+  });
+
+  it('should normalize format to lowercase', () => {
+    const uuid = '12345678-1234-1234-1234-123456789abc';
+    const result = parseArgs(['--status', uuid, '--output-format', 'JSON']);
+    assert.strictEqual(result.wrapperOptions.outputFormat, 'json');
+  });
+
+  it('should throw error for missing format argument', () => {
+    const uuid = '12345678-1234-1234-1234-123456789abc';
+    assert.throws(() => {
+      parseArgs(['--status', uuid, '--output-format']);
+    }, /requires a format argument/);
+  });
+
+  it('should throw error for invalid format', () => {
+    const uuid = '12345678-1234-1234-1234-123456789abc';
+    assert.throws(() => {
+      parseArgs(['--status', uuid, '--output-format', 'invalid']);
+    }, /Invalid output format/);
+  });
+
+  it('should throw error for output-format without status', () => {
+    assert.throws(() => {
+      parseArgs(['--output-format', 'json', '--', 'npm', 'test']);
+    }, /--output-format option is only valid with --status/);
+  });
+
+  it('should accept all valid output formats', () => {
+    const uuid = '12345678-1234-1234-1234-123456789abc';
+    for (const format of VALID_OUTPUT_FORMATS) {
+      assert.doesNotThrow(() => {
+        parseArgs(['--status', uuid, '--output-format', format]);
+      });
+    }
+  });
+
+  it('should default outputFormat to null', () => {
+    const result = parseArgs(['echo', 'hello']);
+    assert.strictEqual(result.wrapperOptions.outputFormat, null);
+  });
+});
+
+describe('VALID_OUTPUT_FORMATS', () => {
+  it('should include links-notation', () => {
+    assert.ok(VALID_OUTPUT_FORMATS.includes('links-notation'));
+  });
+
+  it('should include json', () => {
+    assert.ok(VALID_OUTPUT_FORMATS.includes('json'));
+  });
+
+  it('should include text', () => {
+    assert.ok(VALID_OUTPUT_FORMATS.includes('text'));
   });
 });

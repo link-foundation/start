@@ -17,6 +17,8 @@
  * --keep-alive, -k                 Keep isolation environment alive after command exits
  * --auto-remove-docker-container   Automatically remove docker container after exit (disabled by default)
  * --use-command-stream             Use command-stream library for command execution (experimental)
+ * --status <uuid>                  Show status of a previous command execution by UUID
+ * --output-format <format>         Output format for status (links-notation, json, text)
  */
 
 // Debug mode from environment
@@ -27,6 +29,11 @@ const DEBUG =
  * Valid isolation backends
  */
 const VALID_BACKENDS = ['screen', 'tmux', 'docker', 'ssh'];
+
+/**
+ * Valid output formats for --status
+ */
+const VALID_OUTPUT_FORMATS = ['links-notation', 'json', 'text'];
 
 /**
  * Parse command line arguments into wrapper options and command
@@ -47,6 +54,8 @@ function parseArgs(args) {
     keepAlive: false, // Keep environment alive after command exits
     autoRemoveDockerContainer: false, // Auto-remove docker container after exit
     useCommandStream: false, // Use command-stream library for command execution
+    status: null, // UUID to show status for
+    outputFormat: null, // Output format for status (links-notation, json, text)
   };
 
   let commandArgs = [];
@@ -247,6 +256,38 @@ function parseOption(args, index, options) {
     return 1;
   }
 
+  // --status <uuid>
+  if (arg === '--status') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.status = args[index + 1];
+      return 2;
+    } else {
+      throw new Error(`Option ${arg} requires a UUID argument`);
+    }
+  }
+
+  // --status=<value>
+  if (arg.startsWith('--status=')) {
+    options.status = arg.split('=')[1];
+    return 1;
+  }
+
+  // --output-format <format>
+  if (arg === '--output-format') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.outputFormat = args[index + 1].toLowerCase();
+      return 2;
+    } else {
+      throw new Error(`Option ${arg} requires a format argument`);
+    }
+  }
+
+  // --output-format=<value>
+  if (arg.startsWith('--output-format=')) {
+    options.outputFormat = arg.split('=')[1].toLowerCase();
+    return 1;
+  }
+
   // Not a recognized wrapper option
   return 0;
 }
@@ -341,6 +382,20 @@ function validateOptions(options) {
   if (options.keepUser && !options.user) {
     throw new Error('--keep-user option is only valid with --isolated-user');
   }
+
+  // Validate output format
+  if (options.outputFormat !== null && options.outputFormat !== undefined) {
+    if (!VALID_OUTPUT_FORMATS.includes(options.outputFormat)) {
+      throw new Error(
+        `Invalid output format: "${options.outputFormat}". Valid options are: ${VALID_OUTPUT_FORMATS.join(', ')}`
+      );
+    }
+  }
+
+  // Output format is only valid with --status
+  if (options.outputFormat && !options.status) {
+    throw new Error('--output-format option is only valid with --status');
+  }
 }
 
 /**
@@ -384,4 +439,5 @@ module.exports = {
   hasIsolation,
   getEffectiveMode,
   VALID_BACKENDS,
+  VALID_OUTPUT_FORMATS,
 };
