@@ -29,6 +29,7 @@ const {
   getCurrentUserGroups,
 } = require('../lib/user-manager');
 const { handleFailure } = require('../lib/failure-handler');
+const { ExecutionStore, ExecutionRecord } = require('../lib/execution-store');
 
 // Configuration from environment variables
 const config = {
@@ -55,7 +56,30 @@ const config = {
   useCommandStream:
     process.env.START_USE_COMMAND_STREAM === '1' ||
     process.env.START_USE_COMMAND_STREAM === 'true',
+  // Disable execution tracking
+  disableTracking:
+    process.env.START_DISABLE_TRACKING === '1' ||
+    process.env.START_DISABLE_TRACKING === 'true',
+  // Custom app folder for storing execution records
+  appFolder: process.env.START_APP_FOLDER || null,
 };
+
+// Global execution store instance (initialized lazily)
+let executionStore = null;
+
+/**
+ * Get the execution store instance
+ * @returns {ExecutionStore}
+ */
+function getExecutionStore() {
+  if (!executionStore && !config.disableTracking) {
+    executionStore = new ExecutionStore({
+      appFolder: config.appFolder || undefined,
+      verbose: config.verbose,
+    });
+  }
+  return executionStore;
+}
 
 // Get all arguments passed after the command
 const args = process.argv.slice(2);
@@ -363,6 +387,32 @@ async function runWithIsolation(options, cmd, useCommandStream = false) {
     options.session ||
     `${environment || 'start'}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
+  // Determine the shell
+  const isWindows = process.platform === 'win32';
+  const shell = isWindows ? 'powershell.exe' : process.env.SHELL || '/bin/sh';
+
+  // Create execution record for tracking
+  let executionRecord = null;
+  const store = getExecutionStore();
+  if (store) {
+    executionRecord = new ExecutionRecord({
+      command: cmd,
+      logPath: logFilePath,
+      shell,
+      workingDirectory: process.cwd(),
+      options: {
+        isolated: environment,
+        isolationMode: mode,
+        sessionName,
+        image: options.image,
+        endpoint: options.endpoint,
+        user: options.user,
+        keepAlive: options.keepAlive,
+        useCommandStream,
+      },
+    });
+  }
+
   // Handle --isolated-user option: create a new user with same permissions
   let createdUser = null;
 
@@ -415,6 +465,9 @@ async function runWithIsolation(options, cmd, useCommandStream = false) {
 
   // Print start message (unified format)
   console.log(`[${startTime}] Starting: ${cmd}`);
+  if (executionRecord && config.verbose) {
+    console.log(`[Tracking] Execution ID: ${executionRecord.uuid}`);
+  }
   console.log('');
 
   // Log isolation info
@@ -438,6 +491,19 @@ async function runWithIsolation(options, cmd, useCommandStream = false) {
   }
   console.log('');
 
+  // Save initial execution record
+  if (executionRecord && store) {
+    try {
+      store.save(executionRecord);
+    } catch (err) {
+      if (config.verbose) {
+        console.error(
+          `[Tracking] Warning: Could not save execution record: ${err.message}`
+        );
+      }
+    }
+  }
+
   // Create log content
   let logContent = createLogHeader({
     command: cmd,
@@ -448,6 +514,14 @@ async function runWithIsolation(options, cmd, useCommandStream = false) {
     user: createdUser,
     startTime,
   });
+
+  // Add execution ID to log content
+  if (executionRecord) {
+    logContent = logContent.replace(
+      '=== Start Command Log ===\n',
+      `=== Start Command Log ===\nExecution ID: ${executionRecord.uuid}\n`
+    );
+  }
 
   let result;
 
@@ -483,6 +557,20 @@ async function runWithIsolation(options, cmd, useCommandStream = false) {
 
   // Write log file
   writeLogFile(logFilePath, logContent);
+
+  // Update execution record as completed
+  if (executionRecord && store) {
+    executionRecord.complete(exitCode);
+    try {
+      store.save(executionRecord);
+    } catch (err) {
+      if (config.verbose) {
+        console.error(
+          `[Tracking] Warning: Could not update execution record: ${err.message}`
+        );
+      }
+    }
+  }
 
   // Print result and footer (unified format)
   console.log('');
@@ -538,9 +626,30 @@ function runDirect(cmd) {
   const runtimeVersion =
     typeof Bun !== 'undefined' ? Bun.version : process.version;
 
+  // Create execution record for tracking
+  let executionRecord = null;
+  const store = getExecutionStore();
+  if (store) {
+    executionRecord = new ExecutionRecord({
+      command: cmd,
+      logPath: logFilePath,
+      shell,
+      workingDirectory: process.cwd(),
+      options: {
+        substitutionMatched: substitutionResult?.matched || false,
+        originalCommand: substitutionResult?.matched ? parsedCommand : null,
+        runtime,
+        runtimeVersion,
+      },
+    });
+  }
+
   // Log header
   logContent += `=== Start Command Log ===\n`;
   logContent += `Timestamp: ${startTime}\n`;
+  if (executionRecord) {
+    logContent += `Execution ID: ${executionRecord.uuid}\n`;
+  }
   if (substitutionResult && substitutionResult.matched) {
     logContent += `Original Input: ${parsedCommand}\n`;
     logContent += `Substituted Command: ${cmd}\n`;
@@ -561,6 +670,9 @@ function runDirect(cmd) {
   } else {
     console.log(`[${startTime}] Starting: ${cmd}`);
   }
+  if (executionRecord && config.verbose) {
+    console.log(`[Tracking] Execution ID: ${executionRecord.uuid}`);
+  }
   console.log('');
 
   // Execute the command with captured output
@@ -568,6 +680,20 @@ function runDirect(cmd) {
     stdio: ['inherit', 'pipe', 'pipe'],
     shell: false,
   });
+
+  // Update execution record with PID and save initial state
+  if (executionRecord && store) {
+    executionRecord.pid = child.pid;
+    try {
+      store.save(executionRecord);
+    } catch (err) {
+      if (config.verbose) {
+        console.error(
+          `[Tracking] Warning: Could not save execution record: ${err.message}`
+        );
+      }
+    }
+  }
 
   // Capture stdout
   child.stdout.on('data', (data) => {
@@ -600,6 +726,20 @@ function runDirect(cmd) {
       console.error(`\nWarning: Could not save log file: ${err.message}`);
     }
 
+    // Update execution record as completed
+    if (executionRecord && store) {
+      executionRecord.complete(exitCode);
+      try {
+        store.save(executionRecord);
+      } catch (err) {
+        if (config.verbose) {
+          console.error(
+            `[Tracking] Warning: Could not update execution record: ${err.message}`
+          );
+        }
+      }
+    }
+
     // Print footer to console
     console.log('');
     console.log(`[${endTime}] Finished`);
@@ -629,6 +769,20 @@ function runDirect(cmd) {
       fs.writeFileSync(logFilePath, logContent, 'utf8');
     } catch (writeErr) {
       console.error(`\nWarning: Could not save log file: ${writeErr.message}`);
+    }
+
+    // Update execution record as failed
+    if (executionRecord && store) {
+      executionRecord.complete(1);
+      try {
+        store.save(executionRecord);
+      } catch (storeErr) {
+        if (config.verbose) {
+          console.error(
+            `[Tracking] Warning: Could not update execution record: ${storeErr.message}`
+          );
+        }
+      }
     }
 
     console.error(`\n${errorMessage}`);
@@ -674,9 +828,31 @@ async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
   const runtimeVersion =
     typeof Bun !== 'undefined' ? Bun.version : process.version;
 
+  // Create execution record for tracking
+  let executionRecord = null;
+  const store = getExecutionStore();
+  if (store) {
+    executionRecord = new ExecutionRecord({
+      command: cmd,
+      logPath: logFilePath,
+      shell,
+      workingDirectory: process.cwd(),
+      options: {
+        substitutionMatched: subResult?.matched || false,
+        originalCommand: subResult?.matched ? parsedCmd : null,
+        runtime,
+        runtimeVersion,
+        executionMode: 'command-stream',
+      },
+    });
+  }
+
   // Log header
   logContent += `=== Start Command Log ===\n`;
   logContent += `Timestamp: ${startTime}\n`;
+  if (executionRecord) {
+    logContent += `Execution ID: ${executionRecord.uuid}\n`;
+  }
   logContent += `Execution Mode: command-stream\n`;
   if (subResult && subResult.matched) {
     logContent += `Original Input: ${parsedCmd}\n`;
@@ -699,7 +875,23 @@ async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
     console.log(`[${startTime}] Starting: ${cmd}`);
   }
   console.log('[command-stream] Using command-stream library');
+  if (executionRecord && config.verbose) {
+    console.log(`[Tracking] Execution ID: ${executionRecord.uuid}`);
+  }
   console.log('');
+
+  // Save initial execution record (PID will be updated later if available)
+  if (executionRecord && store) {
+    try {
+      store.save(executionRecord);
+    } catch (err) {
+      if (config.verbose) {
+        console.error(
+          `[Tracking] Warning: Could not save execution record: ${err.message}`
+        );
+      }
+    }
+  }
 
   // Execute the command using command-stream with real-time output
   // Using mirror: true to show output in real-time, capture: true to collect it
@@ -712,6 +904,11 @@ async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
     // This is important for complex commands with pipes, redirects, etc.
     const result = await $cmd`${raw(cmd)}`;
     exitCode = result.code || 0;
+
+    // Update PID if available from result
+    if (executionRecord && result.pid) {
+      executionRecord.pid = result.pid;
+    }
 
     // Collect output for log
     if (result.stdout) {
@@ -739,6 +936,20 @@ async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
     fs.writeFileSync(logFilePath, logContent, 'utf8');
   } catch (err) {
     console.error(`\nWarning: Could not save log file: ${err.message}`);
+  }
+
+  // Update execution record as completed
+  if (executionRecord && store) {
+    executionRecord.complete(exitCode);
+    try {
+      store.save(executionRecord);
+    } catch (err) {
+      if (config.verbose) {
+        console.error(
+          `[Tracking] Warning: Could not update execution record: ${err.message}`
+        );
+      }
+    }
   }
 
   // Print footer to console
