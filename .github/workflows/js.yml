@@ -222,8 +222,9 @@ jobs:
           bun run src/bin/cli.js echo "Testing env var mode"
           echo "Env var mode test passed"
 
-      # Test execution tracking
-      - name: Test execution tracking
+      # Test execution tracking (Linux/macOS)
+      - name: Test execution tracking (Unix)
+        if: runner.os != 'Windows'
         working-directory: js
         env:
           START_VERBOSE: '1'
@@ -231,6 +232,19 @@ jobs:
           bun run src/bin/cli.js echo "Testing execution tracking"
           ls -la ~/.start-command/
           cat ~/.start-command/executions.lino
+          echo "Execution tracking test passed"
+
+      # Test execution tracking (Windows)
+      - name: Test execution tracking (Windows)
+        if: runner.os == 'Windows'
+        working-directory: js
+        env:
+          START_VERBOSE: '1'
+        shell: bash
+        run: |
+          bun run src/bin/cli.js echo "Testing execution tracking"
+          ls -la "$USERPROFILE/.start-command/"
+          cat "$USERPROFILE/.start-command/executions.lino"
           echo "Execution tracking test passed"
 
       # SSH Integration Tests - Linux only
