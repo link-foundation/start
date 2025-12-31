@@ -169,6 +169,30 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install screen
 
+      - name: Setup .NET for clink (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install clink (Linux)
+        if: runner.os == 'Linux'
+        run: dotnet tool install --global clink
+
+      - name: Setup .NET for clink (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install clink (macOS)
+        if: runner.os == 'macOS'
+        run: dotnet tool install --global clink
+
+      - name: Add .NET tools to PATH
+        if: runner.os != 'Windows'
+        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
       - name: Install dependencies
         working-directory: js
         run: bun install
@@ -197,6 +221,17 @@ jobs:
         run: |
           bun run src/bin/cli.js echo "Testing env var mode"
           echo "Env var mode test passed"
+
+      # Test execution tracking
+      - name: Test execution tracking
+        working-directory: js
+        env:
+          START_VERBOSE: '1'
+        run: |
+          bun run src/bin/cli.js echo "Testing execution tracking"
+          ls -la ~/.start-command/
+          cat ~/.start-command/executions.lino
+          echo "Execution tracking test passed"
 
       # SSH Integration Tests - Linux only
       - name: Setup SSH server for integration tests (Linux)
