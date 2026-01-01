@@ -1,8 +1,12 @@
 {
   "name": "start-command",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Gamification of coding, execute any command with ability to auto-report issues on GitHub",
   "main": "src/bin/cli.js",
+  "exports": {
+    ".": "./src/bin/cli.js",
+    "./execution-store": "./src/lib/execution-store.js"
+  },
   "bin": {
     "$": "./src/bin/cli.js"
   },
