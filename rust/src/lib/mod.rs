@@ -6,13 +6,14 @@ pub mod args_parser;
 pub mod execution_store;
 pub mod failure_handler;
 pub mod isolation;
+pub mod status_formatter;
 pub mod substitution;
 pub mod user_manager;
 
 // Re-export commonly used items
 pub use args_parser::{
-    get_effective_mode, has_isolation, parse_args, validate_options, ParsedArgs, WrapperOptions,
-    VALID_BACKENDS,
+    generate_session_name, generate_uuid, get_effective_mode, has_isolation, is_valid_uuid,
+    parse_args, validate_options, ParsedArgs, WrapperOptions, VALID_BACKENDS, VALID_OUTPUT_FORMATS,
 };
 pub use execution_store::{
     is_clink_installed, ExecutionRecord, ExecutionRecordOptions, ExecutionStats, ExecutionStatus,
@@ -23,6 +24,10 @@ pub use isolation::{
     create_log_footer, create_log_header, create_log_path, get_timestamp, is_command_available,
     run_as_isolated_user, run_isolated, write_log_file, IsolationOptions, IsolationResult,
     LogHeaderParams,
+};
+pub use status_formatter::{
+    format_record, format_record_as_links_notation, format_record_as_text, query_status,
+    StatusQueryResult,
 };
 pub use substitution::{process_command, ProcessOptions, SubstitutionResult};
 pub use user_manager::{

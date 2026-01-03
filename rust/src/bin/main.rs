@@ -13,12 +13,17 @@ use std::path::PathBuf;
 use std::process::{self, Command, Stdio};
 
 use start_command::{
-    args_parser::{generate_session_name, get_effective_mode, has_isolation, parse_args},
+    args_parser::{
+        generate_session_name, generate_uuid, get_effective_mode, has_isolation, parse_args,
+    },
     create_log_footer, create_log_header, create_log_path,
-    execution_store::{ExecutionRecord, ExecutionStore, ExecutionStoreOptions},
+    execution_store::{
+        ExecutionRecord, ExecutionRecordOptions, ExecutionStore, ExecutionStoreOptions,
+    },
     failure_handler::{handle_failure, Config as FailureConfig},
     get_timestamp,
     isolation::{run_as_isolated_user, run_isolated, IsolationOptions},
+    status_formatter::query_status,
     substitution::{process_command, ProcessOptions},
     user_manager::{
         create_isolated_user, delete_user, get_current_user_groups, has_sudo_access,
@@ -51,6 +56,10 @@ struct Config {
 
 impl Config {
     fn from_env() -> Self {
+        // Default app folder to ~/.start-command
+        let default_app_folder =
+            dirs::home_dir().map(|h| h.join(".start-command").to_string_lossy().to_string());
+
         Self {
             disable_auto_issue: env_bool("START_DISABLE_AUTO_ISSUE"),
             disable_log_upload: env_bool("START_DISABLE_LOG_UPLOAD"),
@@ -60,7 +69,7 @@ impl Config {
             substitutions_path: env::var("START_SUBSTITUTIONS_PATH").ok(),
             use_command_stream: env_bool("START_USE_COMMAND_STREAM"),
             disable_tracking: env_bool("START_DISABLE_TRACKING"),
-            app_folder: env::var("START_APP_FOLDER").ok(),
+            app_folder: env::var("START_APP_FOLDER").ok().or(default_app_folder),
         }
     }
 
@@ -121,6 +130,12 @@ fn main() {
     let wrapper_options = parsed.wrapper_options;
     let parsed_command = parsed.command.clone();
 
+    // Handle --status flag
+    if let Some(ref uuid) = wrapper_options.status {
+        handle_status_query(&config, uuid, wrapper_options.output_format.as_deref());
+        process::exit(0);
+    }
+
     // Check if no command was provided
     if parsed_command.is_empty() {
         eprintln!("Error: No command provided");
@@ -154,15 +169,28 @@ fn main() {
     // Determine if we should use command-stream
     let use_command_stream = wrapper_options.use_command_stream || config.use_command_stream;
 
+    // Generate session ID if not provided (auto-generate UUID)
+    let session_id = wrapper_options
+        .session_id
+        .clone()
+        .unwrap_or_else(generate_uuid);
+
     // Main execution
     if has_isolation(&wrapper_options) || wrapper_options.user {
-        run_with_isolation(&config, &wrapper_options, &command, use_command_stream);
+        run_with_isolation(
+            &config,
+            &wrapper_options,
+            &command,
+            use_command_stream,
+            &session_id,
+        );
     } else {
         run_direct(
             &config,
             &command,
             &parsed_command,
             substitution_result.as_ref(),
+            &session_id,
         );
     }
 }
@@ -250,17 +278,37 @@ fn get_tool_version(tool_name: &str, version_flag: &str, verbose: bool) -> Optio
     combined.lines().next().map(String::from)
 }
 
+/// Handle status query
+fn handle_status_query(config: &Config, uuid: &str, output_format: Option<&str>) {
+    let store = config.create_execution_store();
+    let result = query_status(store.as_ref(), uuid, output_format);
+
+    if result.success {
+        if let Some(output) = result.output {
+            println!("{}", output);
+        }
+    } else {
+        if let Some(error) = result.error {
+            eprintln!("Error: {}", error);
+        }
+        process::exit(1);
+    }
+}
+
 /// Print usage information
 fn print_usage() {
     println!(
         r#"Usage: start [options] [--] <command> [args...]
        start <command> [args...]
+       start --status <uuid> [--output-format <format>]
 
 Options:
   --isolated, -i <env>  Run in isolated environment (screen, tmux, docker, ssh)
   --attached, -a        Run in attached mode (foreground)
   --detached, -d        Run in detached mode (background)
   --session, -s <name>  Session name for isolation
+  --session-id <uuid>   Session UUID for tracking (auto-generated if not provided)
+  --session-name <uuid> Alias for --session-id
   --image <image>       Docker image (required for docker isolation)
   --endpoint <endpoint> SSH endpoint (required for ssh isolation, e.g., user@host)
   --isolated-user, -u [name]  Create isolated user with same permissions
@@ -268,6 +316,8 @@ Options:
   --keep-alive, -k      Keep isolation environment alive after command exits
   --auto-remove-docker-container  Auto-remove docker container after exit
   --use-command-stream  Use command-stream library for execution (experimental)
+  --status <uuid>       Show status of execution by UUID
+  --output-format <fmt> Output format for status (links-notation, json, text)
   --version, -v         Show version information
 
 Examples:
@@ -280,6 +330,8 @@ Examples:
   start --isolated-user -- npm test
   start -u myuser -- npm start
   start -i screen --isolated-user -- npm test
+  start --status a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  start --status a1b2c3d4 --output-format json
 
 Features:
   - Logs all output to temporary directory
@@ -296,10 +348,15 @@ fn run_with_isolation(
     wrapper_options: &start_command::WrapperOptions,
     command: &str,
     _use_command_stream: bool,
+    session_id: &str,
 ) {
     let environment = wrapper_options.isolated.as_deref();
     let mode = get_effective_mode(wrapper_options);
     let start_time = get_timestamp();
+
+    // Print session UUID at start
+    println!("{}", session_id);
+    println!();
 
     // Create log file path
     let log_file_path = create_log_path(environment.unwrap_or("direct"));
@@ -465,6 +522,10 @@ fn run_with_isolation(
         }
     }
 
+    // Print session UUID at end
+    println!();
+    println!("{}", session_id);
+
     process::exit(exit_code);
 }
 
@@ -474,7 +535,11 @@ fn run_direct(
     command: &str,
     parsed_command: &str,
     substitution_result: Option<&start_command::SubstitutionResult>,
+    session_id: &str,
 ) {
+    // Print session UUID at start
+    println!("{}", session_id);
+    println!();
     let command_name = command.split_whitespace().next().unwrap_or(command);
 
     // Determine shell
@@ -522,11 +587,15 @@ fn run_direct(
     let mut log_content = String::new();
     let start_time = get_timestamp();
 
-    // Create execution tracking record
+    // Create execution tracking record with provided session ID
     let execution_store = config.create_execution_store();
-    let mut execution_record = ExecutionRecord::new(command);
-    execution_record.log_path = log_file_path.to_string_lossy().to_string();
-    execution_record.pid = Some(process::id());
+    let mut execution_record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        uuid: Some(session_id.to_string()),
+        command: command.to_string(),
+        log_path: Some(log_file_path.to_string_lossy().to_string()),
+        pid: Some(process::id()),
+        ..Default::default()
+    });
 
     // Save initial execution record
     if let Some(ref store) = execution_store {
@@ -623,6 +692,9 @@ fn run_direct(
     println!("[{}] Finished", end_time);
     println!("Exit code: {}", exit_code);
     println!("Log saved: {}", log_file_path.display());
+    println!();
+    // Print session UUID at end
+    println!("{}", session_id);
 
     // Update execution record with completion status
     if let Some(ref store) = execution_store {

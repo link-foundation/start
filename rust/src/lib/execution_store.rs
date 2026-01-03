@@ -107,8 +107,8 @@ impl ExecutionRecord {
     }
 
     /// Create a new execution record with options
-    pub fn with_options(command: &str, options: ExecutionRecordOptions) -> Self {
-        let mut record = Self::new(command);
+    pub fn with_options(options: ExecutionRecordOptions) -> Self {
+        let mut record = Self::new(&options.command);
         if let Some(uuid) = options.uuid {
             record.uuid = uuid;
         }
@@ -167,6 +167,7 @@ impl ExecutionRecord {
 #[derive(Debug, Default)]
 pub struct ExecutionRecordOptions {
     pub uuid: Option<String>,
+    pub command: String,
     pub pid: Option<u32>,
     pub status: Option<ExecutionStatus>,
     pub exit_code: Option<i32>,

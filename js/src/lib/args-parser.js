@@ -17,6 +17,8 @@
  * --keep-alive, -k                 Keep isolation environment alive after command exits
  * --auto-remove-docker-container   Automatically remove docker container after exit (disabled by default)
  * --use-command-stream             Use command-stream library for command execution (experimental)
+ * --status <uuid>                  Show status of a previous command execution by UUID
+ * --output-format <format>         Output format for status (links-notation, json, text)
  */
 
 // Debug mode from environment
@@ -29,6 +31,45 @@ const DEBUG =
 const VALID_BACKENDS = ['screen', 'tmux', 'docker', 'ssh'];
 
 /**
+ * Valid output formats for --status
+ */
+const VALID_OUTPUT_FORMATS = ['links-notation', 'json', 'text'];
+
+/**
+ * UUID v4 regex pattern for validation
+ */
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Check if a string is a valid UUID v4
+ * @param {string} str - String to validate
+ * @returns {boolean} True if valid UUID v4
+ */
+function isValidUUID(str) {
+  return UUID_REGEX.test(str);
+}
+
+/**
+ * Generate a UUID v4
+ * @returns {string} A new UUID v4 string
+ */
+function generateUUID() {
+  // Try to use Node.js/Bun crypto module
+  try {
+    const crypto = require('crypto');
+    return crypto.randomUUID();
+  } catch {
+    // Fallback for environments without crypto.randomUUID
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+}
+
+/**
  * Parse command line arguments into wrapper options and command
  * @param {string[]} args - Array of command line arguments
  * @returns {{wrapperOptions: object, command: string, rawCommand: string[]}}
@@ -39,6 +80,7 @@ function parseArgs(args) {
     attached: false, // Run in attached mode
     detached: false, // Run in detached mode
     session: null, // Session name
+    sessionId: null, // Session ID (UUID) for tracking - auto-generated if not provided
     image: null, // Docker image
     endpoint: null, // SSH endpoint (e.g., user@host)
     user: false, // Create isolated user
@@ -47,6 +89,8 @@ function parseArgs(args) {
     keepAlive: false, // Keep environment alive after command exits
     autoRemoveDockerContainer: false, // Auto-remove docker container after exit
     useCommandStream: false, // Use command-stream library for command execution
+    status: null, // UUID to show status for
+    outputFormat: null, // Output format for status (links-notation, json, text)
   };
 
   let commandArgs = [];
@@ -247,6 +291,54 @@ function parseOption(args, index, options) {
     return 1;
   }
 
+  // --session-id or --session-name (alias) <uuid>
+  if (arg === '--session-id' || arg === '--session-name') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.sessionId = args[index + 1];
+      return 2;
+    } else {
+      throw new Error(`Option ${arg} requires a UUID argument`);
+    }
+  }
+
+  // --session-id=<value> or --session-name=<value>
+  if (arg.startsWith('--session-id=') || arg.startsWith('--session-name=')) {
+    options.sessionId = arg.split('=')[1];
+    return 1;
+  }
+
+  // --status <uuid>
+  if (arg === '--status') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.status = args[index + 1];
+      return 2;
+    } else {
+      throw new Error(`Option ${arg} requires a UUID argument`);
+    }
+  }
+
+  // --status=<value>
+  if (arg.startsWith('--status=')) {
+    options.status = arg.split('=')[1];
+    return 1;
+  }
+
+  // --output-format <format>
+  if (arg === '--output-format') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.outputFormat = args[index + 1].toLowerCase();
+      return 2;
+    } else {
+      throw new Error(`Option ${arg} requires a format argument`);
+    }
+  }
+
+  // --output-format=<value>
+  if (arg.startsWith('--output-format=')) {
+    options.outputFormat = arg.split('=')[1].toLowerCase();
+    return 1;
+  }
+
   // Not a recognized wrapper option
   return 0;
 }
@@ -341,6 +433,29 @@ function validateOptions(options) {
   if (options.keepUser && !options.user) {
     throw new Error('--keep-user option is only valid with --isolated-user');
   }
+
+  // Validate output format
+  if (options.outputFormat !== null && options.outputFormat !== undefined) {
+    if (!VALID_OUTPUT_FORMATS.includes(options.outputFormat)) {
+      throw new Error(
+        `Invalid output format: "${options.outputFormat}". Valid options are: ${VALID_OUTPUT_FORMATS.join(', ')}`
+      );
+    }
+  }
+
+  // Output format is only valid with --status
+  if (options.outputFormat && !options.status) {
+    throw new Error('--output-format option is only valid with --status');
+  }
+
+  // Validate session ID is a valid UUID if provided
+  if (options.sessionId !== null && options.sessionId !== undefined) {
+    if (!isValidUUID(options.sessionId)) {
+      throw new Error(
+        `Invalid session ID: "${options.sessionId}". Session ID must be a valid UUID v4.`
+      );
+    }
+  }
 }
 
 /**
@@ -383,5 +498,8 @@ module.exports = {
   generateSessionName,
   hasIsolation,
   getEffectiveMode,
+  isValidUUID,
+  generateUUID,
   VALID_BACKENDS,
+  VALID_OUTPUT_FORMATS,
 };

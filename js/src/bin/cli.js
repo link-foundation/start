@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-const { spawn, execSync, spawnSync } = require('child_process');
+const { spawn } = require('child_process');
 const process = require('process');
 const os = require('os');
 const fs = require('fs');
@@ -12,6 +12,7 @@ const {
   parseArgs,
   hasIsolation,
   getEffectiveMode,
+  generateUUID,
 } = require('../lib/args-parser');
 const {
   runIsolated,
@@ -30,6 +31,8 @@ const {
 } = require('../lib/user-manager');
 const { handleFailure } = require('../lib/failure-handler');
 const { ExecutionStore, ExecutionRecord } = require('../lib/execution-store');
+const { queryStatus } = require('../lib/status-formatter');
+const { printVersion } = require('../lib/version');
 
 // Configuration from environment variables
 const config = {
@@ -60,8 +63,9 @@ const config = {
   disableTracking:
     process.env.START_DISABLE_TRACKING === '1' ||
     process.env.START_DISABLE_TRACKING === 'true',
-  // Custom app folder for storing execution records
-  appFolder: process.env.START_APP_FOLDER || null,
+  // Custom app folder for storing execution records (defaults to ~/.start-command)
+  appFolder:
+    process.env.START_APP_FOLDER || path.join(os.homedir(), '.start-command'),
 };
 
 // Global execution store instance (initialized lazily)
@@ -126,6 +130,12 @@ try {
 
 const { wrapperOptions, command: parsedCommand } = parsedArgs;
 
+// Handle --status flag
+if (wrapperOptions.status) {
+  handleStatusQuery(wrapperOptions.status, wrapperOptions.outputFormat);
+  process.exit(0);
+}
+
 // Check if no command was provided
 if (!parsedCommand || parsedCommand.trim() === '') {
   console.error('Error: No command provided');
@@ -157,166 +167,54 @@ if (!config.disableSubstitutions) {
 const useCommandStream =
   wrapperOptions.useCommandStream || config.useCommandStream;
 
+// Generate session ID if not provided (auto-generate UUID)
+const sessionId = wrapperOptions.sessionId || generateUUID();
+
 // Main execution
 (async () => {
   // Check if running in isolation mode or with user isolation
   if (hasIsolation(wrapperOptions) || wrapperOptions.user) {
-    await runWithIsolation(wrapperOptions, command, useCommandStream);
+    await runWithIsolation(
+      wrapperOptions,
+      command,
+      useCommandStream,
+      sessionId
+    );
   } else {
     if (useCommandStream) {
       await runDirectWithCommandStream(
         command,
         parsedCommand,
-        substitutionResult
+        substitutionResult,
+        sessionId
       );
     } else {
-      await runDirect(command);
+      await runDirect(command, sessionId);
     }
   }
 })();
 
-/**
- * Print version information
- * @param {boolean} verbose - Whether to show verbose debugging info
- */
-function printVersion(verbose = false) {
-  // Get package version
-  const packageJson = require('../../package.json');
-  const startCommandVersion = packageJson.version;
-
-  console.log(`start-command version: ${startCommandVersion}`);
-  console.log('');
-
-  // Get runtime information (Bun or Node.js)
-  const runtime = typeof Bun !== 'undefined' ? 'Bun' : 'Node.js';
-  const runtimeVersion =
-    typeof Bun !== 'undefined' ? Bun.version : process.version;
-
-  // Get OS information
-  console.log(`OS: ${process.platform}`);
-
-  // Get OS version (use sw_vers on macOS for user-friendly version)
-  let osVersion = os.release();
-  if (process.platform === 'darwin') {
-    try {
-      osVersion = execSync('sw_vers -productVersion', {
-        encoding: 'utf8',
-        timeout: 5000,
-      }).trim();
-      if (verbose) {
-        console.log(`[verbose] macOS version from sw_vers: ${osVersion}`);
-      }
-    } catch {
-      // Fallback to kernel version if sw_vers fails
-      osVersion = os.release();
-      if (verbose) {
-        console.log(
-          `[verbose] sw_vers failed, using kernel version: ${osVersion}`
-        );
-      }
-    }
-  }
-
-  console.log(`OS Version: ${osVersion}`);
-  console.log(`${runtime} Version: ${runtimeVersion}`);
-  console.log(`Architecture: ${process.arch}`);
-  console.log('');
-
-  // Check for installed isolation tools
-  console.log('Isolation tools:');
-
-  if (verbose) {
-    console.log('[verbose] Checking isolation tools...');
-  }
-
-  // Check screen (use -v flag for compatibility with older versions)
-  const screenVersion = getToolVersion('screen', '-v', verbose);
-  if (screenVersion) {
-    console.log(`  screen: ${screenVersion}`);
+function handleStatusQuery(uuid, outputFormat) {
+  const result = queryStatus(getExecutionStore(), uuid, outputFormat);
+  if (result.success) {
+    console.log(result.output);
   } else {
-    console.log('  screen: not installed');
+    console.error(`Error: ${result.error}`);
+    process.exit(1);
   }
-
-  // Check tmux
-  const tmuxVersion = getToolVersion('tmux', '-V', verbose);
-  if (tmuxVersion) {
-    console.log(`  tmux: ${tmuxVersion}`);
-  } else {
-    console.log('  tmux: not installed');
-  }
-
-  // Check docker
-  const dockerVersion = getToolVersion('docker', '--version', verbose);
-  if (dockerVersion) {
-    console.log(`  docker: ${dockerVersion}`);
-  } else {
-    console.log('  docker: not installed');
-  }
-}
-
-/**
- * Get version of an installed tool
- * @param {string} toolName - Name of the tool
- * @param {string} versionFlag - Flag to get version (e.g., '--version', '-V')
- * @param {boolean} verbose - Whether to log verbose information
- * @returns {string|null} Version string or null if not installed
- */
-function getToolVersion(toolName, versionFlag, verbose = false) {
-  const isWindows = process.platform === 'win32';
-  const whichCmd = isWindows ? 'where' : 'which';
-
-  // First, check if the tool exists in PATH
-  try {
-    execSync(`${whichCmd} ${toolName}`, {
-      encoding: 'utf8',
-      timeout: 5000,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-  } catch {
-    // Tool not found in PATH
-    if (verbose) {
-      console.log(`[verbose] ${toolName}: not found in PATH`);
-    }
-    return null;
-  }
-
-  // Tool exists, try to get version using spawnSync
-  // This captures output regardless of exit code (some tools like older screen
-  // versions return non-zero exit code even when showing version successfully)
-  const result = spawnSync(toolName, [versionFlag], {
-    encoding: 'utf8',
-    timeout: 5000,
-    shell: false,
-  });
-
-  // Combine stdout and stderr (some tools output version to stderr)
-  const output = ((result.stdout || '') + (result.stderr || '')).trim();
-
-  if (verbose) {
-    console.log(
-      `[verbose] ${toolName} ${versionFlag}: exit=${result.status}, output="${output.substring(0, 100)}"`
-    );
-  }
-
-  if (!output) {
-    return null;
-  }
-
-  // Return the first line of output
-  const firstLine = output.split('\n')[0];
-  return firstLine || null;
 }
 
 /** Print usage information */
 function printUsage() {
-  console.log(`Usage: $ [options] [--] <command> [args...]
-       $ <command> [args...]
+  console.log(`Usage: $ [options] [--] <command> | $ --status <uuid> [--output-format <fmt>]
 
 Options:
   --isolated, -i <env>  Run in isolated environment (screen, tmux, docker, ssh)
   --attached, -a        Run in attached mode (foreground)
   --detached, -d        Run in detached mode (background)
   --session, -s <name>  Session name for isolation
+  --session-id <uuid>   Session UUID for tracking (auto-generated if not provided)
+  --session-name <uuid> Alias for --session-id
   --image <image>       Docker image (required for docker isolation)
   --endpoint <endpoint> SSH endpoint (required for ssh isolation, e.g., user@host)
   --isolated-user, -u [name]  Create isolated user with same permissions
@@ -324,6 +222,7 @@ Options:
   --keep-alive, -k      Keep isolation environment alive after command exits
   --auto-remove-docker-container  Auto-remove docker container after exit
   --use-command-stream  Use command-stream library for execution (experimental)
+  --status <uuid>       Show status of execution by UUID (--output-format: links-notation|json|text)
   --version, -v         Show version information
 
 Examples:
@@ -373,8 +272,14 @@ Examples:
  * @param {object} options - Wrapper options
  * @param {string} cmd - Command to execute
  * @param {boolean} useCommandStream - Whether to use command-stream for isolation
+ * @param {string} sessionId - Session UUID for tracking
  */
-async function runWithIsolation(options, cmd, useCommandStream = false) {
+async function runWithIsolation(
+  options,
+  cmd,
+  useCommandStream = false,
+  sessionId
+) {
   const environment = options.isolated;
   const mode = getEffectiveMode(options);
   const startTime = getTimestamp();
@@ -391,11 +296,12 @@ async function runWithIsolation(options, cmd, useCommandStream = false) {
   const isWindows = process.platform === 'win32';
   const shell = isWindows ? 'powershell.exe' : process.env.SHELL || '/bin/sh';
 
-  // Create execution record for tracking
+  // Create execution record for tracking with provided session ID
   let executionRecord = null;
   const store = getExecutionStore();
   if (store) {
     executionRecord = new ExecutionRecord({
+      uuid: sessionId, // Use the provided session ID
       command: cmd,
       logPath: logFilePath,
       shell,
@@ -412,6 +318,10 @@ async function runWithIsolation(options, cmd, useCommandStream = false) {
       },
     });
   }
+
+  // Print session UUID at start
+  console.log(sessionId);
+  console.log('');
 
   // Handle --isolated-user option: create a new user with same permissions
   let createdUser = null;
@@ -465,9 +375,6 @@ async function runWithIsolation(options, cmd, useCommandStream = false) {
 
   // Print start message (unified format)
   console.log(`[${startTime}] Starting: ${cmd}`);
-  if (executionRecord && config.verbose) {
-    console.log(`[Tracking] Execution ID: ${executionRecord.uuid}`);
-  }
   console.log('');
 
   // Log isolation info
@@ -597,14 +504,19 @@ async function runWithIsolation(options, cmd, useCommandStream = false) {
     );
   }
 
+  // Print session UUID at end
+  console.log('');
+  console.log(sessionId);
+
   process.exit(exitCode);
 }
 
 /**
  * Run command directly (without isolation) - original synchronous version
  * @param {string} cmd - Command to execute
+ * @param {string} sessionId - Session UUID for tracking
  */
-function runDirect(cmd) {
+function runDirect(cmd, sessionId) {
   // Get the command name (first word of the actual command to execute)
   const commandName = cmd.split(' ')[0];
 
@@ -626,11 +538,12 @@ function runDirect(cmd) {
   const runtimeVersion =
     typeof Bun !== 'undefined' ? Bun.version : process.version;
 
-  // Create execution record for tracking
+  // Create execution record for tracking with provided session ID
   let executionRecord = null;
   const store = getExecutionStore();
   if (store) {
     executionRecord = new ExecutionRecord({
+      uuid: sessionId, // Use the provided session ID
       command: cmd,
       logPath: logFilePath,
       shell,
@@ -647,9 +560,7 @@ function runDirect(cmd) {
   // Log header
   logContent += `=== Start Command Log ===\n`;
   logContent += `Timestamp: ${startTime}\n`;
-  if (executionRecord) {
-    logContent += `Execution ID: ${executionRecord.uuid}\n`;
-  }
+  logContent += `Session ID: ${sessionId}\n`;
   if (substitutionResult && substitutionResult.matched) {
     logContent += `Original Input: ${parsedCommand}\n`;
     logContent += `Substituted Command: ${cmd}\n`;
@@ -663,15 +574,16 @@ function runDirect(cmd) {
   logContent += `Working Directory: ${process.cwd()}\n`;
   logContent += `${'='.repeat(50)}\n\n`;
 
+  // Print session UUID at start
+  console.log(sessionId);
+  console.log('');
+
   // Print start message to console
   if (substitutionResult && substitutionResult.matched) {
     console.log(`[${startTime}] Input: ${parsedCommand}`);
     console.log(`[${startTime}] Executing: ${cmd}`);
   } else {
     console.log(`[${startTime}] Starting: ${cmd}`);
-  }
-  if (executionRecord && config.verbose) {
-    console.log(`[Tracking] Execution ID: ${executionRecord.uuid}`);
   }
   console.log('');
 
@@ -745,6 +657,9 @@ function runDirect(cmd) {
     console.log(`[${endTime}] Finished`);
     console.log(`Exit code: ${exitCode}`);
     console.log(`Log saved: ${logFilePath}`);
+    console.log('');
+    // Print session UUID at end
+    console.log(sessionId);
 
     // If command failed, try to auto-report
     if (exitCode !== 0) {
@@ -790,6 +705,9 @@ function runDirect(cmd) {
     console.log(`[${endTime}] Finished`);
     console.log(`Exit code: 1`);
     console.log(`Log saved: ${logFilePath}`);
+    console.log('');
+    // Print session UUID at end
+    console.log(sessionId);
 
     handleFailure(config, commandName, cmd, 1, logFilePath);
 
@@ -802,8 +720,14 @@ function runDirect(cmd) {
  * @param {string} cmd - Command to execute
  * @param {string} parsedCmd - Original parsed command
  * @param {object} subResult - Result from substitution engine
+ * @param {string} sessionId - Session UUID for tracking
  */
-async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
+async function runDirectWithCommandStream(
+  cmd,
+  parsedCmd,
+  subResult,
+  sessionId
+) {
   // Lazy load command-stream
   const { getCommandStream } = require('../lib/command-stream');
   const { $, raw } = await getCommandStream();
@@ -828,11 +752,12 @@ async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
   const runtimeVersion =
     typeof Bun !== 'undefined' ? Bun.version : process.version;
 
-  // Create execution record for tracking
+  // Create execution record for tracking with provided session ID
   let executionRecord = null;
   const store = getExecutionStore();
   if (store) {
     executionRecord = new ExecutionRecord({
+      uuid: sessionId, // Use the provided session ID
       command: cmd,
       logPath: logFilePath,
       shell,
@@ -850,9 +775,7 @@ async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
   // Log header
   logContent += `=== Start Command Log ===\n`;
   logContent += `Timestamp: ${startTime}\n`;
-  if (executionRecord) {
-    logContent += `Execution ID: ${executionRecord.uuid}\n`;
-  }
+  logContent += `Session ID: ${sessionId}\n`;
   logContent += `Execution Mode: command-stream\n`;
   if (subResult && subResult.matched) {
     logContent += `Original Input: ${parsedCmd}\n`;
@@ -867,6 +790,10 @@ async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
   logContent += `Working Directory: ${process.cwd()}\n`;
   logContent += `${'='.repeat(50)}\n\n`;
 
+  // Print session UUID at start
+  console.log(sessionId);
+  console.log('');
+
   // Print start message to console
   if (subResult && subResult.matched) {
     console.log(`[${startTime}] Input: ${parsedCmd}`);
@@ -875,9 +802,6 @@ async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
     console.log(`[${startTime}] Starting: ${cmd}`);
   }
   console.log('[command-stream] Using command-stream library');
-  if (executionRecord && config.verbose) {
-    console.log(`[Tracking] Execution ID: ${executionRecord.uuid}`);
-  }
   console.log('');
 
   // Save initial execution record (PID will be updated later if available)
@@ -957,6 +881,9 @@ async function runDirectWithCommandStream(cmd, parsedCmd, subResult) {
   console.log(`[${endTime}] Finished`);
   console.log(`Exit code: ${exitCode}`);
   console.log(`Log saved: ${logFilePath}`);
+  console.log('');
+  // Print session UUID at end
+  console.log(sessionId);
 
   // If command failed, try to auto-report
   if (exitCode !== 0) {
