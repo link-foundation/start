@@ -238,22 +238,15 @@ describe('Isolation Resource Cleanup Verification', () => {
   });
 
   describe('docker resource cleanup', () => {
-    // Helper function to check if docker daemon is running
-    function isDockerRunning() {
-      if (!isCommandAvailable('docker')) {
-        return false;
-      }
-      try {
-        execSync('docker info', { stdio: 'ignore', timeout: 5000 });
-        return true;
-      } catch {
-        return false;
-      }
-    }
+    // Use the canRunLinuxDockerImages function from isolation module
+    // to properly detect if Linux containers can run (handles Windows containers mode)
+    const { canRunLinuxDockerImages } = require('../src/lib/isolation');
 
     it('should show docker container as exited after command completes (auto-exit by default)', async () => {
-      if (!isDockerRunning()) {
-        console.log('  Skipping: docker not available or daemon not running');
+      if (!canRunLinuxDockerImages()) {
+        console.log(
+          '  Skipping: docker not available, daemon not running, or Linux containers not supported'
+        );
         return;
       }
 
@@ -325,8 +318,10 @@ describe('Isolation Resource Cleanup Verification', () => {
     });
 
     it('should keep docker container running when keepAlive is true', async () => {
-      if (!isDockerRunning()) {
-        console.log('  Skipping: docker not available or daemon not running');
+      if (!canRunLinuxDockerImages()) {
+        console.log(
+          '  Skipping: docker not available, daemon not running, or Linux containers not supported'
+        );
         return;
       }
 

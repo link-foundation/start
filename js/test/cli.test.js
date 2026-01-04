@@ -13,10 +13,14 @@ const fs = require('fs');
 // Path to the CLI script
 const CLI_PATH = path.join(__dirname, '../src/bin/cli.js');
 
-// Helper to run CLI
+// Timeout for CLI operations - longer on Windows due to cold-start latency
+const CLI_TIMEOUT = process.platform === 'win32' ? 30000 : 10000;
+
+// Helper to run CLI with timeout
 function runCLI(args = []) {
   return spawnSync('bun', [CLI_PATH, ...args], {
     encoding: 'utf8',
+    timeout: CLI_TIMEOUT,
     env: {
       ...process.env,
       START_DISABLE_AUTO_ISSUE: '1',
@@ -29,6 +33,12 @@ describe('CLI version flag', () => {
   it('should display version with --version', () => {
     const result = runCLI(['--version']);
 
+    // Check if process was killed (e.g., due to timeout)
+    assert.notStrictEqual(
+      result.status,
+      null,
+      `Process should complete (was killed with signal: ${result.signal})`
+    );
     assert.strictEqual(result.status, 0, 'Exit code should be 0');
 
     // Check for key elements in version output

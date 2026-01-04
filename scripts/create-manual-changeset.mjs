@@ -41,11 +41,22 @@ const config = makeConfig({
         type: 'string',
         default: getenv('DESCRIPTION', ''),
         describe: 'Description for the changeset',
+      })
+      .option('working-dir', {
+        type: 'string',
+        default: getenv('WORKING_DIR', '.'),
+        describe: 'Working directory containing .changeset folder',
       }),
 });
 
 try {
-  const { bumpType, description: descriptionArg } = config;
+  const { bumpType, description: descriptionArg, workingDir } = config;
+
+  // Change to working directory if specified
+  if (workingDir && workingDir !== '.') {
+    console.log(`Changing to working directory: ${workingDir}`);
+    process.chdir(workingDir);
+  }
 
   // Use provided description or default based on bump type
   const description = descriptionArg || `Manual ${bumpType} release`;

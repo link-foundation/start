@@ -37,11 +37,22 @@ const config = makeConfig({
         type: 'string',
         default: getenv('DESCRIPTION', ''),
         describe: 'Description for the version bump',
+      })
+      .option('working-dir', {
+        type: 'string',
+        default: getenv('WORKING_DIR', '.'),
+        describe: 'Working directory containing package.json',
       }),
 });
 
 try {
-  const { bumpType, description } = config;
+  const { bumpType, description, workingDir } = config;
+
+  // Change to working directory if specified
+  if (workingDir && workingDir !== '.') {
+    console.log(`Changing to working directory: ${workingDir}`);
+    process.chdir(workingDir);
+  }
   const finalDescription = description || `Manual ${bumpType} release`;
 
   if (!bumpType || !['major', 'minor', 'patch'].includes(bumpType)) {
