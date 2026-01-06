@@ -77,6 +77,26 @@ describe('output-blocks module', () => {
       expect(block).toContain('+');
       expect(block).toContain('-');
     });
+
+    it('should include extra lines when provided', () => {
+      const block = createStartBlock({
+        sessionId: 'test-uuid',
+        timestamp: '2025-01-01 00:00:00',
+        command: 'echo hello',
+        extraLines: [
+          '[Isolation] Environment: screen, Mode: attached',
+          '[Isolation] Session: my-session',
+        ],
+      });
+
+      expect(block).toContain('╭');
+      expect(block).toContain('╰');
+      expect(block).toContain('Session ID: test-uuid');
+      expect(block).toContain(
+        '[Isolation] Environment: screen, Mode: attached'
+      );
+      expect(block).toContain('[Isolation] Session: my-session');
+    });
   });
 
   describe('createFinishBlock', () => {
@@ -109,6 +129,26 @@ describe('output-blocks module', () => {
 
       expect(block).toContain('Finished at 2025-01-01 00:00:01');
       expect(block).not.toContain('seconds');
+    });
+
+    it('should include result message when provided', () => {
+      const block = createFinishBlock({
+        sessionId: 'test-uuid-1234',
+        timestamp: '2025-01-01 00:00:01',
+        exitCode: 0,
+        logPath: '/tmp/test.log',
+        durationMs: 17,
+        resultMessage: 'Screen session "my-session" exited with code 0',
+      });
+
+      expect(block).toContain('╭');
+      expect(block).toContain('╰');
+      expect(block).toContain('Screen session');
+      expect(block).toContain('exited with code 0');
+      expect(block).toContain('Session ID: test-uuid-1234');
+      expect(block).toContain(
+        'Finished at 2025-01-01 00:00:01 in 0.017 seconds'
+      );
     });
   });
 

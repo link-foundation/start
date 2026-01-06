@@ -964,6 +964,9 @@ function canRunLinuxDockerImages() {
   }
 }
 
+// Re-export getDefaultDockerImage from docker-utils for backwards compatibility
+const { getDefaultDockerImage } = require('./docker-utils');
+
 module.exports = {
   isCommandAvailable,
   hasTTY,
@@ -985,4 +988,5 @@ module.exports = {
   supportsLogfileOption,
   resetScreenVersionCache,
   canRunLinuxDockerImages,
+  getDefaultDockerImage,
 };

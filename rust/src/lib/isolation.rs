@@ -751,6 +751,78 @@ fn is_debug() -> bool {
     env::var("START_DEBUG").is_ok_and(|v| v == "1" || v == "true")
 }
 
+/// Get the default Docker image based on the host operating system
+/// Returns an image that matches the current OS as closely as possible:
+/// - macOS: Uses alpine (since macOS cannot run in Docker)
+/// - Ubuntu/Debian: Uses ubuntu:latest
+/// - Arch Linux: Uses archlinux:latest
+/// - Other Linux: Uses the detected distro or alpine as fallback
+/// - Windows: Uses alpine (Windows containers have limited support)
+pub fn get_default_docker_image() -> String {
+    #[cfg(target_os = "macos")]
+    {
+        // macOS cannot run in Docker containers, use alpine as lightweight alternative
+        return "alpine:latest".to_string();
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        // Windows containers have limited support, use alpine for Linux containers
+        return "alpine:latest".to_string();
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        // Try to detect the Linux distribution
+        if let Ok(os_release) = fs::read_to_string("/etc/os-release") {
+            // Check for Ubuntu
+            if os_release.contains("ID=ubuntu")
+                || os_release.contains("ID_LIKE=ubuntu")
+                || os_release.contains("ID_LIKE=debian ubuntu")
+            {
+                return "ubuntu:latest".to_string();
+            }
+
+            // Check for Debian
+            if os_release.contains("ID=debian") || os_release.contains("ID_LIKE=debian") {
+                return "debian:latest".to_string();
+            }
+
+            // Check for Arch Linux
+            if os_release.contains("ID=arch") || os_release.contains("ID_LIKE=arch") {
+                return "archlinux:latest".to_string();
+            }
+
+            // Check for Fedora
+            if os_release.contains("ID=fedora") {
+                return "fedora:latest".to_string();
+            }
+
+            // Check for CentOS/RHEL
+            if os_release.contains("ID=centos")
+                || os_release.contains("ID=rhel")
+                || os_release.contains("ID_LIKE=rhel")
+            {
+                return "centos:latest".to_string();
+            }
+
+            // Check for Alpine
+            if os_release.contains("ID=alpine") {
+                return "alpine:latest".to_string();
+            }
+        }
+
+        // Default fallback: use alpine as a lightweight, universal option
+        "alpine:latest".to_string()
+    }
+
+    // Fallback for other platforms
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    {
+        "alpine:latest".to_string()
+    }
+}
+
 // Stub for atty crate functionality
 mod atty {
     pub enum Stream {

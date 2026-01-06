@@ -21,7 +21,7 @@ use start_command::{
         ExecutionRecord, ExecutionRecordOptions, ExecutionStore, ExecutionStoreOptions,
     },
     failure_handler::{handle_failure, Config as FailureConfig},
-    get_timestamp,
+    get_default_docker_image, get_timestamp,
     isolation::{run_as_isolated_user, run_isolated, IsolationOptions},
     output_blocks::{FinishBlockOptions, StartBlockOptions},
     status_formatter::query_status,
@@ -356,18 +356,12 @@ fn run_with_isolation(
     let start_time = get_timestamp();
     let start_instant = std::time::Instant::now();
 
-    // Print start block with session ID
-    println!(
-        "{}",
-        create_start_block(&StartBlockOptions {
-            session_id,
-            timestamp: &start_time,
-            command,
-            style: None,
-            width: None,
-        })
-    );
-    println!();
+    // Use default Docker image if docker isolation is selected but no image specified
+    let effective_image = if environment == Some("docker") && wrapper_options.image.is_none() {
+        Some(get_default_docker_image())
+    } else {
+        wrapper_options.image.clone()
+    };
 
     // Create log file path
     let log_file_path = create_log_path(environment.unwrap_or("direct"));
@@ -377,6 +371,9 @@ fn run_with_isolation(
         .session
         .clone()
         .unwrap_or_else(|| generate_session_name(Some(environment.unwrap_or("start"))));
+
+    // Collect extra lines for start block
+    let mut extra_lines: Vec<String> = Vec::new();
 
     // Handle --isolated-user option
     let mut created_user: Option<String> = None;
@@ -397,12 +394,12 @@ fn run_with_isolation(
             .filter(|g| current_groups.iter().any(|cg| cg == *g))
             .collect();
 
-        println!("[User Isolation] Creating new user with same permissions...");
+        extra_lines.push("[User Isolation] Creating new user...".to_string());
         if !important_groups.is_empty() {
-            println!(
+            extra_lines.push(format!(
                 "[User Isolation] Inheriting groups: {}",
                 important_groups.join(", ")
-            );
+            ));
         }
 
         // Create the isolated user
@@ -420,36 +417,56 @@ fn run_with_isolation(
         }
 
         let username = user_result.username.unwrap();
-        println!("[User Isolation] Created user: {}", username);
+        extra_lines.push(format!("[User Isolation] Created user: {}", username));
         if let Some(groups) = &user_result.groups {
             if !groups.is_empty() {
-                println!("[User Isolation] User groups: {}", groups.join(", "));
+                extra_lines.push(format!(
+                    "[User Isolation] User groups: {}",
+                    groups.join(", ")
+                ));
             }
         }
         if wrapper_options.keep_user {
-            println!("[User Isolation] User will be kept after command completes");
+            extra_lines.push("[User Isolation] User will be kept after completion".to_string());
         }
-        println!();
 
         created_user = Some(username);
     }
 
-    // Log isolation info
+    // Add isolation info to extra lines
     if let Some(env) = environment {
-        println!("[Isolation] Environment: {}, Mode: {}", env, mode);
+        extra_lines.push(format!("[Isolation] Environment: {}, Mode: {}", env, mode));
     }
     if let Some(ref session) = wrapper_options.session {
-        println!("[Isolation] Session: {}", session);
+        extra_lines.push(format!("[Isolation] Session: {}", session));
     }
-    if let Some(ref image) = wrapper_options.image {
-        println!("[Isolation] Image: {}", image);
+    if let Some(ref image) = effective_image {
+        extra_lines.push(format!("[Isolation] Image: {}", image));
     }
     if let Some(ref endpoint) = wrapper_options.endpoint {
-        println!("[Isolation] Endpoint: {}", endpoint);
+        extra_lines.push(format!("[Isolation] Endpoint: {}", endpoint));
     }
     if let Some(ref user) = created_user {
-        println!("[Isolation] User: {} (isolated)", user);
+        extra_lines.push(format!("[Isolation] User: {} (isolated)", user));
     }
+
+    // Print start block with session ID and isolation info
+    let extra_lines_refs: Vec<&str> = extra_lines.iter().map(|s| s.as_str()).collect();
+    println!(
+        "{}",
+        create_start_block(&StartBlockOptions {
+            session_id,
+            timestamp: &start_time,
+            command,
+            extra_lines: if extra_lines.is_empty() {
+                None
+            } else {
+                Some(extra_lines_refs)
+            },
+            style: None,
+            width: None,
+        })
+    );
     println!();
 
     // Create log header
@@ -458,7 +475,7 @@ fn run_with_isolation(
         environment: environment.unwrap_or("direct").to_string(),
         mode: mode.to_string(),
         session_name: session_name.clone(),
-        image: wrapper_options.image.clone(),
+        image: effective_image.clone(),
         user: created_user.clone(),
         start_time: start_time.clone(),
     });
@@ -467,7 +484,7 @@ fn run_with_isolation(
         // Run in isolation backend
         let options = IsolationOptions {
             session: Some(session_name.clone()),
-            image: wrapper_options.image.clone(),
+            image: effective_image.clone(),
             endpoint: wrapper_options.endpoint.clone(),
             detached: mode == "detached",
             user: created_user.clone(),
@@ -501,14 +518,10 @@ fn run_with_isolation(
     // Write log file
     write_log_file(&log_file_path, &log_content);
 
-    // Print result
-    println!();
-    println!("{}", result.message);
-
     // Cleanup: delete the created user if we created one (unless --keep-user)
+    // This output goes to stdout but NOT inside the boxes - it's operational info
     if let Some(ref user) = created_user {
         if !wrapper_options.keep_user {
-            println!();
             println!("[User Isolation] Cleaning up user: {}", user);
             let delete_result = delete_user(user, &DeleteUserOptions { remove_home: true });
             if delete_result.success {
@@ -516,18 +529,18 @@ fn run_with_isolation(
             } else {
                 println!("[User Isolation] Warning: {}", delete_result.message);
             }
-        } else {
             println!();
+        } else {
             println!(
                 "[User Isolation] Keeping user: {} (use 'sudo userdel -r {}' to delete)",
                 user, user
             );
+            println!();
         }
     }
 
-    // Print finish block
+    // Print finish block with result message inside
     let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
-    println!();
     println!(
         "{}",
         create_finish_block(&FinishBlockOptions {
@@ -536,6 +549,7 @@ fn run_with_isolation(
             exit_code,
             log_path: &log_file_path.to_string_lossy(),
             duration_ms: Some(duration_ms),
+            result_message: Some(&result.message),
             style: None,
             width: None,
         })
@@ -566,13 +580,14 @@ fn run_direct(
         command.to_string()
     };
 
-    // Print start block with session ID
+    // Print start block with session ID (no extra lines for direct execution)
     println!(
         "{}",
         create_start_block(&StartBlockOptions {
             session_id,
             timestamp: &start_time,
             command: &display_command,
+            extra_lines: None,
             style: None,
             width: None,
         })
@@ -711,7 +726,7 @@ fn run_direct(
         let _ = file.write_all(log_content.as_bytes());
     }
 
-    // Print finish block
+    // Print finish block (no result_message for direct execution)
     let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
     println!();
     println!(
@@ -722,6 +737,7 @@ fn run_direct(
             exit_code,
             log_path: &log_file_path.to_string_lossy(),
             duration_ms: Some(duration_ms),
+            result_message: None,
             style: None,
             width: None,
         })

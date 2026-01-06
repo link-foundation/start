@@ -144,6 +144,7 @@ function createBottomBorder(width, style) {
  * @param {string} options.sessionId - Session UUID
  * @param {string} options.timestamp - Timestamp string
  * @param {string} options.command - Command being executed
+ * @param {string[]} [options.extraLines] - Additional lines to show after the command line
  * @param {string} [options.style] - Box style name
  * @param {number} [options.width] - Box width
  * @returns {string} Formatted start block
@@ -153,6 +154,7 @@ function createStartBlock(options) {
     sessionId,
     timestamp,
     command,
+    extraLines = [],
     style: styleName = DEFAULT_STYLE,
     width = DEFAULT_WIDTH,
   } = options;
@@ -165,6 +167,12 @@ function createStartBlock(options) {
   lines.push(
     createBorderedLine(`Starting at ${timestamp}: ${command}`, width, style)
   );
+
+  // Add extra lines (e.g., isolation info, docker image, etc.)
+  for (const line of extraLines) {
+    lines.push(createBorderedLine(line, width, style));
+  }
+
   lines.push(createBottomBorder(width, style));
 
   return lines.join('\n');
@@ -197,6 +205,7 @@ function formatDuration(durationMs) {
  * @param {number} options.exitCode - Exit code
  * @param {string} options.logPath - Path to log file
  * @param {number} [options.durationMs] - Duration in milliseconds
+ * @param {string} [options.resultMessage] - Result message (e.g., "Screen session exited...")
  * @param {string} [options.style] - Box style name
  * @param {number} [options.width] - Box width
  * @returns {string} Formatted finish block
@@ -208,6 +217,7 @@ function createFinishBlock(options) {
     exitCode,
     logPath,
     durationMs,
+    resultMessage,
     style: styleName = DEFAULT_STYLE,
     width = DEFAULT_WIDTH,
   } = options;
@@ -222,6 +232,12 @@ function createFinishBlock(options) {
   }
 
   lines.push(createTopBorder(width, style));
+
+  // Add result message first if provided (e.g., "Docker container exited...")
+  if (resultMessage) {
+    lines.push(createBorderedLine(resultMessage, width, style));
+  }
+
   lines.push(createBorderedLine(finishedMsg, width, style));
   lines.push(createBorderedLine(`Exit code: ${exitCode}`, width, style));
   lines.push(createBorderedLine(`Log: ${logPath}`, width, style));

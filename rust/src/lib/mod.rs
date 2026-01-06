@@ -22,9 +22,9 @@ pub use execution_store::{
 };
 pub use failure_handler::{handle_failure, Config as FailureConfig};
 pub use isolation::{
-    create_log_footer, create_log_header, create_log_path, get_timestamp, is_command_available,
-    run_as_isolated_user, run_isolated, write_log_file, IsolationOptions, IsolationResult,
-    LogHeaderParams,
+    create_log_footer, create_log_header, create_log_path, get_default_docker_image, get_timestamp,
+    is_command_available, run_as_isolated_user, run_isolated, write_log_file, IsolationOptions,
+    IsolationResult, LogHeaderParams,
 };
 pub use output_blocks::{
     create_finish_block, create_start_block, escape_for_links_notation, format_duration,
