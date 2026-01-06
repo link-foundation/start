@@ -147,6 +147,7 @@ pub struct StartBlockOptions<'a> {
     pub session_id: &'a str,
     pub timestamp: &'a str,
     pub command: &'a str,
+    pub extra_lines: Option<Vec<&'a str>>,
     pub style: Option<&'a str>,
     pub width: Option<usize>,
 }
@@ -169,6 +170,14 @@ pub fn create_start_block(options: &StartBlockOptions) -> String {
         width,
         &style,
     ));
+
+    // Add extra lines (e.g., isolation info, docker image, etc.)
+    if let Some(ref extra) = options.extra_lines {
+        for line in extra {
+            lines.push(create_bordered_line(line, width, &style));
+        }
+    }
+
     lines.push(create_bottom_border(width, &style));
 
     lines.join("\n")
@@ -196,6 +205,7 @@ pub struct FinishBlockOptions<'a> {
     pub exit_code: i32,
     pub log_path: &'a str,
     pub duration_ms: Option<f64>,
+    pub result_message: Option<&'a str>,
     pub style: Option<&'a str>,
     pub width: Option<usize>,
 }
@@ -219,6 +229,12 @@ pub fn create_finish_block(options: &FinishBlockOptions) -> String {
     };
 
     lines.push(create_top_border(width, &style));
+
+    // Add result message first if provided (e.g., "Docker container exited...")
+    if let Some(result_msg) = options.result_message {
+        lines.push(create_bordered_line(result_msg, width, &style));
+    }
+
     lines.push(create_bordered_line(&finished_msg, width, &style));
     lines.push(create_bordered_line(
         &format!("Exit code: {}", options.exit_code),

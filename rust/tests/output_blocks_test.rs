@@ -13,6 +13,7 @@ fn test_create_start_block() {
         session_id: "test-uuid",
         timestamp: "2025-01-01 00:00:00",
         command: "echo hello",
+        extra_lines: None,
         style: Some("rounded"),
         width: Some(50),
     });
@@ -24,6 +25,29 @@ fn test_create_start_block() {
 }
 
 #[test]
+fn test_create_start_block_with_extra_lines() {
+    let extra = vec![
+        "[Isolation] Environment: screen, Mode: attached",
+        "[Isolation] Session: my-session",
+    ];
+    let block = create_start_block(&StartBlockOptions {
+        session_id: "test-uuid",
+        timestamp: "2025-01-01 00:00:00",
+        command: "echo hello",
+        extra_lines: Some(extra),
+        style: Some("rounded"),
+        width: Some(60),
+    });
+
+    assert!(block.contains("╭"));
+    assert!(block.contains("╰"));
+    assert!(block.contains("Session ID: test-uuid"));
+    assert!(block.contains("Starting at 2025-01-01 00:00:00: echo hello"));
+    assert!(block.contains("[Isolation] Environment: screen, Mode: attached"));
+    assert!(block.contains("[Isolation] Session: my-session"));
+}
+
+#[test]
 fn test_create_finish_block() {
     let block = create_finish_block(&FinishBlockOptions {
         session_id: "test-uuid",
@@ -31,12 +55,35 @@ fn test_create_finish_block() {
         exit_code: 0,
         log_path: "/tmp/test.log",
         duration_ms: Some(17.0),
+        result_message: None,
         style: Some("rounded"),
         width: Some(60),
     });
 
     assert!(block.contains("╭"));
     assert!(block.contains("╰"));
+    assert!(block.contains("Finished at 2025-01-01 00:00:01 in 0.017 seconds"));
+    assert!(block.contains("Exit code: 0"));
+    assert!(block.contains("Session ID: test-uuid"));
+}
+
+#[test]
+fn test_create_finish_block_with_result_message() {
+    let block = create_finish_block(&FinishBlockOptions {
+        session_id: "test-uuid",
+        timestamp: "2025-01-01 00:00:01",
+        exit_code: 0,
+        log_path: "/tmp/test.log",
+        duration_ms: Some(17.0),
+        result_message: Some("Screen session \"my-session\" exited with code 0"),
+        style: Some("rounded"),
+        width: Some(60),
+    });
+
+    assert!(block.contains("╭"));
+    assert!(block.contains("╰"));
+    assert!(block.contains("Screen session"));
+    assert!(block.contains("exited with code 0"));
     assert!(block.contains("Finished at 2025-01-01 00:00:01 in 0.017 seconds"));
     assert!(block.contains("Exit code: 0"));
     assert!(block.contains("Session ID: test-uuid"));
@@ -50,6 +97,7 @@ fn test_create_finish_block_without_duration() {
         exit_code: 0,
         log_path: "/tmp/test.log",
         duration_ms: None,
+        result_message: None,
         style: Some("rounded"),
         width: Some(50),
     });

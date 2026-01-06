@@ -13,6 +13,7 @@ const {
   getScreenVersion,
   supportsLogfileOption,
   resetScreenVersionCache,
+  getDefaultDockerImage,
 } = require('../src/lib/isolation');
 
 describe('Isolation Module', () => {
@@ -719,6 +720,37 @@ describe('Isolation Runner with Available Backends', () => {
       // Either docker not installed or image required
       assert.ok(
         result.message.includes('docker') || result.message.includes('image')
+      );
+    });
+  });
+});
+
+describe('Default Docker Image Detection', () => {
+  describe('getDefaultDockerImage', () => {
+    it('should return a valid Docker image string', () => {
+      const image = getDefaultDockerImage();
+      assert.ok(image, 'Should return a non-empty string');
+      assert.ok(typeof image === 'string', 'Should return a string');
+    });
+
+    it('should return an image with a tag', () => {
+      const image = getDefaultDockerImage();
+      assert.ok(image.includes(':'), 'Image should have a tag (e.g., :latest)');
+    });
+
+    it('should return a known base image', () => {
+      const image = getDefaultDockerImage();
+      const knownImages = [
+        'alpine:latest',
+        'ubuntu:latest',
+        'debian:latest',
+        'archlinux:latest',
+        'fedora:latest',
+        'centos:latest',
+      ];
+      assert.ok(
+        knownImages.includes(image),
+        `Image '${image}' should be one of the known base images: ${knownImages.join(', ')}`
       );
     });
   });

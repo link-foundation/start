@@ -22,6 +22,7 @@ const {
   createLogFooter,
   writeLogFile,
   createLogPath,
+  getDefaultDockerImage,
 } = require('../lib/isolation');
 const {
   createIsolatedUser,
@@ -286,6 +287,12 @@ async function runWithIsolation(
   const startTime = getTimestamp();
   const startTimeMs = Date.now();
 
+  // Use default Docker image if docker isolation is selected but no image specified
+  let effectiveImage = options.image;
+  if (environment === 'docker' && !effectiveImage) {
+    effectiveImage = getDefaultDockerImage();
+  }
+
   // Create log file path
   const logFilePath = createLogPath(environment || 'direct');
 
@@ -298,38 +305,8 @@ async function runWithIsolation(
   const isWindows = process.platform === 'win32';
   const shell = isWindows ? 'powershell.exe' : process.env.SHELL || '/bin/sh';
 
-  // Create execution record for tracking with provided session ID
-  let executionRecord = null;
-  const store = getExecutionStore();
-  if (store) {
-    executionRecord = new ExecutionRecord({
-      uuid: sessionId, // Use the provided session ID
-      command: cmd,
-      logPath: logFilePath,
-      shell,
-      workingDirectory: process.cwd(),
-      options: {
-        isolated: environment,
-        isolationMode: mode,
-        sessionName,
-        image: options.image,
-        endpoint: options.endpoint,
-        user: options.user,
-        keepAlive: options.keepAlive,
-        useCommandStream,
-      },
-    });
-  }
-
-  // Print start block with session ID
-  console.log(
-    createStartBlock({
-      sessionId,
-      timestamp: startTime,
-      command: cmd,
-    })
-  );
-  console.log('');
+  // Collect isolation info lines for start block
+  const extraLines = [];
 
   // Handle --isolated-user option: create a new user with same permissions
   let createdUser = null;
@@ -352,9 +329,9 @@ async function runWithIsolation(
       currentGroups.includes(g)
     );
 
-    console.log(`[User Isolation] Creating new user with same permissions...`);
+    extraLines.push('[User Isolation] Creating new user...');
     if (importantGroups.length > 0) {
-      console.log(
+      extraLines.push(
         `[User Isolation] Inheriting groups: ${importantGroups.join(', ')}`
       );
     }
@@ -369,37 +346,69 @@ async function runWithIsolation(
     }
 
     createdUser = userResult.username;
-    console.log(`[User Isolation] Created user: ${createdUser}`);
+    extraLines.push(`[User Isolation] Created user: ${createdUser}`);
     if (userResult.groups && userResult.groups.length > 0) {
-      console.log(
+      extraLines.push(
         `[User Isolation] User groups: ${userResult.groups.join(', ')}`
       );
     }
     if (options.keepUser) {
-      console.log(`[User Isolation] User will be kept after command completes`);
+      extraLines.push('[User Isolation] User will be kept after completion');
     }
-    console.log('');
   }
 
-  // Log isolation info
+  // Add isolation info to extra lines
   if (environment) {
-    console.log(`[Isolation] Environment: ${environment}, Mode: ${mode}`);
+    extraLines.push(`[Isolation] Environment: ${environment}, Mode: ${mode}`);
   }
   if (options.session) {
-    console.log(`[Isolation] Session: ${options.session}`);
+    extraLines.push(`[Isolation] Session: ${options.session}`);
   }
-  if (options.image) {
-    console.log(`[Isolation] Image: ${options.image}`);
+  if (effectiveImage) {
+    extraLines.push(`[Isolation] Image: ${effectiveImage}`);
   }
   if (options.endpoint) {
-    console.log(`[Isolation] Endpoint: ${options.endpoint}`);
+    extraLines.push(`[Isolation] Endpoint: ${options.endpoint}`);
   }
   if (createdUser) {
-    console.log(`[Isolation] User: ${createdUser} (isolated)`);
+    extraLines.push(`[Isolation] User: ${createdUser} (isolated)`);
   }
   if (useCommandStream) {
-    console.log(`[Isolation] Using command-stream library`);
+    extraLines.push('[Isolation] Using command-stream library');
   }
+
+  // Create execution record for tracking with provided session ID
+  let executionRecord = null;
+  const store = getExecutionStore();
+  if (store) {
+    executionRecord = new ExecutionRecord({
+      uuid: sessionId, // Use the provided session ID
+      command: cmd,
+      logPath: logFilePath,
+      shell,
+      workingDirectory: process.cwd(),
+      options: {
+        isolated: environment,
+        isolationMode: mode,
+        sessionName,
+        image: effectiveImage,
+        endpoint: options.endpoint,
+        user: options.user,
+        keepAlive: options.keepAlive,
+        useCommandStream,
+      },
+    });
+  }
+
+  // Print start block with session ID and isolation info
+  console.log(
+    createStartBlock({
+      sessionId,
+      timestamp: startTime,
+      command: cmd,
+      extraLines,
+    })
+  );
   console.log('');
 
   // Save initial execution record
@@ -421,7 +430,7 @@ async function runWithIsolation(
     environment: environment || 'direct',
     mode,
     sessionName,
-    image: options.image,
+    image: effectiveImage,
     user: createdUser,
     startTime,
   });
@@ -442,7 +451,7 @@ async function runWithIsolation(
     // Future: Add command-stream support with raw() function for multiplexers
     result = await runIsolated(environment, cmd, {
       session: options.session,
-      image: options.image,
+      image: effectiveImage,
       endpoint: options.endpoint,
       detached: mode === 'detached',
       user: createdUser,
@@ -483,30 +492,26 @@ async function runWithIsolation(
     }
   }
 
-  // Print result
-  console.log('');
-  console.log(result.message);
-
   // Cleanup: delete the created user if we created one (unless --keep-user)
+  // This output goes to stdout but NOT inside the boxes - it's operational info
   if (createdUser && !options.keepUser) {
-    console.log('');
     console.log(`[User Isolation] Cleaning up user: ${createdUser}`);
     const deleteResult = deleteUser(createdUser, { removeHome: true });
     if (deleteResult.success) {
-      console.log(`[User Isolation] User deleted successfully`);
+      console.log('[User Isolation] User deleted successfully');
     } else {
       console.log(`[User Isolation] Warning: ${deleteResult.message}`);
     }
-  } else if (createdUser && options.keepUser) {
     console.log('');
+  } else if (createdUser && options.keepUser) {
     console.log(
       `[User Isolation] Keeping user: ${createdUser} (use 'sudo userdel -r ${createdUser}' to delete)`
     );
+    console.log('');
   }
 
-  // Print finish block
+  // Print finish block with result message inside
   const durationMs = Date.now() - startTimeMs;
-  console.log('');
   console.log(
     createFinishBlock({
       sessionId,
@@ -514,6 +519,7 @@ async function runWithIsolation(
       exitCode,
       logPath: logFilePath,
       durationMs,
+      resultMessage: result.message,
     })
   );
 
