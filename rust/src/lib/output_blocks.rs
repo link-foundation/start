@@ -108,7 +108,12 @@ fn pad_text(text: &str, width: usize, allow_overflow: bool) -> String {
 
 /// Create a bordered line with text
 /// If allow_overflow is true, long text is not truncated (for copyable content)
-fn create_bordered_line(text: &str, width: usize, style: &BoxStyle, allow_overflow: bool) -> String {
+fn create_bordered_line(
+    text: &str,
+    width: usize,
+    style: &BoxStyle,
+    allow_overflow: bool,
+) -> String {
     if !style.vertical.is_empty() {
         let inner_width = width.saturating_sub(4); // 2 for borders, 2 for padding
         let padded_text = pad_text(text, inner_width, allow_overflow);
