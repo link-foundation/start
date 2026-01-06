@@ -179,9 +179,8 @@ function formatDuration(durationMs) {
   const seconds = durationMs / 1000;
   if (seconds < 0.001) {
     return '0.001';
-  } else if (seconds < 1) {
-    return seconds.toFixed(3);
   } else if (seconds < 10) {
+    // For durations under 10 seconds, show 3 decimal places
     return seconds.toFixed(3);
   } else if (seconds < 100) {
     return seconds.toFixed(2);

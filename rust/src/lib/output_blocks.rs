@@ -179,9 +179,8 @@ pub fn format_duration(duration_ms: f64) -> String {
     let seconds = duration_ms / 1000.0;
     if seconds < 0.001 {
         "0.001".to_string()
-    } else if seconds < 1.0 {
-        format!("{:.3}", seconds)
     } else if seconds < 10.0 {
+        // For durations under 10 seconds, show 3 decimal places
         format!("{:.3}", seconds)
     } else if seconds < 100.0 {
         format!("{:.2}", seconds)
