@@ -444,23 +444,15 @@ describe('Isolation Keep-Alive Behavior', () => {
   });
 
   describe('runInDocker keep-alive messages', () => {
-    // Helper function to check if docker daemon is running
-    function isDockerRunning() {
-      if (!isCommandAvailable('docker')) {
-        return false;
-      }
-      try {
-        // Try to ping the docker daemon
-        execSync('docker info', { stdio: 'ignore', timeout: 5000 });
-        return true;
-      } catch {
-        return false;
-      }
-    }
+    // Use the canRunLinuxDockerImages function from isolation module
+    // to properly detect if Linux containers can run (handles Windows containers mode)
+    const { canRunLinuxDockerImages } = require('../src/lib/isolation');
 
     it('should include auto-exit message by default in detached mode', async () => {
-      if (!isDockerRunning()) {
-        console.log('  Skipping: docker not available or daemon not running');
+      if (!canRunLinuxDockerImages()) {
+        console.log(
+          '  Skipping: docker not available, daemon not running, or Linux containers not supported'
+        );
         return;
       }
 
@@ -487,8 +479,10 @@ describe('Isolation Keep-Alive Behavior', () => {
     });
 
     it('should include keep-alive message when keepAlive is true', async () => {
-      if (!isDockerRunning()) {
-        console.log('  Skipping: docker not available or daemon not running');
+      if (!canRunLinuxDockerImages()) {
+        console.log(
+          '  Skipping: docker not available, daemon not running, or Linux containers not supported'
+        );
         return;
       }
 

@@ -30,14 +30,26 @@ const { makeConfig } = await use('lino-arguments');
 // Parse CLI arguments using lino-arguments
 const config = makeConfig({
   yargs: ({ yargs, getenv }) =>
-    yargs.option('should-pull', {
-      type: 'boolean',
-      default: getenv('SHOULD_PULL', false),
-      describe: 'Pull latest changes before publishing',
-    }),
+    yargs
+      .option('should-pull', {
+        type: 'boolean',
+        default: getenv('SHOULD_PULL', false),
+        describe: 'Pull latest changes before publishing',
+      })
+      .option('working-dir', {
+        type: 'string',
+        default: getenv('WORKING_DIR', '.'),
+        describe: 'Working directory containing package.json',
+      }),
 });
 
-const { shouldPull } = config;
+const { shouldPull, workingDir } = config;
+
+// Change to working directory if specified
+if (workingDir && workingDir !== '.') {
+  console.log(`Changing to working directory: ${workingDir}`);
+  process.chdir(workingDir);
+}
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 10000; // 10 seconds
 

@@ -148,12 +148,13 @@ mod public_exports_tests {
     fn test_execution_record_options_export() {
         // Verify ExecutionRecordOptions is exported
         let options = ExecutionRecordOptions {
+            command: "echo test".to_string(),
             uuid: Some("custom-uuid".to_string()),
             pid: Some(12345),
             log_path: Some("/tmp/test.log".to_string()),
             ..ExecutionRecordOptions::default()
         };
-        let record = ExecutionRecord::with_options("echo test", options);
+        let record = ExecutionRecord::with_options(options);
         assert_eq!(record.uuid, "custom-uuid");
         assert_eq!(record.pid, Some(12345));
     }

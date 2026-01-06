@@ -914,6 +914,56 @@ function runAsIsolatedUser(cmd, username) {
   });
 }
 
+/**
+ * Check if the Docker daemon can run Linux container images
+ * On Windows with Docker Desktop in Windows containers mode,
+ * Linux images like alpine:latest cannot be pulled or run.
+ * @returns {boolean} True if Linux Docker images can be run
+ */
+function canRunLinuxDockerImages() {
+  if (!isCommandAvailable('docker')) {
+    return false;
+  }
+
+  try {
+    // First check if Docker daemon is running
+    execSync('docker info', { stdio: ['pipe', 'pipe', 'pipe'], timeout: 5000 });
+
+    // On Windows, check if Docker is configured for Linux containers
+    if (process.platform === 'win32') {
+      try {
+        const osType = execSync('docker info --format "{{.OSType}}"', {
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+          timeout: 5000,
+        }).trim();
+
+        // Docker must be using Linux containers to run Linux images
+        if (osType !== 'linux') {
+          if (DEBUG) {
+            console.log(
+              `[DEBUG] Docker is running in ${osType} containers mode, cannot run Linux images`
+            );
+          }
+          return false;
+        }
+      } catch {
+        // If we can't determine the OS type, assume Linux images won't work on Windows
+        if (DEBUG) {
+          console.log(
+            '[DEBUG] Could not determine Docker OS type, assuming Linux images unavailable'
+          );
+        }
+        return false;
+      }
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 module.exports = {
   isCommandAvailable,
   hasTTY,
@@ -934,4 +984,5 @@ module.exports = {
   getScreenVersion,
   supportsLogfileOption,
   resetScreenVersionCache,
+  canRunLinuxDockerImages,
 };

@@ -13,6 +13,7 @@
  */
 
 import { readFileSync, appendFileSync, readdirSync } from 'fs';
+import path from 'path';
 
 // Load use-m dynamically
 const { use } = eval(
@@ -42,17 +43,29 @@ const config = makeConfig({
         type: 'string',
         default: getenv('DESCRIPTION', ''),
         describe: 'Description for instant version bump',
+      })
+      .option('working-dir', {
+        type: 'string',
+        default: getenv('WORKING_DIR', '.'),
+        describe: 'Working directory containing package.json',
       }),
 });
 
-const { mode, bumpType, description } = config;
+const { mode, bumpType, description, workingDir } = config;
 
 // Debug: Log parsed configuration
 console.log('Parsed configuration:', {
   mode,
   bumpType,
   description: description || '(none)',
+  workingDir,
 });
+
+// Change to working directory if specified
+if (workingDir && workingDir !== '.') {
+  console.log(`Changing to working directory: ${workingDir}`);
+  process.chdir(workingDir);
+}
 
 // Detect if positional arguments were used (common mistake)
 const args = process.argv.slice(2);

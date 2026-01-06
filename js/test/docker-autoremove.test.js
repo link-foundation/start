@@ -21,18 +21,9 @@ async function waitFor(conditionFn, timeout = 5000, interval = 100) {
   return false;
 }
 
-// Helper function to check if docker daemon is running
-function isDockerRunning() {
-  if (!isCommandAvailable('docker')) {
-    return false;
-  }
-  try {
-    execSync('docker info', { stdio: 'ignore', timeout: 5000 });
-    return true;
-  } catch {
-    return false;
-  }
-}
+// Use the canRunLinuxDockerImages function from isolation module
+// to properly detect if Linux containers can run (handles Windows containers mode)
+const { canRunLinuxDockerImages } = require('../src/lib/isolation');
 
 describe('Docker Auto-Remove Container Feature', () => {
   // These tests verify the --auto-remove-docker-container option
@@ -40,8 +31,10 @@ describe('Docker Auto-Remove Container Feature', () => {
 
   describe('auto-remove enabled', () => {
     it('should automatically remove container when autoRemoveDockerContainer is true', async () => {
-      if (!isDockerRunning()) {
-        console.log('  Skipping: docker not available or daemon not running');
+      if (!canRunLinuxDockerImages()) {
+        console.log(
+          '  Skipping: docker not available, daemon not running, or Linux containers not supported'
+        );
         return;
       }
 
@@ -103,8 +96,10 @@ describe('Docker Auto-Remove Container Feature', () => {
 
   describe('auto-remove disabled (default)', () => {
     it('should preserve container filesystem by default (without autoRemoveDockerContainer)', async () => {
-      if (!isDockerRunning()) {
-        console.log('  Skipping: docker not available or daemon not running');
+      if (!canRunLinuxDockerImages()) {
+        console.log(
+          '  Skipping: docker not available, daemon not running, or Linux containers not supported'
+        );
         return;
       }
 
