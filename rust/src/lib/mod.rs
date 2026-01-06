@@ -27,7 +27,7 @@ pub use isolation::{
     LogHeaderParams,
 };
 pub use output_blocks::{
-    create_finish_block, create_start_block, escape_for_links_notation,
+    create_finish_block, create_start_block, escape_for_links_notation, format_duration,
     format_value_for_links_notation, get_box_style, BoxStyle, FinishBlockOptions,
     StartBlockOptions, DEFAULT_WIDTH,
 };

@@ -11,6 +11,7 @@ const {
   getBoxStyle,
   createStartBlock,
   createFinishBlock,
+  formatDuration,
   escapeForLinksNotation,
   formatAsNestedLinksNotation,
 } = require('../src/lib/output-blocks');
@@ -62,7 +63,7 @@ describe('output-blocks module', () => {
       expect(block).toContain('╭');
       expect(block).toContain('╰');
       expect(block).toContain('Session ID: test-uuid-1234');
-      expect(block).toContain('Starting: echo hello');
+      expect(block).toContain('Starting at 2025-01-01 00:00:00: echo hello');
     });
 
     it('should use specified style', () => {
@@ -85,14 +86,50 @@ describe('output-blocks module', () => {
         timestamp: '2025-01-01 00:00:01',
         exitCode: 0,
         logPath: '/tmp/test.log',
+        durationMs: 17,
       });
 
       expect(block).toContain('╭');
       expect(block).toContain('╰');
       expect(block).toContain('Session ID: test-uuid-1234');
-      expect(block).toContain('Finished');
+      expect(block).toContain(
+        'Finished at 2025-01-01 00:00:01 in 0.017 seconds'
+      );
       expect(block).toContain('Exit code: 0');
       expect(block).toContain('Log: /tmp/test.log');
+    });
+
+    it('should create a finish block without duration when not provided', () => {
+      const block = createFinishBlock({
+        sessionId: 'test-uuid-1234',
+        timestamp: '2025-01-01 00:00:01',
+        exitCode: 0,
+        logPath: '/tmp/test.log',
+      });
+
+      expect(block).toContain('Finished at 2025-01-01 00:00:01');
+      expect(block).not.toContain('seconds');
+    });
+  });
+
+  describe('formatDuration', () => {
+    it('should format very small durations', () => {
+      expect(formatDuration(0.5)).toBe('0.001');
+    });
+
+    it('should format millisecond durations', () => {
+      expect(formatDuration(17)).toBe('0.017');
+      expect(formatDuration(500)).toBe('0.500');
+    });
+
+    it('should format second durations', () => {
+      expect(formatDuration(1000)).toBe('1.000');
+      expect(formatDuration(5678)).toBe('5.678');
+    });
+
+    it('should format longer durations with less precision', () => {
+      expect(formatDuration(12345)).toBe('12.35');
+      expect(formatDuration(123456)).toBe('123.5');
     });
   });
 

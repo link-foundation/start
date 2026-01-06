@@ -165,7 +165,7 @@ pub fn create_start_block(options: &StartBlockOptions) -> String {
         &style,
     ));
     lines.push(create_bordered_line(
-        &format!("[{}] Starting: {}", options.timestamp, options.command),
+        &format!("Starting at {}: {}", options.timestamp, options.command),
         width,
         &style,
     ));
@@ -174,12 +174,29 @@ pub fn create_start_block(options: &StartBlockOptions) -> String {
     lines.join("\n")
 }
 
+/// Format duration in seconds with appropriate precision
+pub fn format_duration(duration_ms: f64) -> String {
+    let seconds = duration_ms / 1000.0;
+    if seconds < 0.001 {
+        "0.001".to_string()
+    } else if seconds < 1.0 {
+        format!("{:.3}", seconds)
+    } else if seconds < 10.0 {
+        format!("{:.3}", seconds)
+    } else if seconds < 100.0 {
+        format!("{:.2}", seconds)
+    } else {
+        format!("{:.1}", seconds)
+    }
+}
+
 /// Options for creating a finish block
 pub struct FinishBlockOptions<'a> {
     pub session_id: &'a str,
     pub timestamp: &'a str,
     pub exit_code: i32,
     pub log_path: &'a str,
+    pub duration_ms: Option<f64>,
     pub style: Option<&'a str>,
     pub width: Option<usize>,
 }
@@ -191,12 +208,19 @@ pub fn create_finish_block(options: &FinishBlockOptions) -> String {
 
     let mut lines = Vec::new();
 
+    // Format the finished message with optional duration
+    let finished_msg = if let Some(duration_ms) = options.duration_ms {
+        format!(
+            "Finished at {} in {} seconds",
+            options.timestamp,
+            format_duration(duration_ms)
+        )
+    } else {
+        format!("Finished at {}", options.timestamp)
+    };
+
     lines.push(create_top_border(width, &style));
-    lines.push(create_bordered_line(
-        &format!("[{}] Finished", options.timestamp),
-        width,
-        &style,
-    ));
+    lines.push(create_bordered_line(&finished_msg, width, &style));
     lines.push(create_bordered_line(
         &format!("Exit code: {}", options.exit_code),
         width,
@@ -296,7 +320,7 @@ mod tests {
         assert!(block.contains("╭"));
         assert!(block.contains("╰"));
         assert!(block.contains("Session ID: test-uuid"));
-        assert!(block.contains("Starting: echo hello"));
+        assert!(block.contains("Starting at 2025-01-01 00:00:00: echo hello"));
     }
 
     #[test]
@@ -306,15 +330,43 @@ mod tests {
             timestamp: "2025-01-01 00:00:01",
             exit_code: 0,
             log_path: "/tmp/test.log",
+            duration_ms: Some(17.0),
             style: Some("rounded"),
-            width: Some(50),
+            width: Some(60),
         });
 
         assert!(block.contains("╭"));
         assert!(block.contains("╰"));
-        assert!(block.contains("Finished"));
+        assert!(block.contains("Finished at 2025-01-01 00:00:01 in 0.017 seconds"));
         assert!(block.contains("Exit code: 0"));
         assert!(block.contains("Session ID: test-uuid"));
+    }
+
+    #[test]
+    fn test_create_finish_block_without_duration() {
+        let block = create_finish_block(&FinishBlockOptions {
+            session_id: "test-uuid",
+            timestamp: "2025-01-01 00:00:01",
+            exit_code: 0,
+            log_path: "/tmp/test.log",
+            duration_ms: None,
+            style: Some("rounded"),
+            width: Some(50),
+        });
+
+        assert!(block.contains("Finished at 2025-01-01 00:00:01"));
+        assert!(!block.contains("seconds"));
+    }
+
+    #[test]
+    fn test_format_duration() {
+        assert_eq!(format_duration(0.5), "0.001");
+        assert_eq!(format_duration(17.0), "0.017");
+        assert_eq!(format_duration(500.0), "0.500");
+        assert_eq!(format_duration(1000.0), "1.000");
+        assert_eq!(format_duration(5678.0), "5.678");
+        assert_eq!(format_duration(12345.0), "12.35");
+        assert_eq!(format_duration(123456.0), "123.5");
     }
 
     #[test]

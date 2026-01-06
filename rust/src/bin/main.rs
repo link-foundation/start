@@ -354,6 +354,7 @@ fn run_with_isolation(
     let environment = wrapper_options.isolated.as_deref();
     let mode = get_effective_mode(wrapper_options);
     let start_time = get_timestamp();
+    let start_instant = std::time::Instant::now();
 
     // Print start block with session ID
     println!(
@@ -525,6 +526,7 @@ fn run_with_isolation(
     }
 
     // Print finish block
+    let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
     println!();
     println!(
         "{}",
@@ -533,6 +535,7 @@ fn run_with_isolation(
             timestamp: &end_time,
             exit_code,
             log_path: &log_file_path.to_string_lossy(),
+            duration_ms: Some(duration_ms),
             style: None,
             width: None,
         })
@@ -550,6 +553,7 @@ fn run_direct(
     session_id: &str,
 ) {
     let start_time = get_timestamp();
+    let start_instant = std::time::Instant::now();
 
     // Determine display command (show substitution if applied)
     let display_command = if let Some(sub) = substitution_result {
@@ -708,6 +712,7 @@ fn run_direct(
     }
 
     // Print finish block
+    let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
     println!();
     println!(
         "{}",
@@ -716,6 +721,7 @@ fn run_direct(
             timestamp: &end_time,
             exit_code,
             log_path: &log_file_path.to_string_lossy(),
+            duration_ms: Some(duration_ms),
             style: None,
             width: None,
         })

@@ -163,11 +163,31 @@ function createStartBlock(options) {
   lines.push(createTopBorder(width, style));
   lines.push(createBorderedLine(`Session ID: ${sessionId}`, width, style));
   lines.push(
-    createBorderedLine(`[${timestamp}] Starting: ${command}`, width, style)
+    createBorderedLine(`Starting at ${timestamp}: ${command}`, width, style)
   );
   lines.push(createBottomBorder(width, style));
 
   return lines.join('\n');
+}
+
+/**
+ * Format duration in seconds with appropriate precision
+ * @param {number} durationMs - Duration in milliseconds
+ * @returns {string} Formatted duration string
+ */
+function formatDuration(durationMs) {
+  const seconds = durationMs / 1000;
+  if (seconds < 0.001) {
+    return '0.001';
+  } else if (seconds < 1) {
+    return seconds.toFixed(3);
+  } else if (seconds < 10) {
+    return seconds.toFixed(3);
+  } else if (seconds < 100) {
+    return seconds.toFixed(2);
+  } else {
+    return seconds.toFixed(1);
+  }
 }
 
 /**
@@ -177,6 +197,7 @@ function createStartBlock(options) {
  * @param {string} options.timestamp - Timestamp string
  * @param {number} options.exitCode - Exit code
  * @param {string} options.logPath - Path to log file
+ * @param {number} [options.durationMs] - Duration in milliseconds
  * @param {string} [options.style] - Box style name
  * @param {number} [options.width] - Box width
  * @returns {string} Formatted finish block
@@ -187,6 +208,7 @@ function createFinishBlock(options) {
     timestamp,
     exitCode,
     logPath,
+    durationMs,
     style: styleName = DEFAULT_STYLE,
     width = DEFAULT_WIDTH,
   } = options;
@@ -194,8 +216,14 @@ function createFinishBlock(options) {
   const style = getBoxStyle(styleName);
   const lines = [];
 
+  // Format the finished message with optional duration
+  let finishedMsg = `Finished at ${timestamp}`;
+  if (durationMs !== undefined && durationMs !== null) {
+    finishedMsg += ` in ${formatDuration(durationMs)} seconds`;
+  }
+
   lines.push(createTopBorder(width, style));
-  lines.push(createBorderedLine(`[${timestamp}] Finished`, width, style));
+  lines.push(createBorderedLine(finishedMsg, width, style));
   lines.push(createBorderedLine(`Exit code: ${exitCode}`, width, style));
   lines.push(createBorderedLine(`Log: ${logPath}`, width, style));
   lines.push(createBorderedLine(`Session ID: ${sessionId}`, width, style));
@@ -324,6 +352,7 @@ module.exports = {
   createBottomBorder,
   createStartBlock,
   createFinishBlock,
+  formatDuration,
   escapeForLinksNotation,
   formatAsNestedLinksNotation,
 };

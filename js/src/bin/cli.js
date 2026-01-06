@@ -284,6 +284,7 @@ async function runWithIsolation(
   const environment = options.isolated;
   const mode = getEffectiveMode(options);
   const startTime = getTimestamp();
+  const startTimeMs = Date.now();
 
   // Create log file path
   const logFilePath = createLogPath(environment || 'direct');
@@ -504,6 +505,7 @@ async function runWithIsolation(
   }
 
   // Print finish block
+  const durationMs = Date.now() - startTimeMs;
   console.log('');
   console.log(
     createFinishBlock({
@@ -511,6 +513,7 @@ async function runWithIsolation(
       timestamp: endTime,
       exitCode,
       logPath: logFilePath,
+      durationMs,
     })
   );
 
@@ -538,6 +541,7 @@ function runDirect(cmd, sessionId) {
 
   let logContent = '';
   const startTime = getTimestamp();
+  const startTimeMs = Date.now();
 
   // Get runtime information
   const runtime = typeof Bun !== 'undefined' ? 'Bun' : 'Node.js';
@@ -660,6 +664,7 @@ function runDirect(cmd, sessionId) {
     }
 
     // Print finish block
+    const durationMs = Date.now() - startTimeMs;
     console.log('');
     console.log(
       createFinishBlock({
@@ -667,6 +672,7 @@ function runDirect(cmd, sessionId) {
         timestamp: endTime,
         exitCode,
         logPath: logFilePath,
+        durationMs,
       })
     );
 
@@ -681,6 +687,7 @@ function runDirect(cmd, sessionId) {
   // Handle spawn errors
   child.on('error', (err) => {
     const endTime = getTimestamp();
+    const durationMs = Date.now() - startTimeMs;
     const errorMessage = `Error executing command: ${err.message}`;
 
     logContent += `\n${errorMessage}\n`;
@@ -717,6 +724,7 @@ function runDirect(cmd, sessionId) {
         timestamp: endTime,
         exitCode: 1,
         logPath: logFilePath,
+        durationMs,
       })
     );
 
@@ -757,6 +765,7 @@ async function runDirectWithCommandStream(
 
   let logContent = '';
   const startTime = getTimestamp();
+  const startTimeMs = Date.now();
 
   // Get runtime information
   const runtime = typeof Bun !== 'undefined' ? 'Bun' : 'Node.js';
@@ -887,6 +896,7 @@ async function runDirectWithCommandStream(
   }
 
   // Print finish block
+  const durationMs = Date.now() - startTimeMs;
   console.log('');
   console.log(
     createFinishBlock({
@@ -894,6 +904,7 @@ async function runDirectWithCommandStream(
       timestamp: endTime,
       exitCode,
       logPath: logFilePath,
+      durationMs,
     })
   );
 
