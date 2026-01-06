@@ -16,13 +16,14 @@ use start_command::{
     args_parser::{
         generate_session_name, generate_uuid, get_effective_mode, has_isolation, parse_args,
     },
-    create_log_footer, create_log_header, create_log_path,
+    create_finish_block, create_log_footer, create_log_header, create_log_path, create_start_block,
     execution_store::{
         ExecutionRecord, ExecutionRecordOptions, ExecutionStore, ExecutionStoreOptions,
     },
     failure_handler::{handle_failure, Config as FailureConfig},
     get_timestamp,
     isolation::{run_as_isolated_user, run_isolated, IsolationOptions},
+    output_blocks::{FinishBlockOptions, StartBlockOptions},
     status_formatter::query_status,
     substitution::{process_command, ProcessOptions},
     user_manager::{
@@ -353,9 +354,19 @@ fn run_with_isolation(
     let environment = wrapper_options.isolated.as_deref();
     let mode = get_effective_mode(wrapper_options);
     let start_time = get_timestamp();
+    let start_instant = std::time::Instant::now();
 
-    // Print session UUID at start
-    println!("{}", session_id);
+    // Print start block with session ID
+    println!(
+        "{}",
+        create_start_block(&StartBlockOptions {
+            session_id,
+            timestamp: &start_time,
+            command,
+            style: None,
+            width: None,
+        })
+    );
     println!();
 
     // Create log file path
@@ -422,10 +433,6 @@ fn run_with_isolation(
 
         created_user = Some(username);
     }
-
-    // Print start message
-    println!("[{}] Starting: {}", start_time, command);
-    println!();
 
     // Log isolation info
     if let Some(env) = environment {
@@ -497,10 +504,6 @@ fn run_with_isolation(
     // Print result
     println!();
     println!("{}", result.message);
-    println!();
-    println!("[{}] Finished", end_time);
-    println!("Exit code: {}", exit_code);
-    println!("Log saved: {}", log_file_path.display());
 
     // Cleanup: delete the created user if we created one (unless --keep-user)
     if let Some(ref user) = created_user {
@@ -522,9 +525,21 @@ fn run_with_isolation(
         }
     }
 
-    // Print session UUID at end
+    // Print finish block
+    let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
     println!();
-    println!("{}", session_id);
+    println!(
+        "{}",
+        create_finish_block(&FinishBlockOptions {
+            session_id,
+            timestamp: &end_time,
+            exit_code,
+            log_path: &log_file_path.to_string_lossy(),
+            duration_ms: Some(duration_ms),
+            style: None,
+            width: None,
+        })
+    );
 
     process::exit(exit_code);
 }
@@ -537,8 +552,31 @@ fn run_direct(
     substitution_result: Option<&start_command::SubstitutionResult>,
     session_id: &str,
 ) {
-    // Print session UUID at start
-    println!("{}", session_id);
+    let start_time = get_timestamp();
+    let start_instant = std::time::Instant::now();
+
+    // Determine display command (show substitution if applied)
+    let display_command = if let Some(sub) = substitution_result {
+        if sub.matched {
+            format!("{} -> {}", parsed_command, command)
+        } else {
+            command.to_string()
+        }
+    } else {
+        command.to_string()
+    };
+
+    // Print start block with session ID
+    println!(
+        "{}",
+        create_start_block(&StartBlockOptions {
+            session_id,
+            timestamp: &start_time,
+            command: &display_command,
+            style: None,
+            width: None,
+        })
+    );
     println!();
     let command_name = command.split_whitespace().next().unwrap_or(command);
 
@@ -585,7 +623,6 @@ fn run_direct(
     let log_file_path = log_dir.join(&log_filename);
 
     let mut log_content = String::new();
-    let start_time = get_timestamp();
 
     // Create execution tracking record with provided session ID
     let execution_store = config.create_execution_store();
@@ -633,19 +670,6 @@ fn run_direct(
     ));
     log_content.push_str(&format!("{}\n\n", "=".repeat(50)));
 
-    // Print start message
-    if let Some(sub) = substitution_result {
-        if sub.matched {
-            println!("[{}] Input: {}", start_time, parsed_command);
-            println!("[{}] Executing: {}", start_time, command);
-        } else {
-            println!("[{}] Starting: {}", start_time, command);
-        }
-    } else {
-        println!("[{}] Starting: {}", start_time, command);
-    }
-    println!();
-
     // Execute the command
     let output = Command::new(&shell)
         .args(&shell_args)
@@ -687,14 +711,21 @@ fn run_direct(
         let _ = file.write_all(log_content.as_bytes());
     }
 
-    // Print footer
+    // Print finish block
+    let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
     println!();
-    println!("[{}] Finished", end_time);
-    println!("Exit code: {}", exit_code);
-    println!("Log saved: {}", log_file_path.display());
-    println!();
-    // Print session UUID at end
-    println!("{}", session_id);
+    println!(
+        "{}",
+        create_finish_block(&FinishBlockOptions {
+            session_id,
+            timestamp: &end_time,
+            exit_code,
+            log_path: &log_file_path.to_string_lossy(),
+            duration_ms: Some(duration_ms),
+            style: None,
+            width: None,
+        })
+    );
 
     // Update execution record with completion status
     if let Some(ref store) = execution_store {

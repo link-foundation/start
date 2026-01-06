@@ -33,6 +33,7 @@ const { handleFailure } = require('../lib/failure-handler');
 const { ExecutionStore, ExecutionRecord } = require('../lib/execution-store');
 const { queryStatus } = require('../lib/status-formatter');
 const { printVersion } = require('../lib/version');
+const { createStartBlock, createFinishBlock } = require('../lib/output-blocks');
 
 // Configuration from environment variables
 const config = {
@@ -283,6 +284,7 @@ async function runWithIsolation(
   const environment = options.isolated;
   const mode = getEffectiveMode(options);
   const startTime = getTimestamp();
+  const startTimeMs = Date.now();
 
   // Create log file path
   const logFilePath = createLogPath(environment || 'direct');
@@ -319,8 +321,14 @@ async function runWithIsolation(
     });
   }
 
-  // Print session UUID at start
-  console.log(sessionId);
+  // Print start block with session ID
+  console.log(
+    createStartBlock({
+      sessionId,
+      timestamp: startTime,
+      command: cmd,
+    })
+  );
   console.log('');
 
   // Handle --isolated-user option: create a new user with same permissions
@@ -372,10 +380,6 @@ async function runWithIsolation(
     }
     console.log('');
   }
-
-  // Print start message (unified format)
-  console.log(`[${startTime}] Starting: ${cmd}`);
-  console.log('');
 
   // Log isolation info
   if (environment) {
@@ -479,13 +483,9 @@ async function runWithIsolation(
     }
   }
 
-  // Print result and footer (unified format)
+  // Print result
   console.log('');
   console.log(result.message);
-  console.log('');
-  console.log(`[${endTime}] Finished`);
-  console.log(`Exit code: ${exitCode}`);
-  console.log(`Log saved: ${logFilePath}`);
 
   // Cleanup: delete the created user if we created one (unless --keep-user)
   if (createdUser && !options.keepUser) {
@@ -504,9 +504,18 @@ async function runWithIsolation(
     );
   }
 
-  // Print session UUID at end
+  // Print finish block
+  const durationMs = Date.now() - startTimeMs;
   console.log('');
-  console.log(sessionId);
+  console.log(
+    createFinishBlock({
+      sessionId,
+      timestamp: endTime,
+      exitCode,
+      logPath: logFilePath,
+      durationMs,
+    })
+  );
 
   process.exit(exitCode);
 }
@@ -532,6 +541,7 @@ function runDirect(cmd, sessionId) {
 
   let logContent = '';
   const startTime = getTimestamp();
+  const startTimeMs = Date.now();
 
   // Get runtime information
   const runtime = typeof Bun !== 'undefined' ? 'Bun' : 'Node.js';
@@ -574,17 +584,18 @@ function runDirect(cmd, sessionId) {
   logContent += `Working Directory: ${process.cwd()}\n`;
   logContent += `${'='.repeat(50)}\n\n`;
 
-  // Print session UUID at start
-  console.log(sessionId);
-  console.log('');
-
-  // Print start message to console
-  if (substitutionResult && substitutionResult.matched) {
-    console.log(`[${startTime}] Input: ${parsedCommand}`);
-    console.log(`[${startTime}] Executing: ${cmd}`);
-  } else {
-    console.log(`[${startTime}] Starting: ${cmd}`);
-  }
+  // Print start block with session ID
+  const displayCommand =
+    substitutionResult && substitutionResult.matched
+      ? `${parsedCommand} -> ${cmd}`
+      : cmd;
+  console.log(
+    createStartBlock({
+      sessionId,
+      timestamp: startTime,
+      command: displayCommand,
+    })
+  );
   console.log('');
 
   // Execute the command with captured output
@@ -652,14 +663,18 @@ function runDirect(cmd, sessionId) {
       }
     }
 
-    // Print footer to console
+    // Print finish block
+    const durationMs = Date.now() - startTimeMs;
     console.log('');
-    console.log(`[${endTime}] Finished`);
-    console.log(`Exit code: ${exitCode}`);
-    console.log(`Log saved: ${logFilePath}`);
-    console.log('');
-    // Print session UUID at end
-    console.log(sessionId);
+    console.log(
+      createFinishBlock({
+        sessionId,
+        timestamp: endTime,
+        exitCode,
+        logPath: logFilePath,
+        durationMs,
+      })
+    );
 
     // If command failed, try to auto-report
     if (exitCode !== 0) {
@@ -672,6 +687,7 @@ function runDirect(cmd, sessionId) {
   // Handle spawn errors
   child.on('error', (err) => {
     const endTime = getTimestamp();
+    const durationMs = Date.now() - startTimeMs;
     const errorMessage = `Error executing command: ${err.message}`;
 
     logContent += `\n${errorMessage}\n`;
@@ -702,12 +718,15 @@ function runDirect(cmd, sessionId) {
 
     console.error(`\n${errorMessage}`);
     console.log('');
-    console.log(`[${endTime}] Finished`);
-    console.log(`Exit code: 1`);
-    console.log(`Log saved: ${logFilePath}`);
-    console.log('');
-    // Print session UUID at end
-    console.log(sessionId);
+    console.log(
+      createFinishBlock({
+        sessionId,
+        timestamp: endTime,
+        exitCode: 1,
+        logPath: logFilePath,
+        durationMs,
+      })
+    );
 
     handleFailure(config, commandName, cmd, 1, logFilePath);
 
@@ -746,6 +765,7 @@ async function runDirectWithCommandStream(
 
   let logContent = '';
   const startTime = getTimestamp();
+  const startTimeMs = Date.now();
 
   // Get runtime information
   const runtime = typeof Bun !== 'undefined' ? 'Bun' : 'Node.js';
@@ -790,17 +810,16 @@ async function runDirectWithCommandStream(
   logContent += `Working Directory: ${process.cwd()}\n`;
   logContent += `${'='.repeat(50)}\n\n`;
 
-  // Print session UUID at start
-  console.log(sessionId);
-  console.log('');
-
-  // Print start message to console
-  if (subResult && subResult.matched) {
-    console.log(`[${startTime}] Input: ${parsedCmd}`);
-    console.log(`[${startTime}] Executing: ${cmd}`);
-  } else {
-    console.log(`[${startTime}] Starting: ${cmd}`);
-  }
+  // Print start block with session ID
+  const displayCmd =
+    subResult && subResult.matched ? `${parsedCmd} -> ${cmd}` : cmd;
+  console.log(
+    createStartBlock({
+      sessionId,
+      timestamp: startTime,
+      command: displayCmd,
+    })
+  );
   console.log('[command-stream] Using command-stream library');
   console.log('');
 
@@ -876,14 +895,18 @@ async function runDirectWithCommandStream(
     }
   }
 
-  // Print footer to console
+  // Print finish block
+  const durationMs = Date.now() - startTimeMs;
   console.log('');
-  console.log(`[${endTime}] Finished`);
-  console.log(`Exit code: ${exitCode}`);
-  console.log(`Log saved: ${logFilePath}`);
-  console.log('');
-  // Print session UUID at end
-  console.log(sessionId);
+  console.log(
+    createFinishBlock({
+      sessionId,
+      timestamp: endTime,
+      exitCode,
+      logPath: logFilePath,
+      durationMs,
+    })
+  );
 
   // If command failed, try to auto-report
   if (exitCode !== 0) {

@@ -6,6 +6,7 @@ pub mod args_parser;
 pub mod execution_store;
 pub mod failure_handler;
 pub mod isolation;
+pub mod output_blocks;
 pub mod status_formatter;
 pub mod substitution;
 pub mod user_manager;
@@ -24,6 +25,11 @@ pub use isolation::{
     create_log_footer, create_log_header, create_log_path, get_timestamp, is_command_available,
     run_as_isolated_user, run_isolated, write_log_file, IsolationOptions, IsolationResult,
     LogHeaderParams,
+};
+pub use output_blocks::{
+    create_finish_block, create_start_block, escape_for_links_notation, format_duration,
+    format_value_for_links_notation, get_box_style, BoxStyle, FinishBlockOptions,
+    StartBlockOptions, DEFAULT_WIDTH,
 };
 pub use status_formatter::{
     format_record, format_record_as_links_notation, format_record_as_text, query_status,

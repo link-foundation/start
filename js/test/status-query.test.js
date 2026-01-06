@@ -82,9 +82,10 @@ describe('--status query functionality', () => {
       expect(result.exitCode).toBe(0);
       // Should start with UUID on its own line
       expect(result.stdout).toMatch(new RegExp(`^${testRecord.uuid}\\n`));
-      // Should have indented properties
-      expect(result.stdout).toContain(`  uuid "${testRecord.uuid}"`);
-      expect(result.stdout).toContain('  status "executed"');
+      // Should have indented properties (values without special chars are not quoted)
+      expect(result.stdout).toContain(`  uuid ${testRecord.uuid}`);
+      expect(result.stdout).toContain('  status executed');
+      // Command with space should be quoted
       expect(result.stdout).toContain('  command "echo hello world"');
     });
 
@@ -99,7 +100,8 @@ describe('--status query functionality', () => {
       expect(result.exitCode).toBe(0);
       // Should start with UUID on its own line
       expect(result.stdout).toMatch(new RegExp(`^${testRecord.uuid}\\n`));
-      expect(result.stdout).toContain(`  uuid "${testRecord.uuid}"`);
+      // UUID without special chars is not quoted
+      expect(result.stdout).toContain(`  uuid ${testRecord.uuid}`);
     });
   });
 
