@@ -1,5 +1,5 @@
 ---
-'@anthropic-ai/start': minor
+'start-command': minor
 ---
 
 feat: Improve command output formatting with human-readable timestamps and duration
