@@ -511,6 +511,8 @@ async function runWithIsolation(
   }
 
   // Print finish block with result message inside
+  // Add empty line before finish block for visual separation
+  console.log('');
   const durationMs = Date.now() - startTimeMs;
   console.log(
     createFinishBlock({

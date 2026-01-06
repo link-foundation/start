@@ -1,11 +1,4 @@
-/**
- * Isolation Runners for start-command
- *
- * Provides execution of commands in various isolated environments:
- * - screen: GNU Screen terminal multiplexer
- * - tmux: tmux terminal multiplexer
- * - docker: Docker containers
- */
+/** Isolation Runners for start-command (screen, tmux, docker, ssh) */
 
 const { execSync, spawn, spawnSync } = require('child_process');
 const fs = require('fs');
@@ -237,9 +230,13 @@ function runScreenWithLogCapture(command, sessionName, shellInfo, user = null) {
             let output = '';
             try {
               output = fs.readFileSync(logFile, 'utf8');
-              // Display the output
+              // Display the output with surrounding empty lines for consistency
               if (output.trim()) {
                 process.stdout.write(output);
+                // Add trailing newline if output doesn't end with one
+                if (!output.endsWith('\n')) {
+                  process.stdout.write('\n');
+                }
               }
             } catch {
               // Log file might not exist if command was very quick
@@ -281,6 +278,10 @@ function runScreenWithLogCapture(command, sessionName, shellInfo, user = null) {
             output = fs.readFileSync(logFile, 'utf8');
             if (output.trim()) {
               process.stdout.write(output);
+              // Add trailing newline if output doesn't end with one
+              if (!output.endsWith('\n')) {
+                process.stdout.write('\n');
+              }
             }
           } catch {
             // Ignore
