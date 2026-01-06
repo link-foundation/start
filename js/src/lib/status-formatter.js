@@ -7,14 +7,23 @@
  * - Text: Human-readable text format
  */
 
+const {
+  escapeForLinksNotation,
+  formatAsNestedLinksNotation,
+} = require('./output-blocks');
+
 /**
  * Format execution record as Links Notation (indented style)
+ * Uses nested Links notation for object values (like options) instead of JSON
+ *
  * @param {Object} record - The execution record with toObject() method
  * @returns {string} Links Notation formatted string in indented style
  *
  * Output format:
  * <uuid>
  *   <key> "<value>"
+ *   options
+ *     <nested_key> <nested_value>
  *   ...
  */
 function formatRecordAsLinksNotation(record) {
@@ -23,16 +32,27 @@ function formatRecordAsLinksNotation(record) {
 
   for (const [key, value] of Object.entries(obj)) {
     if (value !== null && value !== undefined) {
-      // Format value based on type
-      let formattedValue;
-      if (typeof value === 'object') {
-        formattedValue = JSON.stringify(value);
+      if (key === 'options' && typeof value === 'object') {
+        // Format options as nested Links notation
+        const optionEntries = Object.entries(value).filter(
+          ([, v]) => v !== null && v !== undefined
+        );
+        if (optionEntries.length > 0) {
+          lines.push('  options');
+          for (const [optKey, optValue] of optionEntries) {
+            const formattedOptValue = escapeForLinksNotation(optValue);
+            lines.push(`    ${optKey} ${formattedOptValue}`);
+          }
+        }
+      } else if (typeof value === 'object') {
+        // For other objects, still format as nested Links notation
+        lines.push(`  ${key}`);
+        const nested = formatAsNestedLinksNotation(value, 2, 2);
+        lines.push(nested);
       } else {
-        formattedValue = String(value);
+        const formattedValue = escapeForLinksNotation(value);
+        lines.push(`  ${key} ${formattedValue}`);
       }
-      // Escape quotes in the value
-      const escapedValue = formattedValue.replace(/"/g, '\\"');
-      lines.push(`  ${key} "${escapedValue}"`);
     }
   }
 
@@ -62,8 +82,15 @@ function formatRecordAsText(record) {
     `Log Path:          ${obj.logPath}`,
   ];
 
-  if (Object.keys(obj.options).length > 0) {
-    lines.push(`Options:           ${JSON.stringify(obj.options)}`);
+  // Format options as nested list instead of JSON
+  const optionEntries = Object.entries(obj.options || {}).filter(
+    ([, v]) => v !== null && v !== undefined
+  );
+  if (optionEntries.length > 0) {
+    lines.push(`Options:`);
+    for (const [key, value] of optionEntries) {
+      lines.push(`  ${key}: ${value}`);
+    }
   }
 
   return lines.join('\n');

@@ -1,19 +1,23 @@
 //! Status formatter module for execution records
 //!
 //! Provides formatting functions for execution status output in various formats:
-//! - Links Notation (links-notation): Structured link doublet format
+//! - Links Notation (links-notation): Structured link doublet format with nested options
 //! - JSON: Standard JSON output
 //! - Text: Human-readable text format
 
 use crate::execution_store::{ExecutionRecord, ExecutionStore};
+use crate::output_blocks::{escape_for_links_notation, format_value_for_links_notation};
 use serde_json::Value;
 
 /// Format execution record as Links Notation (indented style)
+/// Uses nested Links notation for object values (like options) instead of JSON
 ///
 /// Output format:
 /// ```text
 /// <uuid>
-///   <key> "<value>"
+///   <key> <value>
+///   options
+///     <nested_key> <nested_value>
 ///   ...
 /// ```
 pub fn format_record_as_links_notation(record: &ExecutionRecord) -> String {
@@ -23,16 +27,32 @@ pub fn format_record_as_links_notation(record: &ExecutionRecord) -> String {
     if let Value::Object(map) = json {
         for (key, value) in map {
             if !value.is_null() {
-                let formatted_value = match &value {
-                    Value::Object(_) | Value::Array(_) => {
-                        serde_json::to_string(&value).unwrap_or_default()
+                if key == "options" {
+                    // Format options as nested Links notation
+                    if let Value::Object(opts) = &value {
+                        if !opts.is_empty() {
+                            lines.push("  options".to_string());
+                            for (opt_key, opt_value) in opts {
+                                if !opt_value.is_null() {
+                                    let formatted = format_value_for_links_notation(opt_value);
+                                    lines.push(format!("    {} {}", opt_key, formatted));
+                                }
+                            }
+                        }
                     }
-                    Value::String(s) => s.clone(),
-                    Value::Null => "null".to_string(),
-                    other => other.to_string(),
-                };
-                let escaped_value = formatted_value.replace('"', "\\\"");
-                lines.push(format!("  {} \"{}\"", key, escaped_value));
+                } else {
+                    let formatted_value = match &value {
+                        Value::String(s) => escape_for_links_notation(s),
+                        Value::Bool(b) => b.to_string(),
+                        Value::Number(n) => n.to_string(),
+                        Value::Null => "null".to_string(),
+                        Value::Object(_) | Value::Array(_) => {
+                            // For other complex types, use nested format
+                            format_value_for_links_notation(&value)
+                        }
+                    };
+                    lines.push(format!("  {} {}", key, formatted_value));
+                }
             }
         }
     }
@@ -68,9 +88,19 @@ pub fn format_record_as_text(record: &ExecutionRecord) -> String {
         format!("Log Path:          {}", record.log_path),
     ];
 
+    // Format options as nested list instead of JSON
     if !record.options.is_empty() {
-        let options_json = serde_json::to_string(&record.options).unwrap_or_default();
-        lines.push(format!("Options:           {}", options_json));
+        lines.push("Options:".to_string());
+        for (key, value) in &record.options {
+            let value_str = match value {
+                Value::String(s) => s.clone(),
+                Value::Bool(b) => b.to_string(),
+                Value::Number(n) => n.to_string(),
+                Value::Null => "null".to_string(),
+                other => serde_json::to_string(other).unwrap_or_default(),
+            };
+            lines.push(format!("  {}: {}", key, value_str));
+        }
     }
 
     lines.join("\n")
@@ -167,9 +197,10 @@ mod tests {
 
         // Should start with the UUID on its own line
         assert!(output.starts_with("test-uuid-1234\n"));
-        // Should contain indented properties
-        assert!(output.contains("  uuid \"test-uuid-1234\""));
-        assert!(output.contains("  status \"executed\""));
+        // Should contain indented properties (values may or may not be quoted based on content)
+        assert!(output.contains("  uuid test-uuid-1234"));
+        assert!(output.contains("  status executed"));
+        // command with space should be quoted
         assert!(output.contains("  command \"echo hello\""));
     }
 
@@ -272,6 +303,7 @@ mod tests {
 
         // Should be in links-notation indented format
         assert!(output.starts_with("test-uuid-1234\n"));
-        assert!(output.contains("  uuid \"test-uuid-1234\""));
+        // UUID without special chars is not quoted
+        assert!(output.contains("  uuid test-uuid-1234"));
     }
 }
