@@ -11,6 +11,8 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{self, Command, Stdio};
+use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
+use std::sync::Mutex;
 
 use start_command::{
     args_parser::{
@@ -18,7 +20,8 @@ use start_command::{
     },
     create_finish_block, create_log_footer, create_log_header, create_log_path, create_start_block,
     execution_store::{
-        ExecutionRecord, ExecutionRecordOptions, ExecutionStore, ExecutionStoreOptions,
+        CleanupOptions, ExecutionRecord, ExecutionRecordOptions, ExecutionStore,
+        ExecutionStoreOptions,
     },
     failure_handler::{handle_failure, Config as FailureConfig},
     get_default_docker_image, get_timestamp,
@@ -32,6 +35,83 @@ use start_command::{
     },
     write_log_file, LogHeaderParams,
 };
+
+// Global state for signal handling cleanup
+// These are used to update execution status when the process is interrupted
+static SIGNAL_RECEIVED: AtomicBool = AtomicBool::new(false);
+static SIGNAL_EXIT_CODE: AtomicI32 = AtomicI32::new(0);
+static CURRENT_EXECUTION: Mutex<Option<(ExecutionRecord, ExecutionStore)>> = Mutex::new(None);
+
+/// Set up signal handlers for graceful cleanup on interruption
+#[cfg(unix)]
+fn setup_signal_handlers() {
+    use std::sync::Once;
+    static INIT: Once = Once::new();
+
+    INIT.call_once(|| {
+        unsafe {
+            // SIGINT (Ctrl+C) - exit code 130 (128 + 2)
+            libc::signal(libc::SIGINT, signal_handler as usize);
+            // SIGTERM (kill command) - exit code 143 (128 + 15)
+            libc::signal(libc::SIGTERM, signal_handler as usize);
+            // SIGHUP (terminal closed) - exit code 129 (128 + 1)
+            libc::signal(libc::SIGHUP, signal_handler as usize);
+        }
+    });
+}
+
+#[cfg(not(unix))]
+fn setup_signal_handlers() {
+    // Signal handling not supported on non-Unix platforms
+}
+
+/// Signal handler function
+#[cfg(unix)]
+extern "C" fn signal_handler(sig: i32) {
+    // Calculate exit code based on signal (128 + signal number)
+    let exit_code = 128 + sig;
+    SIGNAL_EXIT_CODE.store(exit_code, Ordering::SeqCst);
+    SIGNAL_RECEIVED.store(true, Ordering::SeqCst);
+
+    // Try to clean up the current execution record
+    cleanup_execution_on_signal(sig, exit_code);
+
+    // Exit with the appropriate code
+    std::process::exit(exit_code);
+}
+
+/// Clean up execution record when a signal is received
+fn cleanup_execution_on_signal(signal: i32, exit_code: i32) {
+    if let Ok(mut guard) = CURRENT_EXECUTION.lock() {
+        if let Some((ref mut record, ref store)) = *guard {
+            // Mark as completed with signal exit code
+            record.complete(exit_code);
+            if let Err(e) = store.save(record) {
+                // Log error if verbose (can't easily check config here, so always log to stderr)
+                eprintln!(
+                    "\n[Tracking] Warning: Could not save execution record on signal {}: {}",
+                    signal, e
+                );
+            }
+            // Clear the record to prevent double cleanup
+            *guard = None;
+        }
+    }
+}
+
+/// Set the current execution record for signal cleanup
+fn set_current_execution(record: ExecutionRecord, store: ExecutionStore) {
+    if let Ok(mut guard) = CURRENT_EXECUTION.lock() {
+        *guard = Some((record, store));
+    }
+}
+
+/// Clear the current execution record (call after normal completion)
+fn clear_current_execution() {
+    if let Ok(mut guard) = CURRENT_EXECUTION.lock() {
+        *guard = None;
+    }
+}
 
 /// Configuration from environment variables
 struct Config {
@@ -95,6 +175,9 @@ fn env_bool(name: &str) -> bool {
 }
 
 fn main() {
+    // Set up signal handlers for graceful cleanup on interruption
+    setup_signal_handlers();
+
     let config = Config::from_env();
     let args: Vec<String> = env::args().skip(1).collect();
 
@@ -134,6 +217,12 @@ fn main() {
     // Handle --status flag
     if let Some(ref uuid) = wrapper_options.status {
         handle_status_query(&config, uuid, wrapper_options.output_format.as_deref());
+        process::exit(0);
+    }
+
+    // Handle --cleanup flag
+    if wrapper_options.cleanup {
+        handle_cleanup(&config, wrapper_options.cleanup_dry_run);
         process::exit(0);
     }
 
@@ -296,6 +385,62 @@ fn handle_status_query(config: &Config, uuid: &str, output_format: Option<&str>)
     }
 }
 
+/// Handle --cleanup flag
+/// Cleans up stale "executing" records (processes that crashed or were killed)
+fn handle_cleanup(config: &Config, dry_run: bool) {
+    let store = match config.create_execution_store() {
+        Some(s) => s,
+        None => {
+            eprintln!("Error: Execution tracking is disabled.");
+            process::exit(1);
+        }
+    };
+
+    let result = store.cleanup_stale(CleanupOptions {
+        dry_run,
+        ..Default::default()
+    });
+
+    // Print any errors
+    for error in &result.errors {
+        eprintln!("Error: {}", error);
+    }
+
+    if result.records.is_empty() {
+        println!("No stale records found.");
+        return;
+    }
+
+    if dry_run {
+        println!(
+            "Found {} stale record(s) that would be cleaned up:\n",
+            result.records.len()
+        );
+    } else {
+        println!("Cleaned up {} stale record(s):\n", result.cleaned);
+    }
+
+    for record in &result.records {
+        // Parse start time for display
+        let start_time_display = chrono::DateTime::parse_from_rfc3339(&record.start_time)
+            .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
+            .unwrap_or_else(|_| record.start_time.clone());
+
+        println!("  UUID: {}", record.uuid);
+        println!("  Command: {}", record.command);
+        println!("  Started: {}", start_time_display);
+        println!(
+            "  PID: {}",
+            record.pid.map(|p| p.to_string()).unwrap_or("N/A".to_string())
+        );
+        println!();
+    }
+
+    if dry_run {
+        println!("Run with --cleanup to actually clean up these records.");
+    }
+}
+
 /// Print usage information
 fn print_usage() {
     println!(
@@ -317,8 +462,9 @@ Options:
   --keep-alive, -k      Keep isolation environment alive after command exits
   --auto-remove-docker-container  Auto-remove docker container after exit
   --use-command-stream  Use command-stream library for execution (experimental)
-  --status <uuid>       Show status of execution by UUID
-  --output-format <fmt> Output format for status (links-notation, json, text)
+  --status <uuid>       Show status of execution by UUID (--output-format: links-notation|json|text)
+  --cleanup             Clean up stale "executing" records (crashed/killed processes)
+  --cleanup-dry-run     Show stale records that would be cleaned up (without cleaning)
   --version, -v         Show version information
 
 Examples:
@@ -333,6 +479,8 @@ Examples:
   start -i screen --isolated-user -- npm test
   start --status a1b2c3d4-e5f6-7890-abcd-ef1234567890
   start --status a1b2c3d4 --output-format json
+  start --cleanup-dry-run
+  start --cleanup
 
 Features:
   - Logs all output to temporary directory
@@ -651,7 +799,7 @@ fn run_direct(
         ..Default::default()
     });
 
-    // Save initial execution record
+    // Save initial execution record and set up signal cleanup
     if let Some(ref store) = execution_store {
         if let Err(e) = store.save(&execution_record) {
             if config.verbose {
@@ -660,8 +808,13 @@ fn run_direct(
                     e
                 );
             }
-        } else if config.verbose {
-            println!("[ExecutionStore] Execution ID: {}", execution_record.uuid);
+        } else {
+            if config.verbose {
+                println!("[ExecutionStore] Execution ID: {}", execution_record.uuid);
+            }
+            // Set up global state for signal cleanup
+            // Clone the store since we need to pass it to the signal handler
+            set_current_execution(execution_record.clone(), store.clone());
         }
     }
 
@@ -824,6 +977,8 @@ fn run_direct(
                 );
             }
         }
+        // Clear the global signal cleanup state since we handled completion normally
+        clear_current_execution();
     }
 
     // If command failed, try to auto-report

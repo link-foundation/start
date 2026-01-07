@@ -72,6 +72,10 @@ pub struct WrapperOptions {
     pub status: Option<String>,
     /// Output format for status (links-notation, json, text)
     pub output_format: Option<String>,
+    /// Clean up stale "executing" records
+    pub cleanup: bool,
+    /// Show what would be cleaned without actually cleaning
+    pub cleanup_dry_run: bool,
 }
 
 /// Result of parsing arguments
@@ -332,6 +336,19 @@ fn parse_option(
     // --output-format=<value>
     if arg.starts_with("--output-format=") {
         options.output_format = Some(arg.split('=').nth(1).unwrap_or("").to_lowercase());
+        return Ok(1);
+    }
+
+    // --cleanup
+    if arg == "--cleanup" {
+        options.cleanup = true;
+        return Ok(1);
+    }
+
+    // --cleanup-dry-run
+    if arg == "--cleanup-dry-run" {
+        options.cleanup = true;
+        options.cleanup_dry_run = true;
         return Ok(1);
     }
 
@@ -818,5 +835,24 @@ mod tests {
             .map(String::from)
             .collect();
         assert!(parse_args(&args).is_err());
+    }
+
+    #[test]
+    fn test_cleanup_option() {
+        let args: Vec<String> = vec!["--cleanup"].into_iter().map(String::from).collect();
+        let result = parse_args(&args).unwrap();
+        assert!(result.wrapper_options.cleanup);
+        assert!(!result.wrapper_options.cleanup_dry_run);
+    }
+
+    #[test]
+    fn test_cleanup_dry_run_option() {
+        let args: Vec<String> = vec!["--cleanup-dry-run"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let result = parse_args(&args).unwrap();
+        assert!(result.wrapper_options.cleanup);
+        assert!(result.wrapper_options.cleanup_dry_run);
     }
 }

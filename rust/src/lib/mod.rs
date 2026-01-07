@@ -17,8 +17,8 @@ pub use args_parser::{
     parse_args, validate_options, ParsedArgs, WrapperOptions, VALID_BACKENDS, VALID_OUTPUT_FORMATS,
 };
 pub use execution_store::{
-    is_clink_installed, ExecutionRecord, ExecutionRecordOptions, ExecutionStats, ExecutionStatus,
-    ExecutionStore, ExecutionStoreOptions,
+    is_clink_installed, CleanupOptions, CleanupResult, ExecutionRecord, ExecutionRecordOptions,
+    ExecutionStats, ExecutionStatus, ExecutionStore, ExecutionStoreOptions,
 };
 pub use failure_handler::{handle_failure, Config as FailureConfig};
 pub use isolation::{
