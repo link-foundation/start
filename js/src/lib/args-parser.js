@@ -19,6 +19,8 @@
  * --use-command-stream             Use command-stream library for command execution (experimental)
  * --status <uuid>                  Show status of a previous command execution by UUID
  * --output-format <format>         Output format for status (links-notation, json, text)
+ * --cleanup                        Clean up stale "executing" records (processes that crashed or were killed)
+ * --cleanup-dry-run                Show stale records that would be cleaned up (without actually cleaning)
  */
 
 // Debug mode from environment
@@ -91,6 +93,8 @@ function parseArgs(args) {
     useCommandStream: false, // Use command-stream library for command execution
     status: null, // UUID to show status for
     outputFormat: null, // Output format for status (links-notation, json, text)
+    cleanup: false, // Clean up stale "executing" records
+    cleanupDryRun: false, // Show what would be cleaned without actually cleaning
   };
 
   let commandArgs = [];
@@ -336,6 +340,19 @@ function parseOption(args, index, options) {
   // --output-format=<value>
   if (arg.startsWith('--output-format=')) {
     options.outputFormat = arg.split('=')[1].toLowerCase();
+    return 1;
+  }
+
+  // --cleanup
+  if (arg === '--cleanup') {
+    options.cleanup = true;
+    return 1;
+  }
+
+  // --cleanup-dry-run
+  if (arg === '--cleanup-dry-run') {
+    options.cleanup = true;
+    options.cleanupDryRun = true;
     return 1;
   }
 

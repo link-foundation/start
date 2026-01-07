@@ -889,3 +889,25 @@ describe('VALID_OUTPUT_FORMATS', () => {
     assert.ok(VALID_OUTPUT_FORMATS.includes('text'));
   });
 });
+
+describe('cleanup options', () => {
+  it('should parse --cleanup flag', () => {
+    const result = parseArgs(['--cleanup']);
+    assert.strictEqual(result.wrapperOptions.cleanup, true);
+    assert.strictEqual(result.wrapperOptions.cleanupDryRun, false);
+    assert.strictEqual(result.command, '');
+  });
+
+  it('should parse --cleanup-dry-run flag', () => {
+    const result = parseArgs(['--cleanup-dry-run']);
+    assert.strictEqual(result.wrapperOptions.cleanup, true);
+    assert.strictEqual(result.wrapperOptions.cleanupDryRun, true);
+    assert.strictEqual(result.command, '');
+  });
+
+  it('should default cleanup to false', () => {
+    const result = parseArgs(['echo', 'hello']);
+    assert.strictEqual(result.wrapperOptions.cleanup, false);
+    assert.strictEqual(result.wrapperOptions.cleanupDryRun, false);
+  });
+});
