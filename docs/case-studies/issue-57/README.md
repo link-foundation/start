@@ -141,9 +141,94 @@ Tests should verify:
 
 These tests should run on all platforms including macOS in CI.
 
+## Addendum: CI/CD Changelog Fragment Check Bug
+
+### Discovery
+
+During the PR review for Issue #57 (PR #58), a critical bug was discovered in the CI/CD pipeline: the Rust changelog fragment check was passing even when code was changed but no changelog fragment was added.
+
+### Bug Location
+
+File: `.github/workflows/rust.yml`, in the `changelog` job's "Check for changelog fragments" step.
+
+### Root Cause
+
+The check used `exit 0` (success) instead of `exit 1` (failure) when detecting missing changelog fragments:
+
+```yaml
+# Original code (BUGGY):
+if [ "$SOURCE_CHANGED" -gt 0 ] && [ "$FRAGMENTS" -eq 0 ]; then
+  echo "::warning::No changelog fragment found..."
+  exit 0  # BUG: Should be exit 1 to fail the check!
+fi
+```
+
+This meant:
+1. Code changes were correctly detected
+2. Missing changelog fragment was correctly detected
+3. A warning was displayed (which appears in GitHub Actions logs)
+4. But the job still passed with exit code 0
+5. Other jobs (like `test`) that depended on `changelog` proceeded as if everything was fine
+
+### Impact
+
+- PRs with Rust code changes could be merged without changelog fragments
+- The changelog check appeared to work (showed warnings) but didn't actually block PRs
+- This undermines the changelog policy enforcement for the Rust implementation
+
+### Contrast with JavaScript Workflow
+
+The JavaScript workflow uses a separate validation script (`scripts/validate-changeset.mjs`) that correctly exits with code 1 when no changeset is found:
+
+```javascript
+if (changesetCount === 0) {
+  console.error("::error::No changeset found...");
+  process.exit(1);  // CORRECT: Fails the check
+}
+```
+
+### Fix Applied
+
+Changed the Rust workflow to properly fail:
+
+```yaml
+# Fixed code:
+if [ "$SOURCE_CHANGED" -gt 0 ] && [ "$FRAGMENTS" -eq 0 ]; then
+  echo "::error::No changelog fragment found..."  # Changed from ::warning:: to ::error::
+  exit 1  # Fixed: Now properly fails the check
+fi
+```
+
+Changes made:
+1. Changed `exit 0` to `exit 1` to fail the job
+2. Changed `::warning::` to `::error::` for consistent GitHub Actions annotation
+
+### Evidence
+
+CI Run: https://github.com/link-foundation/start/actions/runs/20790282454/job/59710582348
+
+The log shows the job passed with "Changelog check passed" because the condition was not met at the time (no source changes were detected in that specific comparison). However, before commit `30f15eb` added `rust/changelog.d/57.md`, the check would have passed with `exit 0` even if it detected missing fragments.
+
+### Timeline
+
+1. Commit `0e750e6`: Original fix for Issue #57 - changes `rust/src/bin/main.rs`
+2. Commit `d38a67f`: Added JS changeset (`js/.changeset/fix-macos-stdout-capture.md`)
+3. CI Run 20790282454: Rust changelog check passes (bug masked because Rust fragment was added in next commit)
+4. Commit `30f15eb`: Added Rust changelog fragment (`rust/changelog.d/57.md`)
+5. User feedback: Noticed that CI check shouldn't have passed before `30f15eb`
+
+### Lessons Learned
+
+1. **Always test failure paths**: The changelog check was never tested to ensure it actually fails when it should
+2. **Use consistent approaches**: The JS workflow uses a proper validation script, while Rust uses inline shell commands with a subtle bug
+3. **Verify CI annotations**: Using `::warning::` instead of `::error::` was a hint that the check might not be enforced
+4. **Code review**: Shell scripts in YAML can hide subtle bugs like wrong exit codes
+
 ## References
 
 - [Node.js Child Process Documentation](https://nodejs.org/api/child_process.html)
 - [Bun Issue #18239](https://github.com/oven-sh/bun/issues/18239)
 - [Bun Issue #24690](https://github.com/oven-sh/bun/issues/24690)
 - [GitHub Issue #57](https://github.com/link-foundation/start/issues/57)
+- [GitHub PR #58](https://github.com/link-foundation/start/pull/58)
+- [CI Run 20790282454](https://github.com/link-foundation/start/actions/runs/20790282454/job/59710582348)

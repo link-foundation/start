@@ -93,13 +93,13 @@ jobs:
           SOURCE_CHANGED=$(echo "$CHANGED_FILES" | grep -E "^rust/(src/|tests/|Cargo\.toml)" | wc -l)
 
           if [ "$SOURCE_CHANGED" -gt 0 ] && [ "$FRAGMENTS" -eq 0 ]; then
-            echo "::warning::No changelog fragment found. Please add a changelog entry in rust/changelog.d/"
+            echo "::error::No changelog fragment found. Please add a changelog entry in rust/changelog.d/"
             echo ""
             echo "To create a changelog fragment:"
             echo "  Create a new .md file in rust/changelog.d/ with your changes"
             echo ""
             echo "See rust/changelog.d/README.md for more information."
-            exit 0
+            exit 1
           fi
 
           echo "Changelog check passed"
