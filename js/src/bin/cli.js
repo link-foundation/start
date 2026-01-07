@@ -73,6 +73,10 @@ const config = {
 // Global execution store instance (initialized lazily)
 let executionStore = null;
 
+// Global reference to current execution record for cleanup on signals
+// This allows us to mark the execution as completed if the process is interrupted
+let currentExecutionRecord = null;
+
 /**
  * Get the execution store instance
  * @returns {ExecutionStore}
@@ -86,6 +90,57 @@ function getExecutionStore() {
   }
   return executionStore;
 }
+
+/**
+ * Cleanup handler for signals and process exit
+ * Marks the current execution as completed with an appropriate exit code
+ * @param {string} signal - The signal that triggered the cleanup (e.g., 'SIGINT', 'SIGTERM')
+ * @param {number} exitCode - The exit code to use
+ */
+function cleanupExecution(signal, exitCode) {
+  if (currentExecutionRecord && executionStore) {
+    // Signal-based exit codes:
+    // SIGINT (Ctrl+C): 130 (128 + 2)
+    // SIGTERM: 143 (128 + 15)
+    // SIGHUP: 129 (128 + 1)
+    currentExecutionRecord.complete(exitCode);
+    try {
+      executionStore.save(currentExecutionRecord);
+      if (config.verbose) {
+        console.error(
+          `\n[Tracking] Execution ${currentExecutionRecord.uuid} marked as completed (${signal}, exit code: ${exitCode})`
+        );
+      }
+    } catch (err) {
+      if (config.verbose) {
+        console.error(
+          `[Tracking] Warning: Could not save execution record on ${signal}: ${err.message}`
+        );
+      }
+    }
+    // Clear the reference to prevent double cleanup
+    currentExecutionRecord = null;
+  }
+}
+
+// Set up signal handlers to ensure execution status is updated on interruption
+// SIGINT (Ctrl+C) - exit code 130 (128 + signal number 2)
+process.on('SIGINT', () => {
+  cleanupExecution('SIGINT', 130);
+  process.exit(130);
+});
+
+// SIGTERM (kill command) - exit code 143 (128 + signal number 15)
+process.on('SIGTERM', () => {
+  cleanupExecution('SIGTERM', 143);
+  process.exit(143);
+});
+
+// SIGHUP (terminal closed) - exit code 129 (128 + signal number 1)
+process.on('SIGHUP', () => {
+  cleanupExecution('SIGHUP', 129);
+  process.exit(129);
+});
 
 // Get all arguments passed after the command
 const args = process.argv.slice(2);
@@ -135,6 +190,12 @@ const { wrapperOptions, command: parsedCommand } = parsedArgs;
 // Handle --status flag
 if (wrapperOptions.status) {
   handleStatusQuery(wrapperOptions.status, wrapperOptions.outputFormat);
+  process.exit(0);
+}
+
+// Handle --cleanup flag
+if (wrapperOptions.cleanup) {
+  handleCleanup(wrapperOptions.cleanupDryRun);
   process.exit(0);
 }
 
@@ -206,6 +267,53 @@ function handleStatusQuery(uuid, outputFormat) {
   }
 }
 
+/**
+ * Handle --cleanup flag
+ * Cleans up stale "executing" records (processes that crashed or were killed)
+ * @param {boolean} dryRun - If true, just report what would be cleaned
+ */
+function handleCleanup(dryRun) {
+  const store = getExecutionStore();
+  if (!store) {
+    console.error('Error: Execution tracking is disabled.');
+    process.exit(1);
+  }
+
+  const result = store.cleanupStale({ dryRun });
+
+  if (result.errors.length > 0) {
+    for (const error of result.errors) {
+      console.error(`Error: ${error}`);
+    }
+  }
+
+  if (result.records.length === 0) {
+    console.log('No stale records found.');
+    return;
+  }
+
+  if (dryRun) {
+    console.log(
+      `Found ${result.records.length} stale record(s) that would be cleaned up:\n`
+    );
+  } else {
+    console.log(`Cleaned up ${result.cleaned} stale record(s):\n`);
+  }
+
+  for (const record of result.records) {
+    const startTime = new Date(record.startTime).toLocaleString();
+    console.log(`  UUID: ${record.uuid}`);
+    console.log(`  Command: ${record.command}`);
+    console.log(`  Started: ${startTime}`);
+    console.log(`  PID: ${record.pid || 'N/A'}`);
+    console.log('');
+  }
+
+  if (dryRun) {
+    console.log('Run with --cleanup to actually clean up these records.');
+  }
+}
+
 /** Print usage information */
 function printUsage() {
   console.log(`Usage: $ [options] [--] <command> | $ --status <uuid> [--output-format <fmt>]
@@ -225,6 +333,8 @@ Options:
   --auto-remove-docker-container  Auto-remove docker container after exit
   --use-command-stream  Use command-stream library for execution (experimental)
   --status <uuid>       Show status of execution by UUID (--output-format: links-notation|json|text)
+  --cleanup             Clean up stale "executing" records (crashed/killed processes)
+  --cleanup-dry-run     Show stale records that would be cleaned up (without cleaning)
   --version, -v         Show version information
 
 Examples:
@@ -411,8 +521,9 @@ async function runWithIsolation(
   );
   console.log('');
 
-  // Save initial execution record
+  // Save initial execution record and set global reference for signal cleanup
   if (executionRecord && store) {
+    currentExecutionRecord = executionRecord;
     try {
       store.save(executionRecord);
     } catch (err) {
@@ -478,7 +589,7 @@ async function runWithIsolation(
   // Write log file
   writeLogFile(logFilePath, logContent);
 
-  // Update execution record as completed
+  // Update execution record as completed and clear global reference
   if (executionRecord && store) {
     executionRecord.complete(exitCode);
     try {
@@ -490,6 +601,8 @@ async function runWithIsolation(
         );
       }
     }
+    // Clear global reference since we've completed normally
+    currentExecutionRecord = null;
   }
 
   // Cleanup: delete the created user if we created one (unless --keep-user)
@@ -580,6 +693,8 @@ async function runDirect(cmd, sessionId) {
         runtimeVersion,
       },
     });
+    // Set global reference for signal cleanup
+    currentExecutionRecord = executionRecord;
   }
 
   // Log header
@@ -615,6 +730,8 @@ async function runDirect(cmd, sessionId) {
 
   // Completion callback
   const onComplete = (exitCode, endTime, _logContent, durationMs) => {
+    // Clear global reference since execution completed normally
+    currentExecutionRecord = null;
     console.log('');
     console.log(
       createFinishBlock({
@@ -633,6 +750,8 @@ async function runDirect(cmd, sessionId) {
 
   // Error callback
   const onError = (errorMessage, endTime, durationMs) => {
+    // Clear global reference since execution completed (with error)
+    currentExecutionRecord = null;
     console.error(`\n${errorMessage}`);
     console.log('');
     console.log(
@@ -726,6 +845,8 @@ async function runDirectWithCommandStream(
         executionMode: 'command-stream',
       },
     });
+    // Set global reference for signal cleanup
+    currentExecutionRecord = executionRecord;
   }
 
   // Log header
@@ -817,7 +938,7 @@ async function runDirectWithCommandStream(
     console.error(`\nWarning: Could not save log file: ${err.message}`);
   }
 
-  // Update execution record as completed
+  // Update execution record as completed and clear global reference
   if (executionRecord && store) {
     executionRecord.complete(exitCode);
     try {
@@ -829,6 +950,8 @@ async function runDirectWithCommandStream(
         );
       }
     }
+    // Clear global reference since we've completed normally
+    currentExecutionRecord = null;
   }
 
   // Print finish block

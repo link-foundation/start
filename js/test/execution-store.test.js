@@ -480,4 +480,125 @@ describe('ExecutionStore verifyConsistency', () => {
   });
 });
 
+describe('ExecutionStore cleanupStale', () => {
+  let store;
+
+  beforeEach(() => {
+    cleanupTestDir();
+    store = new ExecutionStore({
+      appFolder: TEST_APP_FOLDER,
+      useLinks: false,
+    });
+  });
+
+  afterEach(() => {
+    cleanupTestDir();
+  });
+
+  it('should return empty result when no stale records exist', () => {
+    // Create a completed record
+    const record = new ExecutionRecord({
+      command: 'echo 1',
+      pid: process.pid, // Current process
+    });
+    record.complete(0);
+    store.save(record);
+
+    const result = store.cleanupStale();
+    expect(result.cleaned).toBe(0);
+    expect(result.records.length).toBe(0);
+    expect(result.errors.length).toBe(0);
+  });
+
+  it('should detect stale records with non-existent PIDs', () => {
+    // Create an "executing" record with a non-existent PID
+    const record = new ExecutionRecord({
+      command: 'echo stale',
+      pid: 999999999, // Non-existent PID
+      platform: process.platform,
+    });
+    store.save(record);
+
+    const result = store.cleanupStale({ dryRun: true });
+    expect(result.records.length).toBe(1);
+    expect(result.records[0].uuid).toBe(record.uuid);
+    expect(result.cleaned).toBe(1);
+  });
+
+  it('should detect stale records that exceed max age', () => {
+    // Create an "executing" record with an old start time
+    const oldTime = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(); // 25 hours ago
+    const record = new ExecutionRecord({
+      command: 'echo old',
+      pid: process.pid, // Current process (still running)
+      startTime: oldTime,
+      platform: process.platform,
+    });
+    store.save(record);
+
+    // Use default max age (24 hours)
+    const result = store.cleanupStale({ dryRun: true });
+    expect(result.records.length).toBe(1);
+    expect(result.records[0].uuid).toBe(record.uuid);
+  });
+
+  it('should not detect records within max age as stale', () => {
+    // Create an "executing" record with a recent start time
+    const record = new ExecutionRecord({
+      command: 'echo recent',
+      pid: process.pid, // Current process (still running)
+      platform: process.platform,
+    });
+    store.save(record);
+
+    const result = store.cleanupStale({ dryRun: true });
+    // Should not find this as stale because process is running and not too old
+    expect(result.records.length).toBe(0);
+  });
+
+  it('should clean up stale records when dryRun is false', () => {
+    // Create an "executing" record with a non-existent PID
+    const record = new ExecutionRecord({
+      command: 'echo cleanup-me',
+      pid: 999999999, // Non-existent PID
+      platform: process.platform,
+    });
+    store.save(record);
+
+    // Verify it's still "executing"
+    let retrieved = store.get(record.uuid);
+    expect(retrieved.status).toBe(ExecutionStatus.EXECUTING);
+
+    // Clean it up
+    const result = store.cleanupStale({ dryRun: false });
+    expect(result.cleaned).toBe(1);
+
+    // Verify it's now "executed" with exit code -1
+    retrieved = store.get(record.uuid);
+    expect(retrieved.status).toBe(ExecutionStatus.EXECUTED);
+    expect(retrieved.exitCode).toBe(-1);
+    expect(retrieved.endTime).toBeTruthy();
+  });
+
+  it('should handle custom max age', () => {
+    // Create an "executing" record with start time 5 minutes ago
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const record = new ExecutionRecord({
+      command: 'echo custom-age',
+      pid: process.pid, // Current process (still running)
+      startTime: fiveMinutesAgo,
+      platform: process.platform,
+    });
+    store.save(record);
+
+    // Should not find as stale with default 24h max age
+    let result = store.cleanupStale({ dryRun: true });
+    expect(result.records.length).toBe(0);
+
+    // Should find as stale with 1 minute max age
+    result = store.cleanupStale({ dryRun: true, maxAgeMs: 60 * 1000 });
+    expect(result.records.length).toBe(1);
+  });
+});
+
 console.log('=== Execution Store Unit Tests ===');

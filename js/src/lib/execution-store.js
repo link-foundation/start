@@ -518,6 +518,112 @@ class ExecutionStore {
   }
 
   /**
+   * Clean up stale "executing" records
+   *
+   * Stale records are those that:
+   * 1. Have status "executing"
+   * 2. Either:
+   *    - Their process (by PID) is no longer running (on same hostname)
+   *    - They have been "executing" for longer than maxAgeMs (default: 24 hours)
+   *
+   * @param {object} options - Cleanup options
+   * @param {number} options.maxAgeMs - Max age for executing records (default: 24 hours)
+   * @param {boolean} options.dryRun - If true, just report what would be cleaned (default: false)
+   * @returns {{cleaned: number, records: ExecutionRecord[], errors: string[]}}
+   */
+  cleanupStale(options = {}) {
+    const maxAgeMs = options.maxAgeMs || 24 * 60 * 60 * 1000; // 24 hours
+    const dryRun = options.dryRun || false;
+
+    const result = {
+      cleaned: 0,
+      records: [],
+      errors: [],
+    };
+
+    const records = this.readLinoRecords();
+    const executingRecords = records.filter(
+      (r) => r.status === ExecutionStatus.EXECUTING
+    );
+
+    const staleRecords = [];
+
+    for (const record of executingRecords) {
+      let isStale = false;
+      let reason = '';
+
+      // Check if the process is still running (only if on same platform)
+      if (record.pid && record.platform === process.platform) {
+        try {
+          // Signal 0 just checks if process exists
+          process.kill(record.pid, 0);
+          // Process exists, check age
+        } catch {
+          // Process doesn't exist - record is stale
+          isStale = true;
+          reason = `process ${record.pid} no longer running`;
+        }
+      }
+
+      // Check age if not already determined to be stale
+      if (!isStale) {
+        const startTime = new Date(record.startTime).getTime();
+        const age = Date.now() - startTime;
+        if (age > maxAgeMs) {
+          isStale = true;
+          reason = `running for ${Math.round(age / 1000 / 60)} minutes (max: ${Math.round(maxAgeMs / 1000 / 60)} minutes)`;
+        }
+      }
+
+      if (isStale) {
+        this.log(`Stale record found: ${record.uuid} (${reason})`);
+        staleRecords.push(record);
+      }
+    }
+
+    result.records = staleRecords;
+
+    if (!dryRun && staleRecords.length > 0) {
+      const lock = new LockManager(this.lockFilePath);
+
+      if (!lock.acquire()) {
+        result.errors.push('Failed to acquire lock for cleanup');
+        return result;
+      }
+
+      try {
+        // Re-read records to ensure consistency
+        const currentRecords = this.readLinoRecords();
+
+        // Update stale records to "executed" status with exit code -1 (abnormal termination)
+        for (const staleRecord of staleRecords) {
+          const index = currentRecords.findIndex(
+            (r) => r.uuid === staleRecord.uuid
+          );
+          if (index >= 0) {
+            // Mark as executed with exit code -1 to indicate abnormal termination
+            currentRecords[index].status = ExecutionStatus.EXECUTED;
+            currentRecords[index].exitCode = -1;
+            currentRecords[index].endTime = new Date().toISOString();
+            result.cleaned++;
+          }
+        }
+
+        this.writeLinoRecords(currentRecords);
+        this.log(`Cleaned up ${result.cleaned} stale records`);
+      } catch (err) {
+        result.errors.push(`Cleanup error: ${err.message}`);
+      } finally {
+        lock.release();
+      }
+    } else if (dryRun) {
+      result.cleaned = staleRecords.length;
+    }
+
+    return result;
+  }
+
+  /**
    * Delete an execution record
    * @param {string} uuid
    * @returns {boolean}
