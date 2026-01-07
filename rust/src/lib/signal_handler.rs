@@ -65,6 +65,7 @@ extern "C" fn signal_handler(sig: i32) {
 }
 
 /// Clean up execution record when a signal is received
+#[cfg(unix)]
 fn cleanup_execution_on_signal(signal: i32, exit_code: i32) {
     if let Ok(mut guard) = CURRENT_EXECUTION.lock() {
         if let Some((ref mut record, ref store)) = *guard {

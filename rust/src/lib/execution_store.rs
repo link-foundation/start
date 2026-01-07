@@ -574,11 +574,11 @@ impl ExecutionStore {
             // Check if process is still running (Unix only, same platform)
             #[cfg(unix)]
             if let Some(pid) = record.pid {
-                if record.platform == std::env::consts::OS {
-                    if unsafe { libc::kill(pid as i32, 0) } != 0 {
-                        is_stale = true;
-                        self.log(&format!("Stale: {} (PID {} gone)", record.uuid, pid));
-                    }
+                if record.platform == std::env::consts::OS
+                    && unsafe { libc::kill(pid as i32, 0) } != 0
+                {
+                    is_stale = true;
+                    self.log(&format!("Stale: {} (PID {} gone)", record.uuid, pid));
                 }
             }
 
