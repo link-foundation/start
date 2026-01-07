@@ -93,8 +93,13 @@ fn create_horizontal_line(width: usize, style: &BoxStyle) -> String {
 }
 
 /// Pad or truncate text to fit a specific width
-fn pad_text(text: &str, width: usize) -> String {
+/// If allow_overflow is true, long text is not truncated (for copyable content)
+fn pad_text(text: &str, width: usize, allow_overflow: bool) -> String {
     if text.len() >= width {
+        // If overflow is allowed, return text as-is (for copyable content like paths)
+        if allow_overflow {
+            return text.to_string();
+        }
         text[..width].to_string()
     } else {
         format!("{}{}", text, " ".repeat(width - text.len()))
@@ -102,10 +107,16 @@ fn pad_text(text: &str, width: usize) -> String {
 }
 
 /// Create a bordered line with text
-fn create_bordered_line(text: &str, width: usize, style: &BoxStyle) -> String {
+/// If allow_overflow is true, long text is not truncated (for copyable content)
+fn create_bordered_line(
+    text: &str,
+    width: usize,
+    style: &BoxStyle,
+    allow_overflow: bool,
+) -> String {
     if !style.vertical.is_empty() {
         let inner_width = width.saturating_sub(4); // 2 for borders, 2 for padding
-        let padded_text = pad_text(text, inner_width);
+        let padded_text = pad_text(text, inner_width, allow_overflow);
         format!("{} {} {}", style.vertical, padded_text, style.vertical)
     } else {
         text.to_string()
@@ -164,17 +175,19 @@ pub fn create_start_block(options: &StartBlockOptions) -> String {
         &format!("Session ID: {}", options.session_id),
         width,
         &style,
+        false,
     ));
     lines.push(create_bordered_line(
         &format!("Starting at {}: {}", options.timestamp, options.command),
         width,
         &style,
+        false,
     ));
 
     // Add extra lines (e.g., isolation info, docker image, etc.)
     if let Some(ref extra) = options.extra_lines {
         for line in extra {
-            lines.push(create_bordered_line(line, width, &style));
+            lines.push(create_bordered_line(line, width, &style, false));
         }
     }
 
@@ -231,25 +244,30 @@ pub fn create_finish_block(options: &FinishBlockOptions) -> String {
     lines.push(create_top_border(width, &style));
 
     // Add result message first if provided (e.g., "Docker container exited...")
+    // Allow overflow so the full message is visible and copyable
     if let Some(result_msg) = options.result_message {
-        lines.push(create_bordered_line(result_msg, width, &style));
+        lines.push(create_bordered_line(result_msg, width, &style, true));
     }
 
-    lines.push(create_bordered_line(&finished_msg, width, &style));
+    lines.push(create_bordered_line(&finished_msg, width, &style, false));
     lines.push(create_bordered_line(
         &format!("Exit code: {}", options.exit_code),
         width,
         &style,
+        false,
     ));
+    // Allow overflow for log path and session ID so they can be copied completely
     lines.push(create_bordered_line(
         &format!("Log: {}", options.log_path),
         width,
         &style,
+        true,
     ));
     lines.push(create_bordered_line(
         &format!("Session ID: {}", options.session_id),
         width,
         &style,
+        true,
     ));
     lines.push(create_bottom_border(width, &style));
 

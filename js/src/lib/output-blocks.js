@@ -85,10 +85,15 @@ function createHorizontalLine(width, style) {
  * Pad or truncate text to fit a specific width
  * @param {string} text - Text to pad
  * @param {number} width - Target width
+ * @param {boolean} [allowOverflow=false] - If true, don't truncate long text
  * @returns {string} Padded text
  */
-function padText(text, width) {
+function padText(text, width, allowOverflow = false) {
   if (text.length >= width) {
+    // If overflow is allowed, return text as-is (for copyable content like paths)
+    if (allowOverflow) {
+      return text;
+    }
     return text.substring(0, width);
   }
   return text + ' '.repeat(width - text.length);
@@ -99,12 +104,17 @@ function padText(text, width) {
  * @param {string} text - Text content
  * @param {number} width - Total width (including borders)
  * @param {object} style - Box style
+ * @param {boolean} [allowOverflow=false] - If true, allow text to overflow (for copyable content)
  * @returns {string} Bordered line
  */
-function createBorderedLine(text, width, style) {
+function createBorderedLine(text, width, style, allowOverflow = false) {
   if (style.vertical) {
     const innerWidth = width - 4; // 2 for borders, 2 for padding
-    const paddedText = padText(text, innerWidth);
+    const paddedText = padText(text, innerWidth, allowOverflow);
+    // If text overflows, extend the right border position
+    if (allowOverflow && text.length > innerWidth) {
+      return `${style.vertical} ${paddedText} ${style.vertical}`;
+    }
     return `${style.vertical} ${paddedText} ${style.vertical}`;
   }
   return text;
@@ -234,14 +244,18 @@ function createFinishBlock(options) {
   lines.push(createTopBorder(width, style));
 
   // Add result message first if provided (e.g., "Docker container exited...")
+  // Allow overflow so the full message is visible and copyable
   if (resultMessage) {
-    lines.push(createBorderedLine(resultMessage, width, style));
+    lines.push(createBorderedLine(resultMessage, width, style, true));
   }
 
   lines.push(createBorderedLine(finishedMsg, width, style));
   lines.push(createBorderedLine(`Exit code: ${exitCode}`, width, style));
-  lines.push(createBorderedLine(`Log: ${logPath}`, width, style));
-  lines.push(createBorderedLine(`Session ID: ${sessionId}`, width, style));
+  // Allow overflow for log path and session ID so they can be copied completely
+  lines.push(createBorderedLine(`Log: ${logPath}`, width, style, true));
+  lines.push(
+    createBorderedLine(`Session ID: ${sessionId}`, width, style, true)
+  );
   lines.push(createBottomBorder(width, style));
 
   return lines.join('\n');

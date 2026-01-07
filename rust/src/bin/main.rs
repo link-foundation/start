@@ -540,6 +540,8 @@ fn run_with_isolation(
     }
 
     // Print finish block with result message inside
+    // Add empty line before finish block for visual separation
+    println!();
     let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
     println!(
         "{}",
