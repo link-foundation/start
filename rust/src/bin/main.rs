@@ -8,7 +8,7 @@
 
 use std::env;
 use std::fs::File;
-use std::io::Write;
+use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{self, Command, Stdio};
 
@@ -687,34 +687,102 @@ fn run_direct(
     ));
     log_content.push_str(&format!("{}\n\n", "=".repeat(50)));
 
-    // Execute the command
-    let output = Command::new(&shell)
+    // Execute the command with piped stdout/stderr so we can capture and display output
+    // Using spawn() instead of output() to stream data in real-time (Issue #57)
+    let mut child = match Command::new(&shell)
         .args(&shell_args)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output();
-
-    let exit_code = match output {
-        Ok(output) => {
-            let code = output.status.code().unwrap_or(1);
-
-            // Capture any output
-            if !output.stdout.is_empty() {
-                log_content.push_str(&String::from_utf8_lossy(&output.stdout));
-            }
-            if !output.stderr.is_empty() {
-                log_content.push_str(&String::from_utf8_lossy(&output.stderr));
-            }
-
-            code
-        }
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+    {
+        Ok(child) => child,
         Err(e) => {
             let error_msg = format!("Error executing command: {}", e);
+            log_content.push_str(&format!("\n{}\n", error_msg));
+            eprintln!("\n{}", error_msg);
+
+            let end_time = get_timestamp();
+            log_content.push_str(&format!("\n{}\n", "=".repeat(50)));
+            log_content.push_str(&format!("Finished: {}\n", end_time));
+            log_content.push_str("Exit Code: 1\n");
+
+            if let Ok(mut file) = File::create(&log_file_path) {
+                let _ = file.write_all(log_content.as_bytes());
+            }
+
+            let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
+            println!();
+            println!(
+                "{}",
+                create_finish_block(&FinishBlockOptions {
+                    session_id,
+                    timestamp: &end_time,
+                    exit_code: 1,
+                    log_path: &log_file_path.to_string_lossy(),
+                    duration_ms: Some(duration_ms),
+                    result_message: None,
+                    style: None,
+                    width: None,
+                })
+            );
+
+            process::exit(1);
+        }
+    };
+
+    // Read stdout and stderr, displaying and capturing in real-time
+    // Use threads to read both streams concurrently to avoid deadlocks
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+
+    let stdout_handle = std::thread::spawn(move || {
+        let mut output = String::new();
+        if let Some(stdout) = stdout {
+            let reader = BufReader::new(stdout);
+            for line in reader.lines().map_while(Result::ok) {
+                println!("{}", line);
+                output.push_str(&line);
+                output.push('\n');
+            }
+        }
+        output
+    });
+
+    let stderr_handle = std::thread::spawn(move || {
+        let mut output = String::new();
+        if let Some(stderr) = stderr {
+            let reader = BufReader::new(stderr);
+            for line in reader.lines().map_while(Result::ok) {
+                eprintln!("{}", line);
+                output.push_str(&line);
+                output.push('\n');
+            }
+        }
+        output
+    });
+
+    // Wait for output threads to complete
+    let stdout_output = stdout_handle.join().unwrap_or_default();
+    let stderr_output = stderr_handle.join().unwrap_or_default();
+
+    // Wait for child process to exit
+    let exit_code = match child.wait() {
+        Ok(status) => status.code().unwrap_or(1),
+        Err(e) => {
+            let error_msg = format!("Error waiting for command: {}", e);
             log_content.push_str(&format!("\n{}\n", error_msg));
             eprintln!("\n{}", error_msg);
             1
         }
     };
+
+    // Add captured output to log content
+    if !stdout_output.is_empty() {
+        log_content.push_str(&stdout_output);
+    }
+    if !stderr_output.is_empty() {
+        log_content.push_str(&stderr_output);
+    }
 
     let end_time = get_timestamp();
 

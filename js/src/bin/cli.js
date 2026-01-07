@@ -640,8 +640,11 @@ function runDirect(cmd, sessionId) {
     logContent += text;
   });
 
-  // Handle process exit
-  child.on('exit', (code) => {
+  // Handle process close (not 'exit' - we need to wait for all stdio to be closed)
+  // The 'close' event fires after all stdio streams have been closed, ensuring
+  // all stdout/stderr data has been received. The 'exit' event can fire before
+  // buffered data is received, causing output loss on macOS (Issue #57).
+  child.on('close', (code) => {
     const exitCode = code || 0;
     const endTime = getTimestamp();
 
