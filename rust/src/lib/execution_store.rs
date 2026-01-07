@@ -1,19 +1,4 @@
-//! Execution Store - Dual storage for command execution records
-//!
-//! Stores command execution data in:
-//! 1. Text format (.lino files) using lino-objects-codec
-//! 2. Binary format (.links database) using clink if available
-//!
-//! Each execution record contains:
-//! - uuid: Unique identifier for the command call
-//! - pid: Process ID
-//! - status: 'executing' or 'executed'
-//! - exitCode: Return status code (null while executing)
-//! - command: The command string that was executed
-//! - logPath: Path to the log file
-//! - startTime: Timestamp when execution started
-//! - endTime: Timestamp when execution completed (null while executing)
-//! - options: Execution options (isolation mode, etc.)
+//! Execution Store - Dual storage (.lino text + .links binary) for command execution records
 
 use chrono::Utc;
 use lino_objects_codec::{decode, encode};
@@ -567,19 +552,10 @@ impl ExecutionStore {
         records
     }
 
-    /// Clean up stale "executing" records
-    ///
-    /// Stale records are those that:
-    /// 1. Have status "executing"
-    /// 2. Either:
-    ///    - Their process (by PID) is no longer running (on same platform)
-    ///    - They have been "executing" for longer than max_age_ms (default: 24 hours)
-    ///
-    /// Stale records are marked as "executed" with exit code -1 to indicate abnormal termination.
+    /// Clean up stale "executing" records (processes no longer running or aged out)
     pub fn cleanup_stale(&self, options: CleanupOptions) -> CleanupResult {
-        let max_age_ms = options.max_age_ms.unwrap_or(24 * 60 * 60 * 1000); // 24 hours default
+        let max_age_ms = options.max_age_ms.unwrap_or(24 * 60 * 60 * 1000);
         let dry_run = options.dry_run;
-
         let mut result = CleanupResult {
             cleaned: 0,
             records: Vec::new(),
@@ -587,45 +563,36 @@ impl ExecutionStore {
         };
 
         let records = self.read_lino_records();
-        let executing_records: Vec<_> = records
-            .iter()
-            .filter(|r| r.status == ExecutionStatus::Executing)
-            .collect();
-
         let mut stale_records: Vec<ExecutionRecord> = Vec::new();
 
-        for record in executing_records {
+        for record in records
+            .iter()
+            .filter(|r| r.status == ExecutionStatus::Executing)
+        {
             let mut is_stale = false;
 
-            // Check if the process is still running (only if on same platform)
+            // Check if process is still running (Unix only, same platform)
             #[cfg(unix)]
             if let Some(pid) = record.pid {
                 if record.platform == std::env::consts::OS {
-                    // Check if process exists using kill(pid, 0)
-                    let result = unsafe { libc::kill(pid as i32, 0) };
-                    if result != 0 {
-                        // Process doesn't exist - record is stale
+                    if unsafe { libc::kill(pid as i32, 0) } != 0 {
                         is_stale = true;
-                        self.log(&format!(
-                            "Stale record found: {} (process {} no longer running)",
-                            record.uuid, pid
-                        ));
+                        self.log(&format!("Stale: {} (PID {} gone)", record.uuid, pid));
                     }
                 }
             }
 
-            // Check age if not already determined to be stale
+            // Check age
             if !is_stale {
-                if let Ok(start_time) = chrono::DateTime::parse_from_rfc3339(&record.start_time) {
-                    let age_ms = (chrono::Utc::now() - start_time.with_timezone(&chrono::Utc))
-                        .num_milliseconds();
+                if let Ok(st) = chrono::DateTime::parse_from_rfc3339(&record.start_time) {
+                    let age_ms =
+                        (chrono::Utc::now() - st.with_timezone(&chrono::Utc)).num_milliseconds();
                     if age_ms > max_age_ms as i64 {
                         is_stale = true;
                         self.log(&format!(
-                            "Stale record found: {} (running for {} minutes, max: {} minutes)",
+                            "Stale: {} ({}min old)",
                             record.uuid,
-                            age_ms / 1000 / 60,
-                            max_age_ms / 1000 / 60
+                            age_ms / 60000
                         ));
                     }
                 }
@@ -640,35 +607,25 @@ impl ExecutionStore {
 
         if !dry_run && !stale_records.is_empty() {
             let mut lock = LockManager::new(self.lock_file_path.clone());
-
             if !lock.acquire(LOCK_TIMEOUT_MS) {
-                result
-                    .errors
-                    .push("Failed to acquire lock for cleanup".to_string());
+                result.errors.push("Failed to acquire lock".to_string());
                 return result;
             }
 
-            // Re-read records to ensure consistency
-            let mut current_records = self.read_lino_records();
-
-            // Update stale records to "executed" status with exit code -1 (abnormal termination)
-            for stale_record in &stale_records {
-                if let Some(index) = current_records
-                    .iter()
-                    .position(|r| r.uuid == stale_record.uuid)
-                {
-                    // Mark as executed with exit code -1 to indicate abnormal termination
-                    current_records[index].status = ExecutionStatus::Executed;
-                    current_records[index].exit_code = Some(-1);
-                    current_records[index].end_time = Some(chrono::Utc::now().to_rfc3339());
+            let mut current = self.read_lino_records();
+            for stale in &stale_records {
+                if let Some(i) = current.iter().position(|r| r.uuid == stale.uuid) {
+                    current[i].status = ExecutionStatus::Executed;
+                    current[i].exit_code = Some(-1);
+                    current[i].end_time = Some(chrono::Utc::now().to_rfc3339());
                     result.cleaned += 1;
                 }
             }
 
-            if let Err(e) = self.write_lino_records(&current_records) {
+            if let Err(e) = self.write_lino_records(&current) {
                 result.errors.push(format!("Cleanup error: {}", e));
             } else {
-                self.log(&format!("Cleaned up {} stale records", result.cleaned));
+                self.log(&format!("Cleaned {} stale records", result.cleaned));
             }
         } else if dry_run {
             result.cleaned = stale_records.len();
@@ -839,23 +796,18 @@ pub struct ConsistencyResult {
     pub errors: Vec<String>,
 }
 
-/// Options for cleanup_stale operation
+/// Options for cleanup_stale: max_age_ms (default 24h), dry_run
 #[derive(Debug, Default)]
 pub struct CleanupOptions {
-    /// Maximum age for executing records in milliseconds (default: 24 hours)
     pub max_age_ms: Option<u64>,
-    /// If true, just report what would be cleaned (default: false)
     pub dry_run: bool,
 }
 
-/// Result of cleanup_stale operation
+/// Result of cleanup_stale: cleaned count, records, errors
 #[derive(Debug)]
 pub struct CleanupResult {
-    /// Number of records cleaned up
     pub cleaned: usize,
-    /// Records that were (or would be) cleaned
     pub records: Vec<ExecutionRecord>,
-    /// Any errors that occurred during cleanup
     pub errors: Vec<String>,
 }
 
@@ -952,94 +904,73 @@ mod tests {
     #[test]
     fn test_store_save_and_get() {
         let (store, _temp) = create_test_store();
-
         let mut record = ExecutionRecord::new("echo hello");
         record.pid = Some(12345);
-
         store.save(&record).unwrap();
-
         let retrieved = store.get(&record.uuid).unwrap();
-        assert_eq!(retrieved.uuid, record.uuid);
-        assert_eq!(retrieved.command, "echo hello");
-        assert_eq!(retrieved.pid, Some(12345));
+        assert_eq!(
+            (retrieved.uuid, retrieved.command.as_str(), retrieved.pid),
+            (record.uuid, "echo hello", Some(12345))
+        );
     }
 
     #[test]
     fn test_store_update() {
         let (store, _temp) = create_test_store();
-
         let mut record = ExecutionRecord::new("echo hello");
         store.save(&record).unwrap();
-
         record.complete(0);
         store.save(&record).unwrap();
-
-        let retrieved = store.get(&record.uuid).unwrap();
-        assert_eq!(retrieved.status, ExecutionStatus::Executed);
-        assert_eq!(retrieved.exit_code, Some(0));
+        let r = store.get(&record.uuid).unwrap();
+        assert_eq!(
+            (r.status, r.exit_code),
+            (ExecutionStatus::Executed, Some(0))
+        );
     }
 
     #[test]
     fn test_store_get_all() {
         let (store, _temp) = create_test_store();
-
-        let record1 = ExecutionRecord::new("echo 1");
-        let record2 = ExecutionRecord::new("echo 2");
-        let record3 = ExecutionRecord::new("echo 3");
-
-        store.save(&record1).unwrap();
-        store.save(&record2).unwrap();
-        store.save(&record3).unwrap();
-
-        let all = store.get_all();
-        assert_eq!(all.len(), 3);
+        for i in 1..=3 {
+            store
+                .save(&ExecutionRecord::new(&format!("e{}", i)))
+                .unwrap();
+        }
+        assert_eq!(store.get_all().len(), 3);
     }
 
     #[test]
     fn test_store_get_by_status() {
         let (store, _temp) = create_test_store();
-
-        let executing1 = ExecutionRecord::new("echo 1");
-        let executing2 = ExecutionRecord::new("echo 2");
-        let mut executed = ExecutionRecord::new("echo 3");
-        executed.complete(0);
-
-        store.save(&executing1).unwrap();
-        store.save(&executing2).unwrap();
-        store.save(&executed).unwrap();
-
-        let executing_records = store.get_executing();
-        assert_eq!(executing_records.len(), 2);
-
-        let executed_records = store.get_by_status(ExecutionStatus::Executed);
-        assert_eq!(executed_records.len(), 1);
+        store.save(&ExecutionRecord::new("1")).unwrap();
+        store.save(&ExecutionRecord::new("2")).unwrap();
+        let mut done = ExecutionRecord::new("3");
+        done.complete(0);
+        store.save(&done).unwrap();
+        assert_eq!(
+            (
+                store.get_executing().len(),
+                store.get_by_status(ExecutionStatus::Executed).len()
+            ),
+            (2, 1)
+        );
     }
 
     #[test]
     fn test_store_delete() {
         let (store, _temp) = create_test_store();
-
         let record = ExecutionRecord::new("echo hello");
         store.save(&record).unwrap();
-
-        assert!(store.get(&record.uuid).is_some());
-
-        let deleted = store.delete(&record.uuid).unwrap();
-        assert!(deleted);
+        assert!(store.get(&record.uuid).is_some() && store.delete(&record.uuid).unwrap());
         assert!(store.get(&record.uuid).is_none());
     }
 
     #[test]
     fn test_store_clear() {
         let (store, _temp) = create_test_store();
-
-        let record1 = ExecutionRecord::new("echo 1");
-        let record2 = ExecutionRecord::new("echo 2");
-
-        store.save(&record1).unwrap();
-        store.save(&record2).unwrap();
+        store.save(&ExecutionRecord::new("1")).unwrap();
+        store.save(&ExecutionRecord::new("2")).unwrap();
         assert_eq!(store.get_all().len(), 2);
-
         store.clear().unwrap();
         assert_eq!(store.get_all().len(), 0);
     }
@@ -1047,157 +978,18 @@ mod tests {
     #[test]
     fn test_store_get_stats() {
         let (store, _temp) = create_test_store();
-
-        let executing = ExecutionRecord::new("echo 1");
-        let mut success = ExecutionRecord::new("echo 2");
-        success.complete(0);
-        let mut failure = ExecutionRecord::new("echo 3");
-        failure.complete(1);
-
-        store.save(&executing).unwrap();
-        store.save(&success).unwrap();
-        store.save(&failure).unwrap();
-
-        let stats = store.get_stats();
-        assert_eq!(stats.total, 3);
-        assert_eq!(stats.executing, 1);
-        assert_eq!(stats.executed, 2);
-        assert_eq!(stats.successful, 1);
-        assert_eq!(stats.failed, 1);
+        store.save(&ExecutionRecord::new("1")).unwrap();
+        let mut ok = ExecutionRecord::new("2");
+        ok.complete(0);
+        store.save(&ok).unwrap();
+        let mut fail = ExecutionRecord::new("3");
+        fail.complete(1);
+        store.save(&fail).unwrap();
+        let s = store.get_stats();
+        assert_eq!(
+            (s.total, s.executing, s.executed, s.successful, s.failed),
+            (3, 1, 2, 1, 1)
+        );
     }
-
-    #[test]
-    fn test_lock_manager() {
-        let temp_dir = TempDir::new().unwrap();
-        let lock_path = temp_dir.path().join("test.lock");
-
-        let mut lock = LockManager::new(lock_path.clone());
-        assert!(lock.acquire(1000));
-        assert!(lock_path.exists());
-
-        lock.release();
-        assert!(!lock_path.exists());
-    }
-
-    #[test]
-    fn test_cleanup_stale_no_stale_records() {
-        let (store, _temp) = create_test_store();
-
-        // Create a record that just started (not stale)
-        let record = ExecutionRecord::new("echo hello");
-        store.save(&record).unwrap();
-
-        let result = store.cleanup_stale(CleanupOptions {
-            dry_run: false,
-            ..Default::default()
-        });
-
-        assert_eq!(result.cleaned, 0);
-        assert_eq!(result.records.len(), 0);
-        assert!(result.errors.is_empty());
-    }
-
-    #[test]
-    fn test_cleanup_stale_dry_run() {
-        let (store, _temp) = create_test_store();
-
-        // Create a record with an old start time
-        let mut record = ExecutionRecord::new("echo old");
-        // Set start time to 25 hours ago
-        let old_time = chrono::Utc::now() - chrono::Duration::hours(25);
-        record.start_time = old_time.to_rfc3339();
-        store.save(&record).unwrap();
-
-        // Dry run should find the stale record but not clean it
-        let result = store.cleanup_stale(CleanupOptions {
-            dry_run: true,
-            ..Default::default()
-        });
-
-        assert_eq!(result.cleaned, 1);
-        assert_eq!(result.records.len(), 1);
-        assert_eq!(result.records[0].uuid, record.uuid);
-
-        // Record should still be executing
-        let retrieved = store.get(&record.uuid).unwrap();
-        assert_eq!(retrieved.status, ExecutionStatus::Executing);
-    }
-
-    #[test]
-    fn test_cleanup_stale_actual_cleanup() {
-        let (store, _temp) = create_test_store();
-
-        // Create a record with an old start time
-        let mut record = ExecutionRecord::new("echo old");
-        // Set start time to 25 hours ago
-        let old_time = chrono::Utc::now() - chrono::Duration::hours(25);
-        record.start_time = old_time.to_rfc3339();
-        store.save(&record).unwrap();
-
-        // Actual cleanup should mark the record as executed with exit code -1
-        let result = store.cleanup_stale(CleanupOptions {
-            dry_run: false,
-            ..Default::default()
-        });
-
-        assert_eq!(result.cleaned, 1);
-        assert_eq!(result.records.len(), 1);
-
-        // Record should now be executed with exit code -1
-        let retrieved = store.get(&record.uuid).unwrap();
-        assert_eq!(retrieved.status, ExecutionStatus::Executed);
-        assert_eq!(retrieved.exit_code, Some(-1));
-        assert!(retrieved.end_time.is_some());
-    }
-
-    #[test]
-    fn test_cleanup_stale_custom_max_age() {
-        let (store, _temp) = create_test_store();
-
-        // Create a record with a 2 hour old start time
-        let mut record = ExecutionRecord::new("echo recent");
-        let old_time = chrono::Utc::now() - chrono::Duration::hours(2);
-        record.start_time = old_time.to_rfc3339();
-        store.save(&record).unwrap();
-
-        // With default 24 hour max age, should not be stale
-        let result = store.cleanup_stale(CleanupOptions {
-            dry_run: true,
-            ..Default::default()
-        });
-        assert_eq!(result.cleaned, 0);
-
-        // With 1 hour max age, should be stale
-        let result = store.cleanup_stale(CleanupOptions {
-            dry_run: true,
-            max_age_ms: Some(60 * 60 * 1000), // 1 hour
-        });
-        assert_eq!(result.cleaned, 1);
-    }
-
-    #[test]
-    fn test_cleanup_stale_only_executing_records() {
-        let (store, _temp) = create_test_store();
-
-        // Create an old executed record
-        let mut executed_record = ExecutionRecord::new("echo done");
-        let old_time = chrono::Utc::now() - chrono::Duration::hours(25);
-        executed_record.start_time = old_time.to_rfc3339();
-        executed_record.complete(0);
-        store.save(&executed_record).unwrap();
-
-        // Create an old executing record
-        let mut executing_record = ExecutionRecord::new("echo running");
-        executing_record.start_time = old_time.to_rfc3339();
-        store.save(&executing_record).unwrap();
-
-        let result = store.cleanup_stale(CleanupOptions {
-            dry_run: true,
-            ..Default::default()
-        });
-
-        // Only the executing record should be found as stale
-        assert_eq!(result.cleaned, 1);
-        assert_eq!(result.records[0].uuid, executing_record.uuid);
-    }
+    // Note: Additional tests in tests/cleanup_test.rs
 }

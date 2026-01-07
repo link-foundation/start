@@ -7,6 +7,7 @@ pub mod execution_store;
 pub mod failure_handler;
 pub mod isolation;
 pub mod output_blocks;
+pub mod signal_handler;
 pub mod status_formatter;
 pub mod substitution;
 pub mod user_manager;
@@ -31,6 +32,7 @@ pub use output_blocks::{
     format_value_for_links_notation, get_box_style, BoxStyle, FinishBlockOptions,
     StartBlockOptions, DEFAULT_WIDTH,
 };
+pub use signal_handler::{clear_current_execution, set_current_execution, setup_signal_handlers};
 pub use status_formatter::{
     format_record, format_record_as_links_notation, format_record_as_text, query_status,
     StatusQueryResult,

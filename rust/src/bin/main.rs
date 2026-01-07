@@ -11,14 +11,13 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{self, Command, Stdio};
-use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
-use std::sync::Mutex;
 
 use start_command::{
     args_parser::{
         generate_session_name, generate_uuid, get_effective_mode, has_isolation, parse_args,
     },
-    create_finish_block, create_log_footer, create_log_header, create_log_path, create_start_block,
+    clear_current_execution, create_finish_block, create_log_footer, create_log_header,
+    create_log_path, create_start_block,
     execution_store::{
         CleanupOptions, ExecutionRecord, ExecutionRecordOptions, ExecutionStore,
         ExecutionStoreOptions,
@@ -27,6 +26,7 @@ use start_command::{
     get_default_docker_image, get_timestamp,
     isolation::{run_as_isolated_user, run_isolated, IsolationOptions},
     output_blocks::{FinishBlockOptions, StartBlockOptions},
+    set_current_execution, setup_signal_handlers,
     status_formatter::query_status,
     substitution::{process_command, ProcessOptions},
     user_manager::{
@@ -35,83 +35,6 @@ use start_command::{
     },
     write_log_file, LogHeaderParams,
 };
-
-// Global state for signal handling cleanup
-// These are used to update execution status when the process is interrupted
-static SIGNAL_RECEIVED: AtomicBool = AtomicBool::new(false);
-static SIGNAL_EXIT_CODE: AtomicI32 = AtomicI32::new(0);
-static CURRENT_EXECUTION: Mutex<Option<(ExecutionRecord, ExecutionStore)>> = Mutex::new(None);
-
-/// Set up signal handlers for graceful cleanup on interruption
-#[cfg(unix)]
-fn setup_signal_handlers() {
-    use std::sync::Once;
-    static INIT: Once = Once::new();
-
-    INIT.call_once(|| {
-        unsafe {
-            // SIGINT (Ctrl+C) - exit code 130 (128 + 2)
-            libc::signal(libc::SIGINT, signal_handler as usize);
-            // SIGTERM (kill command) - exit code 143 (128 + 15)
-            libc::signal(libc::SIGTERM, signal_handler as usize);
-            // SIGHUP (terminal closed) - exit code 129 (128 + 1)
-            libc::signal(libc::SIGHUP, signal_handler as usize);
-        }
-    });
-}
-
-#[cfg(not(unix))]
-fn setup_signal_handlers() {
-    // Signal handling not supported on non-Unix platforms
-}
-
-/// Signal handler function
-#[cfg(unix)]
-extern "C" fn signal_handler(sig: i32) {
-    // Calculate exit code based on signal (128 + signal number)
-    let exit_code = 128 + sig;
-    SIGNAL_EXIT_CODE.store(exit_code, Ordering::SeqCst);
-    SIGNAL_RECEIVED.store(true, Ordering::SeqCst);
-
-    // Try to clean up the current execution record
-    cleanup_execution_on_signal(sig, exit_code);
-
-    // Exit with the appropriate code
-    std::process::exit(exit_code);
-}
-
-/// Clean up execution record when a signal is received
-fn cleanup_execution_on_signal(signal: i32, exit_code: i32) {
-    if let Ok(mut guard) = CURRENT_EXECUTION.lock() {
-        if let Some((ref mut record, ref store)) = *guard {
-            // Mark as completed with signal exit code
-            record.complete(exit_code);
-            if let Err(e) = store.save(record) {
-                // Log error if verbose (can't easily check config here, so always log to stderr)
-                eprintln!(
-                    "\n[Tracking] Warning: Could not save execution record on signal {}: {}",
-                    signal, e
-                );
-            }
-            // Clear the record to prevent double cleanup
-            *guard = None;
-        }
-    }
-}
-
-/// Set the current execution record for signal cleanup
-fn set_current_execution(record: ExecutionRecord, store: ExecutionStore) {
-    if let Ok(mut guard) = CURRENT_EXECUTION.lock() {
-        *guard = Some((record, store));
-    }
-}
-
-/// Clear the current execution record (call after normal completion)
-fn clear_current_execution() {
-    if let Ok(mut guard) = CURRENT_EXECUTION.lock() {
-        *guard = None;
-    }
-}
 
 /// Configuration from environment variables
 struct Config {
