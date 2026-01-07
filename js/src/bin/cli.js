@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
 
-const { spawn } = require('child_process');
 const process = require('process');
 const os = require('os');
 const fs = require('fs');
@@ -35,6 +34,7 @@ const { ExecutionStore, ExecutionRecord } = require('../lib/execution-store');
 const { queryStatus } = require('../lib/status-formatter');
 const { printVersion } = require('../lib/version');
 const { createStartBlock, createFinishBlock } = require('../lib/output-blocks');
+const { runWithBunSpawn, runWithNodeSpawn } = require('../lib/spawn-helpers');
 
 // Configuration from environment variables
 const config = {
@@ -529,11 +529,18 @@ async function runWithIsolation(
 }
 
 /**
- * Run command directly (without isolation) - original synchronous version
+ * Run command directly (without isolation)
+ *
+ * Uses Bun.spawn when running on Bun for reliable event handling on macOS.
+ * Falls back to node:child_process for Node.js compatibility.
+ *
+ * Issue #57: On macOS with Bun, node:child_process events may not fire reliably
+ * before the event loop exits. Bun.spawn provides more reliable stream handling.
+ *
  * @param {string} cmd - Command to execute
  * @param {string} sessionId - Session UUID for tracking
  */
-function runDirect(cmd, sessionId) {
+async function runDirect(cmd, sessionId) {
   // Get the command name (first word of the actual command to execute)
   const commandName = cmd.split(' ')[0];
 
@@ -606,76 +613,8 @@ function runDirect(cmd, sessionId) {
   );
   console.log('');
 
-  // Execute the command with captured output
-  const child = spawn(shell, shellArgs, {
-    stdio: ['inherit', 'pipe', 'pipe'],
-    shell: false,
-  });
-
-  // Update execution record with PID and save initial state
-  if (executionRecord && store) {
-    executionRecord.pid = child.pid;
-    try {
-      store.save(executionRecord);
-    } catch (err) {
-      if (config.verbose) {
-        console.error(
-          `[Tracking] Warning: Could not save execution record: ${err.message}`
-        );
-      }
-    }
-  }
-
-  // Capture stdout
-  child.stdout.on('data', (data) => {
-    const text = data.toString();
-    process.stdout.write(text);
-    logContent += text;
-  });
-
-  // Capture stderr
-  child.stderr.on('data', (data) => {
-    const text = data.toString();
-    process.stderr.write(text);
-    logContent += text;
-  });
-
-  // Handle process close (not 'exit' - we need to wait for all stdio to be closed)
-  // The 'close' event fires after all stdio streams have been closed, ensuring
-  // all stdout/stderr data has been received. The 'exit' event can fire before
-  // buffered data is received, causing output loss on macOS (Issue #57).
-  child.on('close', (code) => {
-    const exitCode = code || 0;
-    const endTime = getTimestamp();
-
-    // Log footer
-    logContent += `\n${'='.repeat(50)}\n`;
-    logContent += `Finished: ${endTime}\n`;
-    logContent += `Exit Code: ${exitCode}\n`;
-
-    // Write log file
-    try {
-      fs.writeFileSync(logFilePath, logContent, 'utf8');
-    } catch (err) {
-      console.error(`\nWarning: Could not save log file: ${err.message}`);
-    }
-
-    // Update execution record as completed
-    if (executionRecord && store) {
-      executionRecord.complete(exitCode);
-      try {
-        store.save(executionRecord);
-      } catch (err) {
-        if (config.verbose) {
-          console.error(
-            `[Tracking] Warning: Could not update execution record: ${err.message}`
-          );
-        }
-      }
-    }
-
-    // Print finish block
-    const durationMs = Date.now() - startTimeMs;
+  // Completion callback
+  const onComplete = (exitCode, endTime, _logContent, durationMs) => {
     console.log('');
     console.log(
       createFinishBlock({
@@ -686,47 +625,14 @@ function runDirect(cmd, sessionId) {
         durationMs,
       })
     );
-
-    // If command failed, try to auto-report
     if (exitCode !== 0) {
       handleFailure(config, commandName, cmd, exitCode, logFilePath);
     }
-
     process.exit(exitCode);
-  });
+  };
 
-  // Handle spawn errors
-  child.on('error', (err) => {
-    const endTime = getTimestamp();
-    const durationMs = Date.now() - startTimeMs;
-    const errorMessage = `Error executing command: ${err.message}`;
-
-    logContent += `\n${errorMessage}\n`;
-    logContent += `\n${'='.repeat(50)}\n`;
-    logContent += `Finished: ${endTime}\n`;
-    logContent += `Exit Code: 1\n`;
-
-    // Write log file
-    try {
-      fs.writeFileSync(logFilePath, logContent, 'utf8');
-    } catch (writeErr) {
-      console.error(`\nWarning: Could not save log file: ${writeErr.message}`);
-    }
-
-    // Update execution record as failed
-    if (executionRecord && store) {
-      executionRecord.complete(1);
-      try {
-        store.save(executionRecord);
-      } catch (storeErr) {
-        if (config.verbose) {
-          console.error(
-            `[Tracking] Warning: Could not update execution record: ${storeErr.message}`
-          );
-        }
-      }
-    }
-
+  // Error callback
+  const onError = (errorMessage, endTime, durationMs) => {
     console.error(`\n${errorMessage}`);
     console.log('');
     console.log(
@@ -738,11 +644,30 @@ function runDirect(cmd, sessionId) {
         durationMs,
       })
     );
-
     handleFailure(config, commandName, cmd, 1, logFilePath);
-
     process.exit(1);
-  });
+  };
+
+  // Use Bun.spawn when running on Bun for reliable event handling on macOS
+  // Fall back to node:child_process for Node.js compatibility
+  const spawnOptions = {
+    shell,
+    shellArgs,
+    logFilePath,
+    logContent,
+    startTimeMs,
+    executionRecord,
+    store,
+    config,
+    onComplete,
+    onError,
+  };
+
+  if (typeof Bun !== 'undefined') {
+    await runWithBunSpawn(spawnOptions);
+  } else {
+    runWithNodeSpawn(spawnOptions);
+  }
 }
 
 /**

@@ -94,11 +94,11 @@ Several Bun-specific issues have been reported related to stdout/stderr bufferin
 1. [Bun Issue #18239](https://github.com/oven-sh/bun/issues/18239): `process.stdin` on macOS buffers all input instead of emitting chunks incrementally
 2. [Bun Issue #24690](https://github.com/oven-sh/bun/issues/24690): `Bun.spawn()` with `stdout: 'pipe'` returns empty output in test runner
 
-## Solution
+## Solution Attempts
 
-### JavaScript Fix
+### Initial Fix (v0.17.2): Using `close` event
 
-Change from `exit` event to `close` event in `js/src/bin/cli.js`:
+The initial fix changed from `exit` event to `close` event in `js/src/bin/cli.js`:
 
 ```javascript
 // Before (problematic):
@@ -107,28 +107,85 @@ child.on('exit', (code) => {
   process.exit(exitCode);
 });
 
-// After (fixed):
+// After (v0.17.2):
 child.on('close', (code) => {
   // Handle completion - all stdio data guaranteed to be received
   process.exit(exitCode);
 });
 ```
 
-### Rust Fix
+**Result**: This fix did NOT work on macOS. User testing showed the issue persisted.
 
-The Rust implementation doesn't have this issue because `Command::output()` waits for the process to complete and returns all output:
+### Deeper Root Cause Analysis (v0.17.3)
 
-```rust
-let output = Command::new(&shell)
-    .args(&shell_args)
-    .stdout(Stdio::inherit())
-    .stderr(Stdio::inherit())
-    .output();
+After further investigation, we discovered the actual root cause is related to **Bun's event loop behavior**, not just the event type:
+
+1. **Bun Issue #3083**: `node:child_process#spawn` doesn't fire `close` event if app exits immediately after spawned app exits ([GitHub](https://github.com/oven-sh/bun/issues/3083))
+
+2. The issue is that Bun's event loop may exit **before** the `close` event callback can be scheduled, especially for fast commands like `echo`.
+
+3. This explains why:
+   - The start block appears (synchronous code)
+   - No output appears (async stream data never received)
+   - No finish block appears (`close` event never fires)
+   - The shell prompt returns (Bun process exits without waiting)
+
+### Final Fix (v0.17.3): Using Bun.spawn with async/await
+
+The proper fix uses **Bun's native `Bun.spawn` API** instead of `node:child_process`:
+
+```javascript
+// New approach: Use Bun.spawn for reliable event handling
+if (typeof Bun !== 'undefined') {
+  // Bun runtime - use native API
+  const proc = Bun.spawn([shell, ...shellArgs], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+    stdin: 'inherit',
+  });
+
+  // Read streams using async/await (blocks until complete)
+  const stdoutContent = await new Response(proc.stdout).text();
+  const stderrContent = await new Response(proc.stderr).text();
+
+  // Wait for process to exit
+  const exitCode = await proc.exited;
+
+  // Now safe to print finish block and exit
+} else {
+  // Node.js - fallback to event-based approach
+  const child = spawn(shell, shellArgs, { ... });
+  child.on('close', (code) => { ... });
+}
 ```
 
-However, note that `Stdio::inherit()` means output goes directly to parent's stdout/stderr, bypassing capture. For the Rust version, the output is already being displayed in real-time via `inherit`, so the finish block appears after the process completes.
+**Why this works**:
+1. `await proc.exited` keeps the event loop alive until the process exits
+2. Reading streams with async readers ensures all data is consumed
+3. The Promise-based approach doesn't have the callback scheduling issues
 
-The Rust implementation may need review to ensure consistent behavior with the JavaScript version in terms of output capture and display.
+### Rust Implementation
+
+The Rust implementation uses `spawn()` with threads for real-time output, which correctly waits for completion:
+
+```rust
+let mut child = Command::new(&shell)
+    .args(&shell_args)
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .spawn()?;
+
+// Threads read stdout/stderr in real-time
+let stdout_handle = thread::spawn(move || { ... });
+let stderr_handle = thread::spawn(move || { ... });
+
+// Wait for threads and process
+stdout_handle.join();
+stderr_handle.join();
+child.wait();  // This blocks until completion
+```
+
+This approach doesn't have the event loop issue because Rust's threads naturally wait for completion.
 
 ## Testing
 
@@ -227,8 +284,11 @@ The log shows the job passed with "Changelog check passed" because the condition
 ## References
 
 - [Node.js Child Process Documentation](https://nodejs.org/api/child_process.html)
-- [Bun Issue #18239](https://github.com/oven-sh/bun/issues/18239)
-- [Bun Issue #24690](https://github.com/oven-sh/bun/issues/24690)
+- [Bun Issue #3083](https://github.com/oven-sh/bun/issues/3083): `close` event not firing
+- [Bun Issue #18239](https://github.com/oven-sh/bun/issues/18239): macOS stdin buffering
+- [Bun Issue #24690](https://github.com/oven-sh/bun/issues/24690): stdout pipe issues in tests
+- [Bun Spawn Documentation](https://bun.sh/docs/api/spawn)
 - [GitHub Issue #57](https://github.com/link-foundation/start/issues/57)
-- [GitHub PR #58](https://github.com/link-foundation/start/pull/58)
+- [GitHub PR #58](https://github.com/link-foundation/start/pull/58): Initial fix attempt
+- [GitHub PR #59](https://github.com/link-foundation/start/pull/59): Final fix with Bun.spawn
 - [CI Run 20790282454](https://github.com/link-foundation/start/actions/runs/20790282454/job/59710582348)
