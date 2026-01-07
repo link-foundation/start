@@ -431,7 +431,10 @@ fn handle_cleanup(config: &Config, dry_run: bool) {
         println!("  Started: {}", start_time_display);
         println!(
             "  PID: {}",
-            record.pid.map(|p| p.to_string()).unwrap_or("N/A".to_string())
+            record
+                .pid
+                .map(|p| p.to_string())
+                .unwrap_or("N/A".to_string())
         );
         println!();
     }

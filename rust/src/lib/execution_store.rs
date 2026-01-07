@@ -653,7 +653,9 @@ impl ExecutionStore {
 
             // Update stale records to "executed" status with exit code -1 (abnormal termination)
             for stale_record in &stale_records {
-                if let Some(index) = current_records.iter().position(|r| r.uuid == stale_record.uuid)
+                if let Some(index) = current_records
+                    .iter()
+                    .position(|r| r.uuid == stale_record.uuid)
                 {
                     // Mark as executed with exit code -1 to indicate abnormal termination
                     current_records[index].status = ExecutionStatus::Executed;
