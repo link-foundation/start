@@ -72,6 +72,45 @@ jobs:
           GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/detect-code-changes.mjs
 
+  # === VERSION CHANGE CHECK ===
+  # Prohibit manual version changes in package.json - versions should only be changed by CI/CD
+  version-check:
+    name: Check for Manual Version Changes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for version changes in package.json
+        run: |
+          # Skip check for automated release PRs
+          if [[ "${{ github.head_ref }}" == "changeset-release/"* ]] || [[ "${{ github.head_ref }}" == "changeset-js-"* ]]; then
+            echo "Skipping version check for automated release PR"
+            exit 0
+          fi
+
+          # Get the diff for package.json
+          VERSION_DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- js/package.json | grep -E '^\+.*"version"' || true)
+
+          if [ -n "$VERSION_DIFF" ]; then
+            echo "::error::Manual version change detected in js/package.json"
+            echo ""
+            echo "Version changes in package.json are prohibited in pull requests."
+            echo "Versions are managed automatically by the CI/CD pipeline using changesets."
+            echo ""
+            echo "To request a release:"
+            echo "  1. Add a changeset file describing your changes"
+            echo "  2. The release workflow will automatically bump the version when merged"
+            echo ""
+            echo "Detected change:"
+            echo "$VERSION_DIFF"
+            exit 1
+          fi
+
+          echo "No manual version changes detected - check passed"
+
   # === CHANGESET CHECK ===
   changeset-check:
     name: Check for Changesets

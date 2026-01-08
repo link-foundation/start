@@ -70,6 +70,39 @@ jobs:
           GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/detect-code-changes.mjs
 
+  # === VERSION CHANGE CHECK ===
+  # Prohibit manual version changes in Cargo.toml - versions should only be changed by CI/CD
+  version-check:
+    name: Check for Manual Version Changes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for version changes in Cargo.toml
+        run: |
+          # Get the diff for Cargo.toml
+          VERSION_DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- rust/Cargo.toml | grep -E '^\+version\s*=' || true)
+
+          if [ -n "$VERSION_DIFF" ]; then
+            echo "::error::Manual version change detected in rust/Cargo.toml"
+            echo ""
+            echo "Version changes in Cargo.toml are prohibited in pull requests."
+            echo "Versions are managed automatically by the CI/CD pipeline using changelog fragments."
+            echo ""
+            echo "To request a release:"
+            echo "  1. Add a changelog fragment in rust/changelog.d/ describing your changes"
+            echo "  2. The release workflow will automatically bump the version when merged"
+            echo ""
+            echo "Detected change:"
+            echo "$VERSION_DIFF"
+            exit 1
+          fi
+
+          echo "No manual version changes detected - check passed"
+
   # === CHANGELOG CHECK ===
   changelog:
     name: Changelog Fragment Check

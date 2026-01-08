@@ -467,6 +467,83 @@ pub fn run_in_ssh(command: &str, options: &IsolationOptions) -> IsolationResult 
     }
 }
 
+/// Check if a Docker image exists locally
+pub fn docker_image_exists(image: &str) -> bool {
+    Command::new("docker")
+        .args(["image", "inspect", image])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+/// Pull a Docker image with output streaming
+/// Returns (success, output) tuple
+pub fn docker_pull_image(image: &str) -> (bool, String) {
+    use std::io::{BufRead, BufReader};
+
+    // Print the virtual command line
+    println!(
+        "{}",
+        crate::output_blocks::create_virtual_command_block(&format!("docker pull {}", image))
+    );
+    println!();
+
+    let mut child = match Command::new("docker")
+        .args(["pull", image])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            let error_msg = format!("Failed to run docker pull: {}", e);
+            eprintln!("{}", error_msg);
+            println!();
+            println!(
+                "{}",
+                crate::output_blocks::create_virtual_command_result(false)
+            );
+            return (false, error_msg);
+        }
+    };
+
+    let mut output = String::new();
+
+    // Read and display stdout
+    if let Some(stdout) = child.stdout.take() {
+        let reader = BufReader::new(stdout);
+        for line in reader.lines().map_while(Result::ok) {
+            println!("{}", line);
+            output.push_str(&line);
+            output.push('\n');
+        }
+    }
+
+    // Read and display stderr
+    if let Some(stderr) = child.stderr.take() {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines().map_while(Result::ok) {
+            eprintln!("{}", line);
+            output.push_str(&line);
+            output.push('\n');
+        }
+    }
+
+    let success = child.wait().map(|s| s.success()).unwrap_or(false);
+
+    // Print result marker and separator
+    println!();
+    println!(
+        "{}",
+        crate::output_blocks::create_virtual_command_result(success)
+    );
+    println!("{}", crate::output_blocks::create_timeline_separator());
+
+    (success, output)
+}
+
 /// Run command in Docker container
 pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResult {
     if !is_command_available("docker") {
@@ -490,12 +567,29 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         }
     };
 
+    // Check if image exists locally; if not, pull it as a virtual command
+    if !docker_image_exists(&image) {
+        let (pull_success, _pull_output) = docker_pull_image(&image);
+        if !pull_success {
+            return IsolationResult {
+                success: false,
+                message: format!("Failed to pull Docker image: {}", image),
+                exit_code: Some(1),
+                ..Default::default()
+            };
+        }
+    }
+
     let container_name = options
         .session
         .clone()
         .unwrap_or_else(|| generate_session_name(Some("docker")));
 
     let (_, _) = get_shell();
+
+    // Print the user command (this appears after any virtual commands like docker pull)
+    println!("{}", crate::output_blocks::create_command_line(command));
+    println!();
 
     if options.detached {
         let effective_command = if options.keep_alive {
