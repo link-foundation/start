@@ -7,7 +7,7 @@
 const { describe, it, expect } = require('bun:test');
 
 const {
-  // New spine format exports
+  // Spine format exports
   SPINE,
   SUCCESS_MARKER,
   FAILURE_MARKER,
@@ -22,12 +22,6 @@ const {
   createStartBlock,
   createFinishBlock,
   formatDuration,
-
-  // Legacy exports (deprecated but kept for backward compatibility)
-  BOX_STYLES,
-  DEFAULT_STYLE,
-  DEFAULT_WIDTH,
-  getBoxStyle,
 
   // Links notation utilities
   escapeForLinksNotation,
@@ -317,42 +311,6 @@ describe('output-blocks module', () => {
     it('should format longer durations with less precision', () => {
       expect(formatDuration(12345)).toBe('12.35s');
       expect(formatDuration(123456)).toBe('123.5s');
-    });
-  });
-
-  // Legacy tests for backward compatibility (BOX_STYLES)
-  describe('BOX_STYLES (legacy)', () => {
-    it('should have all expected styles', () => {
-      expect(BOX_STYLES).toHaveProperty('rounded');
-      expect(BOX_STYLES).toHaveProperty('heavy');
-      expect(BOX_STYLES).toHaveProperty('double');
-      expect(BOX_STYLES).toHaveProperty('simple');
-      expect(BOX_STYLES).toHaveProperty('ascii');
-    });
-
-    it('should have correct rounded style characters', () => {
-      expect(BOX_STYLES.rounded.topLeft).toBe('╭');
-      expect(BOX_STYLES.rounded.topRight).toBe('╮');
-      expect(BOX_STYLES.rounded.bottomLeft).toBe('╰');
-      expect(BOX_STYLES.rounded.bottomRight).toBe('╯');
-    });
-  });
-
-  describe('getBoxStyle (legacy)', () => {
-    it('should return rounded style by default', () => {
-      const style = getBoxStyle();
-      expect(style).toEqual(BOX_STYLES.rounded);
-    });
-
-    it('should return requested style', () => {
-      expect(getBoxStyle('heavy')).toEqual(BOX_STYLES.heavy);
-      expect(getBoxStyle('double')).toEqual(BOX_STYLES.double);
-      expect(getBoxStyle('ascii')).toEqual(BOX_STYLES.ascii);
-    });
-
-    it('should return rounded for unknown style', () => {
-      const style = getBoxStyle('unknown');
-      expect(style).toEqual(BOX_STYLES.rounded);
     });
   });
 

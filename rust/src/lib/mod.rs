@@ -28,26 +28,21 @@ pub use isolation::{
     IsolationResult, LogHeaderParams,
 };
 pub use output_blocks::{
-    // New status spine format (primary API)
+    // Status spine format API
     create_command_line,
     create_empty_spine_line,
-    // Main block creation functions (updated for spine format)
     create_finish_block,
     create_spine_line,
     create_start_block,
-    // Legacy box format (deprecated, kept for backward compatibility)
     escape_for_links_notation,
     format_duration,
     format_value_for_links_notation,
     generate_isolation_lines,
-    get_box_style,
     get_result_marker,
     parse_isolation_metadata,
-    BoxStyle,
     FinishBlockOptions,
     IsolationMetadata,
     StartBlockOptions,
-    DEFAULT_WIDTH,
     FAILURE_MARKER,
     SPINE,
     SUCCESS_MARKER,

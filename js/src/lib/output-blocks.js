@@ -9,8 +9,6 @@
  * - `$` → executed command
  * - No prefix → program output (stdout/stderr)
  * - Result marker (`✓` / `✗`) appears after output
- *
- * Legacy box styles are kept for backward compatibility but deprecated.
  */
 
 // Metadata spine character
@@ -19,56 +17,6 @@ const SPINE = '│';
 // Result markers
 const SUCCESS_MARKER = '✓';
 const FAILURE_MARKER = '✗';
-
-// Box drawing characters for different styles (kept for backward compatibility)
-const BOX_STYLES = {
-  rounded: {
-    topLeft: '╭',
-    topRight: '╮',
-    bottomLeft: '╰',
-    bottomRight: '╯',
-    horizontal: '─',
-    vertical: '│',
-  },
-  heavy: {
-    topLeft: '┏',
-    topRight: '┓',
-    bottomLeft: '┗',
-    bottomRight: '┛',
-    horizontal: '━',
-    vertical: '┃',
-  },
-  double: {
-    topLeft: '╔',
-    topRight: '╗',
-    bottomLeft: '╚',
-    bottomRight: '╝',
-    horizontal: '═',
-    vertical: '║',
-  },
-  simple: {
-    topLeft: '',
-    topRight: '',
-    bottomLeft: '',
-    bottomRight: '',
-    horizontal: '─',
-    vertical: '',
-  },
-  ascii: {
-    topLeft: '+',
-    topRight: '+',
-    bottomLeft: '+',
-    bottomRight: '+',
-    horizontal: '-',
-    vertical: '|',
-  },
-};
-
-// Default style (can be overridden via environment variable)
-const DEFAULT_STYLE = process.env.START_OUTPUT_STYLE || 'rounded';
-
-// Default block width
-const DEFAULT_WIDTH = 60;
 
 /**
  * Create a metadata line with spine prefix
@@ -106,98 +54,6 @@ function createCommandLine(command) {
  */
 function getResultMarker(exitCode) {
   return exitCode === 0 ? SUCCESS_MARKER : FAILURE_MARKER;
-}
-
-/**
- * Get the box style configuration
- * @param {string} [styleName] - Style name (rounded, heavy, double, simple, ascii)
- * @returns {object} Box style configuration
- * @deprecated Use spine format instead
- */
-function getBoxStyle(styleName = DEFAULT_STYLE) {
-  return BOX_STYLES[styleName] || BOX_STYLES.rounded;
-}
-
-/**
- * Create a horizontal line
- * @param {number} width - Line width
- * @param {object} style - Box style
- * @returns {string} Horizontal line
- * @deprecated Use spine format instead
- */
-function createHorizontalLine(width, style) {
-  return style.horizontal.repeat(width);
-}
-
-/**
- * Pad or truncate text to fit a specific width
- * @param {string} text - Text to pad
- * @param {number} width - Target width
- * @param {boolean} [allowOverflow=false] - If true, don't truncate long text
- * @returns {string} Padded text
- * @deprecated Use spine format instead
- */
-function padText(text, width, allowOverflow = false) {
-  if (text.length >= width) {
-    // If overflow is allowed, return text as-is (for copyable content like paths)
-    if (allowOverflow) {
-      return text;
-    }
-    return text.substring(0, width);
-  }
-  return text + ' '.repeat(width - text.length);
-}
-
-/**
- * Create a bordered line with text
- * @param {string} text - Text content
- * @param {number} width - Total width (including borders)
- * @param {object} style - Box style
- * @param {boolean} [allowOverflow=false] - If true, allow text to overflow (for copyable content)
- * @returns {string} Bordered line
- * @deprecated Use spine format instead
- */
-function createBorderedLine(text, width, style, allowOverflow = false) {
-  if (style.vertical) {
-    const innerWidth = width - 4; // 2 for borders, 2 for padding
-    const paddedText = padText(text, innerWidth, allowOverflow);
-    // If text overflows, extend the right border position
-    if (allowOverflow && text.length > innerWidth) {
-      return `${style.vertical} ${paddedText} ${style.vertical}`;
-    }
-    return `${style.vertical} ${paddedText} ${style.vertical}`;
-  }
-  return text;
-}
-
-/**
- * Create the top border of a box
- * @param {number} width - Box width
- * @param {object} style - Box style
- * @returns {string} Top border
- * @deprecated Use spine format instead
- */
-function createTopBorder(width, style) {
-  if (style.topLeft) {
-    const lineWidth = width - 2; // Subtract corners
-    return `${style.topLeft}${createHorizontalLine(lineWidth, style)}${style.topRight}`;
-  }
-  return createHorizontalLine(width, style);
-}
-
-/**
- * Create the bottom border of a box
- * @param {number} width - Box width
- * @param {object} style - Box style
- * @returns {string} Bottom border
- * @deprecated Use spine format instead
- */
-function createBottomBorder(width, style) {
-  if (style.bottomLeft) {
-    const lineWidth = width - 2; // Subtract corners
-    return `${style.bottomLeft}${createHorizontalLine(lineWidth, style)}${style.bottomRight}`;
-  }
-  return createHorizontalLine(width, style);
 }
 
 /**
@@ -543,7 +399,7 @@ function formatAsNestedLinksNotation(obj, indent = 2, depth = 0) {
 }
 
 module.exports = {
-  // New status spine format (primary API)
+  // Status spine format API
   SPINE,
   SUCCESS_MARKER,
   FAILURE_MARKER,
@@ -554,20 +410,10 @@ module.exports = {
   parseIsolationMetadata,
   generateIsolationLines,
 
-  // Main block creation functions (updated for spine format)
+  // Main block creation functions
   createStartBlock,
   createFinishBlock,
   formatDuration,
-
-  // Legacy box format (deprecated, kept for backward compatibility)
-  BOX_STYLES,
-  DEFAULT_STYLE,
-  DEFAULT_WIDTH,
-  getBoxStyle,
-  createHorizontalLine,
-  createBorderedLine,
-  createTopBorder,
-  createBottomBorder,
 
   // Links notation utilities
   escapeForLinksNotation,

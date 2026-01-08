@@ -4,8 +4,8 @@
 
 use start_command::{
     create_finish_block, create_start_block, escape_for_links_notation, format_duration,
-    get_box_style, get_result_marker, parse_isolation_metadata, FinishBlockOptions,
-    StartBlockOptions, FAILURE_MARKER, SPINE, SUCCESS_MARKER,
+    get_result_marker, parse_isolation_metadata, FinishBlockOptions, StartBlockOptions,
+    FAILURE_MARKER, SPINE, SUCCESS_MARKER,
 };
 
 #[test]
@@ -241,20 +241,4 @@ fn test_escape_for_links_notation_with_double_quotes() {
 #[test]
 fn test_escape_for_links_notation_with_single_quotes() {
     assert_eq!(escape_for_links_notation("it's cool"), "\"it's cool\"");
-}
-
-// Legacy tests for backward compatibility (BOX_STYLES)
-#[test]
-fn test_box_styles_legacy() {
-    let rounded = get_box_style(Some("rounded"));
-    assert_eq!(rounded.top_left, "╭");
-
-    let heavy = get_box_style(Some("heavy"));
-    assert_eq!(heavy.top_left, "┏");
-
-    let double = get_box_style(Some("double"));
-    assert_eq!(double.top_left, "╔");
-
-    let ascii = get_box_style(Some("ascii"));
-    assert_eq!(ascii.top_left, "+");
 }

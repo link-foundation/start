@@ -55,24 +55,18 @@ function runCli(args, options = {}) {
 }
 
 // Verify output contains expected structure for attached modes (shows finish block)
-// Supports both old box format and new status spine format
+// Uses status spine format only
 function verifyAttachedModeOutput(output, expectedOutputText = 'hi') {
-  // Should contain start block (box format or spine format)
-  const hasBoxFormat = output.includes('╭') && output.includes('╰');
-  const hasSpineFormat =
-    output.includes('│ session') && output.includes('│ start');
+  // Should contain start block with spine format
   assert.ok(
-    hasBoxFormat || hasSpineFormat,
-    'Output should contain start block (box or spine format)'
+    output.includes('│ session') && output.includes('│ start'),
+    'Output should contain start block with spine format'
   );
 
-  // Should contain session info (either format)
+  // Should contain session info
+  assert.ok(output.includes('│ session'), 'Output should contain session ID');
   assert.ok(
-    output.includes('Session ID:') || output.includes('│ session'),
-    'Output should contain Session ID'
-  );
-  assert.ok(
-    output.includes('Starting at') || output.includes('│ start'),
+    output.includes('│ start'),
     'Output should contain start timestamp'
   );
 
@@ -82,20 +76,18 @@ function verifyAttachedModeOutput(output, expectedOutputText = 'hi') {
     `Output should contain the "${expectedOutputText}" command output`
   );
 
-  // Should contain finish block (for attached modes) - either format
+  // Should contain finish block
   assert.ok(
-    output.includes('Finished at') || output.includes('│ finish'),
+    output.includes('│ finish'),
     'Output should contain finish timestamp'
   );
-  // Exit code in both formats
+  assert.ok(output.includes('│ exit'), 'Output should contain exit code');
+  assert.ok(output.includes('│ log'), 'Output should contain log path');
+
+  // Should contain result marker
   assert.ok(
-    output.includes('Exit code:') || output.includes('│ exit'),
-    'Output should contain Exit code'
-  );
-  // Log path in both formats
-  assert.ok(
-    output.includes('Log:') || output.includes('│ log'),
-    'Output should contain Log path'
+    output.includes('✓') || output.includes('✗'),
+    'Output should contain result marker (✓ or ✗)'
   );
 
   // Verify there are empty lines around output (structure check)
@@ -105,89 +97,70 @@ function verifyAttachedModeOutput(output, expectedOutputText = 'hi') {
   if (outputIndex > 0) {
     // Check for empty line before output
     const lineBefore = lines[outputIndex - 1];
-    // Line before should be empty or end of start block
+    // Line before should be empty
     assert.ok(
-      lineBefore.trim() === '' || lineBefore.includes('╰'),
-      `Expected empty line or block end before output, got: "${lineBefore}"`
+      lineBefore.trim() === '',
+      `Expected empty line before output, got: "${lineBefore}"`
     );
   }
 
   if (outputIndex >= 0 && outputIndex < lines.length - 1) {
     // Check for empty line after output
     const lineAfter = lines[outputIndex + 1];
-    // Line after should be empty, start of finish block, or result marker (✓/✗)
+    // Line after should be empty or result marker (✓/✗)
     assert.ok(
       lineAfter.trim() === '' ||
-        lineAfter.includes('╭') ||
         lineAfter.includes('✓') ||
         lineAfter.includes('✗'),
-      `Expected empty line, block start, or result marker after output, got: "${lineAfter}"`
+      `Expected empty line or result marker after output, got: "${lineAfter}"`
     );
   }
 }
 
 // Verify output for detached modes (only start block, no finish block)
-// Supports both old box format and new status spine format
+// Uses status spine format only
 function verifyDetachedModeOutput(output) {
-  // Should contain start block (box format or spine format)
-  const hasBoxFormat = output.includes('╭') && output.includes('╰');
-  const hasSpineFormat =
-    output.includes('│ session') && output.includes('│ start');
+  // Should contain start block with spine format
   assert.ok(
-    hasBoxFormat || hasSpineFormat,
-    'Output should contain start block (box or spine format)'
+    output.includes('│ session') && output.includes('│ start'),
+    'Output should contain start block with spine format'
   );
 
-  // Should contain session info (either format)
+  // Should contain session info
+  assert.ok(output.includes('│ session'), 'Output should contain session ID');
   assert.ok(
-    output.includes('Session ID:') || output.includes('│ session'),
-    'Output should contain Session ID'
-  );
-  assert.ok(
-    output.includes('Starting at') || output.includes('│ start'),
+    output.includes('│ start'),
     'Output should contain start timestamp'
   );
 
   // Should show detached mode info
   assert.ok(
-    output.includes('Mode: detached') ||
-      output.includes('│ mode      detached') ||
-      output.includes('Reattach with'),
+    output.includes('│ mode      detached') || output.includes('Reattach with'),
     'Output should indicate detached mode or show reattach instructions'
   );
 }
 
 // Verify log path is not truncated
-// Supports both old box format and new status spine format
+// Uses status spine format only
 function verifyLogPathNotTruncated(output) {
-  // Try old format first
-  let logMatch = output.match(/Log: (.+)/);
-  if (!logMatch) {
-    // Try spine format
-    logMatch = output.match(/│ log\s+(.+)/);
-  }
-  assert.ok(logMatch, 'Should have Log line');
+  const logMatch = output.match(/│ log\s+(.+)/);
+  assert.ok(logMatch, 'Should have log line with spine format');
   const logPath = logMatch[1].trim();
-  // Remove trailing box border character if present
-  const cleanPath = logPath.replace(/\s*│\s*$/, '').trim();
 
   // Log path should end with .log extension
   assert.ok(
-    cleanPath.endsWith('.log'),
-    `Log path should end with .log extension, got: "${cleanPath}"`
+    logPath.endsWith('.log'),
+    `Log path should end with .log extension, got: "${logPath}"`
   );
 }
 
 // Verify session ID is a valid UUID
-// Supports both old box format and new status spine format
+// Uses status spine format only
 function verifySessionId(output) {
-  // Try both formats
-  const oldFormatMatches = output.match(/Session ID: ([a-f0-9-]+)/g);
-  const newFormatMatches = output.match(/│ session\s+([a-f0-9-]+)/g);
-  const sessionMatches = oldFormatMatches || newFormatMatches;
+  const sessionMatches = output.match(/│ session\s+([a-f0-9-]+)/g);
   assert.ok(
     sessionMatches && sessionMatches.length >= 1,
-    'Should have Session ID'
+    'Should have session ID with spine format'
   );
 
   // Extract UUID from first match
@@ -237,11 +210,11 @@ describe('Echo Integration Tests - Issue #55', () => {
       assert.ok(result.success, 'Command should succeed');
 
       // The pattern should be:
-      // [start block]
+      // [start block with spine]
       // [empty line]
       // hi
       // [empty line]
-      // [finish block]
+      // [result marker and finish block]
 
       const lines = result.output.split('\n');
       let foundHi = false;
@@ -257,21 +230,18 @@ describe('Echo Integration Tests - Issue #55', () => {
 
       assert.ok(foundHi, 'Should find "hi" output on its own line');
 
-      // Check line before hi
+      // Check line before hi - should be empty
       if (hiIndex > 0) {
         const prevLine = lines[hiIndex - 1].trim();
-        assert.ok(
-          prevLine === '' || prevLine.startsWith('╰'),
-          `Line before "hi" should be empty or end of start block`
-        );
+        assert.ok(prevLine === '', `Line before "hi" should be empty`);
       }
 
-      // Check line after hi
+      // Check line after hi - should be empty or result marker
       if (hiIndex < lines.length - 1) {
         const nextLine = lines[hiIndex + 1].trim();
         assert.ok(
-          nextLine === '' || nextLine.startsWith('╭'),
-          `Line after "hi" should be empty or start of finish block`
+          nextLine === '' || nextLine.includes('✓') || nextLine.includes('✗'),
+          `Line after "hi" should be empty or result marker`
         );
       }
 
@@ -307,15 +277,13 @@ describe('Echo Integration Tests - Issue #55', () => {
         verifyLogPathNotTruncated(result.output);
         verifySessionId(result.output);
 
-        // Should show isolation info (supports both old box format and new spine format)
+        // Should show isolation info with spine format
         assert.ok(
-          result.output.includes('[Isolation] Environment: screen') ||
-            result.output.includes('│ isolation screen'),
+          result.output.includes('│ isolation screen'),
           'Should show screen isolation info'
         );
         assert.ok(
-          result.output.includes('Mode: attached') ||
-            result.output.includes('│ mode      attached'),
+          result.output.includes('│ mode      attached'),
           'Should show attached mode'
         );
 
@@ -346,13 +314,12 @@ describe('Echo Integration Tests - Issue #55', () => {
 
         assert.ok(result.success, 'Command should succeed');
         assert.ok(
-          result.output.includes('Exit code: 0'),
-          'Should show exit code 0'
+          result.output.includes('│ exit      0'),
+          'Should show exit code 0 with spine format'
         );
         assert.ok(
-          result.output.includes('exited with code 0') ||
-            result.output.includes('Finished at'),
-          'Should show completion info'
+          result.output.includes('│ finish'),
+          'Should show finish timestamp with spine format'
         );
 
         console.log(
@@ -377,15 +344,13 @@ describe('Echo Integration Tests - Issue #55', () => {
         verifyDetachedModeOutput(result.output);
         verifySessionId(result.output);
 
-        // Should show screen isolation info with detached mode (both formats)
+        // Should show screen isolation info with detached mode (spine format)
         assert.ok(
-          result.output.includes('[Isolation] Environment: screen') ||
-            result.output.includes('│ isolation screen'),
+          result.output.includes('│ isolation screen'),
           'Should show screen isolation info'
         );
         assert.ok(
-          result.output.includes('Mode: detached') ||
-            result.output.includes('│ mode      detached'),
+          result.output.includes('│ mode      detached'),
           'Should show detached mode'
         );
 
@@ -453,8 +418,7 @@ describe('Echo Integration Tests - Issue #55', () => {
         if (result.success) {
           assert.ok(result.output.includes('hi'), 'Output should contain "hi"');
           assert.ok(
-            result.output.includes('[Isolation] Environment: tmux') ||
-              result.output.includes('│ isolation tmux'),
+            result.output.includes('│ isolation tmux'),
             'Should show tmux isolation info'
           );
           console.log('  ✓ Tmux isolation (attached): echo hi works correctly');
@@ -484,15 +448,13 @@ describe('Echo Integration Tests - Issue #55', () => {
         verifyDetachedModeOutput(result.output);
         verifySessionId(result.output);
 
-        // Should show tmux isolation info (support both old box and new spine format)
+        // Should show tmux isolation info (spine format)
         assert.ok(
-          result.output.includes('[Isolation] Environment: tmux') ||
-            result.output.includes('│ isolation  tmux'),
+          result.output.includes('│ isolation tmux'),
           'Should show tmux isolation info'
         );
         assert.ok(
-          result.output.includes('Mode: detached') ||
-            result.output.includes('│ mode       detached'),
+          result.output.includes('│ mode      detached'),
           'Should show detached mode'
         );
 
@@ -588,15 +550,13 @@ describe('Echo Integration Tests - Issue #55', () => {
         verifyLogPathNotTruncated(result.output);
         verifySessionId(result.output);
 
-        // Should show docker isolation info (support both old box and new spine format)
+        // Should show docker isolation info (spine format)
         assert.ok(
-          result.output.includes('[Isolation] Environment: docker') ||
-            result.output.includes('│ isolation  docker'),
+          result.output.includes('│ isolation docker'),
           'Should show docker isolation info'
         );
         assert.ok(
-          result.output.includes('[Isolation] Image: alpine:latest') ||
-            result.output.includes('│ image      alpine:latest'),
+          result.output.includes('│ image     alpine'),
           'Should show docker image info'
         );
 
@@ -631,13 +591,12 @@ describe('Echo Integration Tests - Issue #55', () => {
 
         assert.ok(result.success, 'Command should succeed');
         assert.ok(
-          result.output.includes('Exit code: 0'),
-          'Should show exit code 0'
+          result.output.includes('│ exit      0'),
+          'Should show exit code 0 with spine format'
         );
         assert.ok(
-          result.output.includes('exited with code 0') ||
-            result.output.includes('Finished at'),
-          'Should show completion info'
+          result.output.includes('│ finish'),
+          'Should show finish timestamp with spine format'
         );
 
         console.log(
@@ -662,15 +621,13 @@ describe('Echo Integration Tests - Issue #55', () => {
         verifyDetachedModeOutput(result.output);
         verifySessionId(result.output);
 
-        // Should show docker isolation info with detached mode (support both old box and new spine format)
+        // Should show docker isolation info with detached mode (spine format)
         assert.ok(
-          result.output.includes('[Isolation] Environment: docker') ||
-            result.output.includes('│ isolation  docker'),
+          result.output.includes('│ isolation docker'),
           'Should show docker isolation info'
         );
         assert.ok(
-          result.output.includes('Mode: detached') ||
-            result.output.includes('│ mode       detached'),
+          result.output.includes('│ mode      detached'),
           'Should show detached mode'
         );
 
@@ -746,14 +703,14 @@ describe('Echo Integration Tests - Issue #55', () => {
 
       assert.ok(result.success, 'Command should succeed');
 
-      // Get the log path line
-      const logMatch = result.output.match(/Log: (.+)/);
-      assert.ok(logMatch, 'Should have Log line');
+      // Get the log path line with spine format
+      const logMatch = result.output.match(/│ log\s+(.+)/);
+      assert.ok(logMatch, 'Should have log line with spine format');
 
-      const logLine = logMatch[0];
+      const logPath = logMatch[1];
       // Log line should contain full path ending in .log
       assert.ok(
-        logLine.includes('.log'),
+        logPath.includes('.log'),
         'Log path should be complete and not truncated'
       );
 
@@ -766,10 +723,10 @@ describe('Echo Integration Tests - Issue #55', () => {
       assert.ok(result.success, 'Command should succeed');
 
       // Get session IDs from output (should appear twice: start and finish block)
-      const sessionMatches = result.output.match(/Session ID: ([a-f0-9-]+)/g);
+      const sessionMatches = result.output.match(/│ session\s+([a-f0-9-]+)/g);
       assert.ok(
         sessionMatches && sessionMatches.length >= 2,
-        'Should have Session ID in both blocks'
+        'Should have session ID in both blocks with spine format'
       );
 
       // Extract UUID from first match
@@ -786,8 +743,8 @@ describe('Echo Integration Tests - Issue #55', () => {
 
       assert.ok(result.success, 'Command should succeed');
       assert.ok(
-        result.output.includes('Exit code: 0'),
-        'Should show "Exit code: 0" for successful command'
+        result.output.includes('│ exit      0'),
+        'Should show exit code with spine format'
       );
 
       console.log('  ✓ Exit code formatting is consistent');
@@ -798,8 +755,8 @@ describe('Echo Integration Tests - Issue #55', () => {
 
       assert.ok(result.success, 'Command should succeed');
       assert.ok(
-        result.output.includes('seconds') || result.output.includes('in 0.'),
-        'Should include timing information'
+        result.output.includes('│ duration'),
+        'Should include duration with spine format'
       );
 
       console.log('  ✓ Timing information is present in finish block');

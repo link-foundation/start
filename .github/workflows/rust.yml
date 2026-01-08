@@ -218,11 +218,12 @@ jobs:
           echo "Execution tracking test passed"
 
   # === BUILD ===
+  # Only build on push to main, not on PRs (tests already verify the code builds)
   build:
     name: Build Package
     runs-on: ubuntu-latest
     needs: [lint, test]
-    if: always() && needs.lint.result == 'success' && needs.test.result == 'success'
+    if: always() && github.event_name == 'push' && needs.lint.result == 'success' && needs.test.result == 'success'
     steps:
       - uses: actions/checkout@v4
 

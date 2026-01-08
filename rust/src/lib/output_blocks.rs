@@ -8,11 +8,8 @@
 //! - `$` → executed command
 //! - No prefix → program output (stdout/stderr)
 //! - Result marker (`✓` / `✗`) appears after output
-//!
-//! Legacy box styles are kept for backward compatibility but deprecated.
 
 use regex::Regex;
-use std::env;
 
 /// Metadata spine character
 pub const SPINE: &str = "│";
@@ -22,67 +19,6 @@ pub const SUCCESS_MARKER: &str = "✓";
 
 /// Failure result marker
 pub const FAILURE_MARKER: &str = "✗";
-
-/// Box drawing characters for different styles (kept for backward compatibility)
-#[derive(Clone, Copy)]
-pub struct BoxStyle {
-    pub top_left: &'static str,
-    pub top_right: &'static str,
-    pub bottom_left: &'static str,
-    pub bottom_right: &'static str,
-    pub horizontal: &'static str,
-    pub vertical: &'static str,
-}
-
-impl BoxStyle {
-    pub const ROUNDED: BoxStyle = BoxStyle {
-        top_left: "╭",
-        top_right: "╮",
-        bottom_left: "╰",
-        bottom_right: "╯",
-        horizontal: "─",
-        vertical: "│",
-    };
-
-    pub const HEAVY: BoxStyle = BoxStyle {
-        top_left: "┏",
-        top_right: "┓",
-        bottom_left: "┗",
-        bottom_right: "┛",
-        horizontal: "━",
-        vertical: "┃",
-    };
-
-    pub const DOUBLE: BoxStyle = BoxStyle {
-        top_left: "╔",
-        top_right: "╗",
-        bottom_left: "╚",
-        bottom_right: "╝",
-        horizontal: "═",
-        vertical: "║",
-    };
-
-    pub const SIMPLE: BoxStyle = BoxStyle {
-        top_left: "",
-        top_right: "",
-        bottom_left: "",
-        bottom_right: "",
-        horizontal: "─",
-        vertical: "",
-    };
-
-    pub const ASCII: BoxStyle = BoxStyle {
-        top_left: "+",
-        top_right: "+",
-        bottom_left: "+",
-        bottom_right: "+",
-        horizontal: "-",
-        vertical: "|",
-    };
-}
-
-/// Default block width (kept for backward compatibility)
-pub const DEFAULT_WIDTH: usize = 60;
 
 /// Create a metadata line with spine prefix
 pub fn create_spine_line(label: &str, value: &str) -> String {
@@ -205,92 +141,6 @@ pub fn generate_isolation_lines(
     }
 
     lines
-}
-
-/// Get the box style configuration from environment or default
-/// @deprecated Use spine format instead
-pub fn get_box_style(style_name: Option<&str>) -> BoxStyle {
-    let env_style = env::var("START_OUTPUT_STYLE").ok();
-    let name = style_name.or(env_style.as_deref()).unwrap_or("rounded");
-
-    match name {
-        "heavy" => BoxStyle::HEAVY,
-        "double" => BoxStyle::DOUBLE,
-        "simple" => BoxStyle::SIMPLE,
-        "ascii" => BoxStyle::ASCII,
-        _ => BoxStyle::ROUNDED,
-    }
-}
-
-/// Create a horizontal line
-/// @deprecated Use spine format instead
-fn create_horizontal_line(width: usize, style: &BoxStyle) -> String {
-    style.horizontal.repeat(width)
-}
-
-/// Pad or truncate text to fit a specific width
-/// If allow_overflow is true, long text is not truncated (for copyable content)
-/// @deprecated Use spine format instead
-fn pad_text(text: &str, width: usize, allow_overflow: bool) -> String {
-    if text.len() >= width {
-        // If overflow is allowed, return text as-is (for copyable content like paths)
-        if allow_overflow {
-            return text.to_string();
-        }
-        text[..width].to_string()
-    } else {
-        format!("{}{}", text, " ".repeat(width - text.len()))
-    }
-}
-
-/// Create a bordered line with text
-/// If allow_overflow is true, long text is not truncated (for copyable content)
-/// @deprecated Use spine format instead
-fn create_bordered_line(
-    text: &str,
-    width: usize,
-    style: &BoxStyle,
-    allow_overflow: bool,
-) -> String {
-    if !style.vertical.is_empty() {
-        let inner_width = width.saturating_sub(4); // 2 for borders, 2 for padding
-        let padded_text = pad_text(text, inner_width, allow_overflow);
-        format!("{} {} {}", style.vertical, padded_text, style.vertical)
-    } else {
-        text.to_string()
-    }
-}
-
-/// Create the top border of a box
-/// @deprecated Use spine format instead
-fn create_top_border(width: usize, style: &BoxStyle) -> String {
-    if !style.top_left.is_empty() {
-        let line_width = width.saturating_sub(2); // Subtract corners
-        format!(
-            "{}{}{}",
-            style.top_left,
-            create_horizontal_line(line_width, style),
-            style.top_right
-        )
-    } else {
-        create_horizontal_line(width, style)
-    }
-}
-
-/// Create the bottom border of a box
-/// @deprecated Use spine format instead
-fn create_bottom_border(width: usize, style: &BoxStyle) -> String {
-    if !style.bottom_left.is_empty() {
-        let line_width = width.saturating_sub(2); // Subtract corners
-        format!(
-            "{}{}{}",
-            style.bottom_left,
-            create_horizontal_line(line_width, style),
-            style.bottom_right
-        )
-    } else {
-        create_horizontal_line(width, style)
-    }
 }
 
 /// Options for creating a start block
@@ -462,28 +312,5 @@ pub fn format_value_for_links_notation(value: &serde_json::Value) -> String {
             let s = serde_json::to_string(value).unwrap_or_default();
             escape_for_links_notation(&s)
         }
-    }
-}
-
-// Re-export legacy functions for backward compatibility
-#[allow(dead_code)]
-mod legacy {
-    use super::*;
-
-    pub fn create_bordered_line_legacy(
-        text: &str,
-        width: usize,
-        style: &BoxStyle,
-        allow_overflow: bool,
-    ) -> String {
-        create_bordered_line(text, width, style, allow_overflow)
-    }
-
-    pub fn create_top_border_legacy(width: usize, style: &BoxStyle) -> String {
-        create_top_border(width, style)
-    }
-
-    pub fn create_bottom_border_legacy(width: usize, style: &BoxStyle) -> String {
-        create_bottom_border(width, style)
     }
 }
