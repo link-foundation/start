@@ -623,7 +623,7 @@ async function runWithIsolation(
     console.log('');
   }
 
-  // Print finish block with result message inside
+  // Print finish block with isolation metadata repeated
   // Add empty line before finish block for visual separation
   console.log('');
   const durationMs = Date.now() - startTimeMs;
@@ -634,7 +634,7 @@ async function runWithIsolation(
       exitCode,
       logPath: logFilePath,
       durationMs,
-      resultMessage: result.message,
+      extraLines, // Pass extraLines for isolation metadata repetition in footer
     })
   );
 

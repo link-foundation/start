@@ -1,18 +1,26 @@
 /**
  * Output formatting utilities for nicely rendered command blocks
  *
- * Provides various styles for start/finish blocks to distinguish
- * command output from the $ wrapper output.
+ * Provides "status spine" format: a width-independent, lossless output format
+ * that works in TTY, tmux, SSH, CI, and logs.
  *
- * Available styles:
- * 1. 'rounded' (default): Rounded unicode box borders (╭─╮ ╰─╯)
- * 2. 'heavy': Heavy unicode box borders (┏━┓ ┗━┛)
- * 3. 'double': Double line box borders (╔═╗ ╚═╝)
- * 4. 'simple': Simple dash lines (────────)
- * 5. 'ascii': Pure ASCII compatible (-------- +------+)
+ * Core concepts:
+ * - `│` prefix → tool metadata
+ * - `$` → executed command
+ * - No prefix → program output (stdout/stderr)
+ * - Result marker (`✓` / `✗`) appears after output
+ *
+ * Legacy box styles are kept for backward compatibility but deprecated.
  */
 
-// Box drawing characters for different styles
+// Metadata spine character
+const SPINE = '│';
+
+// Result markers
+const SUCCESS_MARKER = '✓';
+const FAILURE_MARKER = '✗';
+
+// Box drawing characters for different styles (kept for backward compatibility)
 const BOX_STYLES = {
   rounded: {
     topLeft: '╭',
@@ -63,9 +71,48 @@ const DEFAULT_STYLE = process.env.START_OUTPUT_STYLE || 'rounded';
 const DEFAULT_WIDTH = 60;
 
 /**
+ * Create a metadata line with spine prefix
+ * @param {string} label - Label (e.g., 'session', 'start', 'exit')
+ * @param {string} value - Value for the label
+ * @returns {string} Formatted line with spine prefix
+ */
+function createSpineLine(label, value) {
+  // Pad label to 10 characters for alignment
+  const paddedLabel = label.padEnd(10);
+  return `${SPINE} ${paddedLabel}${value}`;
+}
+
+/**
+ * Create an empty spine line (just the spine character)
+ * @returns {string} Empty spine line
+ */
+function createEmptySpineLine() {
+  return SPINE;
+}
+
+/**
+ * Create a command line with $ prefix
+ * @param {string} command - The command being executed
+ * @returns {string} Formatted command line
+ */
+function createCommandLine(command) {
+  return `$ ${command}`;
+}
+
+/**
+ * Get the result marker based on exit code
+ * @param {number} exitCode - Exit code (0 = success)
+ * @returns {string} Result marker (✓ or ✗)
+ */
+function getResultMarker(exitCode) {
+  return exitCode === 0 ? SUCCESS_MARKER : FAILURE_MARKER;
+}
+
+/**
  * Get the box style configuration
  * @param {string} [styleName] - Style name (rounded, heavy, double, simple, ascii)
  * @returns {object} Box style configuration
+ * @deprecated Use spine format instead
  */
 function getBoxStyle(styleName = DEFAULT_STYLE) {
   return BOX_STYLES[styleName] || BOX_STYLES.rounded;
@@ -76,6 +123,7 @@ function getBoxStyle(styleName = DEFAULT_STYLE) {
  * @param {number} width - Line width
  * @param {object} style - Box style
  * @returns {string} Horizontal line
+ * @deprecated Use spine format instead
  */
 function createHorizontalLine(width, style) {
   return style.horizontal.repeat(width);
@@ -87,6 +135,7 @@ function createHorizontalLine(width, style) {
  * @param {number} width - Target width
  * @param {boolean} [allowOverflow=false] - If true, don't truncate long text
  * @returns {string} Padded text
+ * @deprecated Use spine format instead
  */
 function padText(text, width, allowOverflow = false) {
   if (text.length >= width) {
@@ -106,6 +155,7 @@ function padText(text, width, allowOverflow = false) {
  * @param {object} style - Box style
  * @param {boolean} [allowOverflow=false] - If true, allow text to overflow (for copyable content)
  * @returns {string} Bordered line
+ * @deprecated Use spine format instead
  */
 function createBorderedLine(text, width, style, allowOverflow = false) {
   if (style.vertical) {
@@ -125,6 +175,7 @@ function createBorderedLine(text, width, style, allowOverflow = false) {
  * @param {number} width - Box width
  * @param {object} style - Box style
  * @returns {string} Top border
+ * @deprecated Use spine format instead
  */
 function createTopBorder(width, style) {
   if (style.topLeft) {
@@ -139,6 +190,7 @@ function createTopBorder(width, style) {
  * @param {number} width - Box width
  * @param {object} style - Box style
  * @returns {string} Bottom border
+ * @deprecated Use spine format instead
  */
 function createBottomBorder(width, style) {
   if (style.bottomLeft) {
@@ -149,41 +201,149 @@ function createBottomBorder(width, style) {
 }
 
 /**
- * Create a start block for command execution
+ * Parse isolation metadata from extraLines
+ * Extracts key-value pairs from lines like "[Isolation] Environment: docker, Mode: attached"
+ * @param {string[]} extraLines - Extra lines containing isolation info
+ * @returns {object} Parsed isolation metadata
+ */
+function parseIsolationMetadata(extraLines) {
+  const metadata = {
+    isolation: null,
+    mode: null,
+    image: null,
+    container: null,
+    screen: null,
+    session: null,
+    endpoint: null,
+    user: null,
+  };
+
+  for (const line of extraLines) {
+    // Parse [Isolation] Environment: docker, Mode: attached
+    const envModeMatch = line.match(
+      /\[Isolation\] Environment: (\w+), Mode: (\w+)/
+    );
+    if (envModeMatch) {
+      metadata.isolation = envModeMatch[1];
+      metadata.mode = envModeMatch[2];
+      continue;
+    }
+
+    // Parse [Isolation] Session: name
+    const sessionMatch = line.match(/\[Isolation\] Session: (.+)/);
+    if (sessionMatch) {
+      metadata.session = sessionMatch[1];
+      continue;
+    }
+
+    // Parse [Isolation] Image: name
+    const imageMatch = line.match(/\[Isolation\] Image: (.+)/);
+    if (imageMatch) {
+      metadata.image = imageMatch[1];
+      continue;
+    }
+
+    // Parse [Isolation] Endpoint: user@host
+    const endpointMatch = line.match(/\[Isolation\] Endpoint: (.+)/);
+    if (endpointMatch) {
+      metadata.endpoint = endpointMatch[1];
+      continue;
+    }
+
+    // Parse [Isolation] User: name (isolated)
+    const userMatch = line.match(/\[Isolation\] User: (\w+)/);
+    if (userMatch) {
+      metadata.user = userMatch[1];
+      continue;
+    }
+  }
+
+  return metadata;
+}
+
+/**
+ * Generate isolation metadata lines for spine format
+ * @param {object} metadata - Parsed isolation metadata
+ * @param {string} [containerOrScreenName] - Container or screen session name
+ * @returns {string[]} Array of spine-formatted isolation lines
+ */
+function generateIsolationLines(metadata, containerOrScreenName = null) {
+  const lines = [];
+
+  if (metadata.isolation) {
+    lines.push(createSpineLine('isolation', metadata.isolation));
+  }
+
+  if (metadata.mode) {
+    lines.push(createSpineLine('mode', metadata.mode));
+  }
+
+  if (metadata.image) {
+    lines.push(createSpineLine('image', metadata.image));
+  }
+
+  // Use provided container/screen name or fall back to metadata.session
+  if (metadata.isolation === 'docker') {
+    const containerName = containerOrScreenName || metadata.session;
+    if (containerName) {
+      lines.push(createSpineLine('container', containerName));
+    }
+  } else if (metadata.isolation === 'screen') {
+    const screenName = containerOrScreenName || metadata.session;
+    if (screenName) {
+      lines.push(createSpineLine('screen', screenName));
+    }
+  } else if (metadata.isolation === 'tmux') {
+    const tmuxName = containerOrScreenName || metadata.session;
+    if (tmuxName) {
+      lines.push(createSpineLine('tmux', tmuxName));
+    }
+  } else if (metadata.isolation === 'ssh') {
+    if (metadata.endpoint) {
+      lines.push(createSpineLine('endpoint', metadata.endpoint));
+    }
+  }
+
+  if (metadata.user) {
+    lines.push(createSpineLine('user', metadata.user));
+  }
+
+  return lines;
+}
+
+/**
+ * Create a start block for command execution using status spine format
  * @param {object} options - Options for the block
  * @param {string} options.sessionId - Session UUID
  * @param {string} options.timestamp - Timestamp string
  * @param {string} options.command - Command being executed
- * @param {string[]} [options.extraLines] - Additional lines to show after the command line
- * @param {string} [options.style] - Box style name
- * @param {number} [options.width] - Box width
- * @returns {string} Formatted start block
+ * @param {string[]} [options.extraLines] - Additional lines with isolation info
+ * @param {string} [options.style] - Ignored (kept for backward compatibility)
+ * @param {number} [options.width] - Ignored (kept for backward compatibility)
+ * @returns {string} Formatted start block in spine format
  */
 function createStartBlock(options) {
-  const {
-    sessionId,
-    timestamp,
-    command,
-    extraLines = [],
-    style: styleName = DEFAULT_STYLE,
-    width = DEFAULT_WIDTH,
-  } = options;
+  const { sessionId, timestamp, command, extraLines = [] } = options;
 
-  const style = getBoxStyle(styleName);
   const lines = [];
 
-  lines.push(createTopBorder(width, style));
-  lines.push(createBorderedLine(`Session ID: ${sessionId}`, width, style));
-  lines.push(
-    createBorderedLine(`Starting at ${timestamp}: ${command}`, width, style)
-  );
+  // Header: session and start time
+  lines.push(createSpineLine('session', sessionId));
+  lines.push(createSpineLine('start', timestamp));
 
-  // Add extra lines (e.g., isolation info, docker image, etc.)
-  for (const line of extraLines) {
-    lines.push(createBorderedLine(line, width, style));
+  // Parse and add isolation metadata if present
+  const metadata = parseIsolationMetadata(extraLines);
+
+  if (metadata.isolation) {
+    lines.push(createEmptySpineLine());
+    lines.push(...generateIsolationLines(metadata));
   }
 
-  lines.push(createBottomBorder(width, style));
+  // Empty spine line before command
+  lines.push(createEmptySpineLine());
+
+  // Command line
+  lines.push(createCommandLine(command));
 
   return lines.join('\n');
 }
@@ -191,34 +351,46 @@ function createStartBlock(options) {
 /**
  * Format duration in seconds with appropriate precision
  * @param {number} durationMs - Duration in milliseconds
- * @returns {string} Formatted duration string
+ * @returns {string} Formatted duration string (e.g., "0.273s")
  */
 function formatDuration(durationMs) {
   const seconds = durationMs / 1000;
   if (seconds < 0.001) {
-    return '0.001';
+    return '0.001s';
   } else if (seconds < 10) {
     // For durations under 10 seconds, show 3 decimal places
-    return seconds.toFixed(3);
+    return `${seconds.toFixed(3)}s`;
   } else if (seconds < 100) {
-    return seconds.toFixed(2);
+    return `${seconds.toFixed(2)}s`;
   } else {
-    return seconds.toFixed(1);
+    return `${seconds.toFixed(1)}s`;
   }
 }
 
 /**
- * Create a finish block for command execution
+ * Create a finish block for command execution using status spine format
+ *
+ * Bottom block ordering rules:
+ * 1. Result marker (✓ or ✗)
+ * 2. finish timestamp
+ * 3. duration
+ * 4. exit code
+ * 5. (repeated isolation metadata, if any)
+ * 6. empty spine line
+ * 7. log path (always second-to-last)
+ * 8. session ID (always last)
+ *
  * @param {object} options - Options for the block
  * @param {string} options.sessionId - Session UUID
  * @param {string} options.timestamp - Timestamp string
  * @param {number} options.exitCode - Exit code
  * @param {string} options.logPath - Path to log file
  * @param {number} [options.durationMs] - Duration in milliseconds
- * @param {string} [options.resultMessage] - Result message (e.g., "Screen session exited...")
- * @param {string} [options.style] - Box style name
- * @param {number} [options.width] - Box width
- * @returns {string} Formatted finish block
+ * @param {string} [options.resultMessage] - Result message (ignored in new format)
+ * @param {string[]} [options.extraLines] - Isolation info for repetition in footer
+ * @param {string} [options.style] - Ignored (kept for backward compatibility)
+ * @param {number} [options.width] - Ignored (kept for backward compatibility)
+ * @returns {string} Formatted finish block in spine format
  */
 function createFinishBlock(options) {
   const {
@@ -227,36 +399,36 @@ function createFinishBlock(options) {
     exitCode,
     logPath,
     durationMs,
-    resultMessage,
-    style: styleName = DEFAULT_STYLE,
-    width = DEFAULT_WIDTH,
+    extraLines = [],
   } = options;
 
-  const style = getBoxStyle(styleName);
   const lines = [];
 
-  // Format the finished message with optional duration
-  let finishedMsg = `Finished at ${timestamp}`;
+  // Result marker appears first in footer (after program output)
+  lines.push(getResultMarker(exitCode));
+
+  // Finish metadata
+  lines.push(createSpineLine('finish', timestamp));
+
   if (durationMs !== undefined && durationMs !== null) {
-    finishedMsg += ` in ${formatDuration(durationMs)} seconds`;
+    lines.push(createSpineLine('duration', formatDuration(durationMs)));
   }
 
-  lines.push(createTopBorder(width, style));
+  lines.push(createSpineLine('exit', String(exitCode)));
 
-  // Add result message first if provided (e.g., "Docker container exited...")
-  // Allow overflow so the full message is visible and copyable
-  if (resultMessage) {
-    lines.push(createBorderedLine(resultMessage, width, style, true));
+  // Repeat isolation metadata if present
+  const metadata = parseIsolationMetadata(extraLines);
+  if (metadata.isolation) {
+    lines.push(createEmptySpineLine());
+    lines.push(...generateIsolationLines(metadata));
   }
 
-  lines.push(createBorderedLine(finishedMsg, width, style));
-  lines.push(createBorderedLine(`Exit code: ${exitCode}`, width, style));
-  // Allow overflow for log path and session ID so they can be copied completely
-  lines.push(createBorderedLine(`Log: ${logPath}`, width, style, true));
-  lines.push(
-    createBorderedLine(`Session ID: ${sessionId}`, width, style, true)
-  );
-  lines.push(createBottomBorder(width, style));
+  // Empty spine line before final two entries
+  lines.push(createEmptySpineLine());
+
+  // Log and session are ALWAYS last (in that order)
+  lines.push(createSpineLine('log', logPath));
+  lines.push(createSpineLine('session', sessionId));
 
   return lines.join('\n');
 }
@@ -371,6 +543,23 @@ function formatAsNestedLinksNotation(obj, indent = 2, depth = 0) {
 }
 
 module.exports = {
+  // New status spine format (primary API)
+  SPINE,
+  SUCCESS_MARKER,
+  FAILURE_MARKER,
+  createSpineLine,
+  createEmptySpineLine,
+  createCommandLine,
+  getResultMarker,
+  parseIsolationMetadata,
+  generateIsolationLines,
+
+  // Main block creation functions (updated for spine format)
+  createStartBlock,
+  createFinishBlock,
+  formatDuration,
+
+  // Legacy box format (deprecated, kept for backward compatibility)
   BOX_STYLES,
   DEFAULT_STYLE,
   DEFAULT_WIDTH,
@@ -379,9 +568,8 @@ module.exports = {
   createBorderedLine,
   createTopBorder,
   createBottomBorder,
-  createStartBlock,
-  createFinishBlock,
-  formatDuration,
+
+  // Links notation utilities
   escapeForLinksNotation,
   formatAsNestedLinksNotation,
 };

@@ -614,6 +614,8 @@ fn run_with_isolation(
     // Add empty line before finish block for visual separation
     println!();
     let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
+    // Convert extra_lines to &str references for the finish block
+    let extra_lines_refs: Vec<&str> = extra_lines.iter().map(|s| s.as_str()).collect();
     println!(
         "{}",
         create_finish_block(&FinishBlockOptions {
@@ -623,6 +625,7 @@ fn run_with_isolation(
             log_path: &log_file_path.to_string_lossy(),
             duration_ms: Some(duration_ms),
             result_message: Some(&result.message),
+            extra_lines: Some(extra_lines_refs),
             style: None,
             width: None,
         })
@@ -797,6 +800,7 @@ fn run_direct(
                     log_path: &log_file_path.to_string_lossy(),
                     duration_ms: Some(duration_ms),
                     result_message: None,
+                    extra_lines: None,
                     style: None,
                     width: None,
                 })
@@ -884,6 +888,7 @@ fn run_direct(
             log_path: &log_file_path.to_string_lossy(),
             duration_ms: Some(duration_ms),
             result_message: None,
+            extra_lines: None,
             style: None,
             width: None,
         })
