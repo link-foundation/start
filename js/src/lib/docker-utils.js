@@ -115,8 +115,9 @@ function dockerPullImage(image) {
     createTimelineSeparator,
   } = require('./output-blocks');
 
-  // Print the virtual command line
+  // Print the virtual command line followed by empty line for visual separation
   console.log(createVirtualCommandBlock(`docker pull ${image}`));
+  console.log();
 
   let output = '';
   let success = false;
@@ -141,8 +142,7 @@ function dockerPullImage(image) {
     success = false;
   }
 
-  // Print result marker and separator
-  console.log();
+  // Print result marker and separator (no empty line needed - already printed after command)
   console.log(createVirtualCommandResult(success));
   console.log(createTimelineSeparator());
 

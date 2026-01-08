@@ -458,6 +458,88 @@ describe('output-blocks module', () => {
       });
       expect(block).not.toContain('$ echo hello');
     });
+
+    it('should end with empty timeline line when deferCommand is true (issue #73)', () => {
+      // Issue #73: Visual continuity - when deferCommand is true,
+      // the start block should end with │ (empty timeline line)
+      // and no trailing empty line should be added by the CLI
+      const block = createStartBlock({
+        sessionId: 'test-uuid',
+        timestamp: '2025-01-01 00:00:00',
+        command: 'echo hello',
+        extraLines: [
+          '[Isolation] Environment: docker, Mode: attached',
+          '[Isolation] Image: alpine:latest',
+          '[Isolation] Session: docker-container-123',
+        ],
+        deferCommand: true,
+      });
+      const lines = block.split('\n');
+      // Last line should be empty timeline line (│)
+      expect(lines[lines.length - 1]).toBe('│');
+      // Should not contain the command
+      expect(block).not.toContain('$ echo hello');
+    });
+  });
+
+  describe('Visual Continuity (issue #73)', () => {
+    it('virtual command block should be followed by empty line for visual separation', () => {
+      // Issue #73: The empty line should come AFTER the command
+      // ($ docker pull ...), not BEFORE it
+      // This test verifies the expected format: command line followed by
+      // empty line before output
+      const virtualCommand = createVirtualCommandBlock(
+        'docker pull alpine:latest'
+      );
+      expect(virtualCommand).toBe('$ docker pull alpine:latest');
+      // The empty line is added by the caller (dockerPullImage)
+      // after the command and before running docker pull
+    });
+
+    it('timeline separator should be empty timeline line for visual structure', () => {
+      // After virtual command output, we print result marker and separator
+      const separator = createTimelineSeparator();
+      expect(separator).toBe('│');
+    });
+
+    it('start block with docker isolation should end cleanly for virtual commands', () => {
+      // When using docker isolation with defer_command, the block ends with │
+      // The virtual command (docker pull) starts immediately after
+      const block = createStartBlock({
+        sessionId: 'uuid-abc',
+        timestamp: '2026-01-08 12:00:00',
+        command: 'echo hi',
+        extraLines: [
+          '[Isolation] Environment: docker, Mode: attached',
+          '[Isolation] Image: alpine:latest',
+          '[Isolation] Session: docker-1234',
+        ],
+        deferCommand: true,
+      });
+
+      // Expected structure:
+      // │ session   uuid-abc
+      // │ start     2026-01-08 12:00:00
+      // │
+      // │ isolation docker
+      // │ mode      attached
+      // │ image     alpine:latest
+      // │ container docker-1234
+      // │   <-- ends here with empty timeline line
+      const lines = block.split('\n');
+      expect(lines[lines.length - 1]).toBe('│');
+
+      // Next should be virtual command (added separately by docker-utils):
+      // $ docker pull alpine:latest
+      // <empty line>
+      // <docker output>
+      // ✓
+      // │
+      // $ echo hi
+      // <empty line>
+      // hi
+      // ✓
+    });
   });
 });
 

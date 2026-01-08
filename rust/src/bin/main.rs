@@ -542,7 +542,10 @@ fn run_with_isolation(
             defer_command: is_docker_isolation,
         })
     );
-    println!();
+    // Only print empty line when not deferring command (docker isolation handles its own spacing)
+    if !is_docker_isolation {
+        println!();
+    }
 
     // Create log header
     let mut log_content = create_log_header(&LogHeaderParams {
