@@ -470,9 +470,10 @@ async function runWithIsolation(
   // Add isolation info to extra lines
   if (environment) {
     extraLines.push(`[Isolation] Environment: ${environment}, Mode: ${mode}`);
-  }
-  if (options.session) {
-    extraLines.push(`[Isolation] Session: ${options.session}`);
+    // Always add the session name so users can reconnect to detached sessions
+    // This is important for screen, tmux, docker where the session/container name
+    // is different from the session UUID used for tracking (see issue #67)
+    extraLines.push(`[Isolation] Session: ${sessionName}`);
   }
   if (effectiveImage) {
     extraLines.push(`[Isolation] Image: ${effectiveImage}`);

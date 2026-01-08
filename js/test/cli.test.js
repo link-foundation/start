@@ -122,3 +122,97 @@ describe('CLI basic behavior', () => {
     assert.ok(result.stdout.includes('Usage:'), 'Should display usage');
   });
 });
+
+describe('CLI isolation output (issue #67)', () => {
+  const { isCommandAvailable } = require('../src/lib/isolation');
+
+  it('should display screen session name when using screen isolation', async () => {
+    if (!isCommandAvailable('screen')) {
+      console.log('  Skipping: screen not installed');
+      return;
+    }
+
+    const result = runCLI(['-i', 'screen', '--', 'echo', 'hello']);
+
+    // The output should contain the screen session name (in format screen-timestamp-random)
+    // Check that the session UUID is displayed
+    assert.ok(
+      result.stdout.includes('│ session'),
+      'Should display session UUID'
+    );
+    // Check that screen isolation info is displayed
+    assert.ok(
+      result.stdout.includes('│ isolation screen'),
+      'Should display screen isolation'
+    );
+    // Check that the actual screen session name is displayed (issue #67 fix)
+    assert.ok(
+      result.stdout.includes('│ screen    screen-'),
+      'Should display actual screen session name for reconnection (issue #67)'
+    );
+  });
+
+  it('should display tmux session name when using tmux isolation', async () => {
+    if (!isCommandAvailable('tmux')) {
+      console.log('  Skipping: tmux not installed');
+      return;
+    }
+
+    const result = runCLI(['-i', 'tmux', '--', 'echo', 'hello']);
+
+    // The output should contain the tmux session name
+    assert.ok(
+      result.stdout.includes('│ session'),
+      'Should display session UUID'
+    );
+    assert.ok(
+      result.stdout.includes('│ isolation tmux'),
+      'Should display tmux isolation'
+    );
+    // Check that the actual tmux session name is displayed (issue #67 fix)
+    assert.ok(
+      result.stdout.includes('│ tmux      tmux-'),
+      'Should display actual tmux session name for reconnection (issue #67)'
+    );
+  });
+
+  it('should display docker container name when using docker isolation', async () => {
+    const { canRunLinuxDockerImages } = require('../src/lib/isolation');
+
+    if (!canRunLinuxDockerImages()) {
+      console.log(
+        '  Skipping: docker not available or cannot run Linux images'
+      );
+      return;
+    }
+
+    const result = runCLI([
+      '-i',
+      'docker',
+      '--image',
+      'alpine:latest',
+      '--',
+      'echo',
+      'hello',
+    ]);
+
+    // The output should contain the docker container name
+    assert.ok(
+      result.stdout.includes('│ session'),
+      'Should display session UUID'
+    );
+    assert.ok(
+      result.stdout.includes('│ isolation docker'),
+      'Should display docker isolation'
+    );
+    assert.ok(
+      result.stdout.includes('│ image     alpine:latest'),
+      'Should display docker image'
+    );
+    // Check that the actual container name is displayed (issue #67 fix)
+    assert.ok(
+      result.stdout.includes('│ container docker-'),
+      'Should display actual container name for reconnection (issue #67)'
+    );
+  });
+});
