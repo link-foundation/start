@@ -23,17 +23,22 @@ pub use execution_store::{
 };
 pub use failure_handler::{handle_failure, Config as FailureConfig};
 pub use isolation::{
-    create_log_footer, create_log_header, create_log_path, get_default_docker_image, get_timestamp,
-    is_command_available, run_as_isolated_user, run_isolated, write_log_file, IsolationOptions,
-    IsolationResult, LogHeaderParams,
+    create_log_footer, create_log_header, create_log_path, docker_image_exists, docker_pull_image,
+    get_default_docker_image, get_timestamp, is_command_available, run_as_isolated_user,
+    run_isolated, write_log_file, IsolationOptions, IsolationResult, LogHeaderParams,
 };
 pub use output_blocks::{
-    // Status spine format API
+    // Timeline format API (formerly "status spine")
     create_command_line,
-    create_empty_spine_line,
+    create_empty_spine_line, // deprecated, use create_empty_timeline_line
+    create_empty_timeline_line,
     create_finish_block,
-    create_spine_line,
+    create_spine_line, // deprecated, use create_timeline_line
     create_start_block,
+    create_timeline_line,
+    create_timeline_separator,
+    create_virtual_command_block,
+    create_virtual_command_result,
     escape_for_links_notation,
     format_duration,
     format_value_for_links_notation,
@@ -44,8 +49,9 @@ pub use output_blocks::{
     IsolationMetadata,
     StartBlockOptions,
     FAILURE_MARKER,
-    SPINE,
+    SPINE, // deprecated, use TIMELINE_MARKER
     SUCCESS_MARKER,
+    TIMELINE_MARKER,
 };
 pub use signal_handler::{clear_current_execution, set_current_execution, setup_signal_handlers};
 pub use status_formatter::{

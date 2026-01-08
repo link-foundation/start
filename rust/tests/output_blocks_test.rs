@@ -1,16 +1,16 @@
 //! Tests for output_blocks module
 //!
-//! Tests for the "status spine" format: width-independent, lossless output.
+//! Tests for the "timeline" format: width-independent, lossless output.
 
 use start_command::{
     create_finish_block, create_start_block, escape_for_links_notation, format_duration,
     get_result_marker, parse_isolation_metadata, FinishBlockOptions, StartBlockOptions,
-    FAILURE_MARKER, SPINE, SUCCESS_MARKER,
+    FAILURE_MARKER, SUCCESS_MARKER, TIMELINE_MARKER,
 };
 
 #[test]
-fn test_spine_constants() {
-    assert_eq!(SPINE, "│");
+fn test_timeline_constants() {
+    assert_eq!(TIMELINE_MARKER, "│");
     assert_eq!(SUCCESS_MARKER, "✓");
     assert_eq!(FAILURE_MARKER, "✗");
 }
@@ -46,6 +46,7 @@ fn test_create_start_block() {
         extra_lines: None,
         style: Some("rounded"),
         width: Some(50),
+        defer_command: false,
     });
 
     assert!(block.contains("│ session   test-uuid"));
@@ -66,6 +67,7 @@ fn test_create_start_block_with_isolation() {
         extra_lines: Some(extra),
         style: Some("rounded"),
         width: Some(60),
+        defer_command: false,
     });
 
     assert!(block.contains("│ session   test-uuid"));
@@ -90,11 +92,40 @@ fn test_create_start_block_with_docker_isolation() {
         extra_lines: Some(extra),
         style: None,
         width: None,
+        defer_command: false,
     });
 
     assert!(block.contains("│ isolation docker"));
     assert!(block.contains("│ image     ubuntu"));
     assert!(block.contains("│ container docker-container-123"));
+}
+
+#[test]
+fn test_create_start_block_with_defer_command() {
+    // When defer_command is true, the command line should be omitted
+    // (used when virtual commands will be shown separately)
+    let extra = vec![
+        "[Isolation] Environment: docker, Mode: attached",
+        "[Isolation] Image: alpine:latest",
+        "[Isolation] Session: docker-container-456",
+    ];
+    let block = create_start_block(&StartBlockOptions {
+        session_id: "test-uuid",
+        timestamp: "2025-01-01 00:00:00",
+        command: "echo hello",
+        extra_lines: Some(extra),
+        style: None,
+        width: None,
+        defer_command: true,
+    });
+
+    assert!(block.contains("│ session   test-uuid"));
+    assert!(block.contains("│ isolation docker"));
+    assert!(block.contains("│ image     alpine:latest"));
+    assert!(
+        !block.contains("$ echo hello"),
+        "Command should not appear when defer_command is true"
+    );
 }
 
 #[test]

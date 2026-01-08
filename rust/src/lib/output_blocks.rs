@@ -1,17 +1,22 @@
 //! Output formatting utilities for nicely rendered command blocks
 //!
-//! Provides "status spine" format: a width-independent, lossless output format
+//! Provides "timeline" format: a width-independent, lossless output format
 //! that works in TTY, tmux, SSH, CI, and logs.
 //!
 //! Core concepts:
-//! - `│` prefix → tool metadata
-//! - `$` → executed command
+//! - `│` prefix → tool metadata (timeline marker)
+//! - `$` → executed command (virtual or user command)
 //! - No prefix → program output (stdout/stderr)
 //! - Result marker (`✓` / `✗`) appears after output
 
 use regex::Regex;
 
-/// Metadata spine character
+/// Timeline marker character (formerly called "spine")
+/// Used to prefix metadata lines in the timeline format
+pub const TIMELINE_MARKER: &str = "│";
+
+/// Alias for backward compatibility
+#[deprecated(since = "0.20.0", note = "Use TIMELINE_MARKER instead")]
 pub const SPINE: &str = "│";
 
 /// Success result marker
@@ -20,20 +25,53 @@ pub const SUCCESS_MARKER: &str = "✓";
 /// Failure result marker
 pub const FAILURE_MARKER: &str = "✗";
 
-/// Create a metadata line with spine prefix
-pub fn create_spine_line(label: &str, value: &str) -> String {
+/// Create a metadata line with timeline marker prefix
+pub fn create_timeline_line(label: &str, value: &str) -> String {
     // Pad label to 10 characters for alignment
-    format!("{} {:10}{}", SPINE, label, value)
+    format!("{} {:10}{}", TIMELINE_MARKER, label, value)
 }
 
-/// Create an empty spine line (just the spine character)
+/// Alias for backward compatibility
+#[deprecated(since = "0.20.0", note = "Use create_timeline_line instead")]
+pub fn create_spine_line(label: &str, value: &str) -> String {
+    create_timeline_line(label, value)
+}
+
+/// Create an empty timeline line (just the timeline marker character)
+pub fn create_empty_timeline_line() -> String {
+    TIMELINE_MARKER.to_string()
+}
+
+/// Alias for backward compatibility
+#[deprecated(since = "0.20.0", note = "Use create_empty_timeline_line instead")]
 pub fn create_empty_spine_line() -> String {
-    SPINE.to_string()
+    create_empty_timeline_line()
 }
 
 /// Create a command line with $ prefix
 pub fn create_command_line(command: &str) -> String {
     format!("$ {}", command)
+}
+
+/// Create a virtual command block for setup steps (like docker pull)
+/// Virtual commands are displayed separately in the timeline to show
+/// intermediate steps that the tool performs automatically
+pub fn create_virtual_command_block(command: &str) -> String {
+    create_command_line(command)
+}
+
+/// Create a result marker line for a virtual command
+pub fn create_virtual_command_result(success: bool) -> String {
+    if success {
+        SUCCESS_MARKER.to_string()
+    } else {
+        FAILURE_MARKER.to_string()
+    }
+}
+
+/// Create a separator line between virtual commands and user commands
+pub fn create_timeline_separator() -> String {
+    create_empty_timeline_line()
 }
 
 /// Get the result marker based on exit code
@@ -96,7 +134,7 @@ pub fn parse_isolation_metadata(extra_lines: &[&str]) -> IsolationMetadata {
     metadata
 }
 
-/// Generate isolation metadata lines for spine format
+/// Generate isolation metadata lines for timeline format
 pub fn generate_isolation_lines(
     metadata: &IsolationMetadata,
     container_or_screen_name: Option<&str>,
@@ -104,15 +142,15 @@ pub fn generate_isolation_lines(
     let mut lines = Vec::new();
 
     if let Some(ref isolation) = metadata.isolation {
-        lines.push(create_spine_line("isolation", isolation));
+        lines.push(create_timeline_line("isolation", isolation));
     }
 
     if let Some(ref mode) = metadata.mode {
-        lines.push(create_spine_line("mode", mode));
+        lines.push(create_timeline_line("mode", mode));
     }
 
     if let Some(ref image) = metadata.image {
-        lines.push(create_spine_line("image", image));
+        lines.push(create_timeline_line("image", image));
     }
 
     // Use provided container/screen name or fall back to metadata.session
@@ -123,12 +161,12 @@ pub fn generate_isolation_lines(
 
         if let Some(name) = name {
             match isolation.as_str() {
-                "docker" => lines.push(create_spine_line("container", &name)),
-                "screen" => lines.push(create_spine_line("screen", &name)),
-                "tmux" => lines.push(create_spine_line("tmux", &name)),
+                "docker" => lines.push(create_timeline_line("container", &name)),
+                "screen" => lines.push(create_timeline_line("screen", &name)),
+                "tmux" => lines.push(create_timeline_line("tmux", &name)),
                 "ssh" => {
                     if let Some(ref endpoint) = metadata.endpoint {
-                        lines.push(create_spine_line("endpoint", endpoint));
+                        lines.push(create_timeline_line("endpoint", endpoint));
                     }
                 }
                 _ => {}
@@ -137,7 +175,7 @@ pub fn generate_isolation_lines(
     }
 
     if let Some(ref user) = metadata.user {
-        lines.push(create_spine_line("user", user));
+        lines.push(create_timeline_line("user", user));
     }
 
     lines
@@ -151,31 +189,36 @@ pub struct StartBlockOptions<'a> {
     pub extra_lines: Option<Vec<&'a str>>,
     pub style: Option<&'a str>,
     pub width: Option<usize>,
+    /// If true, the command line is omitted from the start block
+    /// (useful when virtual commands will be shown before the actual command)
+    pub defer_command: bool,
 }
 
-/// Create a start block for command execution using status spine format
+/// Create a start block for command execution using timeline format
 pub fn create_start_block(options: &StartBlockOptions) -> String {
     let mut lines = Vec::new();
 
     // Header: session and start time
-    lines.push(create_spine_line("session", options.session_id));
-    lines.push(create_spine_line("start", options.timestamp));
+    lines.push(create_timeline_line("session", options.session_id));
+    lines.push(create_timeline_line("start", options.timestamp));
 
     // Parse and add isolation metadata if present
     if let Some(ref extra) = options.extra_lines {
         let metadata = parse_isolation_metadata(extra);
 
         if metadata.isolation.is_some() {
-            lines.push(create_empty_spine_line());
+            lines.push(create_empty_timeline_line());
             lines.extend(generate_isolation_lines(&metadata, None));
         }
     }
 
-    // Empty spine line before command
-    lines.push(create_empty_spine_line());
+    // Empty timeline line before command (always needed for separation)
+    lines.push(create_empty_timeline_line());
 
-    // Command line
-    lines.push(create_command_line(options.command));
+    // Command line (unless deferred for virtual command handling)
+    if !options.defer_command {
+        lines.push(create_command_line(options.command));
+    }
 
     lines.join("\n")
 }
@@ -208,7 +251,7 @@ pub struct FinishBlockOptions<'a> {
     pub width: Option<usize>,
 }
 
-/// Create a finish block for command execution using status spine format
+/// Create a finish block for command execution using timeline format
 ///
 /// Bottom block ordering rules:
 /// 1. Result marker (✓ or ✗)
@@ -216,7 +259,7 @@ pub struct FinishBlockOptions<'a> {
 /// 3. duration
 /// 4. exit code
 /// 5. (repeated isolation metadata, if any)
-/// 6. empty spine line
+/// 6. empty timeline line
 /// 7. log path (always second-to-last)
 /// 8. session ID (always last)
 pub fn create_finish_block(options: &FinishBlockOptions) -> String {
@@ -226,29 +269,32 @@ pub fn create_finish_block(options: &FinishBlockOptions) -> String {
     lines.push(get_result_marker(options.exit_code).to_string());
 
     // Finish metadata
-    lines.push(create_spine_line("finish", options.timestamp));
+    lines.push(create_timeline_line("finish", options.timestamp));
 
     if let Some(duration_ms) = options.duration_ms {
-        lines.push(create_spine_line("duration", &format_duration(duration_ms)));
+        lines.push(create_timeline_line(
+            "duration",
+            &format_duration(duration_ms),
+        ));
     }
 
-    lines.push(create_spine_line("exit", &options.exit_code.to_string()));
+    lines.push(create_timeline_line("exit", &options.exit_code.to_string()));
 
     // Repeat isolation metadata if present
     if let Some(ref extra) = options.extra_lines {
         let metadata = parse_isolation_metadata(extra);
         if metadata.isolation.is_some() {
-            lines.push(create_empty_spine_line());
+            lines.push(create_empty_timeline_line());
             lines.extend(generate_isolation_lines(&metadata, None));
         }
     }
 
-    // Empty spine line before final two entries
-    lines.push(create_empty_spine_line());
+    // Empty timeline line before final two entries
+    lines.push(create_empty_timeline_line());
 
     // Log and session are ALWAYS last (in that order)
-    lines.push(create_spine_line("log", options.log_path));
-    lines.push(create_spine_line("session", options.session_id));
+    lines.push(create_timeline_line("log", options.log_path));
+    lines.push(create_timeline_line("session", options.session_id));
 
     lines.join("\n")
 }
@@ -466,6 +512,7 @@ mod tests {
             extra_lines: Some(extra_lines),
             style: None,
             width: None,
+            defer_command: false,
         });
         // Issue #67: The start block should include the session name for reconnection
         assert!(block.contains("│ session   uuid-123"));

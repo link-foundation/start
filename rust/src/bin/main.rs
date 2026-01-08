@@ -523,6 +523,8 @@ fn run_with_isolation(
     }
 
     // Print start block with session ID and isolation info
+    // For Docker isolation, defer the command display since virtual commands may be shown first
+    let is_docker_isolation = environment == Some("docker");
     let extra_lines_refs: Vec<&str> = extra_lines.iter().map(|s| s.as_str()).collect();
     println!(
         "{}",
@@ -537,6 +539,7 @@ fn run_with_isolation(
             },
             style: None,
             width: None,
+            defer_command: is_docker_isolation,
         })
     );
     println!();
@@ -667,6 +670,7 @@ fn run_direct(
             extra_lines: None,
             style: None,
             width: None,
+            defer_command: false,
         })
     );
     println!();

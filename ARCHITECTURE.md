@@ -205,7 +205,7 @@ By default, all isolation environments automatically exit after command completi
 │  │ Execution   │    │ stdout/stderr│    │ Temp Log File     │   │
 │  └─────────────┘    └──────────────┘    └───────────────────┘   │
 │                                                                  │
-│  Console Output Format (Status Spine):                           │
+│  Console Output Format (Timeline):                           │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │ │ session   abc-123-def-456                              │    │
 │  │ │ start     2024-01-15 10:30:45                          │    │

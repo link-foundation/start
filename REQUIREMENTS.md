@@ -242,13 +242,34 @@ Note: `--auto-remove-docker-container` is only valid with `--isolated docker` an
 
 ## Output Format
 
-The output uses a "status spine" format that is width-independent, lossless, and works uniformly in TTY, tmux, SSH, CI, and log files.
+The output uses a "timeline" format that is width-independent, lossless, and works uniformly in TTY, tmux, SSH, CI, and log files.
 
 Format conventions:
-- `│` prefix → tool metadata
-- `$` prefix → executed command
+- `│` prefix → tool metadata (timeline marker)
+- `$` prefix → executed command (can be virtual command for setup steps or user command)
 - No prefix → program output (stdout/stderr)
 - `✓` / `✗` → result marker (success/failure)
+
+### Virtual Commands
+
+When running commands in isolation environments that require setup steps (like Docker pulling an image), the timeline shows these as separate virtual commands. This makes the execution flow transparent:
+
+```
+$ docker pull alpine:latest    ← virtual command (setup step)
+
+Unable to find image 'alpine:latest' locally
+... pull output ...
+
+✓
+│
+$ echo hi                      ← user command
+
+hi
+
+✓
+```
+
+Virtual commands are only displayed when the setup step actually occurs (e.g., `docker pull` is shown only if the image needs to be downloaded).
 
 ### Success Case
 
