@@ -315,13 +315,17 @@ describe('SSH CLI Integration', () => {
     console.log(`  CLI exit code: ${result.status}`);
 
     if (result.status === 0) {
+      // Check for isolation info in the new status spine format
       assert.ok(
-        result.stdout.includes('[Isolation]'),
+        result.stdout.includes('│ isolation') ||
+          result.stdout.includes('[Isolation]'),
         'Should show isolation info'
       );
       assert.ok(
-        result.stdout.includes('ssh') || result.stdout.includes('SSH'),
-        'Should mention SSH'
+        result.stdout.includes('ssh') ||
+          result.stdout.includes('SSH') ||
+          result.stdout.includes('endpoint'),
+        'Should mention SSH or endpoint'
       );
     }
   });

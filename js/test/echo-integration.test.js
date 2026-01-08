@@ -55,17 +55,25 @@ function runCli(args, options = {}) {
 }
 
 // Verify output contains expected structure for attached modes (shows finish block)
+// Supports both old box format and new status spine format
 function verifyAttachedModeOutput(output, expectedOutputText = 'hi') {
-  // Should contain start block
+  // Should contain start block (box format or spine format)
+  const hasBoxFormat = output.includes('╭') && output.includes('╰');
+  const hasSpineFormat =
+    output.includes('│ session') && output.includes('│ start');
   assert.ok(
-    output.includes('╭'),
-    'Output should contain start block top border'
+    hasBoxFormat || hasSpineFormat,
+    'Output should contain start block (box or spine format)'
   );
-  assert.ok(output.includes('╰'), 'Output should contain block bottom border');
-  assert.ok(output.includes('Session ID:'), 'Output should contain Session ID');
+
+  // Should contain session info (either format)
   assert.ok(
-    output.includes('Starting at'),
-    'Output should contain Starting at timestamp'
+    output.includes('Session ID:') || output.includes('│ session'),
+    'Output should contain Session ID'
+  );
+  assert.ok(
+    output.includes('Starting at') || output.includes('│ start'),
+    'Output should contain start timestamp'
   );
 
   // Should contain command output
@@ -74,13 +82,21 @@ function verifyAttachedModeOutput(output, expectedOutputText = 'hi') {
     `Output should contain the "${expectedOutputText}" command output`
   );
 
-  // Should contain finish block (for attached modes)
+  // Should contain finish block (for attached modes) - either format
   assert.ok(
-    output.includes('Finished at'),
-    'Output should contain Finished at timestamp'
+    output.includes('Finished at') || output.includes('│ finish'),
+    'Output should contain finish timestamp'
   );
-  assert.ok(output.includes('Exit code:'), 'Output should contain Exit code');
-  assert.ok(output.includes('Log:'), 'Output should contain Log path');
+  // Exit code in both formats
+  assert.ok(
+    output.includes('Exit code:') || output.includes('│ exit'),
+    'Output should contain Exit code'
+  );
+  // Log path in both formats
+  assert.ok(
+    output.includes('Log:') || output.includes('│ log'),
+    'Output should contain Log path'
+  );
 
   // Verify there are empty lines around output (structure check)
   const lines = output.split('\n');
@@ -99,38 +115,57 @@ function verifyAttachedModeOutput(output, expectedOutputText = 'hi') {
   if (outputIndex >= 0 && outputIndex < lines.length - 1) {
     // Check for empty line after output
     const lineAfter = lines[outputIndex + 1];
-    // Line after should be empty or start of finish block
+    // Line after should be empty, start of finish block, or result marker (✓/✗)
     assert.ok(
-      lineAfter.trim() === '' || lineAfter.includes('╭'),
-      `Expected empty line or block start after output, got: "${lineAfter}"`
+      lineAfter.trim() === '' ||
+        lineAfter.includes('╭') ||
+        lineAfter.includes('✓') ||
+        lineAfter.includes('✗'),
+      `Expected empty line, block start, or result marker after output, got: "${lineAfter}"`
     );
   }
 }
 
 // Verify output for detached modes (only start block, no finish block)
+// Supports both old box format and new status spine format
 function verifyDetachedModeOutput(output) {
-  // Should contain start block
+  // Should contain start block (box format or spine format)
+  const hasBoxFormat = output.includes('╭') && output.includes('╰');
+  const hasSpineFormat =
+    output.includes('│ session') && output.includes('│ start');
   assert.ok(
-    output.includes('╭'),
-    'Output should contain start block top border'
+    hasBoxFormat || hasSpineFormat,
+    'Output should contain start block (box or spine format)'
   );
-  assert.ok(output.includes('╰'), 'Output should contain block bottom border');
-  assert.ok(output.includes('Session ID:'), 'Output should contain Session ID');
+
+  // Should contain session info (either format)
   assert.ok(
-    output.includes('Starting at'),
-    'Output should contain Starting at timestamp'
+    output.includes('Session ID:') || output.includes('│ session'),
+    'Output should contain Session ID'
+  );
+  assert.ok(
+    output.includes('Starting at') || output.includes('│ start'),
+    'Output should contain start timestamp'
   );
 
   // Should show detached mode info
   assert.ok(
-    output.includes('Mode: detached') || output.includes('Reattach with'),
+    output.includes('Mode: detached') ||
+      output.includes('│ mode      detached') ||
+      output.includes('Reattach with'),
     'Output should indicate detached mode or show reattach instructions'
   );
 }
 
 // Verify log path is not truncated
+// Supports both old box format and new status spine format
 function verifyLogPathNotTruncated(output) {
-  const logMatch = output.match(/Log: (.+)/);
+  // Try old format first
+  let logMatch = output.match(/Log: (.+)/);
+  if (!logMatch) {
+    // Try spine format
+    logMatch = output.match(/│ log\s+(.+)/);
+  }
   assert.ok(logMatch, 'Should have Log line');
   const logPath = logMatch[1].trim();
   // Remove trailing box border character if present
@@ -144,8 +179,12 @@ function verifyLogPathNotTruncated(output) {
 }
 
 // Verify session ID is a valid UUID
+// Supports both old box format and new status spine format
 function verifySessionId(output) {
-  const sessionMatches = output.match(/Session ID: ([a-f0-9-]+)/g);
+  // Try both formats
+  const oldFormatMatches = output.match(/Session ID: ([a-f0-9-]+)/g);
+  const newFormatMatches = output.match(/│ session\s+([a-f0-9-]+)/g);
+  const sessionMatches = oldFormatMatches || newFormatMatches;
   assert.ok(
     sessionMatches && sessionMatches.length >= 1,
     'Should have Session ID'
@@ -268,13 +307,15 @@ describe('Echo Integration Tests - Issue #55', () => {
         verifyLogPathNotTruncated(result.output);
         verifySessionId(result.output);
 
-        // Should show isolation info
+        // Should show isolation info (supports both old box format and new spine format)
         assert.ok(
-          result.output.includes('[Isolation] Environment: screen'),
+          result.output.includes('[Isolation] Environment: screen') ||
+            result.output.includes('│ isolation screen'),
           'Should show screen isolation info'
         );
         assert.ok(
-          result.output.includes('Mode: attached'),
+          result.output.includes('Mode: attached') ||
+            result.output.includes('│ mode      attached'),
           'Should show attached mode'
         );
 
@@ -336,13 +377,15 @@ describe('Echo Integration Tests - Issue #55', () => {
         verifyDetachedModeOutput(result.output);
         verifySessionId(result.output);
 
-        // Should show screen isolation info with detached mode
+        // Should show screen isolation info with detached mode (both formats)
         assert.ok(
-          result.output.includes('[Isolation] Environment: screen'),
+          result.output.includes('[Isolation] Environment: screen') ||
+            result.output.includes('│ isolation screen'),
           'Should show screen isolation info'
         );
         assert.ok(
-          result.output.includes('Mode: detached'),
+          result.output.includes('Mode: detached') ||
+            result.output.includes('│ mode      detached'),
           'Should show detached mode'
         );
 
@@ -410,7 +453,8 @@ describe('Echo Integration Tests - Issue #55', () => {
         if (result.success) {
           assert.ok(result.output.includes('hi'), 'Output should contain "hi"');
           assert.ok(
-            result.output.includes('[Isolation] Environment: tmux'),
+            result.output.includes('[Isolation] Environment: tmux') ||
+              result.output.includes('│ isolation tmux'),
             'Should show tmux isolation info'
           );
           console.log('  ✓ Tmux isolation (attached): echo hi works correctly');
@@ -440,13 +484,15 @@ describe('Echo Integration Tests - Issue #55', () => {
         verifyDetachedModeOutput(result.output);
         verifySessionId(result.output);
 
-        // Should show tmux isolation info
+        // Should show tmux isolation info (support both old box and new spine format)
         assert.ok(
-          result.output.includes('[Isolation] Environment: tmux'),
+          result.output.includes('[Isolation] Environment: tmux') ||
+            result.output.includes('│ isolation  tmux'),
           'Should show tmux isolation info'
         );
         assert.ok(
-          result.output.includes('Mode: detached'),
+          result.output.includes('Mode: detached') ||
+            result.output.includes('│ mode       detached'),
           'Should show detached mode'
         );
 
@@ -542,13 +588,15 @@ describe('Echo Integration Tests - Issue #55', () => {
         verifyLogPathNotTruncated(result.output);
         verifySessionId(result.output);
 
-        // Should show docker isolation info
+        // Should show docker isolation info (support both old box and new spine format)
         assert.ok(
-          result.output.includes('[Isolation] Environment: docker'),
+          result.output.includes('[Isolation] Environment: docker') ||
+            result.output.includes('│ isolation  docker'),
           'Should show docker isolation info'
         );
         assert.ok(
-          result.output.includes('[Isolation] Image: alpine:latest'),
+          result.output.includes('[Isolation] Image: alpine:latest') ||
+            result.output.includes('│ image      alpine:latest'),
           'Should show docker image info'
         );
 
@@ -614,13 +662,15 @@ describe('Echo Integration Tests - Issue #55', () => {
         verifyDetachedModeOutput(result.output);
         verifySessionId(result.output);
 
-        // Should show docker isolation info with detached mode
+        // Should show docker isolation info with detached mode (support both old box and new spine format)
         assert.ok(
-          result.output.includes('[Isolation] Environment: docker'),
+          result.output.includes('[Isolation] Environment: docker') ||
+            result.output.includes('│ isolation  docker'),
           'Should show docker isolation info'
         );
         assert.ok(
-          result.output.includes('Mode: detached'),
+          result.output.includes('Mode: detached') ||
+            result.output.includes('│ mode       detached'),
           'Should show detached mode'
         );
 
