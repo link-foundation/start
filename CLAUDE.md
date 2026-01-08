@@ -1,5 +1,0 @@
-Issue to solve: https://github.com/link-foundation/start/issues/73
-Your prepared branch: issue-73-47a3e673b0a8
-Your prepared working directory: /tmp/gh-issue-solver-1767896754022
-
-Proceed.
