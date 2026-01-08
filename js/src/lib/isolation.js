@@ -619,6 +619,70 @@ function runInSsh(command, options = {}) {
 }
 
 /**
+ * Check if a Docker image exists locally
+ * @param {string} image - Docker image name
+ * @returns {boolean} True if image exists locally
+ */
+function dockerImageExists(image) {
+  try {
+    execSync(`docker image inspect ${image}`, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Pull a Docker image with output streaming
+ * Displays the pull operation as a virtual command in the timeline
+ * @param {string} image - Docker image to pull
+ * @returns {{success: boolean, output: string}} Pull result
+ */
+function dockerPullImage(image) {
+  const {
+    createVirtualCommandBlock,
+    createVirtualCommandResult,
+    createTimelineSeparator,
+  } = require('./output-blocks');
+
+  // Print the virtual command line
+  console.log(createVirtualCommandBlock(`docker pull ${image}`));
+  console.log();
+
+  let output = '';
+  let success = false;
+
+  try {
+    // Run docker pull with inherited stdio for real-time output
+    const result = spawnSync('docker', ['pull', image], {
+      stdio: ['pipe', 'inherit', 'inherit'],
+    });
+
+    success = result.status === 0;
+
+    if (result.stdout) {
+      output = result.stdout.toString();
+    }
+    if (result.stderr) {
+      output += result.stderr.toString();
+    }
+  } catch (err) {
+    console.error(`Failed to run docker pull: ${err.message}`);
+    output = err.message;
+    success = false;
+  }
+
+  // Print result marker and separator
+  console.log();
+  console.log(createVirtualCommandResult(success));
+  console.log(createTimelineSeparator());
+
+  return { success, output };
+}
+
+/**
  * Run command in Docker container
  * @param {string} command - Command to execute
  * @param {object} options - Options (image, session/name, detached, user, keepAlive, autoRemoveDockerContainer)
@@ -643,6 +707,24 @@ function runInDocker(command, options = {}) {
   }
 
   const containerName = options.session || generateSessionName('docker');
+
+  // Check if image exists locally; if not, pull it as a virtual command
+  if (!dockerImageExists(options.image)) {
+    const pullResult = dockerPullImage(options.image);
+    if (!pullResult.success) {
+      return Promise.resolve({
+        success: false,
+        containerName: null,
+        message: `Failed to pull Docker image: ${options.image}`,
+        exitCode: 1,
+      });
+    }
+  }
+
+  // Print the user command (this appears after any virtual commands like docker pull)
+  const { createCommandLine } = require('./output-blocks');
+  console.log(createCommandLine(command));
+  console.log();
 
   try {
     if (options.detached) {
@@ -753,8 +835,8 @@ function runInDocker(command, options = {}) {
 }
 
 /**
- * Run command in the specified isolation backend
- * @param {string} backend - Isolation backend (screen, tmux, docker, ssh)
+ * Run command in the specified isolation environment
+ * @param {string} backend - Isolation environment (screen, tmux, docker, ssh)
  * @param {string} command - Command to execute
  * @param {object} options - Options
  * @returns {Promise<{success: boolean, message: string}>}
@@ -772,7 +854,7 @@ function runIsolated(backend, command, options = {}) {
     default:
       return Promise.resolve({
         success: false,
-        message: `Unknown isolation backend: ${backend}`,
+        message: `Unknown isolation environment: ${backend}`,
       });
   }
 }
@@ -885,7 +967,7 @@ function resetScreenVersionCache() {
 }
 
 /**
- * Run command as an isolated user (without isolation backend)
+ * Run command as an isolated user (without isolation environment)
  * Uses sudo -u to switch users
  * @param {string} cmd - Command to execute
  * @param {string} username - User to run as
@@ -990,4 +1072,7 @@ module.exports = {
   resetScreenVersionCache,
   canRunLinuxDockerImages,
   getDefaultDockerImage,
+  // Docker image utilities for virtual command visualization
+  dockerImageExists,
+  dockerPullImage,
 };

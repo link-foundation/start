@@ -463,7 +463,7 @@ describe('parseArgs', () => {
     it('should throw error for invalid backend', () => {
       assert.throws(() => {
         parseArgs(['--isolated', 'invalid-backend', '--', 'npm', 'test']);
-      }, /Invalid isolation backend/);
+      }, /Invalid isolation environment/);
     });
 
     it('should list valid backends in error message', () => {

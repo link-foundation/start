@@ -512,12 +512,15 @@ async function runWithIsolation(
   }
 
   // Print start block with session ID and isolation info
+  // For docker isolation, defer command printing to allow virtual commands (like docker pull) to be shown first
+  const deferCommand = environment === 'docker';
   console.log(
     createStartBlock({
       sessionId,
       timestamp: startTime,
       command: cmd,
       extraLines,
+      deferCommand,
     })
   );
   console.log('');
@@ -558,8 +561,8 @@ async function runWithIsolation(
   let result;
 
   if (environment) {
-    // Run in isolation backend (screen, tmux, docker, ssh)
-    // Note: Isolation backends currently use native spawn/execSync
+    // Run in isolation environment (screen, tmux, docker, ssh)
+    // Note: Isolation environments currently use native spawn/execSync
     // Future: Add command-stream support with raw() function for multiplexers
     result = await runIsolated(environment, cmd, {
       session: options.session,
@@ -571,7 +574,7 @@ async function runWithIsolation(
       autoRemoveDockerContainer: options.autoRemoveDockerContainer,
     });
   } else if (createdUser) {
-    // Run directly as the created user (no isolation backend)
+    // Run directly as the created user (no isolation environment)
     result = await runAsIsolatedUser(cmd, createdUser);
   } else {
     // This shouldn't happen in isolation mode, but handle gracefully

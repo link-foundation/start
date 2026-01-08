@@ -30,7 +30,7 @@ const DEBUG =
   process.env.START_DEBUG === '1' || process.env.START_DEBUG === 'true';
 
 /**
- * Valid isolation backends
+ * Valid isolation environments
  */
 const VALID_BACKENDS = ['screen', 'tmux', 'docker', 'ssh'];
 
@@ -80,7 +80,7 @@ function generateUUID() {
  */
 function parseArgs(args) {
   const wrapperOptions = {
-    isolated: null, // Isolation backend: screen, tmux, docker, ssh
+    isolated: null, // Isolation environment: screen, tmux, docker, ssh
     attached: false, // Run in attached mode
     detached: false, // Run in detached mode
     session: null, // Session name
@@ -375,11 +375,11 @@ function validateOptions(options) {
     );
   }
 
-  // Validate isolation backend
+  // Validate isolation environment
   if (options.isolated !== null) {
     if (!VALID_BACKENDS.includes(options.isolated)) {
       throw new Error(
-        `Invalid isolation backend: "${options.isolated}". Valid options are: ${VALID_BACKENDS.join(', ')}`
+        `Invalid isolation environment: "${options.isolated}". Valid options are: ${VALID_BACKENDS.join(', ')}`
       );
     }
 

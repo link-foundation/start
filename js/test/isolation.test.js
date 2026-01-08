@@ -89,8 +89,8 @@ describe('Isolation Module', () => {
     });
   });
 
-  describe('isolation backend checks', () => {
-    // These tests check if specific backends are available
+  describe('isolation environment checks', () => {
+    // These tests check if specific isolation environments are available
     // They don't fail if not installed, just report status
 
     it('should check if screen is available', () => {
@@ -710,7 +710,7 @@ describe('Isolation Runner with Available Backends', () => {
       // Test with a backend that returns predictable error for missing tools
       const result = await runIsolated('nonexistent-backend', 'echo test', {});
       assert.strictEqual(result.success, false);
-      assert.ok(result.message.includes('Unknown isolation backend'));
+      assert.ok(result.message.includes('Unknown isolation environment'));
     });
 
     it('should pass options to backend', async () => {

@@ -96,7 +96,7 @@ Variables like `$packageName`, `$version`, `$repository` are captured and used i
 
 ### Automatic Logging
 
-All command output is automatically saved to your system's temporary directory. Output uses a "status spine" format with clear visual distinction:
+All command output is automatically saved to your system's temporary directory. Output uses a "timeline" format with clear visual distinction:
 
 ```
 │ session   abc-123-def-456-ghi
@@ -205,7 +205,7 @@ The `--isolated-user` option:
 - Runs the command as that user
 - Automatically deletes the user after the command completes (unless `--keep-user` is specified)
 - Requires sudo access without password (NOPASSWD configuration)
-- Works with screen and tmux isolation backends (not docker)
+- Works with screen and tmux isolation environments (not docker)
 
 This is useful for:
 
@@ -213,20 +213,20 @@ This is useful for:
 - Testing with a clean user environment
 - Ensuring commands don't affect your user's files
 
-#### Supported Backends
+#### Supported Isolation Environments
 
-| Backend  | Description                                    | Installation                                               |
-| -------- | ---------------------------------------------- | ---------------------------------------------------------- |
-| `screen` | GNU Screen terminal multiplexer                | `apt install screen` / `brew install screen`               |
-| `tmux`   | Modern terminal multiplexer                    | `apt install tmux` / `brew install tmux`                   |
-| `docker` | Container isolation (requires --image)         | [Docker Installation](https://docs.docker.com/get-docker/) |
-| `ssh`    | Remote execution via SSH (requires --endpoint) | `apt install openssh-client` / `brew install openssh`      |
+| Environment | Description                                    | Installation                                               |
+| ----------- | ---------------------------------------------- | ---------------------------------------------------------- |
+| `screen`    | GNU Screen terminal multiplexer                | `apt install screen` / `brew install screen`               |
+| `tmux`      | Modern terminal multiplexer                    | `apt install tmux` / `brew install tmux`                   |
+| `docker`    | Container isolation (requires --image)         | [Docker Installation](https://docs.docker.com/get-docker/) |
+| `ssh`       | Remote execution via SSH (requires --endpoint) | `apt install openssh-client` / `brew install openssh`      |
 
 #### Isolation Options
 
 | Option                           | Description                                               |
 | -------------------------------- | --------------------------------------------------------- |
-| `--isolated, -i`                 | Isolation backend (screen, tmux, docker, ssh)             |
+| `--isolated, -i`                 | Isolation environment (screen, tmux, docker, ssh)         |
 | `--attached, -a`                 | Run in attached/foreground mode (default)                 |
 | `--detached, -d`                 | Run in detached/background mode                           |
 | `--session, -s`                  | Custom session/container name                             |
@@ -266,7 +266,7 @@ The tool works in any environment:
 - **No `gh-upload-log`?** - Issue can still be created with local log reference
 - **Repository not detected?** - Command runs normally with logging
 - **No permission to create issue?** - Skipped with a clear message
-- **Isolation backend not installed?** - Clear error message with installation instructions
+- **Isolation environment not installed?** - Clear error message with installation instructions
 
 ## Requirements
 
@@ -335,7 +335,7 @@ You can create your own substitution patterns by placing a `substitutions.lino` 
 
 ## Log File Format
 
-Log files are saved as `start-command-{timestamp}-{random}.log` and contain the command output along with metadata. The console output uses a "status spine" format:
+Log files are saved as `start-command-{timestamp}-{random}.log` and contain the command output along with metadata. The console output uses a "timeline" format:
 
 ```
 │ session   abc-123-def-456-ghi
