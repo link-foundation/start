@@ -488,7 +488,6 @@ pub fn docker_pull_image(image: &str) -> (bool, String) {
         "{}",
         crate::output_blocks::create_virtual_command_block(&format!("docker pull {}", image))
     );
-    println!();
 
     let mut child = match Command::new("docker")
         .args(["pull", image])

@@ -117,7 +117,6 @@ function dockerPullImage(image) {
 
   // Print the virtual command line
   console.log(createVirtualCommandBlock(`docker pull ${image}`));
-  console.log();
 
   let output = '';
   let success = false;
