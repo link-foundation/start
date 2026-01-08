@@ -314,3 +314,210 @@ pub fn format_value_for_links_notation(value: &serde_json::Value) -> String {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_spine_line() {
+        let line = create_spine_line("session", "abc123");
+        assert!(line.starts_with("│"));
+        assert!(line.contains("session"));
+        assert!(line.contains("abc123"));
+    }
+
+    #[test]
+    fn test_create_command_line() {
+        let line = create_command_line("echo hello");
+        assert_eq!(line, "$ echo hello");
+    }
+
+    #[test]
+    fn test_parse_isolation_metadata_screen() {
+        let extra_lines = vec![
+            "[Isolation] Environment: screen, Mode: attached",
+            "[Isolation] Session: screen-1234567890-abc123",
+        ];
+        let metadata = parse_isolation_metadata(&extra_lines);
+        assert_eq!(metadata.isolation, Some("screen".to_string()));
+        assert_eq!(metadata.mode, Some("attached".to_string()));
+        assert_eq!(
+            metadata.session,
+            Some("screen-1234567890-abc123".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_isolation_metadata_tmux() {
+        let extra_lines = vec![
+            "[Isolation] Environment: tmux, Mode: detached",
+            "[Isolation] Session: tmux-1234567890-xyz789",
+        ];
+        let metadata = parse_isolation_metadata(&extra_lines);
+        assert_eq!(metadata.isolation, Some("tmux".to_string()));
+        assert_eq!(metadata.mode, Some("detached".to_string()));
+        assert_eq!(metadata.session, Some("tmux-1234567890-xyz789".to_string()));
+    }
+
+    #[test]
+    fn test_parse_isolation_metadata_docker() {
+        let extra_lines = vec![
+            "[Isolation] Environment: docker, Mode: attached",
+            "[Isolation] Session: docker-1234567890-def456",
+            "[Isolation] Image: alpine:latest",
+        ];
+        let metadata = parse_isolation_metadata(&extra_lines);
+        assert_eq!(metadata.isolation, Some("docker".to_string()));
+        assert_eq!(metadata.mode, Some("attached".to_string()));
+        assert_eq!(
+            metadata.session,
+            Some("docker-1234567890-def456".to_string())
+        );
+        assert_eq!(metadata.image, Some("alpine:latest".to_string()));
+    }
+
+    #[test]
+    fn test_generate_isolation_lines_screen() {
+        let metadata = IsolationMetadata {
+            isolation: Some("screen".to_string()),
+            mode: Some("attached".to_string()),
+            session: Some("screen-1234567890-abc123".to_string()),
+            ..Default::default()
+        };
+        let lines = generate_isolation_lines(&metadata, None);
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("isolation") && l.contains("screen")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("mode") && l.contains("attached")));
+        // Issue #67: Session name should be displayed for screen
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("screen") && l.contains("screen-1234567890-abc123")),
+            "Should display screen session name for reconnection (issue #67)"
+        );
+    }
+
+    #[test]
+    fn test_generate_isolation_lines_tmux() {
+        let metadata = IsolationMetadata {
+            isolation: Some("tmux".to_string()),
+            mode: Some("detached".to_string()),
+            session: Some("tmux-1234567890-xyz789".to_string()),
+            ..Default::default()
+        };
+        let lines = generate_isolation_lines(&metadata, None);
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("isolation") && l.contains("tmux")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("mode") && l.contains("detached")));
+        // Issue #67: Session name should be displayed for tmux
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("tmux") && l.contains("tmux-1234567890-xyz789")),
+            "Should display tmux session name for reconnection (issue #67)"
+        );
+    }
+
+    #[test]
+    fn test_generate_isolation_lines_docker() {
+        let metadata = IsolationMetadata {
+            isolation: Some("docker".to_string()),
+            mode: Some("attached".to_string()),
+            session: Some("docker-1234567890-def456".to_string()),
+            image: Some("alpine:latest".to_string()),
+            ..Default::default()
+        };
+        let lines = generate_isolation_lines(&metadata, None);
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("isolation") && l.contains("docker")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("mode") && l.contains("attached")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("image") && l.contains("alpine:latest")));
+        // Issue #67: Container name should be displayed for docker
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("container") && l.contains("docker-1234567890-def456")),
+            "Should display docker container name for reconnection (issue #67)"
+        );
+    }
+
+    #[test]
+    fn test_create_start_block_with_isolation() {
+        let extra_lines: Vec<&str> = vec![
+            "[Isolation] Environment: screen, Mode: attached",
+            "[Isolation] Session: screen-1234567890-test",
+        ];
+        let block = create_start_block(&StartBlockOptions {
+            session_id: "uuid-123",
+            timestamp: "2026-01-08 12:00:00",
+            command: "echo hello",
+            extra_lines: Some(extra_lines),
+            style: None,
+            width: None,
+        });
+        // Issue #67: The start block should include the session name for reconnection
+        assert!(block.contains("│ session   uuid-123"));
+        assert!(block.contains("│ isolation screen"));
+        assert!(
+            block.contains("│ screen    screen-1234567890-test"),
+            "Start block should display screen session name for reconnection (issue #67)"
+        );
+    }
+
+    #[test]
+    fn test_create_finish_block_with_isolation() {
+        let extra_lines: Vec<&str> = vec![
+            "[Isolation] Environment: docker, Mode: attached",
+            "[Isolation] Session: docker-1234567890-test",
+            "[Isolation] Image: alpine:latest",
+        ];
+        let block = create_finish_block(&FinishBlockOptions {
+            session_id: "uuid-456",
+            timestamp: "2026-01-08 12:00:01",
+            exit_code: 0,
+            log_path: "/tmp/test.log",
+            duration_ms: Some(100.0),
+            result_message: None,
+            extra_lines: Some(extra_lines),
+            style: None,
+            width: None,
+        });
+        // Issue #67: The finish block should include the container name for reconnection
+        assert!(block.contains("✓"));
+        assert!(block.contains("│ session   uuid-456"));
+        assert!(
+            block.contains("│ container docker-1234567890-test"),
+            "Finish block should display docker container name for reconnection (issue #67)"
+        );
+    }
+
+    #[test]
+    fn test_format_duration() {
+        assert_eq!(format_duration(500.0), "0.500s");
+        assert_eq!(format_duration(1500.0), "1.500s");
+        assert_eq!(format_duration(15000.0), "15.00s");
+        assert_eq!(format_duration(150000.0), "150.0s");
+    }
+
+    #[test]
+    fn test_escape_for_links_notation() {
+        // Simple value - no quoting needed
+        assert_eq!(escape_for_links_notation("simple"), "simple");
+        // Value with space - needs quoting
+        assert_eq!(escape_for_links_notation("hello world"), "\"hello world\"");
+        // Value with colon - needs quoting
+        assert_eq!(escape_for_links_notation("key:value"), "\"key:value\"");
+    }
+}

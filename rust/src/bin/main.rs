@@ -507,9 +507,10 @@ fn run_with_isolation(
     // Add isolation info to extra lines
     if let Some(env) = environment {
         extra_lines.push(format!("[Isolation] Environment: {}, Mode: {}", env, mode));
-    }
-    if let Some(ref session) = wrapper_options.session {
-        extra_lines.push(format!("[Isolation] Session: {}", session));
+        // Always add the session name so users can reconnect to detached sessions
+        // This is important for screen, tmux, docker where the session/container name
+        // is different from the session UUID used for tracking (see issue #67)
+        extra_lines.push(format!("[Isolation] Session: {}", session_name));
     }
     if let Some(ref image) = effective_image {
         extra_lines.push(format!("[Isolation] Image: {}", image));
