@@ -618,69 +618,8 @@ function runInSsh(command, options = {}) {
   }
 }
 
-/**
- * Check if a Docker image exists locally
- * @param {string} image - Docker image name
- * @returns {boolean} True if image exists locally
- */
-function dockerImageExists(image) {
-  try {
-    execSync(`docker image inspect ${image}`, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Pull a Docker image with output streaming
- * Displays the pull operation as a virtual command in the timeline
- * @param {string} image - Docker image to pull
- * @returns {{success: boolean, output: string}} Pull result
- */
-function dockerPullImage(image) {
-  const {
-    createVirtualCommandBlock,
-    createVirtualCommandResult,
-    createTimelineSeparator,
-  } = require('./output-blocks');
-
-  // Print the virtual command line
-  console.log(createVirtualCommandBlock(`docker pull ${image}`));
-  console.log();
-
-  let output = '';
-  let success = false;
-
-  try {
-    // Run docker pull with inherited stdio for real-time output
-    const result = spawnSync('docker', ['pull', image], {
-      stdio: ['pipe', 'inherit', 'inherit'],
-    });
-
-    success = result.status === 0;
-
-    if (result.stdout) {
-      output = result.stdout.toString();
-    }
-    if (result.stderr) {
-      output += result.stderr.toString();
-    }
-  } catch (err) {
-    console.error(`Failed to run docker pull: ${err.message}`);
-    output = err.message;
-    success = false;
-  }
-
-  // Print result marker and separator
-  console.log();
-  console.log(createVirtualCommandResult(success));
-  console.log(createTimelineSeparator());
-
-  return { success, output };
-}
+// Import docker image utilities from docker-utils
+const { dockerImageExists, dockerPullImage } = require('./docker-utils');
 
 /**
  * Run command in Docker container
@@ -997,58 +936,11 @@ function runAsIsolatedUser(cmd, username) {
   });
 }
 
-/**
- * Check if the Docker daemon can run Linux container images
- * On Windows with Docker Desktop in Windows containers mode,
- * Linux images like alpine:latest cannot be pulled or run.
- * @returns {boolean} True if Linux Docker images can be run
- */
-function canRunLinuxDockerImages() {
-  if (!isCommandAvailable('docker')) {
-    return false;
-  }
-
-  try {
-    // First check if Docker daemon is running
-    execSync('docker info', { stdio: ['pipe', 'pipe', 'pipe'], timeout: 5000 });
-
-    // On Windows, check if Docker is configured for Linux containers
-    if (process.platform === 'win32') {
-      try {
-        const osType = execSync('docker info --format "{{.OSType}}"', {
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe'],
-          timeout: 5000,
-        }).trim();
-
-        // Docker must be using Linux containers to run Linux images
-        if (osType !== 'linux') {
-          if (DEBUG) {
-            console.log(
-              `[DEBUG] Docker is running in ${osType} containers mode, cannot run Linux images`
-            );
-          }
-          return false;
-        }
-      } catch {
-        // If we can't determine the OS type, assume Linux images won't work on Windows
-        if (DEBUG) {
-          console.log(
-            '[DEBUG] Could not determine Docker OS type, assuming Linux images unavailable'
-          );
-        }
-        return false;
-      }
-    }
-
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// Re-export getDefaultDockerImage from docker-utils for backwards compatibility
-const { getDefaultDockerImage } = require('./docker-utils');
+// Re-export docker utilities from docker-utils for backwards compatibility
+const {
+  getDefaultDockerImage,
+  canRunLinuxDockerImages,
+} = require('./docker-utils');
 
 module.exports = {
   isCommandAvailable,
@@ -1071,8 +963,8 @@ module.exports = {
   supportsLogfileOption,
   resetScreenVersionCache,
   canRunLinuxDockerImages,
+  // Re-exported from docker-utils for backwards compatibility
   getDefaultDockerImage,
-  // Docker image utilities for virtual command visualization
   dockerImageExists,
   dockerPullImage,
 };
