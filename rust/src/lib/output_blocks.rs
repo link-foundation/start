@@ -386,11 +386,17 @@ mod tests {
             ..Default::default()
         };
         let lines = generate_isolation_lines(&metadata, None);
-        assert!(lines.iter().any(|l| l.contains("isolation") && l.contains("screen")));
-        assert!(lines.iter().any(|l| l.contains("mode") && l.contains("attached")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("isolation") && l.contains("screen")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("mode") && l.contains("attached")));
         // Issue #67: Session name should be displayed for screen
         assert!(
-            lines.iter().any(|l| l.contains("screen") && l.contains("screen-1234567890-abc123")),
+            lines
+                .iter()
+                .any(|l| l.contains("screen") && l.contains("screen-1234567890-abc123")),
             "Should display screen session name for reconnection (issue #67)"
         );
     }
@@ -404,11 +410,17 @@ mod tests {
             ..Default::default()
         };
         let lines = generate_isolation_lines(&metadata, None);
-        assert!(lines.iter().any(|l| l.contains("isolation") && l.contains("tmux")));
-        assert!(lines.iter().any(|l| l.contains("mode") && l.contains("detached")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("isolation") && l.contains("tmux")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("mode") && l.contains("detached")));
         // Issue #67: Session name should be displayed for tmux
         assert!(
-            lines.iter().any(|l| l.contains("tmux") && l.contains("tmux-1234567890-xyz789")),
+            lines
+                .iter()
+                .any(|l| l.contains("tmux") && l.contains("tmux-1234567890-xyz789")),
             "Should display tmux session name for reconnection (issue #67)"
         );
     }
@@ -423,12 +435,20 @@ mod tests {
             ..Default::default()
         };
         let lines = generate_isolation_lines(&metadata, None);
-        assert!(lines.iter().any(|l| l.contains("isolation") && l.contains("docker")));
-        assert!(lines.iter().any(|l| l.contains("mode") && l.contains("attached")));
-        assert!(lines.iter().any(|l| l.contains("image") && l.contains("alpine:latest")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("isolation") && l.contains("docker")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("mode") && l.contains("attached")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("image") && l.contains("alpine:latest")));
         // Issue #67: Container name should be displayed for docker
         assert!(
-            lines.iter().any(|l| l.contains("container") && l.contains("docker-1234567890-def456")),
+            lines
+                .iter()
+                .any(|l| l.contains("container") && l.contains("docker-1234567890-def456")),
             "Should display docker container name for reconnection (issue #67)"
         );
     }
