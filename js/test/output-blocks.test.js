@@ -533,12 +533,40 @@ describe('output-blocks module', () => {
       // $ docker pull alpine:latest
       // <empty line>
       // <docker output>
+      // <empty line>
       // ✓
       // │
       // $ echo hi
       // <empty line>
       // hi
+      // <empty line>
       // ✓
+    });
+
+    it('output formatting follows visual continuity pattern', () => {
+      // Issue #73: All commands should have consistent formatting:
+      // 1. Command line ($ ...)
+      // 2. Empty line (visual separation)
+      // 3. Command output
+      // 4. Empty line (visual separation)
+      // 5. Result marker (✓ or ✗)
+      //
+      // This test documents the expected output structure that
+      // dockerPullImage and runInDocker should produce.
+
+      // Verify createCommandLine produces the correct format
+      const commandLine = createCommandLine('docker pull alpine:latest');
+      expect(commandLine).toBe('$ docker pull alpine:latest');
+
+      // Verify createVirtualCommandBlock matches
+      const virtualCommandLine = createVirtualCommandBlock(
+        'docker pull alpine:latest'
+      );
+      expect(virtualCommandLine).toBe(commandLine);
+
+      // Verify result markers
+      expect(createVirtualCommandResult(true)).toBe('✓');
+      expect(createVirtualCommandResult(false)).toBe('✗');
     });
   });
 });

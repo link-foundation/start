@@ -533,7 +533,9 @@ pub fn docker_pull_image(image: &str) -> (bool, String) {
 
     let success = child.wait().map(|s| s.success()).unwrap_or(false);
 
-    // Print result marker and separator (no empty line needed - already printed after command)
+    // Print empty line before result marker for visual separation (issue #73)
+    // This ensures output is visually separated from the result marker
+    println!();
     println!(
         "{}",
         crate::output_blocks::create_virtual_command_result(success)
