@@ -1,5 +1,5 @@
 ---
-"start-command": patch
+'start-command': patch
 ---
 
 fix: Remove empty line after virtual command to maintain visual continuity
