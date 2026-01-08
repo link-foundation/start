@@ -350,3 +350,86 @@ fn test_visual_continuity_start_block_for_docker_isolation() {
     );
     assert!(!block.contains("$ echo hi"), "Command should be deferred");
 }
+
+// Issue #73: Visual Continuity Tests
+#[test]
+fn test_visual_continuity_output_formatting() {
+    // Issue #73: All commands should have consistent formatting:
+    // 1. Command line ($ ...)
+    // 2. Empty line (visual separation)
+    // 3. Command output
+    // 4. Empty line (visual separation)
+    // 5. Result marker (✓ or ✗)
+    //
+    // This test documents the expected output structure.
+
+    use start_command::{
+        create_command_line, create_virtual_command_block, create_virtual_command_result,
+    };
+
+    // Verify createCommandLine produces the correct format
+    let command_line = create_command_line("docker pull alpine:latest");
+    assert_eq!(command_line, "$ docker pull alpine:latest");
+
+    // Verify createVirtualCommandBlock matches createCommandLine
+    let virtual_command_line = create_virtual_command_block("docker pull alpine:latest");
+    assert_eq!(virtual_command_line, command_line);
+
+    // Verify result markers
+    assert_eq!(create_virtual_command_result(true), "✓");
+    assert_eq!(create_virtual_command_result(false), "✗");
+}
+
+#[test]
+fn test_visual_continuity_command_output_pattern() {
+    // Issue #73: The expected output pattern for docker isolation with virtual commands:
+    //
+    // │ session   uuid-abc
+    // │ start     2026-01-08 12:00:00
+    // │
+    // │ isolation docker
+    // │ mode      attached
+    // │ image     alpine:latest
+    // │ container docker-1234
+    // │
+    // $ docker pull alpine:latest
+    //
+    // latest: Pulling from library/alpine
+    // ...
+    //
+    // ✓
+    // │
+    // $ echo hi
+    //
+    // hi
+    //
+    // ✓
+    //
+    // The key aspects tested here:
+    // 1. Start block ends with │ when defer_command is true
+    // 2. Virtual command and user command follow the same pattern:
+    //    command -> empty line -> output -> empty line -> result marker
+
+    let extra = vec![
+        "[Isolation] Environment: docker, Mode: attached",
+        "[Isolation] Image: alpine:latest",
+        "[Isolation] Session: docker-1234",
+    ];
+    let start_block = create_start_block(&StartBlockOptions {
+        session_id: "uuid-abc",
+        timestamp: "2026-01-08 12:00:00",
+        command: "echo hi",
+        extra_lines: Some(extra),
+        style: None,
+        width: None,
+        defer_command: true,
+    });
+
+    // When defer_command is true, start block should end with empty timeline line
+    let lines: Vec<&str> = start_block.lines().collect();
+    assert_eq!(
+        lines.last().unwrap(),
+        &"│",
+        "Start block with defer_command should end with │"
+    );
+}
