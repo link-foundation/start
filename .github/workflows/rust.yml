@@ -83,20 +83,25 @@ jobs:
 
       - name: Check for changelog fragments
         run: |
-          # Get list of fragment files (excluding README and template)
-          FRAGMENTS=$(find rust/changelog.d -name "*.md" ! -name "README.md" 2>/dev/null | wc -l)
-
           # Get changed files in PR
           CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
 
           # Check if any Rust source files changed
           SOURCE_CHANGED=$(echo "$CHANGED_FILES" | grep -E "^rust/(src/|tests/|Cargo\.toml)" | wc -l)
 
-          if [ "$SOURCE_CHANGED" -gt 0 ] && [ "$FRAGMENTS" -eq 0 ]; then
-            echo "::error::No changelog fragment found. Please add a changelog entry in rust/changelog.d/"
+          # Check if a changelog fragment was ADDED in this PR (not just existing)
+          # We need to check the diff, not just the directory contents
+          FRAGMENT_ADDED=$(echo "$CHANGED_FILES" | grep -E "^rust/changelog\.d/.*\.md$" | grep -v "README.md" | wc -l)
+
+          echo "Source files changed: $SOURCE_CHANGED"
+          echo "Changelog fragments added in PR: $FRAGMENT_ADDED"
+
+          if [ "$SOURCE_CHANGED" -gt 0 ] && [ "$FRAGMENT_ADDED" -eq 0 ]; then
+            echo "::error::No changelog fragment found in this PR. Please add a changelog entry in rust/changelog.d/"
             echo ""
             echo "To create a changelog fragment:"
             echo "  Create a new .md file in rust/changelog.d/ with your changes"
+            echo "  Name it after your PR number, e.g., '123.md'"
             echo ""
             echo "See rust/changelog.d/README.md for more information."
             exit 1
@@ -218,11 +223,12 @@ jobs:
           echo "Execution tracking test passed"
 
   # === BUILD ===
+  # Only build on push to main, not on PRs (tests already verify the code builds)
   build:
     name: Build Package
     runs-on: ubuntu-latest
     needs: [lint, test]
-    if: always() && needs.lint.result == 'success' && needs.test.result == 'success'
+    if: always() && github.event_name == 'push' && needs.lint.result == 'success' && needs.test.result == 'success'
     steps:
       - uses: actions/checkout@v4
 

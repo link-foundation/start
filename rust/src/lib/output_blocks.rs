@@ -1,156 +1,146 @@
 //! Output formatting utilities for nicely rendered command blocks
 //!
-//! Provides various styles for start/finish blocks to distinguish
-//! command output from the $ wrapper output.
+//! Provides "status spine" format: a width-independent, lossless output format
+//! that works in TTY, tmux, SSH, CI, and logs.
 //!
-//! Available styles:
-//! - `rounded` (default): Rounded unicode box borders (╭─╮ ╰─╯)
-//! - `heavy`: Heavy unicode box borders (┏━┓ ┗━┛)
-//! - `double`: Double line box borders (╔═╗ ╚═╝)
-//! - `simple`: Simple dash lines (────────)
-//! - `ascii`: Pure ASCII compatible (+--------+)
+//! Core concepts:
+//! - `│` prefix → tool metadata
+//! - `$` → executed command
+//! - No prefix → program output (stdout/stderr)
+//! - Result marker (`✓` / `✗`) appears after output
 
-use std::env;
+use regex::Regex;
 
-/// Box drawing characters for different styles
-#[derive(Clone, Copy)]
-pub struct BoxStyle {
-    pub top_left: &'static str,
-    pub top_right: &'static str,
-    pub bottom_left: &'static str,
-    pub bottom_right: &'static str,
-    pub horizontal: &'static str,
-    pub vertical: &'static str,
+/// Metadata spine character
+pub const SPINE: &str = "│";
+
+/// Success result marker
+pub const SUCCESS_MARKER: &str = "✓";
+
+/// Failure result marker
+pub const FAILURE_MARKER: &str = "✗";
+
+/// Create a metadata line with spine prefix
+pub fn create_spine_line(label: &str, value: &str) -> String {
+    // Pad label to 10 characters for alignment
+    format!("{} {:10}{}", SPINE, label, value)
 }
 
-impl BoxStyle {
-    pub const ROUNDED: BoxStyle = BoxStyle {
-        top_left: "╭",
-        top_right: "╮",
-        bottom_left: "╰",
-        bottom_right: "╯",
-        horizontal: "─",
-        vertical: "│",
-    };
-
-    pub const HEAVY: BoxStyle = BoxStyle {
-        top_left: "┏",
-        top_right: "┓",
-        bottom_left: "┗",
-        bottom_right: "┛",
-        horizontal: "━",
-        vertical: "┃",
-    };
-
-    pub const DOUBLE: BoxStyle = BoxStyle {
-        top_left: "╔",
-        top_right: "╗",
-        bottom_left: "╚",
-        bottom_right: "╝",
-        horizontal: "═",
-        vertical: "║",
-    };
-
-    pub const SIMPLE: BoxStyle = BoxStyle {
-        top_left: "",
-        top_right: "",
-        bottom_left: "",
-        bottom_right: "",
-        horizontal: "─",
-        vertical: "",
-    };
-
-    pub const ASCII: BoxStyle = BoxStyle {
-        top_left: "+",
-        top_right: "+",
-        bottom_left: "+",
-        bottom_right: "+",
-        horizontal: "-",
-        vertical: "|",
-    };
+/// Create an empty spine line (just the spine character)
+pub fn create_empty_spine_line() -> String {
+    SPINE.to_string()
 }
 
-/// Default block width
-pub const DEFAULT_WIDTH: usize = 60;
+/// Create a command line with $ prefix
+pub fn create_command_line(command: &str) -> String {
+    format!("$ {}", command)
+}
 
-/// Get the box style configuration from environment or default
-pub fn get_box_style(style_name: Option<&str>) -> BoxStyle {
-    let env_style = env::var("START_OUTPUT_STYLE").ok();
-    let name = style_name.or(env_style.as_deref()).unwrap_or("rounded");
-
-    match name {
-        "heavy" => BoxStyle::HEAVY,
-        "double" => BoxStyle::DOUBLE,
-        "simple" => BoxStyle::SIMPLE,
-        "ascii" => BoxStyle::ASCII,
-        _ => BoxStyle::ROUNDED,
+/// Get the result marker based on exit code
+pub fn get_result_marker(exit_code: i32) -> &'static str {
+    if exit_code == 0 {
+        SUCCESS_MARKER
+    } else {
+        FAILURE_MARKER
     }
 }
 
-/// Create a horizontal line
-fn create_horizontal_line(width: usize, style: &BoxStyle) -> String {
-    style.horizontal.repeat(width)
+/// Parsed isolation metadata
+#[derive(Default)]
+pub struct IsolationMetadata {
+    pub isolation: Option<String>,
+    pub mode: Option<String>,
+    pub image: Option<String>,
+    pub session: Option<String>,
+    pub endpoint: Option<String>,
+    pub user: Option<String>,
 }
 
-/// Pad or truncate text to fit a specific width
-/// If allow_overflow is true, long text is not truncated (for copyable content)
-fn pad_text(text: &str, width: usize, allow_overflow: bool) -> String {
-    if text.len() >= width {
-        // If overflow is allowed, return text as-is (for copyable content like paths)
-        if allow_overflow {
-            return text.to_string();
+/// Parse isolation metadata from extra lines
+pub fn parse_isolation_metadata(extra_lines: &[&str]) -> IsolationMetadata {
+    let mut metadata = IsolationMetadata::default();
+
+    let env_mode_re = Regex::new(r"\[Isolation\] Environment: (\w+), Mode: (\w+)").unwrap();
+    let session_re = Regex::new(r"\[Isolation\] Session: (.+)").unwrap();
+    let image_re = Regex::new(r"\[Isolation\] Image: (.+)").unwrap();
+    let endpoint_re = Regex::new(r"\[Isolation\] Endpoint: (.+)").unwrap();
+    let user_re = Regex::new(r"\[Isolation\] User: (\w+)").unwrap();
+
+    for line in extra_lines {
+        if let Some(caps) = env_mode_re.captures(line) {
+            metadata.isolation = Some(caps[1].to_string());
+            metadata.mode = Some(caps[2].to_string());
+            continue;
         }
-        text[..width].to_string()
-    } else {
-        format!("{}{}", text, " ".repeat(width - text.len()))
+
+        if let Some(caps) = session_re.captures(line) {
+            metadata.session = Some(caps[1].to_string());
+            continue;
+        }
+
+        if let Some(caps) = image_re.captures(line) {
+            metadata.image = Some(caps[1].to_string());
+            continue;
+        }
+
+        if let Some(caps) = endpoint_re.captures(line) {
+            metadata.endpoint = Some(caps[1].to_string());
+            continue;
+        }
+
+        if let Some(caps) = user_re.captures(line) {
+            metadata.user = Some(caps[1].to_string());
+        }
     }
+
+    metadata
 }
 
-/// Create a bordered line with text
-/// If allow_overflow is true, long text is not truncated (for copyable content)
-fn create_bordered_line(
-    text: &str,
-    width: usize,
-    style: &BoxStyle,
-    allow_overflow: bool,
-) -> String {
-    if !style.vertical.is_empty() {
-        let inner_width = width.saturating_sub(4); // 2 for borders, 2 for padding
-        let padded_text = pad_text(text, inner_width, allow_overflow);
-        format!("{} {} {}", style.vertical, padded_text, style.vertical)
-    } else {
-        text.to_string()
-    }
-}
+/// Generate isolation metadata lines for spine format
+pub fn generate_isolation_lines(
+    metadata: &IsolationMetadata,
+    container_or_screen_name: Option<&str>,
+) -> Vec<String> {
+    let mut lines = Vec::new();
 
-/// Create the top border of a box
-fn create_top_border(width: usize, style: &BoxStyle) -> String {
-    if !style.top_left.is_empty() {
-        let line_width = width.saturating_sub(2); // Subtract corners
-        format!(
-            "{}{}{}",
-            style.top_left,
-            create_horizontal_line(line_width, style),
-            style.top_right
-        )
-    } else {
-        create_horizontal_line(width, style)
+    if let Some(ref isolation) = metadata.isolation {
+        lines.push(create_spine_line("isolation", isolation));
     }
-}
 
-/// Create the bottom border of a box
-fn create_bottom_border(width: usize, style: &BoxStyle) -> String {
-    if !style.bottom_left.is_empty() {
-        let line_width = width.saturating_sub(2); // Subtract corners
-        format!(
-            "{}{}{}",
-            style.bottom_left,
-            create_horizontal_line(line_width, style),
-            style.bottom_right
-        )
-    } else {
-        create_horizontal_line(width, style)
+    if let Some(ref mode) = metadata.mode {
+        lines.push(create_spine_line("mode", mode));
     }
+
+    if let Some(ref image) = metadata.image {
+        lines.push(create_spine_line("image", image));
+    }
+
+    // Use provided container/screen name or fall back to metadata.session
+    if let Some(ref isolation) = metadata.isolation {
+        let name = container_or_screen_name
+            .map(String::from)
+            .or_else(|| metadata.session.clone());
+
+        if let Some(name) = name {
+            match isolation.as_str() {
+                "docker" => lines.push(create_spine_line("container", &name)),
+                "screen" => lines.push(create_spine_line("screen", &name)),
+                "tmux" => lines.push(create_spine_line("tmux", &name)),
+                "ssh" => {
+                    if let Some(ref endpoint) = metadata.endpoint {
+                        lines.push(create_spine_line("endpoint", endpoint));
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    if let Some(ref user) = metadata.user {
+        lines.push(create_spine_line("user", user));
+    }
+
+    lines
 }
 
 /// Options for creating a start block
@@ -163,35 +153,29 @@ pub struct StartBlockOptions<'a> {
     pub width: Option<usize>,
 }
 
-/// Create a start block for command execution
+/// Create a start block for command execution using status spine format
 pub fn create_start_block(options: &StartBlockOptions) -> String {
-    let width = options.width.unwrap_or(DEFAULT_WIDTH);
-    let style = get_box_style(options.style);
-
     let mut lines = Vec::new();
 
-    lines.push(create_top_border(width, &style));
-    lines.push(create_bordered_line(
-        &format!("Session ID: {}", options.session_id),
-        width,
-        &style,
-        false,
-    ));
-    lines.push(create_bordered_line(
-        &format!("Starting at {}: {}", options.timestamp, options.command),
-        width,
-        &style,
-        false,
-    ));
+    // Header: session and start time
+    lines.push(create_spine_line("session", options.session_id));
+    lines.push(create_spine_line("start", options.timestamp));
 
-    // Add extra lines (e.g., isolation info, docker image, etc.)
+    // Parse and add isolation metadata if present
     if let Some(ref extra) = options.extra_lines {
-        for line in extra {
-            lines.push(create_bordered_line(line, width, &style, false));
+        let metadata = parse_isolation_metadata(extra);
+
+        if metadata.isolation.is_some() {
+            lines.push(create_empty_spine_line());
+            lines.extend(generate_isolation_lines(&metadata, None));
         }
     }
 
-    lines.push(create_bottom_border(width, &style));
+    // Empty spine line before command
+    lines.push(create_empty_spine_line());
+
+    // Command line
+    lines.push(create_command_line(options.command));
 
     lines.join("\n")
 }
@@ -200,14 +184,14 @@ pub fn create_start_block(options: &StartBlockOptions) -> String {
 pub fn format_duration(duration_ms: f64) -> String {
     let seconds = duration_ms / 1000.0;
     if seconds < 0.001 {
-        "0.001".to_string()
+        "0.001s".to_string()
     } else if seconds < 10.0 {
         // For durations under 10 seconds, show 3 decimal places
-        format!("{:.3}", seconds)
+        format!("{:.3}s", seconds)
     } else if seconds < 100.0 {
-        format!("{:.2}", seconds)
+        format!("{:.2}s", seconds)
     } else {
-        format!("{:.1}", seconds)
+        format!("{:.1}s", seconds)
     }
 }
 
@@ -219,57 +203,52 @@ pub struct FinishBlockOptions<'a> {
     pub log_path: &'a str,
     pub duration_ms: Option<f64>,
     pub result_message: Option<&'a str>,
+    pub extra_lines: Option<Vec<&'a str>>,
     pub style: Option<&'a str>,
     pub width: Option<usize>,
 }
 
-/// Create a finish block for command execution
+/// Create a finish block for command execution using status spine format
+///
+/// Bottom block ordering rules:
+/// 1. Result marker (✓ or ✗)
+/// 2. finish timestamp
+/// 3. duration
+/// 4. exit code
+/// 5. (repeated isolation metadata, if any)
+/// 6. empty spine line
+/// 7. log path (always second-to-last)
+/// 8. session ID (always last)
 pub fn create_finish_block(options: &FinishBlockOptions) -> String {
-    let width = options.width.unwrap_or(DEFAULT_WIDTH);
-    let style = get_box_style(options.style);
-
     let mut lines = Vec::new();
 
-    // Format the finished message with optional duration
-    let finished_msg = if let Some(duration_ms) = options.duration_ms {
-        format!(
-            "Finished at {} in {} seconds",
-            options.timestamp,
-            format_duration(duration_ms)
-        )
-    } else {
-        format!("Finished at {}", options.timestamp)
-    };
+    // Result marker appears first in footer (after program output)
+    lines.push(get_result_marker(options.exit_code).to_string());
 
-    lines.push(create_top_border(width, &style));
+    // Finish metadata
+    lines.push(create_spine_line("finish", options.timestamp));
 
-    // Add result message first if provided (e.g., "Docker container exited...")
-    // Allow overflow so the full message is visible and copyable
-    if let Some(result_msg) = options.result_message {
-        lines.push(create_bordered_line(result_msg, width, &style, true));
+    if let Some(duration_ms) = options.duration_ms {
+        lines.push(create_spine_line("duration", &format_duration(duration_ms)));
     }
 
-    lines.push(create_bordered_line(&finished_msg, width, &style, false));
-    lines.push(create_bordered_line(
-        &format!("Exit code: {}", options.exit_code),
-        width,
-        &style,
-        false,
-    ));
-    // Allow overflow for log path and session ID so they can be copied completely
-    lines.push(create_bordered_line(
-        &format!("Log: {}", options.log_path),
-        width,
-        &style,
-        true,
-    ));
-    lines.push(create_bordered_line(
-        &format!("Session ID: {}", options.session_id),
-        width,
-        &style,
-        true,
-    ));
-    lines.push(create_bottom_border(width, &style));
+    lines.push(create_spine_line("exit", &options.exit_code.to_string()));
+
+    // Repeat isolation metadata if present
+    if let Some(ref extra) = options.extra_lines {
+        let metadata = parse_isolation_metadata(extra);
+        if metadata.isolation.is_some() {
+            lines.push(create_empty_spine_line());
+            lines.extend(generate_isolation_lines(&metadata, None));
+        }
+    }
+
+    // Empty spine line before final two entries
+    lines.push(create_empty_spine_line());
+
+    // Log and session are ALWAYS last (in that order)
+    lines.push(create_spine_line("log", options.log_path));
+    lines.push(create_spine_line("session", options.session_id));
 
     lines.join("\n")
 }

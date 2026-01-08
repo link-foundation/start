@@ -161,13 +161,13 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Install screen (Linux)
+      - name: Install screen and tmux (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y screen
+        run: sudo apt-get update && sudo apt-get install -y screen tmux
 
-      - name: Install screen (macOS)
+      - name: Install screen and tmux (macOS)
         if: runner.os == 'macOS'
-        run: brew install screen
+        run: brew install screen tmux
 
       - name: Setup .NET for clink (Linux)
         if: runner.os == 'Linux'
@@ -246,6 +246,28 @@ jobs:
           ls -la "$USERPROFILE/.start-command/"
           cat "$USERPROFILE/.start-command/executions.lino"
           echo "Execution tracking test passed"
+
+      # Integration tests for isolation modes - Linux only
+      - name: Test screen isolation mode (Linux)
+        if: runner.os == 'Linux'
+        working-directory: js
+        run: |
+          bun run src/bin/cli.js --isolated screen -- echo "Testing screen isolation"
+          echo "Screen isolation test passed"
+
+      - name: Test tmux isolation mode (Linux)
+        if: runner.os == 'Linux'
+        working-directory: js
+        run: |
+          bun run src/bin/cli.js --isolated tmux -d -- echo "Testing tmux isolation"
+          echo "Tmux isolation test passed"
+
+      - name: Test docker isolation mode (Linux)
+        if: runner.os == 'Linux'
+        working-directory: js
+        run: |
+          bun run src/bin/cli.js --isolated docker -d --image alpine:latest -- echo "Testing docker isolation"
+          echo "Docker isolation test passed"
 
       # SSH Integration Tests - Linux only
       - name: Setup SSH server for integration tests (Linux)
