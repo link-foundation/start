@@ -1,22 +1,35 @@
 /**
  * Tests for output-blocks module
  *
- * Tests the "status spine" format: width-independent, lossless output
+ * Tests the "timeline" format: width-independent, lossless output
+ * (formerly called "status spine" format)
  */
 
 const { describe, it, expect } = require('bun:test');
 
 const {
-  // Spine format exports
+  // Timeline format exports (new names)
+  TIMELINE_MARKER,
+  createTimelineLine,
+  createEmptyTimelineLine,
+
+  // Deprecated aliases (for backward compatibility)
   SPINE,
-  SUCCESS_MARKER,
-  FAILURE_MARKER,
   createSpineLine,
   createEmptySpineLine,
+
+  // Common exports
+  SUCCESS_MARKER,
+  FAILURE_MARKER,
   createCommandLine,
   getResultMarker,
   parseIsolationMetadata,
   generateIsolationLines,
+
+  // Virtual command API
+  createVirtualCommandBlock,
+  createVirtualCommandResult,
+  createTimelineSeparator,
 
   // Main block functions
   createStartBlock,
@@ -29,9 +42,13 @@ const {
 } = require('../src/lib/output-blocks');
 
 describe('output-blocks module', () => {
-  describe('spine format constants', () => {
-    it('should export spine character', () => {
-      expect(SPINE).toBe('│');
+  describe('timeline format constants', () => {
+    it('should export timeline marker character', () => {
+      expect(TIMELINE_MARKER).toBe('│');
+    });
+
+    it('should export spine as alias for backward compatibility', () => {
+      expect(SPINE).toBe(TIMELINE_MARKER);
     });
 
     it('should export result markers', () => {
@@ -40,24 +57,37 @@ describe('output-blocks module', () => {
     });
   });
 
-  describe('createSpineLine', () => {
-    it('should create a line with spine prefix and padded label', () => {
-      const line = createSpineLine('session', 'abc-123');
+  describe('createTimelineLine', () => {
+    it('should create a line with timeline marker prefix and padded label', () => {
+      const line = createTimelineLine('session', 'abc-123');
       expect(line).toBe('│ session   abc-123');
     });
 
     it('should pad labels to 10 characters', () => {
-      const shortLabel = createSpineLine('exit', '0');
+      const shortLabel = createTimelineLine('exit', '0');
       expect(shortLabel).toBe('│ exit      0');
 
-      const longLabel = createSpineLine('isolation', 'docker');
+      const longLabel = createTimelineLine('isolation', 'docker');
       expect(longLabel).toBe('│ isolation docker');
     });
   });
 
-  describe('createEmptySpineLine', () => {
-    it('should create just the spine character', () => {
-      expect(createEmptySpineLine()).toBe('│');
+  describe('createSpineLine (deprecated alias)', () => {
+    it('should work as alias for createTimelineLine', () => {
+      const line = createSpineLine('session', 'abc-123');
+      expect(line).toBe(createTimelineLine('session', 'abc-123'));
+    });
+  });
+
+  describe('createEmptyTimelineLine', () => {
+    it('should create just the timeline marker character', () => {
+      expect(createEmptyTimelineLine()).toBe('│');
+    });
+  });
+
+  describe('createEmptySpineLine (deprecated alias)', () => {
+    it('should work as alias for createEmptyTimelineLine', () => {
+      expect(createEmptySpineLine()).toBe(createEmptyTimelineLine());
     });
   });
 
@@ -371,6 +401,62 @@ describe('output-blocks module', () => {
 
     it('should handle null', () => {
       expect(formatAsNestedLinksNotation(null)).toBe('null');
+    });
+  });
+
+  describe('Virtual Command API', () => {
+    describe('createVirtualCommandBlock', () => {
+      it('should create a command line for virtual commands', () => {
+        const block = createVirtualCommandBlock('docker pull ubuntu:latest');
+        expect(block).toBe('$ docker pull ubuntu:latest');
+      });
+
+      it('should behave like createCommandLine', () => {
+        const virtualBlock = createVirtualCommandBlock('npm install');
+        const commandLine = createCommandLine('npm install');
+        expect(virtualBlock).toBe(commandLine);
+      });
+    });
+
+    describe('createVirtualCommandResult', () => {
+      it('should return success marker for true', () => {
+        expect(createVirtualCommandResult(true)).toBe('✓');
+      });
+
+      it('should return failure marker for false', () => {
+        expect(createVirtualCommandResult(false)).toBe('✗');
+      });
+    });
+
+    describe('createTimelineSeparator', () => {
+      it('should create an empty timeline line', () => {
+        expect(createTimelineSeparator()).toBe('│');
+      });
+
+      it('should behave like createEmptyTimelineLine', () => {
+        expect(createTimelineSeparator()).toBe(createEmptyTimelineLine());
+      });
+    });
+  });
+
+  describe('createStartBlock with deferCommand', () => {
+    it('should include command line by default', () => {
+      const block = createStartBlock({
+        sessionId: 'test-uuid',
+        timestamp: '2025-01-01 00:00:00',
+        command: 'echo hello',
+      });
+      expect(block).toContain('$ echo hello');
+    });
+
+    it('should omit command line when deferCommand is true', () => {
+      const block = createStartBlock({
+        sessionId: 'test-uuid',
+        timestamp: '2025-01-01 00:00:00',
+        command: 'echo hello',
+        deferCommand: true,
+      });
+      expect(block).not.toContain('$ echo hello');
     });
   });
 });

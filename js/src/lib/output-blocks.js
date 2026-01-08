@@ -1,41 +1,60 @@
 /**
  * Output formatting utilities for nicely rendered command blocks
  *
- * Provides "status spine" format: a width-independent, lossless output format
+ * Provides "timeline" format: a width-independent, lossless output format
  * that works in TTY, tmux, SSH, CI, and logs.
  *
  * Core concepts:
- * - `│` prefix → tool metadata
- * - `$` → executed command
+ * - `│` prefix → tool metadata (timeline marker)
+ * - `$` → executed command (virtual or user command)
  * - No prefix → program output (stdout/stderr)
  * - Result marker (`✓` / `✗`) appears after output
  */
 
-// Metadata spine character
-const SPINE = '│';
+// Timeline marker character (formerly called "spine")
+const TIMELINE_MARKER = '│';
+
+// Alias for backward compatibility
+const SPINE = TIMELINE_MARKER;
 
 // Result markers
 const SUCCESS_MARKER = '✓';
 const FAILURE_MARKER = '✗';
 
 /**
- * Create a metadata line with spine prefix
+ * Create a metadata line with timeline marker prefix
  * @param {string} label - Label (e.g., 'session', 'start', 'exit')
  * @param {string} value - Value for the label
- * @returns {string} Formatted line with spine prefix
+ * @returns {string} Formatted line with timeline marker prefix
  */
-function createSpineLine(label, value) {
+function createTimelineLine(label, value) {
   // Pad label to 10 characters for alignment
   const paddedLabel = label.padEnd(10);
-  return `${SPINE} ${paddedLabel}${value}`;
+  return `${TIMELINE_MARKER} ${paddedLabel}${value}`;
 }
 
 /**
- * Create an empty spine line (just the spine character)
- * @returns {string} Empty spine line
+ * Alias for backward compatibility
+ * @deprecated Use createTimelineLine instead
+ */
+function createSpineLine(label, value) {
+  return createTimelineLine(label, value);
+}
+
+/**
+ * Create an empty timeline line (just the timeline marker character)
+ * @returns {string} Empty timeline line
+ */
+function createEmptyTimelineLine() {
+  return TIMELINE_MARKER;
+}
+
+/**
+ * Alias for backward compatibility
+ * @deprecated Use createEmptyTimelineLine instead
  */
 function createEmptySpineLine() {
-  return SPINE;
+  return createEmptyTimelineLine();
 }
 
 /**
@@ -54,6 +73,34 @@ function createCommandLine(command) {
  */
 function getResultMarker(exitCode) {
   return exitCode === 0 ? SUCCESS_MARKER : FAILURE_MARKER;
+}
+
+/**
+ * Create a virtual command block for setup steps (like docker pull)
+ * Virtual commands are displayed separately in the timeline to show
+ * intermediate steps that the tool performs automatically
+ * @param {string} command - The virtual command being executed
+ * @returns {string} Formatted command line
+ */
+function createVirtualCommandBlock(command) {
+  return createCommandLine(command);
+}
+
+/**
+ * Create a result marker line for a virtual command
+ * @param {boolean} success - Whether the virtual command succeeded
+ * @returns {string} Result marker (✓ or ✗)
+ */
+function createVirtualCommandResult(success) {
+  return success ? SUCCESS_MARKER : FAILURE_MARKER;
+}
+
+/**
+ * Create a separator line between virtual commands and user commands
+ * @returns {string} Empty timeline line
+ */
+function createTimelineSeparator() {
+  return createEmptyTimelineLine();
 }
 
 /**
@@ -118,88 +165,97 @@ function parseIsolationMetadata(extraLines) {
 }
 
 /**
- * Generate isolation metadata lines for spine format
+ * Generate isolation metadata lines for timeline format
  * @param {object} metadata - Parsed isolation metadata
  * @param {string} [containerOrScreenName] - Container or screen session name
- * @returns {string[]} Array of spine-formatted isolation lines
+ * @returns {string[]} Array of timeline-formatted isolation lines
  */
 function generateIsolationLines(metadata, containerOrScreenName = null) {
   const lines = [];
 
   if (metadata.isolation) {
-    lines.push(createSpineLine('isolation', metadata.isolation));
+    lines.push(createTimelineLine('isolation', metadata.isolation));
   }
 
   if (metadata.mode) {
-    lines.push(createSpineLine('mode', metadata.mode));
+    lines.push(createTimelineLine('mode', metadata.mode));
   }
 
   if (metadata.image) {
-    lines.push(createSpineLine('image', metadata.image));
+    lines.push(createTimelineLine('image', metadata.image));
   }
 
   // Use provided container/screen name or fall back to metadata.session
   if (metadata.isolation === 'docker') {
     const containerName = containerOrScreenName || metadata.session;
     if (containerName) {
-      lines.push(createSpineLine('container', containerName));
+      lines.push(createTimelineLine('container', containerName));
     }
   } else if (metadata.isolation === 'screen') {
     const screenName = containerOrScreenName || metadata.session;
     if (screenName) {
-      lines.push(createSpineLine('screen', screenName));
+      lines.push(createTimelineLine('screen', screenName));
     }
   } else if (metadata.isolation === 'tmux') {
     const tmuxName = containerOrScreenName || metadata.session;
     if (tmuxName) {
-      lines.push(createSpineLine('tmux', tmuxName));
+      lines.push(createTimelineLine('tmux', tmuxName));
     }
   } else if (metadata.isolation === 'ssh') {
     if (metadata.endpoint) {
-      lines.push(createSpineLine('endpoint', metadata.endpoint));
+      lines.push(createTimelineLine('endpoint', metadata.endpoint));
     }
   }
 
   if (metadata.user) {
-    lines.push(createSpineLine('user', metadata.user));
+    lines.push(createTimelineLine('user', metadata.user));
   }
 
   return lines;
 }
 
 /**
- * Create a start block for command execution using status spine format
+ * Create a start block for command execution using timeline format
  * @param {object} options - Options for the block
  * @param {string} options.sessionId - Session UUID
  * @param {string} options.timestamp - Timestamp string
  * @param {string} options.command - Command being executed
  * @param {string[]} [options.extraLines] - Additional lines with isolation info
+ * @param {boolean} [options.deferCommand] - If true, omit command line (for virtual command handling)
  * @param {string} [options.style] - Ignored (kept for backward compatibility)
  * @param {number} [options.width] - Ignored (kept for backward compatibility)
- * @returns {string} Formatted start block in spine format
+ * @returns {string} Formatted start block in timeline format
  */
 function createStartBlock(options) {
-  const { sessionId, timestamp, command, extraLines = [] } = options;
+  const {
+    sessionId,
+    timestamp,
+    command,
+    extraLines = [],
+    deferCommand = false,
+  } = options;
 
   const lines = [];
 
   // Header: session and start time
-  lines.push(createSpineLine('session', sessionId));
-  lines.push(createSpineLine('start', timestamp));
+  lines.push(createTimelineLine('session', sessionId));
+  lines.push(createTimelineLine('start', timestamp));
 
   // Parse and add isolation metadata if present
   const metadata = parseIsolationMetadata(extraLines);
 
   if (metadata.isolation) {
-    lines.push(createEmptySpineLine());
+    lines.push(createEmptyTimelineLine());
     lines.push(...generateIsolationLines(metadata));
   }
 
-  // Empty spine line before command
-  lines.push(createEmptySpineLine());
+  // Empty timeline line before command (always needed for separation)
+  lines.push(createEmptyTimelineLine());
 
-  // Command line
-  lines.push(createCommandLine(command));
+  // Command line (unless deferred for virtual command handling)
+  if (!deferCommand) {
+    lines.push(createCommandLine(command));
+  }
 
   return lines.join('\n');
 }
@@ -224,7 +280,7 @@ function formatDuration(durationMs) {
 }
 
 /**
- * Create a finish block for command execution using status spine format
+ * Create a finish block for command execution using timeline format
  *
  * Bottom block ordering rules:
  * 1. Result marker (✓ or ✗)
@@ -232,7 +288,7 @@ function formatDuration(durationMs) {
  * 3. duration
  * 4. exit code
  * 5. (repeated isolation metadata, if any)
- * 6. empty spine line
+ * 6. empty timeline line
  * 7. log path (always second-to-last)
  * 8. session ID (always last)
  *
@@ -246,7 +302,7 @@ function formatDuration(durationMs) {
  * @param {string[]} [options.extraLines] - Isolation info for repetition in footer
  * @param {string} [options.style] - Ignored (kept for backward compatibility)
  * @param {number} [options.width] - Ignored (kept for backward compatibility)
- * @returns {string} Formatted finish block in spine format
+ * @returns {string} Formatted finish block in timeline format
  */
 function createFinishBlock(options) {
   const {
@@ -264,27 +320,27 @@ function createFinishBlock(options) {
   lines.push(getResultMarker(exitCode));
 
   // Finish metadata
-  lines.push(createSpineLine('finish', timestamp));
+  lines.push(createTimelineLine('finish', timestamp));
 
   if (durationMs !== undefined && durationMs !== null) {
-    lines.push(createSpineLine('duration', formatDuration(durationMs)));
+    lines.push(createTimelineLine('duration', formatDuration(durationMs)));
   }
 
-  lines.push(createSpineLine('exit', String(exitCode)));
+  lines.push(createTimelineLine('exit', String(exitCode)));
 
   // Repeat isolation metadata if present
   const metadata = parseIsolationMetadata(extraLines);
   if (metadata.isolation) {
-    lines.push(createEmptySpineLine());
+    lines.push(createEmptyTimelineLine());
     lines.push(...generateIsolationLines(metadata));
   }
 
-  // Empty spine line before final two entries
-  lines.push(createEmptySpineLine());
+  // Empty timeline line before final two entries
+  lines.push(createEmptyTimelineLine());
 
   // Log and session are ALWAYS last (in that order)
-  lines.push(createSpineLine('log', logPath));
-  lines.push(createSpineLine('session', sessionId));
+  lines.push(createTimelineLine('log', logPath));
+  lines.push(createTimelineLine('session', sessionId));
 
   return lines.join('\n');
 }
@@ -399,16 +455,24 @@ function formatAsNestedLinksNotation(obj, indent = 2, depth = 0) {
 }
 
 module.exports = {
-  // Status spine format API
-  SPINE,
+  // Timeline format API (formerly "status spine")
+  TIMELINE_MARKER,
+  SPINE, // deprecated, use TIMELINE_MARKER
   SUCCESS_MARKER,
   FAILURE_MARKER,
-  createSpineLine,
-  createEmptySpineLine,
+  createTimelineLine,
+  createSpineLine, // deprecated, use createTimelineLine
+  createEmptyTimelineLine,
+  createEmptySpineLine, // deprecated, use createEmptyTimelineLine
   createCommandLine,
   getResultMarker,
   parseIsolationMetadata,
   generateIsolationLines,
+
+  // Virtual command API (for multi-step execution)
+  createVirtualCommandBlock,
+  createVirtualCommandResult,
+  createTimelineSeparator,
 
   // Main block creation functions
   createStartBlock,
