@@ -266,7 +266,7 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: js
         run: |
-          bun run src/bin/cli.js --isolated docker --image alpine:latest -- echo "Testing docker isolation"
+          bun run src/bin/cli.js --isolated docker -d --image alpine:latest -- echo "Testing docker isolation"
           echo "Docker isolation test passed"
 
       # SSH Integration Tests - Linux only

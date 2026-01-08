@@ -366,7 +366,7 @@ describe('Echo Integration Tests - Issue #55', () => {
         );
       });
 
-      it('should provide reattach instructions in detached screen mode', () => {
+      it('should show session name in detached screen mode for reattaching', () => {
         const sessionName = `test-screen-reattach-${Date.now()}`;
         const result = runCli(
           `--isolated screen -d --session ${sessionName} -- echo hi`,
@@ -374,10 +374,11 @@ describe('Echo Integration Tests - Issue #55', () => {
         );
 
         assert.ok(result.success, 'Command should succeed');
+        // Session name is shown in spine format, user can use it to reattach with: screen -r <session>
         assert.ok(
-          result.output.includes('Reattach with') ||
-            result.output.includes('screen -r'),
-          'Should show reattach instructions'
+          result.output.includes(`│ session`) &&
+            result.output.includes(sessionName.substring(0, 10)),
+          'Should show session name for reattaching'
         );
 
         // Cleanup
@@ -388,7 +389,7 @@ describe('Echo Integration Tests - Issue #55', () => {
         }
 
         console.log(
-          '  ✓ Screen isolation (detached): reattach instructions displayed'
+          '  ✓ Screen isolation (detached): session name displayed for reattaching'
         );
       });
     });
@@ -468,7 +469,7 @@ describe('Echo Integration Tests - Issue #55', () => {
         console.log('  ✓ Tmux isolation (detached): echo hi starts correctly');
       });
 
-      it('should provide reattach instructions in detached tmux mode', () => {
+      it('should show session name in detached tmux mode for reattaching', () => {
         const sessionName = `test-tmux-reattach-${Date.now()}`;
         const result = runCli(
           `--isolated tmux -d --session ${sessionName} -- echo hi`,
@@ -476,10 +477,11 @@ describe('Echo Integration Tests - Issue #55', () => {
         );
 
         assert.ok(result.success, 'Command should succeed');
+        // Session name is shown in spine format, user can use it to reattach with: tmux attach -t <session>
         assert.ok(
-          result.output.includes('Reattach with') ||
-            result.output.includes('tmux attach'),
-          'Should show reattach instructions'
+          result.output.includes(`│ session`) &&
+            result.output.includes(sessionName.substring(0, 10)),
+          'Should show session name for reattaching'
         );
 
         // Cleanup
@@ -490,7 +492,7 @@ describe('Echo Integration Tests - Issue #55', () => {
         }
 
         console.log(
-          '  ✓ Tmux isolation (detached): reattach instructions displayed'
+          '  ✓ Tmux isolation (detached): session name displayed for reattaching'
         );
       });
 
@@ -643,7 +645,7 @@ describe('Echo Integration Tests - Issue #55', () => {
         );
       });
 
-      it('should provide reattach instructions in detached docker mode', () => {
+      it('should show session/container name in detached docker mode for reattaching', () => {
         const containerName = `test-docker-reattach-${Date.now()}`;
         const result = runCli(
           `--isolated docker -d --image alpine:latest --session ${containerName} -- echo hi`,
@@ -651,11 +653,11 @@ describe('Echo Integration Tests - Issue #55', () => {
         );
 
         assert.ok(result.success, 'Command should succeed');
+        // Session/container info is shown in spine format, user can use it to reattach with: docker attach <container>
         assert.ok(
-          result.output.includes('Reattach with') ||
-            result.output.includes('docker attach') ||
-            result.output.includes('docker logs'),
-          'Should show reattach instructions'
+          result.output.includes(`│ session`) &&
+            result.output.includes(containerName.substring(0, 10)),
+          'Should show session/container name for reattaching'
         );
 
         // Cleanup
@@ -666,7 +668,7 @@ describe('Echo Integration Tests - Issue #55', () => {
         }
 
         console.log(
-          '  ✓ Docker isolation (detached): reattach instructions displayed'
+          '  ✓ Docker isolation (detached): session/container name displayed for reattaching'
         );
       });
 
