@@ -10,6 +10,7 @@ fix: Add empty line before result marker for visual continuity
 - Tests document the expected visual format
 
 Expected format:
+
 ```
 │
 $ docker pull alpine:latest
