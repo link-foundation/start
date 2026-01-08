@@ -242,24 +242,51 @@ Note: `--auto-remove-docker-container` is only valid with `--isolated docker` an
 
 ## Output Format
 
+The output uses a "status spine" format that is width-independent, lossless, and works uniformly in TTY, tmux, SSH, CI, and log files.
+
+Format conventions:
+- `│` prefix → tool metadata
+- `$` prefix → executed command
+- No prefix → program output (stdout/stderr)
+- `✓` / `✗` → result marker (success/failure)
+
 ### Success Case
 
 ```
-[2024-01-15 10:30:45] Starting: ls -la
+│ session   abc-123-def-456-ghi
+│ start     2024-01-15 10:30:45
+│
+$ ls -la
+
 ... command output ...
-[2024-01-15 10:30:45] Finished
-Exit code: 0
-Log saved: /tmp/start-command-1705312245-abc123.log
+
+✓
+│ finish    2024-01-15 10:30:45
+│ duration  0.123s
+│ exit      0
+│
+│ log       /tmp/start-command-1705312245-abc123.log
+│ session   abc-123-def-456-ghi
 ```
 
 ### Failure Case (With Auto-Reporting)
 
 ```
-[2024-01-15 10:30:45] Starting: failing-npm-command --arg
+│ session   abc-123-def-456-ghi
+│ start     2024-01-15 10:30:45
+│
+$ failing-npm-command --arg
+
 ... command output/error ...
-[2024-01-15 10:30:46] Finished
-Exit code: 1
-Log saved: /tmp/start-command-1705312246-def456.log
+
+✗
+│ finish    2024-01-15 10:30:46
+│ duration  1.234s
+│ exit      1
+│
+│ log       /tmp/start-command-1705312246-def456.log
+│ session   abc-123-def-456-ghi
+
 Detected repository: https://github.com/owner/repo
 Log uploaded: https://gist.github.com/...
 Issue created: https://github.com/owner/repo/issues/123
@@ -268,11 +295,21 @@ Issue created: https://github.com/owner/repo/issues/123
 ### Failure Case (Without Auto-Reporting)
 
 ```
-[2024-01-15 10:30:45] Starting: unknown-command
+│ session   abc-123-def-456-ghi
+│ start     2024-01-15 10:30:45
+│
+$ unknown-command
+
 ... command output/error ...
-[2024-01-15 10:30:45] Finished
-Exit code: 127
-Log saved: /tmp/start-command-1705312245-ghi789.log
+
+✗
+│ finish    2024-01-15 10:30:45
+│ duration  0.050s
+│ exit      127
+│
+│ log       /tmp/start-command-1705312245-ghi789.log
+│ session   abc-123-def-456-ghi
+
 Repository not detected - automatic issue creation skipped
 ```
 

@@ -205,19 +205,29 @@ By default, all isolation environments automatically exit after command completi
 │  │ Execution   │    │ stdout/stderr│    │ Temp Log File     │   │
 │  └─────────────┘    └──────────────┘    └───────────────────┘   │
 │                                                                  │
-│  Log File Format:                                                │
+│  Console Output Format (Status Spine):                           │
 │  ┌─────────────────────────────────────────────────────────┐    │
-│  │ === Start Command Log ===                                │    │
-│  │ Timestamp: 2024-01-15 10:30:45                          │    │
-│  │ Command: <command>                                       │    │
-│  │ Shell: /bin/bash                                        │    │
-│  │ Platform: linux                                          │    │
-│  │ ==================================================      │    │
+│  │ │ session   abc-123-def-456                              │    │
+│  │ │ start     2024-01-15 10:30:45                          │    │
+│  │ │                                                        │    │
+│  │ $ <command>                                              │    │
+│  │                                                          │    │
 │  │ <command output>                                         │    │
-│  │ ==================================================      │    │
-│  │ Finished: 2024-01-15 10:30:46                           │    │
-│  │ Exit Code: 0                                             │    │
+│  │                                                          │    │
+│  │ ✓ (or ✗ for failure)                                     │    │
+│  │ │ finish    2024-01-15 10:30:46                          │    │
+│  │ │ duration  1.234s                                       │    │
+│  │ │ exit      0                                            │    │
+│  │ │                                                        │    │
+│  │ │ log       /tmp/start-command-123.log                   │    │
+│  │ │ session   abc-123-def-456                              │    │
 │  └─────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│  Format key:                                                     │
+│  - │ prefix → tool metadata                                      │
+│  - $ prefix → executed command                                   │
+│  - No prefix → program output (stdout/stderr)                    │
+│  - ✓ / ✗ → result marker (success/failure)                       │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
