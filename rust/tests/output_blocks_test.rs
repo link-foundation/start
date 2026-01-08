@@ -273,3 +273,80 @@ fn test_escape_for_links_notation_with_double_quotes() {
 fn test_escape_for_links_notation_with_single_quotes() {
     assert_eq!(escape_for_links_notation("it's cool"), "\"it's cool\"");
 }
+
+// Issue #73: Visual Continuity Tests
+#[test]
+fn test_start_block_ends_with_empty_timeline_when_defer_command_true() {
+    // Issue #73: When deferCommand is true (docker isolation),
+    // the start block should end with │ (empty timeline line)
+    // and no trailing empty line should be added by the CLI
+    let extra = vec![
+        "[Isolation] Environment: docker, Mode: attached",
+        "[Isolation] Image: alpine:latest",
+        "[Isolation] Session: docker-container-123",
+    ];
+    let block = create_start_block(&StartBlockOptions {
+        session_id: "test-uuid",
+        timestamp: "2026-01-08 12:00:00",
+        command: "echo hello",
+        extra_lines: Some(extra),
+        style: None,
+        width: None,
+        defer_command: true,
+    });
+
+    let lines: Vec<&str> = block.lines().collect();
+    // Last line should be empty timeline line (│)
+    assert_eq!(
+        lines[lines.len() - 1],
+        "│",
+        "Start block with defer_command should end with empty timeline line"
+    );
+    // Should not contain the command
+    assert!(
+        !block.contains("$ echo hello"),
+        "Command should not appear when defer_command is true"
+    );
+}
+
+#[test]
+fn test_visual_continuity_start_block_for_docker_isolation() {
+    // Issue #73: Visual continuity - the start block with docker isolation
+    // should end cleanly for virtual commands to follow immediately
+    let extra = vec![
+        "[Isolation] Environment: docker, Mode: attached",
+        "[Isolation] Image: alpine:latest",
+        "[Isolation] Session: docker-1234",
+    ];
+    let block = create_start_block(&StartBlockOptions {
+        session_id: "uuid-abc",
+        timestamp: "2026-01-08 12:00:00",
+        command: "echo hi",
+        extra_lines: Some(extra),
+        style: None,
+        width: None,
+        defer_command: true,
+    });
+
+    // Expected structure:
+    // │ session   uuid-abc
+    // │ start     2026-01-08 12:00:00
+    // │
+    // │ isolation docker
+    // │ mode      attached
+    // │ image     alpine:latest
+    // │ container docker-1234
+    // │   <-- ends here with empty timeline line
+
+    let lines: Vec<&str> = block.lines().collect();
+    assert_eq!(
+        lines[lines.len() - 1],
+        "│",
+        "Should end with empty timeline line"
+    );
+    assert!(
+        block.contains("│ container docker-1234"),
+        "Should contain container name"
+    );
+    assert!(!block.contains("$ echo hi"), "Command should be deferred");
+}

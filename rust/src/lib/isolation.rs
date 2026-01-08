@@ -483,11 +483,12 @@ pub fn docker_image_exists(image: &str) -> bool {
 pub fn docker_pull_image(image: &str) -> (bool, String) {
     use std::io::{BufRead, BufReader};
 
-    // Print the virtual command line
+    // Print the virtual command line followed by empty line for visual separation
     println!(
         "{}",
         crate::output_blocks::create_virtual_command_block(&format!("docker pull {}", image))
     );
+    println!();
 
     let mut child = match Command::new("docker")
         .args(["pull", image])
@@ -532,8 +533,7 @@ pub fn docker_pull_image(image: &str) -> (bool, String) {
 
     let success = child.wait().map(|s| s.success()).unwrap_or(false);
 
-    // Print result marker and separator
-    println!();
+    // Print result marker and separator (no empty line needed - already printed after command)
     println!(
         "{}",
         crate::output_blocks::create_virtual_command_result(success)

@@ -523,7 +523,10 @@ async function runWithIsolation(
       deferCommand,
     })
   );
-  console.log('');
+  // Only print empty line when not deferring command (docker isolation handles its own spacing)
+  if (!deferCommand) {
+    console.log('');
+  }
 
   // Save initial execution record and set global reference for signal cleanup
   if (executionRecord && store) {
