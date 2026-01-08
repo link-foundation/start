@@ -9,7 +9,7 @@
 //! --attached, -a                   Run in attached mode (foreground)
 //! --detached, -d                   Run in detached mode (background)
 //! --session, -s <name>             Session name for isolation
-//! --image <image>                  Docker image (required for docker isolation)
+//! --image <image>                  Docker image (optional, defaults to OS-matched image)
 //! --endpoint <endpoint>            SSH endpoint (required for ssh isolation, e.g., user@host)
 //! --isolated-user, -u [username]   Create isolated user with same permissions
 //! --keep-user                      Keep isolated user after command completes
@@ -17,6 +17,8 @@
 //! --auto-remove-docker-container   Automatically remove docker container after exit
 
 use std::env;
+
+use crate::isolation::get_default_docker_image;
 
 /// Valid isolation backends
 pub const VALID_BACKENDS: [&str; 4] = ["screen", "tmux", "docker", "ssh"];
@@ -126,8 +128,8 @@ pub fn parse_args(args: &[String]) -> Result<ParsedArgs, String> {
         }
     }
 
-    // Validate options
-    validate_options(&wrapper_options)?;
+    // Validate options and apply defaults
+    validate_options(&mut wrapper_options)?;
 
     Ok(ParsedArgs {
         wrapper_options,
@@ -356,8 +358,8 @@ fn parse_option(
     Ok(0)
 }
 
-/// Validate parsed options
-pub fn validate_options(options: &WrapperOptions) -> Result<(), String> {
+/// Validate parsed options and apply defaults
+pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
     // Check attached and detached conflict
     if options.attached && options.detached {
         return Err(
@@ -376,12 +378,9 @@ pub fn validate_options(options: &WrapperOptions) -> Result<(), String> {
             ));
         }
 
-        // Docker requires --image
+        // Docker uses --image or defaults to OS-matched image
         if backend == "docker" && options.image.is_none() {
-            return Err(
-                "Docker isolation requires --image option to specify the container image"
-                    .to_string(),
-            );
+            options.image = Some(get_default_docker_image());
         }
 
         // SSH requires --endpoint
@@ -596,12 +595,31 @@ mod tests {
     }
 
     #[test]
-    fn test_docker_requires_image() {
+    fn test_docker_uses_default_image() {
         let args: Vec<String> = vec!["--isolated", "docker", "--", "npm", "test"]
             .into_iter()
             .map(String::from)
             .collect();
-        assert!(parse_args(&args).is_err());
+        let result = parse_args(&args).unwrap();
+        assert_eq!(result.wrapper_options.isolated, Some("docker".to_string()));
+        // Should have a default image set (OS-matched)
+        assert!(result.wrapper_options.image.is_some(), "Expected default image to be set");
+        // Should be one of the known default images
+        let known_defaults = vec![
+            "alpine:latest",
+            "ubuntu:latest",
+            "debian:latest",
+            "archlinux:latest",
+            "fedora:latest",
+            "centos:latest",
+        ];
+        let image = result.wrapper_options.image.as_ref().unwrap();
+        assert!(
+            known_defaults.contains(&image.as_str()),
+            "Expected image to be one of {:?}, got {}",
+            known_defaults,
+            image
+        );
     }
 
     #[test]

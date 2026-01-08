@@ -23,7 +23,7 @@ use start_command::{
         ExecutionStoreOptions,
     },
     failure_handler::{handle_failure, Config as FailureConfig},
-    get_default_docker_image, get_timestamp,
+    get_timestamp,
     isolation::{run_as_isolated_user, run_isolated, IsolationOptions},
     output_blocks::{FinishBlockOptions, StartBlockOptions},
     set_current_execution, setup_signal_handlers,
@@ -381,7 +381,7 @@ Options:
   --session, -s <name>  Session name for isolation
   --session-id <uuid>   Session UUID for tracking (auto-generated if not provided)
   --session-name <uuid> Alias for --session-id
-  --image <image>       Docker image (required for docker isolation)
+  --image <image>       Docker image (optional, defaults to OS-matched image)
   --endpoint <endpoint> SSH endpoint (required for ssh isolation, e.g., user@host)
   --isolated-user, -u [name]  Create isolated user with same permissions
   --keep-user           Keep isolated user after command completes
@@ -398,6 +398,7 @@ Examples:
   start bun test
   start --isolated tmux -- bun start
   start -i screen -d bun start
+  start --isolated docker -- echo 'hi'  # uses OS-matched default image
   start --isolated docker --image oven/bun:latest -- bun install
   start --isolated ssh --endpoint user@remote.server -- ls -la
   start --isolated-user -- npm test
@@ -430,12 +431,8 @@ fn run_with_isolation(
     let start_time = get_timestamp();
     let start_instant = std::time::Instant::now();
 
-    // Use default Docker image if docker isolation is selected but no image specified
-    let effective_image = if environment == Some("docker") && wrapper_options.image.is_none() {
-        Some(get_default_docker_image())
-    } else {
-        wrapper_options.image.clone()
-    };
+    // Docker image is now set in validate_options (defaults to OS-matched image)
+    let effective_image = wrapper_options.image.clone();
 
     // Create log file path
     let log_file_path = create_log_path(environment.unwrap_or("direct"));
