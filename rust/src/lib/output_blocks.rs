@@ -366,8 +366,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_create_spine_line() {
-        let line = create_spine_line("session", "abc123");
+    fn test_create_timeline_line() {
+        let line = create_timeline_line("session", "abc123");
         assert!(line.starts_with("│"));
         assert!(line.contains("session"));
         assert!(line.contains("abc123"));

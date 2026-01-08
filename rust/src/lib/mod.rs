@@ -27,6 +27,7 @@ pub use isolation::{
     get_default_docker_image, get_timestamp, is_command_available, run_as_isolated_user,
     run_isolated, write_log_file, IsolationOptions, IsolationResult, LogHeaderParams,
 };
+#[allow(deprecated)]
 pub use output_blocks::{
     // Timeline format API (formerly "status spine")
     create_command_line,
