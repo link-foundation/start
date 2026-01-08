@@ -1,5 +1,17 @@
 # start-command
 
+## 0.20.2
+
+### Patch Changes
+
+- 4749051: fix: Remove empty line after virtual command to maintain visual continuity
+  - Fixed visual continuity break in docker pull output
+  - Removed empty line between timeline marker (`│`) and virtual command line (`$ docker pull`)
+  - Output now flows continuously from timeline marker to command to output
+  - Applies to all virtual command blocks (currently docker pull operations)
+
+  Fixes #73
+
 ## 0.20.1
 
 ### Patch Changes
