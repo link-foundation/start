@@ -91,9 +91,17 @@ Alternative approach: Try to use the session UUID as the session name when possi
 
 ## Implementation Steps
 
-1. Modify `cli.js` to always add `[Isolation] Session: ${sessionName}` to extraLines
-2. Add tests to verify the session name is displayed in output
-3. Update any relevant documentation
+### JavaScript Implementation (completed)
+
+1. Modified `js/src/bin/cli.js` to always add `[Isolation] Session: ${sessionName}` to extraLines
+2. Added tests in `js/test/cli.test.js` to verify the session name is displayed for screen, tmux, and docker
+3. Created changeset `js/.changeset/issue-67-display-session-name.md`
+
+### Rust Implementation (completed)
+
+1. Modified `rust/src/bin/main.rs` to always add the session name to extraLines when using isolation
+2. Added tests in `rust/src/lib/output_blocks.rs` to verify the session name is displayed for screen, tmux, and docker
+3. Created changelog fragment `rust/changelog.d/67.md`
 
 ## Impact
 
@@ -108,10 +116,17 @@ Alternative approach: Try to use the session UUID as the session name when possi
 
 - Issue: https://github.com/link-foundation/start/issues/67
 - Related Files:
-  - `js/src/bin/cli.js` - Main CLI logic
-  - `js/src/lib/output-blocks.js` - Output formatting
-  - `js/src/lib/isolation.js` - Isolation backend runners
-  - `js/src/lib/args-parser.js` - Argument parsing
+  - JavaScript:
+    - `js/src/bin/cli.js` - Main CLI logic
+    - `js/src/lib/output-blocks.js` - Output formatting
+    - `js/src/lib/isolation.js` - Isolation backend runners
+    - `js/src/lib/args-parser.js` - Argument parsing
+    - `js/test/cli.test.js` - Tests for issue #67 fix
+  - Rust:
+    - `rust/src/bin/main.rs` - Main CLI logic
+    - `rust/src/lib/output_blocks.rs` - Output formatting (with tests)
+    - `rust/src/lib/isolation.rs` - Isolation backend runners
+    - `rust/src/lib/args_parser.rs` - Argument parsing
 
 ## User-Provided Log Examples
 
