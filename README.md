@@ -96,15 +96,26 @@ Variables like `$packageName`, `$version`, `$repository` are captured and used i
 
 ### Automatic Logging
 
-All command output is automatically saved to your system's temporary directory with timestamps:
+All command output is automatically saved to your system's temporary directory. Output uses a "status spine" format with clear visual distinction:
 
 ```
-[2024-01-15 10:30:45.123] Starting: npm test
+│ session   abc-123-def-456-ghi
+│ start     2024-01-15 10:30:45
+│
+$ npm test
+
 ... command output ...
-[2024-01-15 10:30:52.456] Finished
-Exit code: 0
-Log saved: /tmp/start-command-1705312245123-abc123.log
+
+✓
+│ finish    2024-01-15 10:30:52
+│ duration  7.456s
+│ exit      0
+│
+│ log       /tmp/start-command-1705312245123-abc123.log
+│ session   abc-123-def-456-ghi
 ```
+
+The `│` prefix indicates tool metadata, `$` shows the executed command, and `✓`/`✗` indicates success/failure.
 
 ### Exit Code Display
 
@@ -123,11 +134,20 @@ When a command fails (non-zero exit code) and it's a globally installed NPM pack
    - Link to uploaded log
 
 ```
-[2024-01-15 10:30:45.123] Starting: some-npm-tool --broken-arg
+│ session   abc-123-def-456-ghi
+│ start     2024-01-15 10:30:45
+│
+$ some-npm-tool --broken-arg
+
 ... error output ...
-[2024-01-15 10:30:46.789] Finished
-Exit code: 1
-Log saved: /tmp/start-command-1705312246789-def456.log
+
+✗
+│ finish    2024-01-15 10:30:46
+│ duration  1.789s
+│ exit      1
+│
+│ log       /tmp/start-command-1705312246789-def456.log
+│ session   abc-123-def-456-ghi
 
 Detected repository: https://github.com/owner/some-npm-tool
 Log uploaded: https://gist.github.com/user/abc123
@@ -315,24 +335,26 @@ You can create your own substitution patterns by placing a `substitutions.lino` 
 
 ## Log File Format
 
-Log files are saved as `start-command-{timestamp}-{random}.log` and contain:
+Log files are saved as `start-command-{timestamp}-{random}.log` and contain the command output along with metadata. The console output uses a "status spine" format:
 
 ```
-=== Start Command Log ===
-Timestamp: 2024-01-15 10:30:45.123
-Command: bun test
-Shell: /bin/bash
-Platform: linux
-Bun Version: 1.2.0
-Working Directory: /home/user/project
-==================================================
+│ session   abc-123-def-456-ghi
+│ start     2024-01-15 10:30:45
+│
+$ bun test
 
 ... command output ...
 
-==================================================
-Finished: 2024-01-15 10:30:52.456
-Exit Code: 0
+✓
+│ finish    2024-01-15 10:30:52
+│ duration  7.456s
+│ exit      0
+│
+│ log       /tmp/start-command-1705312245123-abc123.log
+│ session   abc-123-def-456-ghi
 ```
+
+The log file itself contains the raw command output and execution metadata.
 
 ## License
 
