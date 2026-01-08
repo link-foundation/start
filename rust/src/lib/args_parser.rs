@@ -603,7 +603,10 @@ mod tests {
         let result = parse_args(&args).unwrap();
         assert_eq!(result.wrapper_options.isolated, Some("docker".to_string()));
         // Should have a default image set (OS-matched)
-        assert!(result.wrapper_options.image.is_some(), "Expected default image to be set");
+        assert!(
+            result.wrapper_options.image.is_some(),
+            "Expected default image to be set"
+        );
         // Should be one of the known default images
         let known_defaults = vec![
             "alpine:latest",
