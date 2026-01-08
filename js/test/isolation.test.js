@@ -714,13 +714,19 @@ describe('Isolation Runner with Available Backends', () => {
     });
 
     it('should pass options to backend', async () => {
-      // Test docker without image - should fail with specific error
-      const result = await runIsolated('docker', 'echo test', {});
-      assert.strictEqual(result.success, false);
-      // Either docker not installed or image required
-      assert.ok(
-        result.message.includes('docker') || result.message.includes('image')
-      );
+      // Test docker with explicit image - should work if docker is installed
+      // or fail with docker-not-installed error (not image-required error)
+      const result = await runIsolated('docker', 'echo test', {
+        image: 'alpine:latest',
+      });
+      // If docker is not installed, we get a docker-related error
+      // If docker is installed, it might succeed or fail for other reasons
+      if (!result.success) {
+        assert.ok(
+          result.message.toLowerCase().includes('docker'),
+          `Expected docker-related error, got: ${result.message}`
+        );
+      }
     });
   });
 });

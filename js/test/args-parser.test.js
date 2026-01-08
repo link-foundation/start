@@ -199,10 +199,26 @@ describe('parseArgs', () => {
       assert.strictEqual(result.wrapperOptions.image, 'alpine:latest');
     });
 
-    it('should throw error for docker without image', () => {
-      assert.throws(() => {
-        parseArgs(['--isolated', 'docker', '--', 'npm', 'test']);
-      }, /Docker isolation requires --image option/);
+    it('should use default OS-matched image for docker without --image', () => {
+      const result = parseArgs(['--isolated', 'docker', '--', 'npm', 'test']);
+      // Should have a default image set (OS-matched)
+      assert.ok(
+        result.wrapperOptions.image,
+        'Expected default image to be set'
+      );
+      // Should be one of the known default images
+      const knownDefaults = [
+        'alpine:latest',
+        'ubuntu:latest',
+        'debian:latest',
+        'archlinux:latest',
+        'fedora:latest',
+        'centos:latest',
+      ];
+      assert.ok(
+        knownDefaults.includes(result.wrapperOptions.image),
+        `Expected image to be one of ${knownDefaults.join(', ')}, got ${result.wrapperOptions.image}`
+      );
     });
 
     it('should throw error for image with non-docker backend', () => {

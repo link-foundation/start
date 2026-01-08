@@ -10,7 +10,7 @@
  * --attached, -a                   Run in attached mode (foreground)
  * --detached, -d                   Run in detached mode (background)
  * --session, -s <name>             Session name for isolation
- * --image <image>                  Docker image (required for docker isolation)
+ * --image <image>                  Docker image (optional, defaults to OS-matched image)
  * --endpoint <endpoint>            SSH endpoint (required for ssh isolation, e.g., user@host)
  * --isolated-user, -u [username]   Create isolated user with same permissions (auto-generated name if not specified)
  * --keep-user                      Keep isolated user after command completes (don't delete)
@@ -22,6 +22,8 @@
  * --cleanup                        Clean up stale "executing" records (processes that crashed or were killed)
  * --cleanup-dry-run                Show stale records that would be cleaned up (without actually cleaning)
  */
+
+const { getDefaultDockerImage } = require('./docker-utils');
 
 // Debug mode from environment
 const DEBUG =
@@ -381,11 +383,9 @@ function validateOptions(options) {
       );
     }
 
-    // Docker requires --image
+    // Docker uses --image or defaults to OS-matched image
     if (options.isolated === 'docker' && !options.image) {
-      throw new Error(
-        'Docker isolation requires --image option to specify the container image'
-      );
+      options.image = getDefaultDockerImage();
     }
 
     // SSH requires --endpoint

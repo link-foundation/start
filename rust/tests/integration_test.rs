@@ -2,7 +2,7 @@
 //!
 //! These tests verify the public API works correctly.
 
-use start_command::{parse_args, validate_options, VALID_BACKENDS};
+use start_command::{parse_args, VALID_BACKENDS};
 
 fn to_string_vec(strs: &[&str]) -> Vec<String> {
     strs.iter().map(|s| s.to_string()).collect()
@@ -29,14 +29,14 @@ mod args_parser_integration_tests {
     #[test]
     fn test_validate_options_valid_backends() {
         for backend in VALID_BACKENDS.iter() {
-            // Docker requires --image, SSH requires --endpoint
-            if *backend == "docker" || *backend == "ssh" {
+            // SSH requires --endpoint (docker now auto-defaults image)
+            if *backend == "ssh" {
                 continue;
             }
             let args = to_string_vec(&["--isolated", *backend, "--", "echo", "test"]);
-            let parsed = parse_args(&args).unwrap();
-            let result = validate_options(&parsed.wrapper_options);
-            assert!(result.is_ok(), "Backend '{}' should be valid", backend);
+            // parse_args calls validate_options internally, so if it succeeds, options are valid
+            let parsed = parse_args(&args);
+            assert!(parsed.is_ok(), "Backend '{}' should be valid", backend);
         }
     }
 
