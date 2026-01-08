@@ -1,6 +1,6 @@
 [package]
 name = "start-command"
-version = "0.20.0"
+version = "0.14.0"
 edition = "2021"
 authors = ["Link Foundation"]
 description = "Gamification of coding, execute any command with ability to auto-report issues on GitHub"
