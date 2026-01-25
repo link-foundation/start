@@ -232,7 +232,7 @@ describe('parseArgs', () => {
           'npm',
           'test',
         ]);
-      }, /--image option is only valid with --isolated docker/);
+      }, /--image option is only valid when isolation stack includes docker/);
     });
   });
 
@@ -264,7 +264,7 @@ describe('parseArgs', () => {
     it('should throw error for ssh without endpoint', () => {
       assert.throws(() => {
         parseArgs(['--isolated', 'ssh', '--', 'npm', 'test']);
-      }, /SSH isolation requires --endpoint option/);
+      }, /SSH isolation at level 1 requires --endpoint option/);
     });
 
     it('should throw error for endpoint with non-ssh backend', () => {
@@ -278,7 +278,7 @@ describe('parseArgs', () => {
           'npm',
           'test',
         ]);
-      }, /--endpoint option is only valid with --isolated ssh/);
+      }, /--endpoint option is only valid when isolation stack includes ssh/);
     });
   });
 
@@ -384,13 +384,13 @@ describe('parseArgs', () => {
           'npm',
           'test',
         ]);
-      }, /--auto-remove-docker-container option is only valid with --isolated docker/);
+      }, /--auto-remove-docker-container option is only valid when isolation stack includes docker/);
     });
 
     it('should throw error for auto-remove-docker-container without isolation', () => {
       assert.throws(() => {
         parseArgs(['--auto-remove-docker-container', '--', 'npm', 'test']);
-      }, /--auto-remove-docker-container option is only valid with --isolated docker/);
+      }, /--auto-remove-docker-container option is only valid when isolation stack includes docker/);
     });
 
     it('should work with keep-alive and auto-remove-docker-container', () => {
@@ -706,7 +706,7 @@ describe('user isolation option', () => {
         'npm',
         'install',
       ]);
-    }, /--isolated-user is not supported with Docker isolation/);
+    }, /--isolated-user is not supported with Docker as the first isolation level/);
   });
 
   it('should work with tmux isolation', () => {
