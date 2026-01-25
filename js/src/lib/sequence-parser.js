@@ -198,7 +198,9 @@ function formatIsolationChain(stack, options = {}) {
 
   return stack
     .map((backend, i) => {
-      if (!backend) return '_';
+      if (!backend) {
+        return '_';
+      }
 
       if (backend === 'ssh' && options.endpointStack?.[i]) {
         return `ssh@${options.endpointStack[i]}`;

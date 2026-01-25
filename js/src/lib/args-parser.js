@@ -501,7 +501,9 @@ function validateOptions(options) {
 
       // Docker uses --image or defaults to OS-matched image
       if (backend === 'docker') {
-        const image = options.imageStack ? options.imageStack[i] : options.image;
+        const image = options.imageStack
+          ? options.imageStack[i]
+          : options.image;
         if (!image) {
           // Apply default image
           if (!options.imageStack) {

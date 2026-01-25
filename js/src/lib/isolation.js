@@ -791,7 +791,9 @@ function runIsolated(backend, command, options = {}) {
     effectiveCommand = buildNextLevelCommand(options, command);
 
     if (DEBUG) {
-      console.log(`[DEBUG] Stacked isolation - level command: ${effectiveCommand}`);
+      console.log(
+        `[DEBUG] Stacked isolation - level command: ${effectiveCommand}`
+      );
     }
   }
 
@@ -800,7 +802,9 @@ function runIsolated(backend, command, options = {}) {
     ...options,
     // Use current level values from stacks
     image: options.imageStack ? options.imageStack[0] : options.image,
-    endpoint: options.endpointStack ? options.endpointStack[0] : options.endpoint,
+    endpoint: options.endpointStack
+      ? options.endpointStack[0]
+      : options.endpoint,
     session: options.sessionStack ? options.sessionStack[0] : options.session,
   };
 
