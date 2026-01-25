@@ -775,21 +775,48 @@ function runInDocker(command, options = {}) {
 
 /**
  * Run command in the specified isolation environment
+ * Supports stacked isolation where each level calls $ with remaining levels
  * @param {string} backend - Isolation environment (screen, tmux, docker, ssh)
  * @param {string} command - Command to execute
  * @param {object} options - Options
  * @returns {Promise<{success: boolean, message: string}>}
  */
 function runIsolated(backend, command, options = {}) {
+  // If stacked isolation, build the command for next level
+  let effectiveCommand = command;
+
+  if (options.isolatedStack && options.isolatedStack.length > 1) {
+    // Lazy load to avoid circular dependency
+    const { buildNextLevelCommand } = require('./command-builder');
+    effectiveCommand = buildNextLevelCommand(options, command);
+
+    if (DEBUG) {
+      console.log(
+        `[DEBUG] Stacked isolation - level command: ${effectiveCommand}`
+      );
+    }
+  }
+
+  // Get current level option values
+  const currentOptions = {
+    ...options,
+    // Use current level values from stacks
+    image: options.imageStack ? options.imageStack[0] : options.image,
+    endpoint: options.endpointStack
+      ? options.endpointStack[0]
+      : options.endpoint,
+    session: options.sessionStack ? options.sessionStack[0] : options.session,
+  };
+
   switch (backend) {
     case 'screen':
-      return runInScreen(command, options);
+      return runInScreen(effectiveCommand, currentOptions);
     case 'tmux':
-      return runInTmux(command, options);
+      return runInTmux(effectiveCommand, currentOptions);
     case 'docker':
-      return runInDocker(command, options);
+      return runInDocker(effectiveCommand, currentOptions);
     case 'ssh':
-      return runInSsh(command, options);
+      return runInSsh(effectiveCommand, currentOptions);
     default:
       return Promise.resolve({
         success: false,

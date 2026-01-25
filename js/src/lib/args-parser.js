@@ -24,6 +24,7 @@
  */
 
 const { getDefaultDockerImage } = require('./docker-utils');
+const { parseSequence, isSequence } = require('./sequence-parser');
 
 // Debug mode from environment
 const DEBUG =
@@ -33,6 +34,11 @@ const DEBUG =
  * Valid isolation environments
  */
 const VALID_BACKENDS = ['screen', 'tmux', 'docker', 'ssh'];
+
+/**
+ * Maximum depth for isolation stacking
+ */
+const MAX_ISOLATION_DEPTH = 7;
 
 /**
  * Valid output formats for --status
@@ -74,19 +80,80 @@ function generateUUID() {
 }
 
 /**
+ * Parse --isolated value, handling both single values and sequences
+ * @param {string} value - Isolation value (e.g., "docker" or "screen ssh docker")
+ * @param {object} options - Options object to populate
+ */
+function parseIsolatedValue(value, options) {
+  if (isSequence(value)) {
+    // Multi-value sequence (e.g., "screen ssh docker")
+    const backends = parseSequence(value).map((v) =>
+      v ? v.toLowerCase() : null
+    );
+    options.isolatedStack = backends;
+    options.isolated = backends[0]; // Current level
+  } else {
+    // Single value (backward compatible)
+    const backend = value.toLowerCase();
+    options.isolated = backend;
+    options.isolatedStack = [backend];
+  }
+}
+
+/**
+ * Parse --image value, handling both single values and sequences
+ * @param {string} value - Image value (e.g., "ubuntu:22.04" or "_ _ ubuntu:22.04")
+ * @param {object} options - Options object to populate
+ */
+function parseImageValue(value, options) {
+  if (isSequence(value)) {
+    // Multi-value sequence with placeholders
+    const images = parseSequence(value);
+    options.imageStack = images;
+    options.image = images[0]; // Current level
+  } else {
+    // Single value - will be distributed later during validation
+    options.image = value;
+    options.imageStack = null; // Will be populated during validation
+  }
+}
+
+/**
+ * Parse --endpoint value, handling both single values and sequences
+ * @param {string} value - Endpoint value (e.g., "user@host" or "_ user@host1 _ user@host2")
+ * @param {object} options - Options object to populate
+ */
+function parseEndpointValue(value, options) {
+  if (isSequence(value)) {
+    // Multi-value sequence with placeholders
+    const endpoints = parseSequence(value);
+    options.endpointStack = endpoints;
+    options.endpoint = endpoints[0]; // Current level
+  } else {
+    // Single value - will be distributed later during validation
+    options.endpoint = value;
+    options.endpointStack = null; // Will be populated during validation
+  }
+}
+
+/**
  * Parse command line arguments into wrapper options and command
  * @param {string[]} args - Array of command line arguments
  * @returns {{wrapperOptions: object, command: string, rawCommand: string[]}}
  */
 function parseArgs(args) {
   const wrapperOptions = {
-    isolated: null, // Isolation environment: screen, tmux, docker, ssh
+    isolated: null, // Isolation environment: screen, tmux, docker, ssh (current level)
+    isolatedStack: null, // Full isolation stack for multi-level isolation (e.g., ["screen", "ssh", "docker"])
     attached: false, // Run in attached mode
     detached: false, // Run in detached mode
-    session: null, // Session name
+    session: null, // Session name (current level)
+    sessionStack: null, // Session names for each level
     sessionId: null, // Session ID (UUID) for tracking - auto-generated if not provided
-    image: null, // Docker image
-    endpoint: null, // SSH endpoint (e.g., user@host)
+    image: null, // Docker image (current level)
+    imageStack: null, // Docker images for each level (with nulls for non-docker levels)
+    endpoint: null, // SSH endpoint (current level, e.g., user@host)
+    endpointStack: null, // SSH endpoints for each level (with nulls for non-ssh levels)
     user: false, // Create isolated user
     userName: null, // Optional custom username for isolated user
     keepUser: false, // Keep isolated user after command completes (don't delete)
@@ -175,18 +242,20 @@ function parseOption(args, index, options) {
   // --isolated or -i
   if (arg === '--isolated' || arg === '-i') {
     if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
-      options.isolated = args[index + 1].toLowerCase();
+      const value = args[index + 1];
+      parseIsolatedValue(value, options);
       return 2;
     } else {
       throw new Error(
-        `Option ${arg} requires a backend argument (screen, tmux, docker)`
+        `Option ${arg} requires a backend argument (screen, tmux, docker, ssh)`
       );
     }
   }
 
   // --isolated=<value>
   if (arg.startsWith('--isolated=')) {
-    options.isolated = arg.split('=')[1].toLowerCase();
+    const value = arg.split('=')[1];
+    parseIsolatedValue(value, options);
     return 1;
   }
 
@@ -218,10 +287,11 @@ function parseOption(args, index, options) {
     return 1;
   }
 
-  // --image (for docker)
+  // --image (for docker) - supports sequence for stacked isolation
   if (arg === '--image') {
     if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
-      options.image = args[index + 1];
+      const value = args[index + 1];
+      parseImageValue(value, options);
       return 2;
     } else {
       throw new Error(`Option ${arg} requires an image name argument`);
@@ -230,14 +300,16 @@ function parseOption(args, index, options) {
 
   // --image=<value>
   if (arg.startsWith('--image=')) {
-    options.image = arg.split('=')[1];
+    const value = arg.split('=')[1];
+    parseImageValue(value, options);
     return 1;
   }
 
-  // --endpoint (for ssh)
+  // --endpoint (for ssh) - supports sequence for stacked isolation
   if (arg === '--endpoint') {
     if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
-      options.endpoint = args[index + 1];
+      const value = args[index + 1];
+      parseEndpointValue(value, options);
       return 2;
     } else {
       throw new Error(`Option ${arg} requires an endpoint argument`);
@@ -246,7 +318,8 @@ function parseOption(args, index, options) {
 
   // --endpoint=<value>
   if (arg.startsWith('--endpoint=')) {
-    options.endpoint = arg.split('=')[1];
+    const value = arg.split('=')[1];
+    parseEndpointValue(value, options);
     return 1;
   }
 
@@ -375,23 +448,137 @@ function validateOptions(options) {
     );
   }
 
-  // Validate isolation environment
+  // Validate isolation environment (with stacking support)
   if (options.isolated !== null) {
-    if (!VALID_BACKENDS.includes(options.isolated)) {
+    const stack = options.isolatedStack || [options.isolated];
+    const stackDepth = stack.length;
+
+    // Check depth limit
+    if (stackDepth > MAX_ISOLATION_DEPTH) {
       throw new Error(
-        `Invalid isolation environment: "${options.isolated}". Valid options are: ${VALID_BACKENDS.join(', ')}`
+        `Isolation stack too deep: ${stackDepth} levels (max: ${MAX_ISOLATION_DEPTH})`
       );
     }
 
-    // Docker uses --image or defaults to OS-matched image
-    if (options.isolated === 'docker' && !options.image) {
-      options.image = getDefaultDockerImage();
+    // Validate each backend in the stack
+    for (const backend of stack) {
+      if (backend && !VALID_BACKENDS.includes(backend)) {
+        throw new Error(
+          `Invalid isolation environment: "${backend}". Valid options are: ${VALID_BACKENDS.join(', ')}`
+        );
+      }
     }
 
-    // SSH requires --endpoint
-    if (options.isolated === 'ssh' && !options.endpoint) {
+    // Distribute single option values across stack if needed
+    if (options.image && !options.imageStack) {
+      // Single image value - replicate for all levels
+      options.imageStack = Array(stackDepth).fill(options.image);
+    }
+
+    if (options.endpoint && !options.endpointStack) {
+      // Single endpoint value - replicate for all levels
+      options.endpointStack = Array(stackDepth).fill(options.endpoint);
+    }
+
+    // Validate stack lengths match
+    if (options.imageStack && options.imageStack.length !== stackDepth) {
       throw new Error(
-        'SSH isolation requires --endpoint option to specify the remote server (e.g., user@host)'
+        `--image has ${options.imageStack.length} value(s) but isolation stack has ${stackDepth} level(s). ` +
+          `Use underscores (_) as placeholders for levels that don't need this option.`
+      );
+    }
+
+    if (options.endpointStack && options.endpointStack.length !== stackDepth) {
+      throw new Error(
+        `--endpoint has ${options.endpointStack.length} value(s) but isolation stack has ${stackDepth} level(s). ` +
+          `Use underscores (_) as placeholders for levels that don't need this option.`
+      );
+    }
+
+    // Validate each level has required options
+    for (let i = 0; i < stackDepth; i++) {
+      const backend = stack[i];
+
+      // Docker uses --image or defaults to OS-matched image
+      if (backend === 'docker') {
+        const image = options.imageStack
+          ? options.imageStack[i]
+          : options.image;
+        if (!image) {
+          // Apply default image
+          if (!options.imageStack) {
+            options.imageStack = Array(stackDepth).fill(null);
+          }
+          options.imageStack[i] = getDefaultDockerImage();
+        }
+      }
+
+      // SSH requires --endpoint
+      if (backend === 'ssh') {
+        const endpoint = options.endpointStack
+          ? options.endpointStack[i]
+          : options.endpoint;
+        if (!endpoint) {
+          throw new Error(
+            `SSH isolation at level ${i + 1} requires --endpoint option. ` +
+              `Use a sequence like --endpoint "_ user@host _" to specify endpoints for specific levels.`
+          );
+        }
+      }
+    }
+
+    // Set current level values for backward compatibility
+    options.image = options.imageStack ? options.imageStack[0] : options.image;
+    options.endpoint = options.endpointStack
+      ? options.endpointStack[0]
+      : options.endpoint;
+
+    // Validate option compatibility with current level (for backward compatible error messages)
+    const currentBackend = stack[0];
+
+    // Image is only valid if stack contains docker
+    if (options.image && !stack.includes('docker')) {
+      throw new Error(
+        '--image option is only valid when isolation stack includes docker'
+      );
+    }
+
+    // Endpoint is only valid if stack contains ssh
+    if (options.endpoint && !stack.includes('ssh')) {
+      throw new Error(
+        '--endpoint option is only valid when isolation stack includes ssh'
+      );
+    }
+
+    // Auto-remove-docker-container is only valid with docker in stack
+    if (options.autoRemoveDockerContainer && !stack.includes('docker')) {
+      throw new Error(
+        '--auto-remove-docker-container option is only valid when isolation stack includes docker'
+      );
+    }
+
+    // User isolation is not supported with Docker as first level
+    if (options.user && currentBackend === 'docker') {
+      throw new Error(
+        '--isolated-user is not supported with Docker as the first isolation level. ' +
+          'Docker uses its own user namespace for isolation.'
+      );
+    }
+  } else {
+    // Validate options that require isolation when no isolation is specified
+    if (options.autoRemoveDockerContainer) {
+      throw new Error(
+        '--auto-remove-docker-container option is only valid when isolation stack includes docker'
+      );
+    }
+    if (options.image) {
+      throw new Error(
+        '--image option is only valid when isolation stack includes docker'
+      );
+    }
+    if (options.endpoint) {
+      throw new Error(
+        '--endpoint option is only valid when isolation stack includes ssh'
       );
     }
   }
@@ -401,36 +588,13 @@ function validateOptions(options) {
     throw new Error('--session option is only valid with --isolated');
   }
 
-  // Image is only valid with docker
-  if (options.image && options.isolated !== 'docker') {
-    throw new Error('--image option is only valid with --isolated docker');
-  }
-
-  // Endpoint is only valid with ssh
-  if (options.endpoint && options.isolated !== 'ssh') {
-    throw new Error('--endpoint option is only valid with --isolated ssh');
-  }
-
   // Keep-alive is only valid with isolation
   if (options.keepAlive && !options.isolated) {
     throw new Error('--keep-alive option is only valid with --isolated');
   }
 
-  // Auto-remove-docker-container is only valid with docker isolation
-  if (options.autoRemoveDockerContainer && options.isolated !== 'docker') {
-    throw new Error(
-      '--auto-remove-docker-container option is only valid with --isolated docker'
-    );
-  }
-
   // User isolation validation
   if (options.user) {
-    // User isolation is not supported with Docker (Docker has its own user mechanism)
-    if (options.isolated === 'docker') {
-      throw new Error(
-        '--isolated-user is not supported with Docker isolation. Docker uses its own user namespace for isolation.'
-      );
-    }
     // Validate custom username if provided
     if (options.userName) {
       if (!/^[a-zA-Z0-9_-]+$/.test(options.userName)) {
@@ -509,14 +673,25 @@ function getEffectiveMode(options) {
   return 'attached';
 }
 
+/**
+ * Check if isolation stack has multiple levels
+ * @param {object} options - Parsed wrapper options
+ * @returns {boolean} True if multiple isolation levels
+ */
+function hasStackedIsolation(options) {
+  return options.isolatedStack && options.isolatedStack.length > 1;
+}
+
 module.exports = {
   parseArgs,
   validateOptions,
   generateSessionName,
   hasIsolation,
+  hasStackedIsolation,
   getEffectiveMode,
   isValidUUID,
   generateUUID,
   VALID_BACKENDS,
   VALID_OUTPUT_FORMATS,
+  MAX_ISOLATION_DEPTH,
 };
