@@ -16,6 +16,7 @@
  * --keep-user                      Keep isolated user after command completes (don't delete)
  * --keep-alive, -k                 Keep isolation environment alive after command exits
  * --auto-remove-docker-container   Automatically remove docker container after exit (disabled by default)
+ * --shell <shell>                  Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
  * --use-command-stream             Use command-stream library for command execution (experimental)
  * --status <uuid>                  Show status of a previous command execution by UUID
  * --output-format <format>         Output format for status (links-notation, json, text)
@@ -34,6 +35,11 @@ const DEBUG =
  * Valid isolation environments
  */
 const VALID_BACKENDS = ['screen', 'tmux', 'docker', 'ssh'];
+
+/**
+ * Valid shell options for --shell
+ */
+const VALID_SHELLS = ['auto', 'bash', 'zsh', 'sh'];
 
 /**
  * Maximum depth for isolation stacking
@@ -159,6 +165,7 @@ function parseArgs(args) {
     keepUser: false, // Keep isolated user after command completes (don't delete)
     keepAlive: false, // Keep environment alive after command exits
     autoRemoveDockerContainer: false, // Auto-remove docker container after exit
+    shell: 'auto', // Shell to use in isolation environments: auto, bash, zsh, sh
     useCommandStream: false, // Use command-stream library for command execution
     status: null, // UUID to show status for
     outputFormat: null, // Output format for status (links-notation, json, text)
@@ -361,6 +368,24 @@ function parseOption(args, index, options) {
   // --auto-remove-docker-container
   if (arg === '--auto-remove-docker-container') {
     options.autoRemoveDockerContainer = true;
+    return 1;
+  }
+
+  // --shell <shell>
+  if (arg === '--shell') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.shell = args[index + 1].toLowerCase();
+      return 2;
+    } else {
+      throw new Error(
+        `Option ${arg} requires a shell argument (auto, bash, zsh, sh)`
+      );
+    }
+  }
+
+  // --shell=<value>
+  if (arg.startsWith('--shell=')) {
+    options.shell = arg.split('=')[1].toLowerCase();
     return 1;
   }
 
@@ -629,6 +654,15 @@ function validateOptions(options) {
     throw new Error('--output-format option is only valid with --status');
   }
 
+  // Validate shell option
+  if (options.shell !== null && options.shell !== undefined) {
+    if (!VALID_SHELLS.includes(options.shell)) {
+      throw new Error(
+        `Invalid shell: "${options.shell}". Valid options are: ${VALID_SHELLS.join(', ')}`
+      );
+    }
+  }
+
   // Validate session ID is a valid UUID if provided
   if (options.sessionId !== null && options.sessionId !== undefined) {
     if (!isValidUUID(options.sessionId)) {
@@ -693,5 +727,6 @@ module.exports = {
   generateUUID,
   VALID_BACKENDS,
   VALID_OUTPUT_FORMATS,
+  VALID_SHELLS,
   MAX_ISOLATION_DEPTH,
 };

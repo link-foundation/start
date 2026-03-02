@@ -71,6 +71,10 @@ function buildNextLevelCommand(options, command) {
     parts.push('--auto-remove-docker-container');
   }
 
+  if (options.shell && options.shell !== 'auto') {
+    parts.push(`--shell ${options.shell}`);
+  }
+
   // Separator and command
   parts.push('--');
   parts.push(command);

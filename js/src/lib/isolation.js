@@ -117,6 +117,101 @@ function getShell() {
 }
 
 /**
+ * Detect the best available shell in an isolation environment (docker/ssh)
+ * Tries shells in order: bash, zsh, sh
+ * @param {'docker'|'ssh'} environment - Isolation environment type
+ * @param {object} options - Options for the isolation environment
+ * @param {string} [shellPreference='auto'] - Shell preference: 'auto', 'bash', 'zsh', 'sh'
+ * @returns {string} Shell path to use
+ */
+function detectShellInEnvironment(
+  environment,
+  options,
+  shellPreference = 'auto'
+) {
+  // If a specific shell is requested (not auto), use it directly
+  if (shellPreference && shellPreference !== 'auto') {
+    if (DEBUG) {
+      console.log(`[DEBUG] Using forced shell: ${shellPreference}`);
+    }
+    return shellPreference;
+  }
+
+  // In auto mode, try shells in order of preference
+  const shellsToTry = ['bash', 'zsh', 'sh'];
+
+  if (environment === 'docker') {
+    const image = options.image;
+    if (!image) {
+      return 'sh';
+    }
+
+    for (const shell of shellsToTry) {
+      try {
+        const result = spawnSync(
+          'docker',
+          ['run', '--rm', image, 'sh', '-c', `command -v ${shell}`],
+          { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+        );
+        if (result.status === 0 && result.stdout.trim()) {
+          if (DEBUG) {
+            console.log(
+              `[DEBUG] Detected shell in docker image ${image}: ${result.stdout.trim()}`
+            );
+          }
+          return result.stdout.trim();
+        }
+      } catch {
+        // Continue to next shell
+      }
+    }
+
+    if (DEBUG) {
+      console.log(
+        `[DEBUG] Could not detect shell in docker image ${image}, falling back to sh`
+      );
+    }
+    return 'sh';
+  }
+
+  if (environment === 'ssh') {
+    const endpoint = options.endpoint;
+    if (!endpoint) {
+      return 'sh';
+    }
+
+    try {
+      // Run a single SSH command to check for available shells in order
+      const checkCmd = shellsToTry.map((s) => `command -v ${s}`).join(' || ');
+      const result = spawnSync('ssh', [endpoint, checkCmd], {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      if (result.status === 0 && result.stdout.trim()) {
+        const detected = result.stdout.trim();
+        if (DEBUG) {
+          console.log(
+            `[DEBUG] Detected shell on SSH host ${endpoint}: ${detected}`
+          );
+        }
+        return detected;
+      }
+    } catch {
+      // Fall through to default
+    }
+
+    if (DEBUG) {
+      console.log(
+        `[DEBUG] Could not detect shell on SSH host ${endpoint}, falling back to sh`
+      );
+    }
+    return 'sh';
+  }
+
+  return 'sh';
+}
+
+/**
  * Check if the current process has a TTY attached
  * @returns {boolean} True if TTY is available
  */
@@ -553,15 +648,19 @@ function runInSsh(command, options = {}) {
   const sessionName = options.session || generateSessionName('ssh');
   const sshTarget = options.endpoint;
 
+  // Detect the shell to use on the remote host
+  const shellToUse = detectShellInEnvironment('ssh', options, options.shell);
+
   try {
     if (options.detached) {
       // Detached mode: Run command in background on remote server using nohup
       // The command will continue running even after SSH connection closes
-      const remoteCommand = `nohup ${command} > /tmp/${sessionName}.log 2>&1 &`;
+      const remoteCommand = `nohup ${shellToUse} -c ${JSON.stringify(command)} > /tmp/${sessionName}.log 2>&1 &`;
       const sshArgs = [sshTarget, remoteCommand];
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: ssh ${sshArgs.join(' ')}`);
+        console.log(`[DEBUG] shell: ${shellToUse}`);
       }
 
       const result = spawnSync('ssh', sshArgs, {
@@ -579,11 +678,12 @@ function runInSsh(command, options = {}) {
       });
     } else {
       // Attached mode: Run command interactively over SSH
-      // This creates a direct SSH connection and runs the command
-      const sshArgs = [sshTarget, command];
+      // This creates a direct SSH connection and runs the command via the detected shell
+      const sshArgs = [sshTarget, shellToUse, '-c', command];
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: ssh ${sshArgs.join(' ')}`);
+        console.log(`[DEBUG] shell: ${shellToUse}`);
       }
 
       return new Promise((resolve) => {
@@ -660,6 +760,9 @@ function runInDocker(command, options = {}) {
     }
   }
 
+  // Detect the shell to use in the container
+  const shellToUse = detectShellInEnvironment('docker', options, options.shell);
+
   // Print the user command (this appears after any virtual commands like docker pull)
   const { createCommandLine } = require('./output-blocks');
   console.log(createCommandLine(command));
@@ -674,7 +777,7 @@ function runInDocker(command, options = {}) {
 
       if (options.keepAlive) {
         // With keep-alive: run command, then keep shell alive
-        effectiveCommand = `${command}; exec /bin/sh`;
+        effectiveCommand = `${command}; exec ${shellToUse}`;
       }
       // Without keep-alive: container exits naturally when command completes
 
@@ -691,10 +794,11 @@ function runInDocker(command, options = {}) {
         dockerArgs.push('--user', options.user);
       }
 
-      dockerArgs.push(options.image, '/bin/sh', '-c', effectiveCommand);
+      dockerArgs.push(options.image, shellToUse, '-c', effectiveCommand);
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
+        console.log(`[DEBUG] shell: ${shellToUse}`);
         console.log(`[DEBUG] keepAlive: ${options.keepAlive || false}`);
         console.log(
           `[DEBUG] autoRemoveDockerContainer: ${options.autoRemoveDockerContainer || false}`
@@ -735,7 +839,11 @@ function runInDocker(command, options = {}) {
         dockerArgs.push('--user', options.user);
       }
 
-      dockerArgs.push(options.image, '/bin/sh', '-c', command);
+      if (DEBUG) {
+        console.log(`[DEBUG] shell: ${shellToUse}`);
+      }
+
+      dockerArgs.push(options.image, shellToUse, '-c', command);
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
@@ -972,6 +1080,7 @@ const {
 module.exports = {
   isCommandAvailable,
   hasTTY,
+  detectShellInEnvironment,
   runInScreen,
   runInTmux,
   runInDocker,
