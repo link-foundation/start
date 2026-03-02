@@ -649,18 +649,24 @@ function runInSsh(command, options = {}) {
   const sshTarget = options.endpoint;
 
   // Detect the shell to use on the remote host
+  // In auto mode, detection may fall back to passing command directly to leverage
+  // the remote user's default login shell (which may already be bash)
   const shellToUse = detectShellInEnvironment('ssh', options, options.shell);
+  // Whether to wrap command with a shell (only when explicit shell is specified)
+  const useExplicitShell =
+    options.shell && options.shell !== 'auto' ? shellToUse : null;
 
   try {
     if (options.detached) {
       // Detached mode: Run command in background on remote server using nohup
       // The command will continue running even after SSH connection closes
-      const remoteCommand = `nohup ${shellToUse} -c ${JSON.stringify(command)} > /tmp/${sessionName}.log 2>&1 &`;
+      const remoteShell = useExplicitShell || shellToUse;
+      const remoteCommand = `nohup ${remoteShell} -c ${JSON.stringify(command)} > /tmp/${sessionName}.log 2>&1 &`;
       const sshArgs = [sshTarget, remoteCommand];
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: ssh ${sshArgs.join(' ')}`);
-        console.log(`[DEBUG] shell: ${shellToUse}`);
+        console.log(`[DEBUG] shell: ${remoteShell}`);
       }
 
       const result = spawnSync('ssh', sshArgs, {
@@ -678,8 +684,11 @@ function runInSsh(command, options = {}) {
       });
     } else {
       // Attached mode: Run command interactively over SSH
-      // This creates a direct SSH connection and runs the command via the detected shell
-      const sshArgs = [sshTarget, shellToUse, '-c', command];
+      // When a specific shell is requested, wrap the command with that shell.
+      // In auto mode, pass the command directly and let the remote's default shell handle it.
+      const sshArgs = useExplicitShell
+        ? [sshTarget, useExplicitShell, '-c', command]
+        : [sshTarget, command];
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: ssh ${sshArgs.join(' ')}`);
