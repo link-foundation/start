@@ -217,7 +217,7 @@ describe('args-parser user isolation options', () => {
           'npm',
           'test',
         ]);
-      }, /--isolated-user is not supported with Docker isolation/);
+      }, /--isolated-user is not supported with Docker as the first isolation level/);
     });
 
     it('should validate custom username format', () => {
