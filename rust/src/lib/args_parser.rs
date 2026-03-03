@@ -15,6 +15,7 @@
 //! --keep-user                      Keep isolated user after command completes
 //! --keep-alive, -k                 Keep isolation environment alive after command exits
 //! --auto-remove-docker-container   Automatically remove docker container after exit
+//! --shell <shell>                  Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
 
 use std::env;
 
@@ -22,6 +23,9 @@ use crate::isolation::get_default_docker_image;
 
 /// Valid isolation backends
 pub const VALID_BACKENDS: [&str; 4] = ["screen", "tmux", "docker", "ssh"];
+
+/// Valid shell options for --shell
+pub const VALID_SHELLS: [&str; 4] = ["auto", "bash", "zsh", "sh"];
 
 /// Valid output formats for --status
 pub const VALID_OUTPUT_FORMATS: [&str; 3] = ["links-notation", "json", "text"];
@@ -42,7 +46,7 @@ pub fn generate_uuid() -> String {
 }
 
 /// Wrapper options parsed from command line
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct WrapperOptions {
     /// Isolation backend: screen, tmux, docker, ssh
     pub isolated: Option<String>,
@@ -68,6 +72,8 @@ pub struct WrapperOptions {
     pub keep_alive: bool,
     /// Auto-remove docker container after exit
     pub auto_remove_docker_container: bool,
+    /// Shell to use in isolation environments: auto, bash, zsh, sh
+    pub shell: String,
     /// Use command-stream library for command execution
     pub use_command_stream: bool,
     /// UUID to query status for
@@ -78,6 +84,31 @@ pub struct WrapperOptions {
     pub cleanup: bool,
     /// Show what would be cleaned without actually cleaning
     pub cleanup_dry_run: bool,
+}
+
+impl Default for WrapperOptions {
+    fn default() -> Self {
+        WrapperOptions {
+            isolated: None,
+            attached: false,
+            detached: false,
+            session: None,
+            session_id: None,
+            image: None,
+            endpoint: None,
+            user: false,
+            user_name: None,
+            keep_user: false,
+            keep_alive: false,
+            auto_remove_docker_container: false,
+            shell: "auto".to_string(),
+            use_command_stream: false,
+            status: None,
+            output_format: None,
+            cleanup: false,
+            cleanup_dry_run: false,
+        }
+    }
 }
 
 /// Result of parsing arguments
@@ -287,6 +318,25 @@ fn parse_option(
         return Ok(1);
     }
 
+    // --shell <shell>
+    if arg == "--shell" {
+        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
+            options.shell = args[index + 1].to_lowercase();
+            return Ok(2);
+        } else {
+            return Err(format!(
+                "Option {} requires a shell argument (auto, bash, zsh, sh)",
+                arg
+            ));
+        }
+    }
+
+    // --shell=<value>
+    if arg.starts_with("--shell=") {
+        options.shell = arg.split('=').nth(1).unwrap_or("").to_lowercase();
+        return Ok(1);
+    }
+
     // --use-command-stream
     if arg == "--use-command-stream" {
         options.use_command_stream = true;
@@ -466,6 +516,15 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
     // Output format is only valid with --status
     if options.output_format.is_some() && options.status.is_none() {
         return Err("--output-format option is only valid with --status".to_string());
+    }
+
+    // Validate shell option
+    if !VALID_SHELLS.contains(&options.shell.as_str()) {
+        return Err(format!(
+            "Invalid shell: \"{}\". Valid options are: {}",
+            options.shell,
+            VALID_SHELLS.join(", ")
+        ));
     }
 
     // Validate session ID is a valid UUID if provided
@@ -875,5 +934,106 @@ mod tests {
         let result = parse_args(&args).unwrap();
         assert!(result.wrapper_options.cleanup);
         assert!(result.wrapper_options.cleanup_dry_run);
+    }
+
+    #[test]
+    fn test_shell_default_is_auto() {
+        let args: Vec<String> = vec!["echo", "hello"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let result = parse_args(&args).unwrap();
+        assert_eq!(result.wrapper_options.shell, "auto");
+    }
+
+    #[test]
+    fn test_shell_bash() {
+        let args: Vec<String> = vec!["--isolated", "docker", "--shell", "bash", "--", "npm", "test"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let result = parse_args(&args).unwrap();
+        assert_eq!(result.wrapper_options.shell, "bash");
+    }
+
+    #[test]
+    fn test_shell_zsh() {
+        let args: Vec<String> = vec!["--isolated", "docker", "--shell", "zsh", "--", "npm", "test"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let result = parse_args(&args).unwrap();
+        assert_eq!(result.wrapper_options.shell, "zsh");
+    }
+
+    #[test]
+    fn test_shell_sh() {
+        let args: Vec<String> = vec!["--isolated", "docker", "--shell", "sh", "--", "npm", "test"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let result = parse_args(&args).unwrap();
+        assert_eq!(result.wrapper_options.shell, "sh");
+    }
+
+    #[test]
+    fn test_shell_auto() {
+        let args: Vec<String> = vec!["--isolated", "docker", "--shell", "auto", "--", "npm", "test"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let result = parse_args(&args).unwrap();
+        assert_eq!(result.wrapper_options.shell, "auto");
+    }
+
+    #[test]
+    fn test_shell_equals_syntax() {
+        let args: Vec<String> = vec!["--isolated", "docker", "--shell=bash", "--", "npm", "test"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let result = parse_args(&args).unwrap();
+        assert_eq!(result.wrapper_options.shell, "bash");
+    }
+
+    #[test]
+    fn test_shell_lowercase_normalization() {
+        let args: Vec<String> = vec!["--isolated", "docker", "--shell", "BASH", "--", "npm", "test"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let result = parse_args(&args).unwrap();
+        assert_eq!(result.wrapper_options.shell, "bash");
+    }
+
+    #[test]
+    fn test_shell_invalid() {
+        let args: Vec<String> = vec!["--isolated", "docker", "--shell", "fish", "--", "echo", "hi"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert!(parse_args(&args).is_err());
+    }
+
+    #[test]
+    fn test_shell_missing_argument() {
+        let args: Vec<String> = vec!["--isolated", "docker", "--shell"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert!(parse_args(&args).is_err());
+    }
+
+    #[test]
+    fn test_shell_with_ssh() {
+        let args: Vec<String> = vec![
+            "--isolated", "ssh", "--endpoint", "user@host", "--shell", "bash", "--", "echo", "hi",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+        let result = parse_args(&args).unwrap();
+        assert_eq!(result.wrapper_options.shell, "bash");
+        assert_eq!(result.wrapper_options.isolated, Some("ssh".to_string()));
     }
 }

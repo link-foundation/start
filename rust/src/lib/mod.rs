@@ -16,6 +16,7 @@ pub mod user_manager;
 pub use args_parser::{
     generate_session_name, generate_uuid, get_effective_mode, has_isolation, is_valid_uuid,
     parse_args, validate_options, ParsedArgs, WrapperOptions, VALID_BACKENDS, VALID_OUTPUT_FORMATS,
+    VALID_SHELLS,
 };
 pub use execution_store::{
     is_clink_installed, CleanupOptions, CleanupResult, ExecutionRecord, ExecutionRecordOptions,

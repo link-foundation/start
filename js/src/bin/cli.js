@@ -331,6 +331,7 @@ Options:
   --keep-user           Keep isolated user after command completes
   --keep-alive, -k      Keep isolation environment alive after command exits
   --auto-remove-docker-container  Auto-remove docker container after exit
+  --shell <shell>       Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
   --use-command-stream  Use command-stream library for execution (experimental)
   --status <uuid>       Show status of execution by UUID (--output-format: links-notation|json|text)
   --cleanup             Clean up stale "executing" records (crashed/killed processes)
@@ -575,6 +576,7 @@ async function runWithIsolation(
       user: createdUser,
       keepAlive: options.keepAlive,
       autoRemoveDockerContainer: options.autoRemoveDockerContainer,
+      shell: options.shell,
     });
   } else if (createdUser) {
     // Run directly as the created user (no isolation environment)
