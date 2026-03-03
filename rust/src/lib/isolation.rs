@@ -106,6 +106,19 @@ pub fn wrap_command_with_user(command: &str, user: Option<&str>) -> String {
     }
 }
 
+/// Get the interactive flag for a shell, if supported.
+/// Returns "-i" for bash and zsh (which support interactive mode that sources startup files),
+/// returns None for sh and other shells that don't support this reliably.
+fn get_shell_interactive_flag(shell_path: &str) -> Option<&'static str> {
+    // Extract the basename of the shell path
+    let shell_name = shell_path.rsplit('/').next().unwrap_or(shell_path);
+    match shell_name {
+        "bash" => Some("-i"),
+        "zsh" => Some("-i"),
+        _ => None,
+    }
+}
+
 /// Detect the best available shell in an isolation environment (docker/ssh)
 /// Tries shells in order: bash, zsh, sh
 /// Returns the shell path to use
@@ -540,19 +553,21 @@ pub fn run_in_ssh(command: &str, options: &IsolationOptions) -> IsolationResult 
 
     // Detect the shell to use on the remote host
     let shell_to_use = detect_shell_in_environment("ssh", options);
-    // Whether to wrap command with a shell (only when explicit shell is specified)
-    let use_explicit_shell = if !options.shell.is_empty() && options.shell != "auto" {
-        Some(shell_to_use.clone())
-    } else {
-        None
-    };
+    // Use interactive mode (-i) for shells that support it (bash, zsh) so that startup
+    // files like .bashrc are sourced, making tools like nvm available in commands.
+    let shell_interactive_flag = get_shell_interactive_flag(&shell_to_use);
 
     if options.detached {
         // Detached mode: run in background on remote server using nohup
-        let remote_shell = use_explicit_shell.as_deref().unwrap_or(&shell_to_use);
+        // Build the shell invocation with interactive flag if supported
+        let shell_invocation = if let Some(flag) = shell_interactive_flag {
+            format!("{} {}", shell_to_use, flag)
+        } else {
+            shell_to_use.clone()
+        };
         let remote_command = format!(
             "nohup {} -c {} > /tmp/{}.log 2>&1 &",
-            remote_shell,
+            shell_invocation,
             shell_escape(command),
             session_name
         );
@@ -560,7 +575,7 @@ pub fn run_in_ssh(command: &str, options: &IsolationOptions) -> IsolationResult 
 
         if is_debug() {
             eprintln!("[DEBUG] Running: ssh {:?}", ssh_args);
-            eprintln!("[DEBUG] shell: {}", remote_shell);
+            eprintln!("[DEBUG] shell: {}", shell_invocation);
         }
 
         let status = Command::new("ssh").args(&ssh_args).status();
@@ -583,37 +598,21 @@ pub fn run_in_ssh(command: &str, options: &IsolationOptions) -> IsolationResult 
             },
         }
     } else {
-        // Attached mode: Run command interactively over SSH
-        // When a specific shell is requested, wrap the command with that shell.
-        // In auto mode, pass the command directly and let the remote's default shell handle it.
-        let (status, ssh_args_debug) = if let Some(ref explicit_shell) = use_explicit_shell {
-            if is_debug() {
-                eprintln!(
-                    "[DEBUG] Running: ssh {} {} -c {}",
-                    endpoint, explicit_shell, command
-                );
-                eprintln!("[DEBUG] shell: {}", explicit_shell);
-            }
-            (
-                Command::new("ssh")
-                    .args([&endpoint, explicit_shell.as_str(), "-c", command])
-                    .status(),
-                format!("ssh {} {} -c {}", endpoint, explicit_shell, command),
-            )
-        } else {
-            if is_debug() {
-                eprintln!("[DEBUG] Running: ssh {} {}", endpoint, command);
-                eprintln!(
-                    "[DEBUG] shell: {} (auto - passing command directly)",
-                    shell_to_use
-                );
-            }
-            (
-                Command::new("ssh").args([&endpoint, command]).status(),
-                format!("ssh {} {}", endpoint, command),
-            )
-        };
-        let _ = ssh_args_debug;
+        // Attached mode: Run command using the detected shell with interactive mode
+        // so that startup files (.bashrc etc.) are sourced and tools like nvm are available.
+        let mut ssh_cmd_args = vec![endpoint.clone(), shell_to_use.clone()];
+        if let Some(flag) = shell_interactive_flag {
+            ssh_cmd_args.push(flag.to_string());
+        }
+        ssh_cmd_args.push("-c".to_string());
+        ssh_cmd_args.push(command.to_string());
+
+        if is_debug() {
+            eprintln!("[DEBUG] Running: ssh {:?}", ssh_cmd_args);
+            eprintln!("[DEBUG] shell: {}", shell_to_use);
+        }
+
+        let status = Command::new("ssh").args(&ssh_cmd_args).status();
 
         match status {
             Ok(s) => IsolationResult {
@@ -759,6 +758,9 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
 
     // Detect the shell to use in the container
     let shell_to_use = detect_shell_in_environment("docker", options);
+    // Use interactive mode (-i) for shells that support it (bash, zsh) so that startup
+    // files like .bashrc are sourced, making tools like nvm available in commands.
+    let shell_interactive_flag = get_shell_interactive_flag(&shell_to_use);
 
     // Print the user command (this appears after any virtual commands like docker pull)
     println!("{}", crate::output_blocks::create_command_line(command));
@@ -782,7 +784,12 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
             args.push(user);
         }
 
-        args.extend(&[&image, &shell_to_use, "-c", &effective_command]);
+        args.push(&image);
+        args.push(&shell_to_use);
+        if let Some(flag) = shell_interactive_flag {
+            args.push(flag);
+        }
+        args.extend(&["-c", &effective_command]);
 
         if is_debug() {
             eprintln!("[DEBUG] Running: docker {:?}", args);
@@ -852,7 +859,12 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
             eprintln!("[DEBUG] shell: {}", shell_to_use);
         }
 
-        args.extend(&[&image, &shell_to_use, "-c", command]);
+        args.push(&image);
+        args.push(&shell_to_use);
+        if let Some(flag) = shell_interactive_flag {
+            args.push(flag);
+        }
+        args.extend(&["-c", command]);
 
         let status = Command::new("docker").args(&args).status();
 
