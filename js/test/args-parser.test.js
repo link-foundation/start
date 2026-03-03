@@ -927,3 +927,5 @@ describe('cleanup options', () => {
     assert.strictEqual(result.wrapperOptions.cleanupDryRun, false);
   });
 });
+
+// Shell option tests moved to args-parser-shell.test.js

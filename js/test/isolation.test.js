@@ -10,6 +10,7 @@ const assert = require('assert');
 const {
   isCommandAvailable,
   hasTTY,
+  detectShellInEnvironment,
   getScreenVersion,
   supportsLogfileOption,
   resetScreenVersionCache,
@@ -759,5 +760,68 @@ describe('Default Docker Image Detection', () => {
         `Image '${image}' should be one of the known base images: ${knownImages.join(', ')}`
       );
     });
+  });
+});
+
+describe('detectShellInEnvironment', () => {
+  it('should return the forced shell when shellPreference is not auto', () => {
+    const result = detectShellInEnvironment(
+      'docker',
+      { image: 'alpine:latest' },
+      'bash'
+    );
+    assert.strictEqual(result, 'bash');
+  });
+
+  it('should return zsh when shellPreference is zsh', () => {
+    const result = detectShellInEnvironment(
+      'ssh',
+      { endpoint: 'user@host' },
+      'zsh'
+    );
+    assert.strictEqual(result, 'zsh');
+  });
+
+  it('should return sh when shellPreference is sh', () => {
+    const result = detectShellInEnvironment(
+      'docker',
+      { image: 'alpine:latest' },
+      'sh'
+    );
+    assert.strictEqual(result, 'sh');
+  });
+
+  it('should return sh fallback when docker image is not provided', () => {
+    const result = detectShellInEnvironment('docker', {}, 'auto');
+    assert.strictEqual(result, 'sh');
+  });
+
+  it('should return sh fallback when ssh endpoint is not provided', () => {
+    const result = detectShellInEnvironment('ssh', {}, 'auto');
+    assert.strictEqual(result, 'sh');
+  });
+
+  it('should return sh fallback for unknown environment', () => {
+    const result = detectShellInEnvironment('screen', {}, 'auto');
+    assert.strictEqual(result, 'sh');
+  });
+
+  it('should auto-detect shell in docker if docker is available', () => {
+    if (!isCommandAvailable('docker')) {
+      console.log('  Skipping: docker not installed');
+      return;
+    }
+    // Use alpine:latest which is commonly available and has sh
+    // This test just verifies we get a valid shell back
+    const result = detectShellInEnvironment(
+      'docker',
+      { image: 'alpine:latest' },
+      'auto'
+    );
+    assert.ok(
+      ['bash', 'zsh', 'sh'].includes(result),
+      `Expected a valid shell (bash/zsh/sh), got: ${result}`
+    );
+    console.log(`  Detected shell in alpine:latest: ${result}`);
   });
 });

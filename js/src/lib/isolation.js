@@ -117,6 +117,101 @@ function getShell() {
 }
 
 /**
+ * Detect the best available shell in an isolation environment (docker/ssh)
+ * Tries shells in order: bash, zsh, sh
+ * @param {'docker'|'ssh'} environment - Isolation environment type
+ * @param {object} options - Options for the isolation environment
+ * @param {string} [shellPreference='auto'] - Shell preference: 'auto', 'bash', 'zsh', 'sh'
+ * @returns {string} Shell path to use
+ */
+function detectShellInEnvironment(
+  environment,
+  options,
+  shellPreference = 'auto'
+) {
+  // If a specific shell is requested (not auto), use it directly
+  if (shellPreference && shellPreference !== 'auto') {
+    if (DEBUG) {
+      console.log(`[DEBUG] Using forced shell: ${shellPreference}`);
+    }
+    return shellPreference;
+  }
+
+  // In auto mode, try shells in order of preference
+  const shellsToTry = ['bash', 'zsh', 'sh'];
+
+  if (environment === 'docker') {
+    const image = options.image;
+    if (!image) {
+      return 'sh';
+    }
+
+    for (const shell of shellsToTry) {
+      try {
+        const result = spawnSync(
+          'docker',
+          ['run', '--rm', image, 'sh', '-c', `command -v ${shell}`],
+          { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+        );
+        if (result.status === 0 && result.stdout.trim()) {
+          if (DEBUG) {
+            console.log(
+              `[DEBUG] Detected shell in docker image ${image}: ${result.stdout.trim()}`
+            );
+          }
+          return result.stdout.trim();
+        }
+      } catch {
+        // Continue to next shell
+      }
+    }
+
+    if (DEBUG) {
+      console.log(
+        `[DEBUG] Could not detect shell in docker image ${image}, falling back to sh`
+      );
+    }
+    return 'sh';
+  }
+
+  if (environment === 'ssh') {
+    const endpoint = options.endpoint;
+    if (!endpoint) {
+      return 'sh';
+    }
+
+    try {
+      // Run a single SSH command to check for available shells in order
+      const checkCmd = shellsToTry.map((s) => `command -v ${s}`).join(' || ');
+      const result = spawnSync('ssh', [endpoint, checkCmd], {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      if (result.status === 0 && result.stdout.trim()) {
+        const detected = result.stdout.trim();
+        if (DEBUG) {
+          console.log(
+            `[DEBUG] Detected shell on SSH host ${endpoint}: ${detected}`
+          );
+        }
+        return detected;
+      }
+    } catch {
+      // Fall through to default
+    }
+
+    if (DEBUG) {
+      console.log(
+        `[DEBUG] Could not detect shell on SSH host ${endpoint}, falling back to sh`
+      );
+    }
+    return 'sh';
+  }
+
+  return 'sh';
+}
+
+/**
  * Check if the current process has a TTY attached
  * @returns {boolean} True if TTY is available
  */
@@ -553,15 +648,25 @@ function runInSsh(command, options = {}) {
   const sessionName = options.session || generateSessionName('ssh');
   const sshTarget = options.endpoint;
 
+  // Detect the shell to use on the remote host
+  // In auto mode, detection may fall back to passing command directly to leverage
+  // the remote user's default login shell (which may already be bash)
+  const shellToUse = detectShellInEnvironment('ssh', options, options.shell);
+  // Whether to wrap command with a shell (only when explicit shell is specified)
+  const useExplicitShell =
+    options.shell && options.shell !== 'auto' ? shellToUse : null;
+
   try {
     if (options.detached) {
       // Detached mode: Run command in background on remote server using nohup
       // The command will continue running even after SSH connection closes
-      const remoteCommand = `nohup ${command} > /tmp/${sessionName}.log 2>&1 &`;
+      const remoteShell = useExplicitShell || shellToUse;
+      const remoteCommand = `nohup ${remoteShell} -c ${JSON.stringify(command)} > /tmp/${sessionName}.log 2>&1 &`;
       const sshArgs = [sshTarget, remoteCommand];
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: ssh ${sshArgs.join(' ')}`);
+        console.log(`[DEBUG] shell: ${remoteShell}`);
       }
 
       const result = spawnSync('ssh', sshArgs, {
@@ -579,11 +684,15 @@ function runInSsh(command, options = {}) {
       });
     } else {
       // Attached mode: Run command interactively over SSH
-      // This creates a direct SSH connection and runs the command
-      const sshArgs = [sshTarget, command];
+      // When a specific shell is requested, wrap the command with that shell.
+      // In auto mode, pass the command directly and let the remote's default shell handle it.
+      const sshArgs = useExplicitShell
+        ? [sshTarget, useExplicitShell, '-c', command]
+        : [sshTarget, command];
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: ssh ${sshArgs.join(' ')}`);
+        console.log(`[DEBUG] shell: ${shellToUse}`);
       }
 
       return new Promise((resolve) => {
@@ -660,6 +769,9 @@ function runInDocker(command, options = {}) {
     }
   }
 
+  // Detect the shell to use in the container
+  const shellToUse = detectShellInEnvironment('docker', options, options.shell);
+
   // Print the user command (this appears after any virtual commands like docker pull)
   const { createCommandLine } = require('./output-blocks');
   console.log(createCommandLine(command));
@@ -674,7 +786,7 @@ function runInDocker(command, options = {}) {
 
       if (options.keepAlive) {
         // With keep-alive: run command, then keep shell alive
-        effectiveCommand = `${command}; exec /bin/sh`;
+        effectiveCommand = `${command}; exec ${shellToUse}`;
       }
       // Without keep-alive: container exits naturally when command completes
 
@@ -691,10 +803,11 @@ function runInDocker(command, options = {}) {
         dockerArgs.push('--user', options.user);
       }
 
-      dockerArgs.push(options.image, '/bin/sh', '-c', effectiveCommand);
+      dockerArgs.push(options.image, shellToUse, '-c', effectiveCommand);
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
+        console.log(`[DEBUG] shell: ${shellToUse}`);
         console.log(`[DEBUG] keepAlive: ${options.keepAlive || false}`);
         console.log(
           `[DEBUG] autoRemoveDockerContainer: ${options.autoRemoveDockerContainer || false}`
@@ -735,7 +848,11 @@ function runInDocker(command, options = {}) {
         dockerArgs.push('--user', options.user);
       }
 
-      dockerArgs.push(options.image, '/bin/sh', '-c', command);
+      if (DEBUG) {
+        console.log(`[DEBUG] shell: ${shellToUse}`);
+      }
+
+      dockerArgs.push(options.image, shellToUse, '-c', command);
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
@@ -826,105 +943,6 @@ function runIsolated(backend, command, options = {}) {
 }
 
 /**
- * Generate timestamp for logging
- * @returns {string} ISO timestamp without 'T' and 'Z'
- */
-function getTimestamp() {
-  return new Date().toISOString().replace('T', ' ').replace('Z', '');
-}
-
-/**
- * Generate unique log filename
- * @param {string} environment - The isolation environment name
- * @returns {string} Log filename
- */
-function generateLogFilename(environment) {
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8);
-  return `start-command-${environment}-${timestamp}-${random}.log`;
-}
-
-/**
- * Create log content header
- * @param {object} params - Log parameters
- * @param {string} params.command - The command being executed
- * @param {string} params.environment - The isolation environment
- * @param {string} params.mode - attached or detached
- * @param {string} params.sessionName - Session/container name
- * @param {string} [params.image] - Docker image (for docker environment)
- * @param {string} [params.user] - User to run command as (optional)
- * @param {string} params.startTime - Start timestamp
- * @returns {string} Log header content
- */
-function createLogHeader(params) {
-  let content = `=== Start Command Log ===\n`;
-  content += `Timestamp: ${params.startTime}\n`;
-  content += `Command: ${params.command}\n`;
-  content += `Environment: ${params.environment}\n`;
-  content += `Mode: ${params.mode}\n`;
-  content += `Session: ${params.sessionName}\n`;
-  if (params.image) {
-    content += `Image: ${params.image}\n`;
-  }
-  if (params.user) {
-    content += `User: ${params.user}\n`;
-  }
-  content += `Platform: ${process.platform}\n`;
-  content += `Node Version: ${process.version}\n`;
-  content += `Working Directory: ${process.cwd()}\n`;
-  content += `${'='.repeat(50)}\n\n`;
-  return content;
-}
-
-/**
- * Create log content footer
- * @param {string} endTime - End timestamp
- * @param {number} exitCode - Exit code
- * @returns {string} Log footer content
- */
-function createLogFooter(endTime, exitCode) {
-  let content = `\n${'='.repeat(50)}\n`;
-  content += `Finished: ${endTime}\n`;
-  content += `Exit Code: ${exitCode}\n`;
-  return content;
-}
-
-/**
- * Write log file
- * @param {string} logPath - Path to log file
- * @param {string} content - Log content
- * @returns {boolean} Success status
- */
-function writeLogFile(logPath, content) {
-  try {
-    fs.writeFileSync(logPath, content, 'utf8');
-    return true;
-  } catch (err) {
-    console.error(`\nWarning: Could not save log file: ${err.message}`);
-    return false;
-  }
-}
-
-/**
- * Get log directory from environment or use system temp
- * @returns {string} Log directory path
- */
-function getLogDir() {
-  return process.env.START_LOG_DIR || os.tmpdir();
-}
-
-/**
- * Create log file path
- * @param {string} environment - The isolation environment
- * @returns {string} Full path to log file
- */
-function createLogPath(environment) {
-  const logDir = getLogDir();
-  const logFilename = generateLogFilename(environment);
-  return path.join(logDir, logFilename);
-}
-
-/**
  * Reset screen version cache (useful for testing)
  */
 function resetScreenVersionCache() {
@@ -932,36 +950,17 @@ function resetScreenVersionCache() {
   screenVersionChecked = false;
 }
 
-/**
- * Run command as an isolated user (without isolation environment)
- * Uses sudo -u to switch users
- * @param {string} cmd - Command to execute
- * @param {string} username - User to run as
- * @returns {Promise<{success: boolean, message: string, exitCode: number}>}
- */
-function runAsIsolatedUser(cmd, username) {
-  return new Promise((resolve) => {
-    const child = spawn('sudo', ['-n', '-u', username, 'sh', '-c', cmd], {
-      stdio: 'inherit',
-    });
-
-    child.on('exit', (code) => {
-      resolve({
-        success: code === 0,
-        message: `Command completed as user "${username}" with exit code ${code}`,
-        exitCode: code || 0,
-      });
-    });
-
-    child.on('error', (err) => {
-      resolve({
-        success: false,
-        message: `Failed to run as user "${username}": ${err.message}`,
-        exitCode: 1,
-      });
-    });
-  });
-}
+// Log utilities and runAsIsolatedUser extracted to isolation-log-utils.js
+const {
+  getTimestamp,
+  generateLogFilename,
+  createLogHeader,
+  createLogFooter,
+  writeLogFile,
+  getLogDir,
+  createLogPath,
+  runAsIsolatedUser,
+} = require('./isolation-log-utils');
 
 // Re-export docker utilities from docker-utils for backwards compatibility
 const {
@@ -972,6 +971,7 @@ const {
 module.exports = {
   isCommandAvailable,
   hasTTY,
+  detectShellInEnvironment,
   runInScreen,
   runInTmux,
   runInDocker,
