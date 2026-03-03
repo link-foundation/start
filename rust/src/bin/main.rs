@@ -387,6 +387,7 @@ Options:
   --keep-user           Keep isolated user after command completes
   --keep-alive, -k      Keep isolation environment alive after command exits
   --auto-remove-docker-container  Auto-remove docker container after exit
+  --shell <shell>       Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
   --use-command-stream  Use command-stream library for execution (experimental)
   --status <uuid>       Show status of execution by UUID (--output-format: links-notation|json|text)
   --cleanup             Clean up stale "executing" records (crashed/killed processes)
@@ -568,6 +569,7 @@ fn run_with_isolation(
             user: created_user.clone(),
             keep_alive: wrapper_options.keep_alive,
             auto_remove_docker_container: wrapper_options.auto_remove_docker_container,
+            shell: wrapper_options.shell.clone(),
         };
         run_isolated(env, command, &options)
     } else if let Some(ref user) = created_user {

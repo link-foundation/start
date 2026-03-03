@@ -35,11 +35,11 @@ pub fn setup_signal_handlers() {
     INIT.call_once(|| {
         unsafe {
             // SIGINT (Ctrl+C) - exit code 130 (128 + 2)
-            libc::signal(libc::SIGINT, signal_handler as usize);
+            libc::signal(libc::SIGINT, signal_handler as *const () as usize);
             // SIGTERM (kill command) - exit code 143 (128 + 15)
-            libc::signal(libc::SIGTERM, signal_handler as usize);
+            libc::signal(libc::SIGTERM, signal_handler as *const () as usize);
             // SIGHUP (terminal closed) - exit code 129 (128 + 1)
-            libc::signal(libc::SIGHUP, signal_handler as usize);
+            libc::signal(libc::SIGHUP, signal_handler as *const () as usize);
         }
     });
 }

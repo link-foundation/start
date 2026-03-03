@@ -7,9 +7,7 @@
 //! - ssh: Remote SSH execution
 
 use std::env;
-use std::fs::{self, File};
-use std::io::Write;
-use std::path::PathBuf;
+use std::fs;
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
@@ -34,7 +32,7 @@ pub struct IsolationResult {
 }
 
 /// Options for isolation
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct IsolationOptions {
     /// Session name
     pub session: Option<String>,
@@ -50,6 +48,23 @@ pub struct IsolationOptions {
     pub keep_alive: bool,
     /// Auto-remove docker container after exit
     pub auto_remove_docker_container: bool,
+    /// Shell to use in isolation environments: auto, bash, zsh, sh
+    pub shell: String,
+}
+
+impl Default for IsolationOptions {
+    fn default() -> Self {
+        IsolationOptions {
+            session: None,
+            image: None,
+            endpoint: None,
+            detached: false,
+            user: None,
+            keep_alive: false,
+            auto_remove_docker_container: false,
+            shell: "auto".to_string(),
+        }
+    }
 }
 
 /// Check if a command is available on the system
@@ -89,6 +104,114 @@ pub fn wrap_command_with_user(command: &str, user: Option<&str>) -> String {
         }
         None => command.to_string(),
     }
+}
+
+/// Detect the best available shell in an isolation environment (docker/ssh)
+/// Tries shells in order: bash, zsh, sh
+/// Returns the shell path to use
+pub fn detect_shell_in_environment(environment: &str, options: &IsolationOptions) -> String {
+    let shell_preference = &options.shell;
+
+    // If a specific shell is requested (not auto), use it directly
+    if !shell_preference.is_empty() && shell_preference != "auto" {
+        if is_debug() {
+            eprintln!("[DEBUG] Using forced shell: {}", shell_preference);
+        }
+        return shell_preference.clone();
+    }
+
+    // In auto mode, try shells in order of preference
+    let shells_to_try = ["bash", "zsh", "sh"];
+
+    if environment == "docker" {
+        let image = match &options.image {
+            Some(i) => i.clone(),
+            None => return "sh".to_string(),
+        };
+
+        for shell in &shells_to_try {
+            let result = Command::new("docker")
+                .args([
+                    "run",
+                    "--rm",
+                    &image,
+                    "sh",
+                    "-c",
+                    &format!("command -v {}", shell),
+                ])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .output();
+
+            if let Ok(output) = result {
+                if output.status.success() {
+                    let detected = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if !detected.is_empty() {
+                        if is_debug() {
+                            eprintln!(
+                                "[DEBUG] Detected shell in docker image {}: {}",
+                                image, detected
+                            );
+                        }
+                        return detected;
+                    }
+                }
+            }
+        }
+
+        if is_debug() {
+            eprintln!(
+                "[DEBUG] Could not detect shell in docker image {}, falling back to sh",
+                image
+            );
+        }
+        return "sh".to_string();
+    }
+
+    if environment == "ssh" {
+        let endpoint = match &options.endpoint {
+            Some(e) => e.clone(),
+            None => return "sh".to_string(),
+        };
+
+        // Run a single SSH command to check for available shells in order
+        let check_cmd: Vec<String> = shells_to_try
+            .iter()
+            .map(|s| format!("command -v {}", s))
+            .collect();
+        let check_cmd_str = check_cmd.join(" || ");
+
+        let result = Command::new("ssh")
+            .args([&endpoint, &check_cmd_str])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .output();
+
+        if let Ok(output) = result {
+            if output.status.success() {
+                let detected = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !detected.is_empty() {
+                    if is_debug() {
+                        eprintln!(
+                            "[DEBUG] Detected shell on SSH host {}: {}",
+                            endpoint, detected
+                        );
+                    }
+                    return detected;
+                }
+            }
+        }
+
+        if is_debug() {
+            eprintln!(
+                "[DEBUG] Could not detect shell on SSH host {}, falling back to sh",
+                endpoint
+            );
+        }
+        return "sh".to_string();
+    }
+
+    "sh".to_string()
 }
 
 /// Get the installed screen version
@@ -415,13 +538,32 @@ pub fn run_in_ssh(command: &str, options: &IsolationOptions) -> IsolationResult 
         .clone()
         .unwrap_or_else(|| generate_session_name(Some("ssh")));
 
-    if options.detached {
-        // Detached mode: run in background on remote
-        let remote_command = format!("nohup {} > /tmp/{}.log 2>&1 &", command, session_name);
+    // Detect the shell to use on the remote host
+    let shell_to_use = detect_shell_in_environment("ssh", options);
+    // Whether to wrap command with a shell (only when explicit shell is specified)
+    let use_explicit_shell = if !options.shell.is_empty() && options.shell != "auto" {
+        Some(shell_to_use.clone())
+    } else {
+        None
+    };
 
-        let status = Command::new("ssh")
-            .args([&endpoint, &remote_command])
-            .status();
+    if options.detached {
+        // Detached mode: run in background on remote server using nohup
+        let remote_shell = use_explicit_shell.as_deref().unwrap_or(&shell_to_use);
+        let remote_command = format!(
+            "nohup {} -c {} > /tmp/{}.log 2>&1 &",
+            remote_shell,
+            shell_escape(command),
+            session_name
+        );
+        let ssh_args = vec![endpoint.as_str(), remote_command.as_str()];
+
+        if is_debug() {
+            eprintln!("[DEBUG] Running: ssh {:?}", ssh_args);
+            eprintln!("[DEBUG] shell: {}", remote_shell);
+        }
+
+        let status = Command::new("ssh").args(&ssh_args).status();
 
         match status {
             Ok(s) if s.success() => IsolationResult {
@@ -441,8 +583,37 @@ pub fn run_in_ssh(command: &str, options: &IsolationOptions) -> IsolationResult 
             },
         }
     } else {
-        // Attached mode
-        let status = Command::new("ssh").args([&endpoint, command]).status();
+        // Attached mode: Run command interactively over SSH
+        // When a specific shell is requested, wrap the command with that shell.
+        // In auto mode, pass the command directly and let the remote's default shell handle it.
+        let (status, ssh_args_debug) = if let Some(ref explicit_shell) = use_explicit_shell {
+            if is_debug() {
+                eprintln!(
+                    "[DEBUG] Running: ssh {} {} -c {}",
+                    endpoint, explicit_shell, command
+                );
+                eprintln!("[DEBUG] shell: {}", explicit_shell);
+            }
+            (
+                Command::new("ssh")
+                    .args([&endpoint, explicit_shell.as_str(), "-c", command])
+                    .status(),
+                format!("ssh {} {} -c {}", endpoint, explicit_shell, command),
+            )
+        } else {
+            if is_debug() {
+                eprintln!("[DEBUG] Running: ssh {} {}", endpoint, command);
+                eprintln!(
+                    "[DEBUG] shell: {} (auto - passing command directly)",
+                    shell_to_use
+                );
+            }
+            (
+                Command::new("ssh").args([&endpoint, command]).status(),
+                format!("ssh {} {}", endpoint, command),
+            )
+        };
+        let _ = ssh_args_debug;
 
         match status {
             Ok(s) => IsolationResult {
@@ -586,7 +757,8 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         .clone()
         .unwrap_or_else(|| generate_session_name(Some("docker")));
 
-    let (_, _) = get_shell();
+    // Detect the shell to use in the container
+    let shell_to_use = detect_shell_in_environment("docker", options);
 
     // Print the user command (this appears after any virtual commands like docker pull)
     println!("{}", crate::output_blocks::create_command_line(command));
@@ -594,7 +766,7 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
 
     if options.detached {
         let effective_command = if options.keep_alive {
-            format!("{}; exec /bin/sh", command)
+            format!("{}; exec {}", command, shell_to_use)
         } else {
             command.to_string()
         };
@@ -610,10 +782,11 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
             args.push(user);
         }
 
-        args.extend(&[&image, "/bin/sh", "-c", &effective_command]);
+        args.extend(&[&image, &shell_to_use, "-c", &effective_command]);
 
         if is_debug() {
             eprintln!("[DEBUG] Running: docker {:?}", args);
+            eprintln!("[DEBUG] shell: {}", shell_to_use);
         }
 
         match Command::new("docker").args(&args).output() {
@@ -675,7 +848,11 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
             args.push(user);
         }
 
-        args.extend(&[&image, "/bin/sh", "-c", command]);
+        if is_debug() {
+            eprintln!("[DEBUG] shell: {}", shell_to_use);
+        }
+
+        args.extend(&[&image, &shell_to_use, "-c", command]);
 
         let status = Command::new("docker").args(&args).status();
 
@@ -742,180 +919,21 @@ pub fn run_as_isolated_user(command: &str, username: &str) -> IsolationResult {
     }
 }
 
-/// Generate timestamp for logging
-pub fn get_timestamp() -> String {
-    chrono::Utc::now()
-        .format("%Y-%m-%d %H:%M:%S%.3f")
-        .to_string()
-}
-
-/// Generate unique log filename
-pub fn generate_log_filename(environment: &str) -> String {
-    let timestamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-    let random: String = (0..6)
-        .map(|_| {
-            let idx = (std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-                % 36) as u8;
-            if idx < 10 {
-                (b'0' + idx) as char
-            } else {
-                (b'a' + idx - 10) as char
-            }
-        })
-        .collect();
-    format!("start-command-{}-{}-{}.log", environment, timestamp, random)
-}
-
-/// Log header parameters
-#[derive(Debug)]
-pub struct LogHeaderParams {
-    pub command: String,
-    pub environment: String,
-    pub mode: String,
-    pub session_name: String,
-    pub image: Option<String>,
-    pub user: Option<String>,
-    pub start_time: String,
-}
-
-/// Create log content header
-pub fn create_log_header(params: &LogHeaderParams) -> String {
-    let mut content = String::new();
-    content.push_str("=== Start Command Log ===\n");
-    content.push_str(&format!("Timestamp: {}\n", params.start_time));
-    content.push_str(&format!("Command: {}\n", params.command));
-    content.push_str(&format!("Environment: {}\n", params.environment));
-    content.push_str(&format!("Mode: {}\n", params.mode));
-    content.push_str(&format!("Session: {}\n", params.session_name));
-    if let Some(ref image) = params.image {
-        content.push_str(&format!("Image: {}\n", image));
-    }
-    if let Some(ref user) = params.user {
-        content.push_str(&format!("User: {}\n", user));
-    }
-    content.push_str(&format!("Platform: {}\n", std::env::consts::OS));
-    content.push_str(&format!(
-        "Working Directory: {}\n",
-        env::current_dir().unwrap_or_default().display()
-    ));
-    content.push_str(&format!("{}\n\n", "=".repeat(50)));
-    content
-}
-
-/// Create log content footer
-pub fn create_log_footer(end_time: &str, exit_code: i32) -> String {
-    let mut content = String::new();
-    content.push_str(&format!("\n{}\n", "=".repeat(50)));
-    content.push_str(&format!("Finished: {}\n", end_time));
-    content.push_str(&format!("Exit Code: {}\n", exit_code));
-    content
-}
-
-/// Write log file
-pub fn write_log_file(log_path: &PathBuf, content: &str) -> bool {
-    match File::create(log_path) {
-        Ok(mut file) => file.write_all(content.as_bytes()).is_ok(),
-        Err(e) => {
-            eprintln!("\nWarning: Could not save log file: {}", e);
-            false
-        }
-    }
-}
-
-/// Get log directory from environment or use system temp
-pub fn get_log_dir() -> PathBuf {
-    env::var("START_LOG_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| env::temp_dir())
-}
-
-/// Create log file path
-pub fn create_log_path(environment: &str) -> PathBuf {
-    let log_dir = get_log_dir();
-    let log_filename = generate_log_filename(environment);
-    log_dir.join(log_filename)
-}
+#[path = "isolation_log.rs"]
+pub mod isolation_log;
+pub use self::isolation_log::{
+    create_log_footer, create_log_header, create_log_path, generate_log_filename,
+    get_default_docker_image, get_log_dir, get_timestamp, write_log_file, LogHeaderParams,
+};
 
 fn is_debug() -> bool {
     env::var("START_DEBUG").is_ok_and(|v| v == "1" || v == "true")
 }
 
-/// Get the default Docker image based on the host operating system
-/// Returns an image that matches the current OS as closely as possible:
-/// - macOS: Uses alpine (since macOS cannot run in Docker)
-/// - Ubuntu/Debian: Uses ubuntu:latest
-/// - Arch Linux: Uses archlinux:latest
-/// - Other Linux: Uses the detected distro or alpine as fallback
-/// - Windows: Uses alpine (Windows containers have limited support)
-pub fn get_default_docker_image() -> String {
-    #[cfg(target_os = "macos")]
-    {
-        // macOS cannot run in Docker containers, use alpine as lightweight alternative
-        return "alpine:latest".to_string();
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        // Windows containers have limited support, use alpine for Linux containers
-        return "alpine:latest".to_string();
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        // Try to detect the Linux distribution
-        if let Ok(os_release) = fs::read_to_string("/etc/os-release") {
-            // Check for Ubuntu
-            if os_release.contains("ID=ubuntu")
-                || os_release.contains("ID_LIKE=ubuntu")
-                || os_release.contains("ID_LIKE=debian ubuntu")
-            {
-                return "ubuntu:latest".to_string();
-            }
-
-            // Check for Debian
-            if os_release.contains("ID=debian") || os_release.contains("ID_LIKE=debian") {
-                return "debian:latest".to_string();
-            }
-
-            // Check for Arch Linux
-            if os_release.contains("ID=arch") || os_release.contains("ID_LIKE=arch") {
-                return "archlinux:latest".to_string();
-            }
-
-            // Check for Fedora
-            if os_release.contains("ID=fedora") {
-                return "fedora:latest".to_string();
-            }
-
-            // Check for CentOS/RHEL
-            if os_release.contains("ID=centos")
-                || os_release.contains("ID=rhel")
-                || os_release.contains("ID_LIKE=rhel")
-            {
-                return "centos:latest".to_string();
-            }
-
-            // Check for Alpine
-            if os_release.contains("ID=alpine") {
-                return "alpine:latest".to_string();
-            }
-        }
-
-        // Default fallback: use alpine as a lightweight, universal option
-        "alpine:latest".to_string()
-    }
-
-    // Fallback for other platforms
-    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
-    {
-        "alpine:latest".to_string()
-    }
+/// Escape a command string for use in shell -c argument
+fn shell_escape(command: &str) -> String {
+    // Wrap in single quotes, escaping any existing single quotes
+    format!("'{}'", command.replace('\'', "'\\''"))
 }
 
 // Stub for atty crate functionality
@@ -943,49 +961,5 @@ mod atty {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_is_command_available() {
-        // These should exist on most systems
-        assert!(is_command_available("ls") || is_command_available("dir"));
-    }
-
-    #[test]
-    fn test_get_shell() {
-        let (shell, arg) = get_shell();
-        assert!(!shell.is_empty());
-        assert!(!arg.is_empty());
-    }
-
-    #[test]
-    fn test_wrap_command_with_user() {
-        let cmd = wrap_command_with_user("echo hello", None);
-        assert_eq!(cmd, "echo hello");
-
-        let cmd = wrap_command_with_user("echo hello", Some("testuser"));
-        assert!(cmd.contains("sudo"));
-        assert!(cmd.contains("testuser"));
-    }
-
-    #[test]
-    fn test_get_timestamp() {
-        let ts = get_timestamp();
-        assert!(ts.contains("-"));
-        assert!(ts.contains(":"));
-    }
-
-    #[test]
-    fn test_generate_log_filename() {
-        let name = generate_log_filename("test");
-        assert!(name.starts_with("start-command-test-"));
-        assert!(name.ends_with(".log"));
-    }
-
-    #[test]
-    fn test_create_log_path() {
-        let path = create_log_path("test");
-        assert!(path.to_string_lossy().contains("start-command-test-"));
-    }
-}
+#[path = "isolation_tests.rs"]
+mod tests;

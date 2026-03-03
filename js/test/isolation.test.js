@@ -824,4 +824,75 @@ describe('detectShellInEnvironment', () => {
     );
     console.log(`  Detected shell in alpine:latest: ${result}`);
   });
+
+  it('should read shell preference from options.shell', () => {
+    // Test that detectShellInEnvironment respects options.shell field
+    const result = detectShellInEnvironment(
+      'docker',
+      { image: 'alpine:latest', shell: 'bash' },
+      'bash'
+    );
+    assert.strictEqual(result, 'bash');
+  });
+});
+
+describe('Shell option forwarding to isolation runners', () => {
+  // These tests verify that the shell option is properly forwarded
+  // through the call chain: cli.js -> runIsolated -> runInDocker/runInSsh
+
+  const { runInDocker, runInSsh } = require('../src/lib/isolation');
+
+  describe('runInDocker shell option', () => {
+    it('should accept shell option in options object', async () => {
+      if (!isCommandAvailable('docker')) {
+        console.log('  Skipping: docker not installed');
+        return;
+      }
+
+      // Test with explicit shell option - just verify the option is accepted
+      // and the function runs (it may fail if image is not available)
+      const result = await runInDocker('echo test', {
+        image: 'alpine:latest',
+        detached: true,
+        shell: 'sh',
+      });
+      // If docker is available, verify the result
+      console.log(`  runInDocker with --shell sh result: ${result.success}`);
+      // The result can be success or failure depending on docker availability
+      // The important thing is no crash due to missing shell option
+      assert.ok(typeof result.success === 'boolean');
+    });
+  });
+
+  describe('runInSsh shell option', () => {
+    it('should accept shell option in options object', async () => {
+      // SSH requires endpoint, so without it we get expected error
+      const result = await runInSsh('echo test', {
+        detached: true,
+        shell: 'bash',
+      });
+      assert.strictEqual(result.success, false);
+      // Should fail with endpoint error, not shell option error
+      assert.ok(
+        result.message.includes('endpoint') ||
+          result.message.includes('--endpoint') ||
+          result.message.includes('SSH isolation requires')
+      );
+    });
+
+    it('should use auto mode when shell option is auto', async () => {
+      // Verify auto mode doesn't crash
+      const result = await runInSsh('echo test', {
+        detached: true,
+        shell: 'auto',
+      });
+      assert.strictEqual(result.success, false);
+      // Should fail with endpoint error in auto mode
+      assert.ok(
+        result.message.includes('endpoint') ||
+          result.message.includes('--endpoint') ||
+          result.message.includes('SSH isolation requires')
+      );
+    });
+  });
 });

@@ -1,0 +1,18 @@
+---
+'start-command': minor
+---
+
+feat: Add shell auto-detection and --shell option for isolation environments
+
+In docker and ssh isolation environments, the shell is now automatically
+selected in order of preference: bash, zsh, sh (auto mode). A new `--shell`
+option allows explicitly specifying the shell to use.
+
+- Auto mode (default): probes the environment for the best available shell
+- `--shell bash/zsh/sh`: forces a specific shell
+- `--shell auto`: explicitly selects auto-detection mode
+
+This enables tools like `nvm` to work correctly in Docker containers where
+bash is available but sh does not source the necessary profile scripts.
+
+Fixes #79
