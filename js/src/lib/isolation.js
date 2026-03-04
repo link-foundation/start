@@ -212,6 +212,21 @@ function detectShellInEnvironment(
 }
 
 /**
+ * Get the interactive flag for a shell, if supported.
+ * Returns "-i" for bash and zsh (which support interactive mode that sources startup files),
+ * and null for other shells like sh.
+ * @param {string} shellPath - Path to or name of the shell
+ * @returns {string|null} "-i" if the shell supports interactive mode, null otherwise
+ */
+function getShellInteractiveFlag(shellPath) {
+  const shellName = shellPath.split('/').pop();
+  if (shellName === 'bash' || shellName === 'zsh') {
+    return '-i';
+  }
+  return null;
+}
+
+/**
  * Check if the current process has a TTY attached
  * @returns {boolean} True if TTY is available
  */
@@ -649,24 +664,24 @@ function runInSsh(command, options = {}) {
   const sshTarget = options.endpoint;
 
   // Detect the shell to use on the remote host
-  // In auto mode, detection may fall back to passing command directly to leverage
-  // the remote user's default login shell (which may already be bash)
   const shellToUse = detectShellInEnvironment('ssh', options, options.shell);
-  // Whether to wrap command with a shell (only when explicit shell is specified)
-  const useExplicitShell =
-    options.shell && options.shell !== 'auto' ? shellToUse : null;
+  // Use interactive mode (-i) for shells that support it (bash, zsh) so that startup
+  // files like .bashrc are sourced, making tools like nvm available in commands.
+  const shellInteractiveFlag = getShellInteractiveFlag(shellToUse);
 
   try {
     if (options.detached) {
       // Detached mode: Run command in background on remote server using nohup
       // The command will continue running even after SSH connection closes
-      const remoteShell = useExplicitShell || shellToUse;
-      const remoteCommand = `nohup ${remoteShell} -c ${JSON.stringify(command)} > /tmp/${sessionName}.log 2>&1 &`;
+      const shellInvocation = shellInteractiveFlag
+        ? `${shellToUse} ${shellInteractiveFlag}`
+        : shellToUse;
+      const remoteCommand = `nohup ${shellInvocation} -c ${JSON.stringify(command)} > /tmp/${sessionName}.log 2>&1 &`;
       const sshArgs = [sshTarget, remoteCommand];
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: ssh ${sshArgs.join(' ')}`);
-        console.log(`[DEBUG] shell: ${remoteShell}`);
+        console.log(`[DEBUG] shell: ${shellInvocation}`);
       }
 
       const result = spawnSync('ssh', sshArgs, {
@@ -683,12 +698,13 @@ function runInSsh(command, options = {}) {
         message: `Command started in detached SSH session on ${sshTarget}\nSession: ${sessionName}\nView logs: ssh ${sshTarget} "tail -f /tmp/${sessionName}.log"`,
       });
     } else {
-      // Attached mode: Run command interactively over SSH
-      // When a specific shell is requested, wrap the command with that shell.
-      // In auto mode, pass the command directly and let the remote's default shell handle it.
-      const sshArgs = useExplicitShell
-        ? [sshTarget, useExplicitShell, '-c', command]
-        : [sshTarget, command];
+      // Attached mode: Run command using the detected shell with interactive mode
+      // so that startup files (.bashrc etc.) are sourced and tools like nvm are available.
+      const sshArgs = [sshTarget, shellToUse];
+      if (shellInteractiveFlag) {
+        sshArgs.push(shellInteractiveFlag);
+      }
+      sshArgs.push('-c', command);
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: ssh ${sshArgs.join(' ')}`);
@@ -771,6 +787,9 @@ function runInDocker(command, options = {}) {
 
   // Detect the shell to use in the container
   const shellToUse = detectShellInEnvironment('docker', options, options.shell);
+  // Use interactive mode (-i) for shells that support it (bash, zsh) so that startup
+  // files (.bashrc, .zshrc) are sourced, making tools like nvm available.
+  const shellInteractiveFlag = getShellInteractiveFlag(shellToUse);
 
   // Print the user command (this appears after any virtual commands like docker pull)
   const { createCommandLine } = require('./output-blocks');
@@ -803,7 +822,17 @@ function runInDocker(command, options = {}) {
         dockerArgs.push('--user', options.user);
       }
 
-      dockerArgs.push(options.image, shellToUse, '-c', effectiveCommand);
+      if (shellInteractiveFlag) {
+        dockerArgs.push(
+          options.image,
+          shellToUse,
+          shellInteractiveFlag,
+          '-c',
+          effectiveCommand
+        );
+      } else {
+        dockerArgs.push(options.image, shellToUse, '-c', effectiveCommand);
+      }
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
@@ -852,7 +881,17 @@ function runInDocker(command, options = {}) {
         console.log(`[DEBUG] shell: ${shellToUse}`);
       }
 
-      dockerArgs.push(options.image, shellToUse, '-c', command);
+      if (shellInteractiveFlag) {
+        dockerArgs.push(
+          options.image,
+          shellToUse,
+          shellInteractiveFlag,
+          '-c',
+          command
+        );
+      } else {
+        dockerArgs.push(options.image, shellToUse, '-c', command);
+      }
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
