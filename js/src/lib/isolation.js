@@ -211,6 +211,12 @@ function detectShellInEnvironment(
   return 'sh';
 }
 
+/** Returns "-i" for bash/zsh (enables .bashrc sourcing), null otherwise. */
+function getShellInteractiveFlag(shellPath) {
+  const shellName = shellPath.split('/').pop();
+  return shellName === 'bash' || shellName === 'zsh' ? '-i' : null;
+}
+
 /**
  * Check if the current process has a TTY attached
  * @returns {boolean} True if TTY is available
@@ -648,30 +654,31 @@ function runInSsh(command, options = {}) {
   const sessionName = options.session || generateSessionName('ssh');
   const sshTarget = options.endpoint;
 
-  // Detect the shell to use on the remote host
-  // In auto mode, detection may fall back to passing command directly to leverage
-  // the remote user's default login shell (which may already be bash)
   const shellToUse = detectShellInEnvironment('ssh', options, options.shell);
-  // Whether to wrap command with a shell (only when explicit shell is specified)
+  // In auto mode, SSH login shells already source startup files (.bashrc etc.);
+  // only wrap with an explicit shell when user requests one.
   const useExplicitShell =
     options.shell && options.shell !== 'auto' ? shellToUse : null;
+  const shellInteractiveFlag = useExplicitShell
+    ? getShellInteractiveFlag(useExplicitShell)
+    : null;
 
   try {
     if (options.detached) {
-      // Detached mode: Run command in background on remote server using nohup
-      // The command will continue running even after SSH connection closes
+      // Detached mode: Run command in background via nohup; continues after SSH closes
       const remoteShell = useExplicitShell || shellToUse;
-      const remoteCommand = `nohup ${remoteShell} -c ${JSON.stringify(command)} > /tmp/${sessionName}.log 2>&1 &`;
+      const shellInvocation = shellInteractiveFlag
+        ? `${remoteShell} ${shellInteractiveFlag}`
+        : remoteShell;
+      const remoteCommand = `nohup ${shellInvocation} -c ${JSON.stringify(command)} > /tmp/${sessionName}.log 2>&1 &`;
       const sshArgs = [sshTarget, remoteCommand];
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: ssh ${sshArgs.join(' ')}`);
-        console.log(`[DEBUG] shell: ${remoteShell}`);
+        console.log(`[DEBUG] shell: ${shellInvocation}`);
       }
 
-      const result = spawnSync('ssh', sshArgs, {
-        stdio: 'inherit',
-      });
+      const result = spawnSync('ssh', sshArgs, { stdio: 'inherit' });
 
       if (result.error) {
         throw result.error;
@@ -683,11 +690,10 @@ function runInSsh(command, options = {}) {
         message: `Command started in detached SSH session on ${sshTarget}\nSession: ${sessionName}\nView logs: ssh ${sshTarget} "tail -f /tmp/${sessionName}.log"`,
       });
     } else {
-      // Attached mode: Run command interactively over SSH
-      // When a specific shell is requested, wrap the command with that shell.
-      // In auto mode, pass the command directly and let the remote's default shell handle it.
+      // Attached mode: pass command directly (auto) or wrap with explicit shell + -i flag (bash/zsh).
+      const extraFlags = shellInteractiveFlag ? [shellInteractiveFlag] : [];
       const sshArgs = useExplicitShell
-        ? [sshTarget, useExplicitShell, '-c', command]
+        ? [sshTarget, useExplicitShell, ...extraFlags, '-c', command]
         : [sshTarget, command];
 
       if (DEBUG) {
@@ -769,8 +775,8 @@ function runInDocker(command, options = {}) {
     }
   }
 
-  // Detect the shell to use in the container
   const shellToUse = detectShellInEnvironment('docker', options, options.shell);
+  const shellInteractiveFlag = getShellInteractiveFlag(shellToUse);
 
   // Print the user command (this appears after any virtual commands like docker pull)
   const { createCommandLine } = require('./output-blocks');
@@ -780,20 +786,12 @@ function runInDocker(command, options = {}) {
   try {
     if (options.detached) {
       // Detached mode: docker run -d --name <name> [--user <user>] <image> <shell> -c '<command>'
-      // By default (keepAlive=false), the container exits after command completes
-      // With keepAlive=true, we keep the container running with a shell
-      let effectiveCommand = command;
-
-      if (options.keepAlive) {
-        // With keep-alive: run command, then keep shell alive
-        effectiveCommand = `${command}; exec ${shellToUse}`;
-      }
-      // Without keep-alive: container exits naturally when command completes
-
+      const effectiveCommand = options.keepAlive
+        ? `${command}; exec ${shellToUse}`
+        : command;
       const dockerArgs = ['run', '-d', '--name', containerName];
 
-      // Add --rm flag if autoRemoveDockerContainer is true
-      // Note: --rm must come before the image name
+      // --rm must come before the image name
       if (options.autoRemoveDockerContainer) {
         dockerArgs.splice(2, 0, '--rm');
       }
@@ -803,7 +801,10 @@ function runInDocker(command, options = {}) {
         dockerArgs.push('--user', options.user);
       }
 
-      dockerArgs.push(options.image, shellToUse, '-c', effectiveCommand);
+      const shellArgs = shellInteractiveFlag
+        ? [shellToUse, shellInteractiveFlag]
+        : [shellToUse];
+      dockerArgs.push(options.image, ...shellArgs, '-c', effectiveCommand);
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
@@ -840,19 +841,19 @@ function runInDocker(command, options = {}) {
         message,
       });
     } else {
-      // Attached mode: docker run -it --name <name> [--user <user>] <image> <shell> -c '<command>'
+      // Attached mode: docker run -it --rm --name <name> [--user <user>] <image> <shell> -c '<cmd>'
       const dockerArgs = ['run', '-it', '--rm', '--name', containerName];
-
-      // Add --user flag if specified
       if (options.user) {
         dockerArgs.push('--user', options.user);
       }
-
       if (DEBUG) {
         console.log(`[DEBUG] shell: ${shellToUse}`);
       }
 
-      dockerArgs.push(options.image, shellToUse, '-c', command);
+      const shellCmdArgs = shellInteractiveFlag
+        ? [shellToUse, shellInteractiveFlag]
+        : [shellToUse];
+      dockerArgs.push(options.image, ...shellCmdArgs, '-c', command);
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
