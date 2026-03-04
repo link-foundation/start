@@ -211,12 +211,7 @@ function detectShellInEnvironment(
   return 'sh';
 }
 
-/**
- * Get "-i" flag for shells that support interactive mode (bash, zsh),
- * enabling startup files (.bashrc, .zshrc) to be sourced.
- * @param {string} shellPath - Path to or name of the shell
- * @returns {string|null} "-i" or null
- */
+/** Returns "-i" for bash/zsh (enables .bashrc sourcing), null otherwise. */
 function getShellInteractiveFlag(shellPath) {
   const shellName = shellPath.split('/').pop();
   return shellName === 'bash' || shellName === 'zsh' ? '-i' : null;
