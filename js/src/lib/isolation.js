@@ -660,14 +660,21 @@ function runInSsh(command, options = {}) {
   const sshTarget = options.endpoint;
 
   const shellToUse = detectShellInEnvironment('ssh', options, options.shell);
-  const shellInteractiveFlag = getShellInteractiveFlag(shellToUse);
+  // In auto mode, SSH login shells already source startup files (.bashrc etc.);
+  // only wrap with an explicit shell when user requests one.
+  const useExplicitShell =
+    options.shell && options.shell !== 'auto' ? shellToUse : null;
+  const shellInteractiveFlag = useExplicitShell
+    ? getShellInteractiveFlag(useExplicitShell)
+    : null;
 
   try {
     if (options.detached) {
       // Detached mode: Run command in background via nohup; continues after SSH closes
+      const remoteShell = useExplicitShell || shellToUse;
       const shellInvocation = shellInteractiveFlag
-        ? `${shellToUse} ${shellInteractiveFlag}`
-        : shellToUse;
+        ? `${remoteShell} ${shellInteractiveFlag}`
+        : remoteShell;
       const remoteCommand = `nohup ${shellInvocation} -c ${JSON.stringify(command)} > /tmp/${sessionName}.log 2>&1 &`;
       const sshArgs = [sshTarget, remoteCommand];
 
@@ -676,9 +683,7 @@ function runInSsh(command, options = {}) {
         console.log(`[DEBUG] shell: ${shellInvocation}`);
       }
 
-      const result = spawnSync('ssh', sshArgs, {
-        stdio: 'inherit',
-      });
+      const result = spawnSync('ssh', sshArgs, { stdio: 'inherit' });
 
       if (result.error) {
         throw result.error;
@@ -690,10 +695,11 @@ function runInSsh(command, options = {}) {
         message: `Command started in detached SSH session on ${sshTarget}\nSession: ${sessionName}\nView logs: ssh ${sshTarget} "tail -f /tmp/${sessionName}.log"`,
       });
     } else {
-      // Attached mode: Run command using detected shell with interactive mode
-      // so startup files (.bashrc etc.) are sourced, making tools like nvm available.
+      // Attached mode: pass command directly (auto) or wrap with explicit shell + -i flag (bash/zsh).
       const extraFlags = shellInteractiveFlag ? [shellInteractiveFlag] : [];
-      const sshArgs = [sshTarget, shellToUse, ...extraFlags, '-c', command];
+      const sshArgs = useExplicitShell
+        ? [sshTarget, useExplicitShell, ...extraFlags, '-c', command]
+        : [sshTarget, command];
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: ssh ${sshArgs.join(' ')}`);
