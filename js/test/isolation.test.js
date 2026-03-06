@@ -896,3 +896,59 @@ describe('Shell option forwarding to isolation runners', () => {
     });
   });
 });
+
+describe('isInteractiveShellCommand (issue #84)', () => {
+  const { isInteractiveShellCommand } = require('../src/lib/isolation');
+
+  it('should return true for "bash"', () => {
+    assert.strictEqual(isInteractiveShellCommand('bash'), true);
+  });
+
+  it('should return true for "zsh"', () => {
+    assert.strictEqual(isInteractiveShellCommand('zsh'), true);
+  });
+
+  it('should return true for "sh"', () => {
+    assert.strictEqual(isInteractiveShellCommand('sh'), true);
+  });
+
+  it('should return true for "/bin/bash"', () => {
+    assert.strictEqual(isInteractiveShellCommand('/bin/bash'), true);
+  });
+
+  it('should return true for "/usr/bin/zsh"', () => {
+    assert.strictEqual(isInteractiveShellCommand('/usr/bin/zsh'), true);
+  });
+
+  it('should return true for "bash -l" (login flag, no -c)', () => {
+    assert.strictEqual(isInteractiveShellCommand('bash -l'), true);
+  });
+
+  it('should return false for "bash -c echo"', () => {
+    assert.strictEqual(isInteractiveShellCommand('bash -c echo'), false);
+  });
+
+  it('should return false for "bash -c \'echo hi\'"', () => {
+    assert.strictEqual(isInteractiveShellCommand("bash -c 'echo hi'"), false);
+  });
+
+  it('should return false for "npm test"', () => {
+    assert.strictEqual(isInteractiveShellCommand('npm test'), false);
+  });
+
+  it('should return false for "echo hello"', () => {
+    assert.strictEqual(isInteractiveShellCommand('echo hello'), false);
+  });
+
+  it('should return false for "ls -la"', () => {
+    assert.strictEqual(isInteractiveShellCommand('ls -la'), false);
+  });
+
+  it('should return false for empty string', () => {
+    assert.strictEqual(isInteractiveShellCommand(''), false);
+  });
+
+  it('should return false for "  "', () => {
+    assert.strictEqual(isInteractiveShellCommand('  '), false);
+  });
+});

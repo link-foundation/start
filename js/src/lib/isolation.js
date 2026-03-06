@@ -216,21 +216,19 @@ function getShellInteractiveFlag(shellPath) {
   const shellName = shellPath.split('/').pop();
   return shellName === 'bash' || shellName === 'zsh' ? '-i' : null;
 }
+/** True if command is a bare shell invocation (no -c); avoids bash-inside-bash (issue #84). */
+function isInteractiveShellCommand(command) {
+  const parts = command.trim().split(/\s+/);
+  const shells = ['bash', 'zsh', 'sh', 'fish', 'ksh', 'csh', 'tcsh', 'dash'];
+  return shells.includes(path.basename(parts[0])) && !parts.includes('-c');
+}
 
-/**
- * Check if the current process has a TTY attached
- * @returns {boolean} True if TTY is available
- */
+/** Returns true if the current process has a TTY attached. */
 function hasTTY() {
   return Boolean(process.stdin.isTTY && process.stdout.isTTY);
 }
 
-/**
- * Wrap command with sudo -u if user option is specified
- * @param {string} command - Original command
- * @param {string|null} user - Username to run as (or null)
- * @returns {string} Wrapped command
- */
+/** Wraps command with sudo -u if user is specified; returns command unchanged otherwise. */
 function wrapCommandWithUser(command, user) {
   if (!user) {
     return command;
@@ -242,13 +240,8 @@ function wrapCommandWithUser(command, user) {
 }
 
 /**
- * Run command in GNU Screen using detached mode with log capture
- * This is a workaround for environments without TTY
- *
- * Supports two methods based on screen version:
- * - screen >= 4.5.1: Uses -L -Logfile option for native log capture
- * - screen < 4.5.1: Uses tee command within the wrapped command for output capture
- *
+ * Run command in GNU Screen using detached mode with log capture.
+ * Supports screen >= 4.5.1 (native -Logfile) and older versions (tee fallback).
  * @param {string} command - Command to execute
  * @param {string} sessionName - Session name
  * @param {object} shellInfo - Shell info from getShell()
@@ -271,16 +264,10 @@ function runScreenWithLogCapture(command, sessionName, shellInfo, user = null) {
       if (useNativeLogging) {
         // Modern screen (>= 4.5.1): Use -L -Logfile option for native log capture
         // screen -dmS <session> -L -Logfile <logfile> <shell> -c '<command>'
-        screenArgs = [
-          '-dmS',
-          sessionName,
-          '-L',
-          '-Logfile',
-          logFile,
-          shell,
-          shellArg,
-          effectiveCommand,
-        ];
+        const logArgs = ['-dmS', sessionName, '-L', '-Logfile', logFile];
+        screenArgs = isInteractiveShellCommand(command)
+          ? [...logArgs, ...command.trim().split(/\s+/)]
+          : [...logArgs, shell, shellArg, effectiveCommand];
 
         if (DEBUG) {
           console.log(
@@ -289,10 +276,13 @@ function runScreenWithLogCapture(command, sessionName, shellInfo, user = null) {
         }
       } else {
         // Older screen (< 4.5.1, e.g., macOS bundled 4.0.3): Use tee fallback
-        // Wrap the command to capture output using tee
         // The parentheses ensure proper grouping of the command and its stderr
-        effectiveCommand = `(${effectiveCommand}) 2>&1 | tee "${logFile}"`;
-        screenArgs = ['-dmS', sessionName, shell, shellArg, effectiveCommand];
+        const isBareShell = isInteractiveShellCommand(command);
+        if (!isBareShell)
+          effectiveCommand = `(${effectiveCommand}) 2>&1 | tee "${logFile}"`;
+        screenArgs = isBareShell
+          ? ['-dmS', sessionName, ...command.trim().split(/\s+/)]
+          : ['-dmS', sessionName, shell, shellArg, effectiveCommand];
 
         if (DEBUG) {
           console.log(
@@ -451,13 +441,9 @@ function runInScreen(command, options = {}) {
       }
       // Without keep-alive: command runs and session exits naturally when done
 
-      const screenArgs = [
-        '-dmS',
-        sessionName,
-        shell,
-        shellArg,
-        effectiveCommand,
-      ];
+      const screenArgs = isInteractiveShellCommand(command)
+        ? ['-dmS', sessionName, ...command.trim().split(/\s+/)]
+        : ['-dmS', sessionName, shell, shellArg, effectiveCommand];
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: screen ${screenArgs.join(' ')}`);
@@ -670,7 +656,9 @@ function runInSsh(command, options = {}) {
       const shellInvocation = shellInteractiveFlag
         ? `${remoteShell} ${shellInteractiveFlag}`
         : remoteShell;
-      const remoteCommand = `nohup ${shellInvocation} -c ${JSON.stringify(command)} > /tmp/${sessionName}.log 2>&1 &`;
+      const remoteCommand = isInteractiveShellCommand(command)
+        ? `nohup ${command} > /tmp/${sessionName}.log 2>&1 &`
+        : `nohup ${shellInvocation} -c ${JSON.stringify(command)} > /tmp/${sessionName}.log 2>&1 &`;
       const sshArgs = [sshTarget, remoteCommand];
 
       if (DEBUG) {
@@ -692,9 +680,11 @@ function runInSsh(command, options = {}) {
     } else {
       // Attached mode: pass command directly (auto) or wrap with explicit shell + -i flag (bash/zsh).
       const extraFlags = shellInteractiveFlag ? [shellInteractiveFlag] : [];
-      const sshArgs = useExplicitShell
-        ? [sshTarget, useExplicitShell, ...extraFlags, '-c', command]
-        : [sshTarget, command];
+      const sshArgs = isInteractiveShellCommand(command)
+        ? [sshTarget, ...command.trim().split(/\s+/)]
+        : useExplicitShell
+          ? [sshTarget, useExplicitShell, ...extraFlags, '-c', command]
+          : [sshTarget, command];
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: ssh ${sshArgs.join(' ')}`);
@@ -804,7 +794,10 @@ function runInDocker(command, options = {}) {
       const shellArgs = shellInteractiveFlag
         ? [shellToUse, shellInteractiveFlag]
         : [shellToUse];
-      dockerArgs.push(options.image, ...shellArgs, '-c', effectiveCommand);
+      const cmdArgs = isInteractiveShellCommand(command)
+        ? command.trim().split(/\s+/)
+        : [...shellArgs, '-c', effectiveCommand];
+      dockerArgs.push(options.image, ...cmdArgs);
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
@@ -853,7 +846,10 @@ function runInDocker(command, options = {}) {
       const shellCmdArgs = shellInteractiveFlag
         ? [shellToUse, shellInteractiveFlag]
         : [shellToUse];
-      dockerArgs.push(options.image, ...shellCmdArgs, '-c', command);
+      const attachedCmdArgs = isInteractiveShellCommand(command)
+        ? command.trim().split(/\s+/)
+        : [...shellCmdArgs, '-c', command];
+      dockerArgs.push(options.image, ...attachedCmdArgs);
 
       if (DEBUG) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
@@ -972,6 +968,7 @@ const {
 module.exports = {
   isCommandAvailable,
   hasTTY,
+  isInteractiveShellCommand,
   detectShellInEnvironment,
   runInScreen,
   runInTmux,
