@@ -278,8 +278,9 @@ function runScreenWithLogCapture(command, sessionName, shellInfo, user = null) {
         // Older screen (< 4.5.1, e.g., macOS bundled 4.0.3): Use tee fallback
         // The parentheses ensure proper grouping of the command and its stderr
         const isBareShell = isInteractiveShellCommand(command);
-        if (!isBareShell)
+        if (!isBareShell) {
           effectiveCommand = `(${effectiveCommand}) 2>&1 | tee "${logFile}"`;
+        }
         screenArgs = isBareShell
           ? ['-dmS', sessionName, ...command.trim().split(/\s+/)]
           : ['-dmS', sessionName, shell, shellArg, effectiveCommand];
