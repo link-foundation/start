@@ -766,7 +766,10 @@ function runInDocker(command, options = {}) {
     }
   }
 
-  const shellToUse = detectShellInEnvironment('docker', options, options.shell);
+  const isBareShell = isInteractiveShellCommand(command);
+  const shellToUse = isBareShell
+    ? 'sh'
+    : detectShellInEnvironment('docker', options, options.shell);
   const shellInteractiveFlag = getShellInteractiveFlag(shellToUse);
 
   // Print the user command (this appears after any virtual commands like docker pull)
@@ -777,9 +780,6 @@ function runInDocker(command, options = {}) {
   try {
     if (options.detached) {
       // Detached mode: docker run -d --name <name> [--user <user>] <image> <shell> -c '<command>'
-      const effectiveCommand = options.keepAlive
-        ? `${command}; exec ${shellToUse}`
-        : command;
       const dockerArgs = ['run', '-d', '--name', containerName];
 
       // --rm must come before the image name
@@ -792,10 +792,13 @@ function runInDocker(command, options = {}) {
         dockerArgs.push('--user', options.user);
       }
 
+      const effectiveCommand = options.keepAlive
+        ? `${command}; exec ${shellToUse}`
+        : command;
       const shellArgs = shellInteractiveFlag
         ? [shellToUse, shellInteractiveFlag]
         : [shellToUse];
-      const cmdArgs = isInteractiveShellCommand(command)
+      const cmdArgs = isBareShell
         ? command.trim().split(/\s+/)
         : [...shellArgs, '-c', effectiveCommand];
       dockerArgs.push(options.image, ...cmdArgs);
@@ -847,7 +850,7 @@ function runInDocker(command, options = {}) {
       const shellCmdArgs = shellInteractiveFlag
         ? [shellToUse, shellInteractiveFlag]
         : [shellToUse];
-      const attachedCmdArgs = isInteractiveShellCommand(command)
+      const attachedCmdArgs = isBareShell
         ? command.trim().split(/\s+/)
         : [...shellCmdArgs, '-c', command];
       dockerArgs.push(options.image, ...attachedCmdArgs);

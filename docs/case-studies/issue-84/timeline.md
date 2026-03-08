@@ -98,3 +98,64 @@ docker run -it --rm --name <name> <image> bash -i -c bash
 
 The `-i -c bash` is the shell wrapper that `start-command` adds unconditionally around the
 user's command. When the user's command **is itself a shell**, this creates bash-inside-bash.
+
+---
+
+## Post-Fix Timeline (2026-03-08)
+
+After v0.24.1 was released with the `isInteractiveShellCommand` fix, the user reported a new failure.
+
+### Step 1: User installs v0.24.1 and runs the command
+
+```
+konard@MacBook-Pro-Konstantin ~ % bun install -g start-command
+installed start-command@0.24.1
+
+konard@MacBook-Pro-Konstantin ~ % $ --isolated docker --image konard/sandbox:latest -- bash
+│ session   021416fd-4fc2-4c47-bdc6-e37f4500e3cc
+│ start     2026-03-08 19:25:39.407
+│
+│ isolation docker
+│ mode      attached
+│ image     konard/sandbox:latest
+│ container docker-1772997939407-fmdn4u
+│
+
+✗
+│ finish    2026-03-08 19:25:39.719
+│ duration  0.412s
+│ exit      1
+```
+
+### Step 2: Fix produces the correct docker command
+
+With v0.24.1, `start-command` now runs:
+
+```
+docker run -it --rm --name docker-xxx konard/sandbox:latest bash
+```
+
+### Step 3: Failure reason
+
+The command fails with exit 1 in 0.3-0.4 seconds. Two possible causes:
+
+**Cause A (most likely):** The `konard/sandbox:1.3.14` tag no longer exists on Docker Hub.
+If the image is not locally cached, `dockerPullImage` runs and fails fast (connection error or
+tag not found), returning exit 1.
+
+**Cause B:** The container image's `/home/sandbox/.bashrc` has a syntax error that causes
+bash to exit immediately (exit 1) rather than printing the error and continuing. This would
+require a newer image with a more severe `.bashrc` bug.
+
+### Step 4: Workaround
+
+Pass `bash --norc` to skip startup file sourcing:
+
+```
+$ --isolated docker --image konard/sandbox:latest -- bash --norc
+```
+
+### Step 5: Upstream fix
+
+The `.bashrc` bug was reported to the sandbox image maintainer as `konard/sandbox#1`.
+Users should update their image: `docker pull konard/sandbox:latest`
