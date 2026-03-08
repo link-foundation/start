@@ -10,8 +10,13 @@
  *
  * The same regression applies to zsh, sh, and all other isolation backends.
  *
+ * Also tests the post-fix regression hint: when a bare shell exits with code 1
+ * quickly (< 3s), a helpful hint suggests `bash --norc` as a workaround for
+ * containers whose .bashrc causes bash to exit non-zero (issue #84, second comment).
+ *
  * Reference: https://github.com/link-foundation/start/issues/84
  * Fixed in: PR #85 (v0.24.1) via isInteractiveShellCommand()
+ * Hint added in: PR #87 for the post-fix regression (broken .bashrc in sandbox)
  */
 
 const { describe, it } = require('node:test');
@@ -154,6 +159,74 @@ describe('Regression: No Shell-Inside-Shell (issue #84)', () => {
     assert.ok(
       args.includes('-c'),
       'bash -c commands should be treated as regular commands'
+    );
+  });
+});
+
+describe('Post-fix regression hint: --norc suggestion (issue #84)', () => {
+  // These tests verify the hint logic that recommends --norc when a bare shell
+  // exits quickly with code 1 (e.g., broken .bashrc in konard/sandbox image).
+  // The hint is shown in runInDocker attached mode when:
+  //   isBareShell && code !== 0 && durationMs < 3000
+
+  // Helper mirrors the hint construction logic in isolation.js runInDocker.
+  const path = require('path');
+  function buildHint(command) {
+    const shellName = command.trim().split(/\s+/)[0];
+    const noRcFlag = path.basename(shellName) === 'zsh' ? '--no-rcs' : '--norc';
+    return (
+      `Hint: The shell exited immediately — its startup file (.bashrc/.zshrc) may have errors.\n` +
+      `Try skipping startup files: ${shellName} ${noRcFlag}`
+    );
+  }
+
+  it('should suggest --norc for bare bash that exits quickly', () => {
+    const hint = buildHint('bash');
+    assert.ok(hint.includes('--norc'), 'Hint must include --norc for bash');
+    assert.ok(
+      hint.includes('bash --norc'),
+      'Hint must show the full corrected command'
+    );
+    assert.ok(
+      hint.includes('startup file'),
+      'Hint must explain why the shell exited'
+    );
+  });
+
+  it('should suggest --no-rcs for bare zsh that exits quickly', () => {
+    const hint = buildHint('zsh');
+    assert.ok(hint.includes('--no-rcs'), 'Hint must include --no-rcs for zsh');
+    assert.ok(
+      hint.includes('zsh --no-rcs'),
+      'Hint must show the full corrected command'
+    );
+  });
+
+  it('should suggest --norc for /bin/bash path that exits quickly', () => {
+    const hint = buildHint('/bin/bash');
+    assert.ok(
+      hint.includes('/bin/bash --norc'),
+      'Hint must include full path with --norc'
+    );
+  });
+
+  it('should suggest --norc for bare sh that exits quickly', () => {
+    const hint = buildHint('sh');
+    assert.ok(hint.includes('sh --norc'), 'Hint must suggest --norc for sh');
+  });
+
+  it('should confirm workaround: bash --norc is detected as bare shell', () => {
+    // The workaround (bash --norc) must still be recognized as a bare shell
+    // so it gets passed directly to docker without -c wrapping
+    assert.strictEqual(
+      isInteractiveShellCommand('bash --norc'),
+      true,
+      'bash --norc must be a bare shell (no -c wrapping)'
+    );
+    assert.strictEqual(
+      isInteractiveShellCommand('zsh --no-rcs'),
+      true,
+      'zsh --no-rcs must be a bare shell (no -c wrapping)'
     );
   });
 });

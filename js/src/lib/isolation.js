@@ -162,7 +162,7 @@ function detectShellInEnvironment(
           return result.stdout.trim();
         }
       } catch {
-        // Continue to next shell
+        // ignore; try next shell
       }
     }
 
@@ -292,10 +292,7 @@ function runScreenWithLogCapture(command, sessionName, shellInfo, user = null) {
         }
       }
 
-      // Use spawnSync with array arguments to avoid shell quoting issues
-      // This is critical for commands containing quotes (e.g., echo "hello")
-      // Using execSync with a constructed string would break on nested quotes
-      // See issue #25 for details
+      // Use spawnSync with array args (not execSync string) to avoid quoting issues (issue #25)
       const result = spawnSync('screen', screenArgs, {
         stdio: 'inherit',
       });
@@ -451,9 +448,7 @@ function runInScreen(command, options = {}) {
         console.log(`[DEBUG] keepAlive: ${options.keepAlive || false}`);
       }
 
-      // Use spawnSync with array arguments to avoid shell quoting issues
-      // This is critical for commands containing quotes (e.g., echo "hello")
-      // See issue #25 for details
+      // Use spawnSync with array args (not execSync string) to avoid quoting issues (issue #25)
       const result = spawnSync('screen', screenArgs, {
         stdio: 'inherit',
       });
@@ -476,15 +471,8 @@ function runInScreen(command, options = {}) {
         message,
       });
     } else {
-      // Attached mode: always use detached mode with log capture
-      // This ensures output is captured and displayed correctly, even for quick commands
-      // that would otherwise have their output lost in a rapidly-terminating screen session.
-      // Direct screen invocation (screen -S session shell -c command) loses output because:
-      // 1. Screen creates a virtual terminal for the session
-      // 2. Command output goes to that virtual terminal
-      // 3. When the command exits quickly, screen shows "[screen is terminating]"
-      // 4. The virtual terminal is destroyed and output is lost
-      // See issue #25 for details: https://github.com/link-foundation/start/issues/25
+      // Attached mode: use detached mode with log capture for reliable output
+      // (direct attached screen loses output for quick commands; see issue #25)
       if (DEBUG) {
         console.log(
           `[DEBUG] Using detached mode with log capture for reliable output`
@@ -860,15 +848,27 @@ function runInDocker(command, options = {}) {
       }
 
       return new Promise((resolve) => {
+        const startTime = Date.now();
         const child = spawn('docker', dockerArgs, {
           stdio: 'inherit',
         });
 
         child.on('exit', (code) => {
+          const durationMs = Date.now() - startTime;
+          let message = `Docker container "${containerName}" exited with code ${code}`;
+          // Bare shell exited non-zero quickly → startup file error; suggest --norc (issue #84).
+          if (isBareShell && code !== 0 && durationMs < 3000) {
+            const shell0 = command.trim().split(/\s+/)[0];
+            // prettier-ignore
+            const norc = path.basename(shell0) === 'zsh' ? '--no-rcs' : '--norc';
+            const hint = `Hint: The shell exited immediately — its startup file (.bashrc/.zshrc) may have errors.\nTry skipping startup files: ${shell0} ${norc}`;
+            console.log(hint);
+            message += `\n${hint}`;
+          }
           resolve({
             success: code === 0,
             containerName,
-            message: `Docker container "${containerName}" exited with code ${code}`,
+            message,
             exitCode: code,
           });
         });
