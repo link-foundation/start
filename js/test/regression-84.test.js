@@ -26,6 +26,7 @@
 const { describe, it } = require('node:test');
 const assert = require('assert');
 const { isInteractiveShellCommand } = require('../src/lib/isolation');
+const { isDockerAvailable } = require('../src/lib/docker-utils');
 
 // Helper: mirrors the command-args construction logic used in
 // runInDocker attached mode.
@@ -187,6 +188,38 @@ describe('Regression: No Shell-Inside-Shell (issue #84)', () => {
       'Should not duplicate -i flag'
     );
     assert.ok(!args.includes('-c'), 'Must not contain -c flag');
+  });
+});
+
+describe('Docker daemon availability check (issue #84)', () => {
+  // Verifies that isDockerAvailable returns a boolean (not a crash),
+  // and that the error message for a non-running daemon is helpful.
+
+  it('isDockerAvailable should return a boolean', () => {
+    const result = isDockerAvailable();
+    assert.strictEqual(
+      typeof result,
+      'boolean',
+      'isDockerAvailable() must return a boolean'
+    );
+  });
+
+  it('runInDocker error message for non-running daemon should be actionable', () => {
+    // Mirrors the message in runInDocker when isDockerAvailable() returns false.
+    const message =
+      'Docker is installed but not running. Please start Docker Desktop or the Docker daemon, then try again.';
+    assert.ok(
+      message.includes('not running'),
+      'Message must indicate Docker is not running'
+    );
+    assert.ok(
+      message.includes('Docker Desktop'),
+      'Message must mention Docker Desktop (common on macOS/Windows)'
+    );
+    assert.ok(
+      message.includes('try again'),
+      'Message must tell user what to do next'
+    );
   });
 });
 

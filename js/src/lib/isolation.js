@@ -233,9 +233,7 @@ function wrapCommandWithUser(command, user) {
   if (!user) {
     return command;
   }
-  // Use sudo -u to run command as specified user
-  // -E preserves environment variables
-  // -n ensures non-interactive (fails if password required)
+  // sudo -n: non-interactive (fails if password required); -u: run as user
   return `sudo -n -u ${user} sh -c '${command.replace(/'/g, "'\\''")}'`;
 }
 
@@ -704,8 +702,14 @@ function runInSsh(command, options = {}) {
   }
 }
 
-// Import docker image utilities from docker-utils
-const { dockerImageExists, dockerPullImage } = require('./docker-utils');
+// Import docker utilities from docker-utils
+const {
+  dockerImageExists,
+  dockerPullImage,
+  isDockerAvailable,
+  getDefaultDockerImage,
+  canRunLinuxDockerImages,
+} = require('./docker-utils');
 
 /**
  * Run command in Docker container
@@ -720,6 +724,15 @@ function runInDocker(command, options = {}) {
       containerName: null,
       message:
         'docker is not installed. Install Docker from https://docs.docker.com/get-docker/',
+    });
+  }
+
+  if (!isDockerAvailable()) {
+    return Promise.resolve({
+      success: false,
+      containerName: null,
+      message:
+        'Docker is installed but not running. Please start Docker Desktop or the Docker daemon, then try again.',
     });
   }
 
@@ -752,7 +765,6 @@ function runInDocker(command, options = {}) {
     : detectShellInEnvironment('docker', options, options.shell);
   const shellInteractiveFlag = getShellInteractiveFlag(shellToUse);
 
-  // Print the user command (this appears after any virtual commands like docker pull)
   const { createCommandLine } = require('./output-blocks');
   console.log(createCommandLine(command));
   console.log();
@@ -761,8 +773,7 @@ function runInDocker(command, options = {}) {
     if (options.detached) {
       // Detached mode: docker run -d --name <name> [--user <user>] <image> <shell> -c '<command>'
       const dockerArgs = ['run', '-d', '--name', containerName];
-
-      // --rm must come before the image name
+      // --rm must come before the image name in args
       if (options.autoRemoveDockerContainer) {
         dockerArgs.splice(2, 0, '--rm');
       }
@@ -825,7 +836,6 @@ function runInDocker(command, options = {}) {
       if (DEBUG) {
         console.log(`[DEBUG] shell: ${shellToUse}`);
       }
-
       const shellCmdArgs = shellInteractiveFlag
         ? [shellToUse, shellInteractiveFlag]
         : [shellToUse];
@@ -849,9 +859,7 @@ function runInDocker(command, options = {}) {
 
       return new Promise((resolve) => {
         const startTime = Date.now();
-        const child = spawn('docker', dockerArgs, {
-          stdio: 'inherit',
-        });
+        const child = spawn('docker', dockerArgs, { stdio: 'inherit' });
 
         child.on('exit', (code) => {
           const durationMs = Date.now() - startTime;
@@ -951,7 +959,6 @@ function resetScreenVersionCache() {
   screenVersionChecked = false;
 }
 
-// Log utilities and runAsIsolatedUser extracted to isolation-log-utils.js
 const {
   getTimestamp,
   generateLogFilename,
@@ -962,12 +969,6 @@ const {
   createLogPath,
   runAsIsolatedUser,
 } = require('./isolation-log-utils');
-
-// Re-export docker utilities from docker-utils for backwards compatibility
-const {
-  getDefaultDockerImage,
-  canRunLinuxDockerImages,
-} = require('./docker-utils');
 
 module.exports = {
   isCommandAvailable,
@@ -992,7 +993,6 @@ module.exports = {
   supportsLogfileOption,
   resetScreenVersionCache,
   canRunLinuxDockerImages,
-  // Re-exported from docker-utils for backwards compatibility
   getDefaultDockerImage,
   dockerImageExists,
   dockerPullImage,
