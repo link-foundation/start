@@ -6,7 +6,11 @@
  * `$ --isolated docker -- bash` caused:
  *   docker run ... image /bin/bash -i -c bash   (WRONG: bash inside bash)
  * instead of:
- *   docker run ... image bash                    (CORRECT: bare shell)
+ *   docker run ... image bash -i                 (CORRECT: bare shell with explicit -i)
+ *
+ * The -i flag is required so that bash reliably starts in interactive mode,
+ * since docker's PTY bridging through Node.js spawn may not set up a TTY that
+ * bash auto-detects. Without -i, bash may exit immediately (post-fix regression).
  *
  * The same regression applies to zsh, sh, and all other isolation backends.
  *
@@ -16,7 +20,7 @@
  *
  * Reference: https://github.com/link-foundation/start/issues/84
  * Fixed in: PR #85 (v0.24.1) via isInteractiveShellCommand()
- * Hint added in: PR #87 for the post-fix regression (broken .bashrc in sandbox)
+ * Fixed in: PR #87 adding explicit -i for bare shells in docker attached mode
  */
 
 const { describe, it } = require('node:test');
@@ -24,19 +28,30 @@ const assert = require('assert');
 const { isInteractiveShellCommand } = require('../src/lib/isolation');
 
 // Helper: mirrors the command-args construction logic used in
-// runInDocker (attached + detached), runInScreen, and runInSsh.
+// runInDocker attached mode.
 // If this helper returns args containing '-c' for a bare shell command,
 // the shell-inside-shell bug is present.
 function buildCmdArgs(command, shellToUse = '/bin/bash') {
+  const path = require('path');
   const shellName = shellToUse.split('/').pop();
   const shellInteractiveFlag =
     shellName === 'bash' || shellName === 'zsh' ? '-i' : null;
   const shellArgs = shellInteractiveFlag
     ? [shellToUse, shellInteractiveFlag]
     : [shellToUse];
-  return isInteractiveShellCommand(command)
-    ? command.trim().split(/\s+/)
-    : [...shellArgs, '-c', command];
+  if (isInteractiveShellCommand(command)) {
+    // Bare shell: pass directly with explicit -i for bash/zsh (issue #84 fix)
+    const parts = command.trim().split(/\s+/);
+    const bareShellFlag =
+      path.basename(parts[0]) === 'bash' || path.basename(parts[0]) === 'zsh'
+        ? '-i'
+        : null;
+    if (bareShellFlag && !parts.includes(bareShellFlag)) {
+      return [parts[0], bareShellFlag, ...parts.slice(1)];
+    }
+    return parts;
+  }
+  return [...shellArgs, '-c', command];
 }
 
 describe('isInteractiveShellCommand additional cases (issue #84)', () => {
@@ -79,15 +94,16 @@ describe('Regression: No Shell-Inside-Shell (issue #84)', () => {
   // Each test verifies that the command-arg construction logic does NOT
   // wrap a bare shell invocation inside another shell with `-c`.
   //
-  // Before fix: buildCmdArgs('bash') → ['/bin/bash', '-i', '-c', 'bash']
-  // After fix:  buildCmdArgs('bash') → ['bash']
+  // Before fix (v0.24.0): buildCmdArgs('bash') → ['/bin/bash', '-i', '-c', 'bash']
+  // After fix (v0.24.1):  buildCmdArgs('bash') → ['bash', '-i']
+  //   (bare shell passed directly with explicit -i for reliable interactive mode)
 
-  it('should pass "bash" directly, not wrap in shell -c', () => {
+  it('should pass "bash" with -i flag, not wrap in shell -c', () => {
     const args = buildCmdArgs('bash');
     assert.deepStrictEqual(
       args,
-      ['bash'],
-      `Expected ["bash"], got: ${JSON.stringify(args)}`
+      ['bash', '-i'],
+      `Expected ["bash", "-i"], got: ${JSON.stringify(args)}`
     );
     assert.ok(
       !args.includes('-c'),
@@ -95,16 +111,16 @@ describe('Regression: No Shell-Inside-Shell (issue #84)', () => {
     );
   });
 
-  it('should pass "zsh" directly, not wrap in shell -c', () => {
+  it('should pass "zsh" with -i flag, not wrap in shell -c', () => {
     const args = buildCmdArgs('zsh');
-    assert.deepStrictEqual(args, ['zsh']);
+    assert.deepStrictEqual(args, ['zsh', '-i']);
     assert.ok(
       !args.includes('-c'),
       'Must not contain -c flag (shell-inside-shell)'
     );
   });
 
-  it('should pass "sh" directly, not wrap in shell -c', () => {
+  it('should pass "sh" directly without -i (sh does not use -i flag), not wrap in shell -c', () => {
     const args = buildCmdArgs('sh', 'sh');
     assert.deepStrictEqual(args, ['sh']);
     assert.ok(
@@ -113,24 +129,24 @@ describe('Regression: No Shell-Inside-Shell (issue #84)', () => {
     );
   });
 
-  it('should pass "/bin/bash" directly, not wrap in shell -c', () => {
+  it('should pass "/bin/bash" with -i flag, not wrap in shell -c', () => {
     const args = buildCmdArgs('/bin/bash');
-    assert.deepStrictEqual(args, ['/bin/bash']);
+    assert.deepStrictEqual(args, ['/bin/bash', '-i']);
     assert.ok(
       !args.includes('-c'),
       'Must not contain -c flag (shell-inside-shell)'
     );
   });
 
-  it('should pass "bash --norc" directly (workaround for broken .bashrc)', () => {
+  it('should pass "bash --norc" with -i flag (workaround for broken .bashrc)', () => {
     const args = buildCmdArgs('bash --norc');
-    assert.deepStrictEqual(args, ['bash', '--norc']);
+    assert.deepStrictEqual(args, ['bash', '-i', '--norc']);
     assert.ok(!args.includes('-c'), 'Must not contain -c flag');
   });
 
-  it('should pass "bash -l" directly (login shell)', () => {
+  it('should pass "bash -l" directly (login shell, already has its own init)', () => {
     const args = buildCmdArgs('bash -l');
-    assert.deepStrictEqual(args, ['bash', '-l']);
+    assert.deepStrictEqual(args, ['bash', '-i', '-l']);
     assert.ok(!args.includes('-c'), 'Must not contain -c flag');
   });
 
@@ -160,6 +176,17 @@ describe('Regression: No Shell-Inside-Shell (issue #84)', () => {
       args.includes('-c'),
       'bash -c commands should be treated as regular commands'
     );
+  });
+
+  it('should not duplicate -i if user already passes "bash -i"', () => {
+    // If user explicitly passes -i, we should not add another -i
+    const args = buildCmdArgs('bash -i');
+    assert.deepStrictEqual(
+      args,
+      ['bash', '-i'],
+      'Should not duplicate -i flag'
+    );
+    assert.ok(!args.includes('-c'), 'Must not contain -c flag');
   });
 });
 

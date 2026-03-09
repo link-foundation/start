@@ -430,14 +430,10 @@ function runInScreen(command, options = {}) {
 
     if (options.detached) {
       // Detached mode: screen -dmS <session> <shell> -c '<command>'
-      // By default (keepAlive=false), the session will exit after command completes
-      // With keepAlive=true, we start a shell that runs the command but stays alive
-
       if (options.keepAlive) {
         // With keep-alive: run command, then keep shell open
         effectiveCommand = `${effectiveCommand}; exec ${shell}`;
       }
-      // Without keep-alive: command runs and session exits naturally when done
 
       const screenArgs = isInteractiveShellCommand(command)
         ? ['-dmS', sessionName, ...command.trim().split(/\s+/)]
@@ -521,14 +517,10 @@ function runInTmux(command, options = {}) {
   try {
     if (options.detached) {
       // Detached mode: tmux new-session -d -s <session> '<command>'
-      // By default (keepAlive=false), the session will exit after command completes
-      // With keepAlive=true, we keep the shell alive after the command
-
       if (options.keepAlive) {
         // With keep-alive: run command, then keep shell open
         effectiveCommand = `${effectiveCommand}; exec ${shell}`;
       }
-      // Without keep-alive: command runs and session exits naturally when done
 
       if (DEBUG) {
         console.log(
@@ -775,7 +767,6 @@ function runInDocker(command, options = {}) {
         dockerArgs.splice(2, 0, '--rm');
       }
 
-      // Add --user flag if specified
       if (options.user) {
         dockerArgs.push('--user', options.user);
       }
@@ -838,9 +829,18 @@ function runInDocker(command, options = {}) {
       const shellCmdArgs = shellInteractiveFlag
         ? [shellToUse, shellInteractiveFlag]
         : [shellToUse];
-      const attachedCmdArgs = isBareShell
-        ? command.trim().split(/\s+/)
-        : [...shellCmdArgs, '-c', command];
+      // Bare shell: pass directly with -i (avoids bash-inside-bash, issue #84; -i ensures interactive).
+      let attachedCmdArgs;
+      if (isBareShell) {
+        const parts = command.trim().split(/\s+/);
+        const bareFlag = getShellInteractiveFlag(parts[0]);
+        attachedCmdArgs =
+          bareFlag && !parts.includes(bareFlag)
+            ? [parts[0], bareFlag, ...parts.slice(1)]
+            : parts;
+      } else {
+        attachedCmdArgs = [...shellCmdArgs, '-c', command];
+      }
       dockerArgs.push(options.image, ...attachedCmdArgs);
 
       if (DEBUG) {

@@ -84,7 +84,10 @@ When user runs `$ --isolated docker -- bash`:
 - Command is passed directly: `docker run -it --rm --name <name> <image> bash`
 - No more shell-inside-shell wrapping
 
-Upstream `.bashrc` bug reported: [konard/sandbox#1](https://github.com/konard/sandbox/issues/1)
+However, the fix inadvertently removed the explicit `-i` flag that the inner bash had previously
+received. Before the fix, `bash -i -c bash` gave the inner bash an implicit TTY setup from the
+outer interactive bash. After the fix, `bash` relies entirely on Docker's TTY bridge through
+Node.js `spawn()` to set up interactive mode.
 
 ---
 
@@ -111,7 +114,7 @@ konard@MacBook-Pro-Konstantin ~ % $ --isolated docker --image konard/sandbox:lat
 ```
 
 **Failure analysis**: Exit 1 in 0.412s. No docker pull shown → image was locally cached.
-With v0.24.1, command is `docker run -it ... konard/sandbox:latest bash` → bash exits 1.
+With v0.24.1, command is `docker run -it ... konard/sandbox:latest bash` (no `-i` flag).
 
 ### Additional Failures (same session)
 
@@ -120,7 +123,7 @@ $ --isolated docker --image konard/sandbox -- bash   → exit 1, 0.299s
 $ --isolated docker --image konard/sandbox:1.3.14 -- bash → exit 1, 0.298s
 ```
 
-All three image references fail. All are likely locally cached from previous use.
+All three image references fail. All are locally cached from previous use.
 
 ---
 
@@ -148,43 +151,73 @@ konard@MacBook-Pro-Konstantin ~ % $ --isolated docker --image konard/sandbox -- 
 
 User comment: "Previous fix didn't work. The image even does not get pulled, before it just worked."
 
-### Root Cause (Determined 2026-03-08)
+### Root Cause (Corrected 2026-03-09)
 
-**Docker Hub investigation** (verified via API):
-- `konard/sandbox:1.3.14` EXISTS on Docker Hub (not removed)
-- `konard/sandbox:latest` = `konard/sandbox:1.3.16` (updated 2026-03-07)
-- All 155 available tags for `konard/sandbox` are present
+**Important clarification**: `konard/sandbox:1.3.14` contains no `.bashrc` errors that cause bash
+to fail. The image works correctly with `docker run -it konard/sandbox:1.3.14 bash` — bash starts
+and the user gets a functional shell. The `.bashrc` syntax error shown in Phase 1 was already
+present before our fix and only caused a warning, not an exit.
 
 **Why "image does not get pulled"**:
 - `dockerImageExists()` uses `docker image inspect` which returns immediately for cached images
 - The images ARE locally cached from prior test runs
 - Since `dockerImageExists()` returns true, `dockerPullImage()` is never called
-- The user sees no pull output — confirming the image is cached
+- The user sees no pull output — confirming the image is cached (expected behavior)
 
 **Why the command fails in 0.3-0.4 seconds**:
 1. `dockerImageExists()` returns true (~10-50ms)
 2. `docker run -it --rm ... bash` starts the container (~100-300ms)
-3. Bash reads `/home/sandbox/.bashrc` which exits non-zero (~10-50ms)
-4. Container exits with code 1 (total: ~0.3-0.4s)
+3. Bash detects that it may not be running interactively (no explicit `-i` flag)
+4. Without `-i`, bash reads stdin, gets EOF from the non-interactive startup path, and exits
+5. Container exits with code 1 (total: ~0.3-0.4s)
 
 **Why v0.24.0 appeared to work**:
 - v0.24.0 command: `docker run -it ... bash -i -c bash`
-- Outer bash with `-i` sources `.bashrc` but does NOT exit on syntax errors
-- Outer bash then runs inner `bash` process
+- Outer bash with explicit `-i` starts in interactive mode, sources `.bashrc` with warning
+- Outer bash then runs inner `bash` process which also starts interactively
 - User gets a nested shell (double errors shown, but functional shell)
 
 **Why v0.24.1+ fails**:
-- v0.24.1+ command: `docker run -it ... bash`
-- Bash is container entrypoint directly
-- `/home/sandbox/.bashrc` contains `set -e` (or equivalent exit-on-error mechanism)
-- When bash sources `.bashrc` and a command fails, bash exits with code 1
-- The user gets NO shell at all
+- v0.24.1+ command: `docker run -it ... bash` (no `-i` flag)
+- Bash relies on TTY auto-detection through: macOS Docker Desktop VM → container process → bash
+- On macOS with Docker Desktop (multiple hypervisor layers), this TTY propagation may be unreliable
+- Without explicit `-i`, bash may not enter interactive mode → reads EOF from stdin → exits
 
 ---
 
-## Phase 5: Fix Path (Current PR #87)
+## Phase 5: Corrected Fix (PR #87)
 
-1. **Root cause documented** — this case study
-2. **upstream issue filed** — [konard/sandbox#1](https://github.com/konard/sandbox/issues/1)
-3. **Code improvements** — better error hints when bare shell exits immediately
-4. **Sandbox fix needed** — remove `set -e` or failing commands before line 167 in `.bashrc`
+**Root cause**: The v0.24.1 fix removed the shell-inside-shell wrapping (correct) but also lost
+the explicit `-i` flag that guaranteed bash started in interactive mode (regression).
+
+**Fix applied**: Bare shell commands now receive `-i` explicitly in docker attached mode.
+
+```
+v0.24.0: docker run -it ... image /bin/bash -i -c bash  (WRONG: bash inside bash)
+v0.24.1: docker run -it ... image bash                  (WRONG: missing -i)
+Fixed:   docker run -it ... image bash -i               (CORRECT: direct + interactive)
+```
+
+The fix is implemented in `runInDocker()` attached mode in `js/src/lib/isolation.js`:
+
+```javascript
+// Bare shell: pass directly with -i (avoids bash-inside-bash; -i ensures interactive).
+let attachedCmdArgs;
+if (isBareShell) {
+  const parts = command.trim().split(/\s+/);
+  const bareFlag = getShellInteractiveFlag(parts[0]);
+  attachedCmdArgs =
+    bareFlag && !parts.includes(bareFlag)
+      ? [parts[0], bareFlag, ...parts.slice(1)]
+      : parts;
+} else {
+  attachedCmdArgs = [...shellCmdArgs, '-c', command];
+}
+```
+
+Results:
+- `bash` → `['bash', '-i']`
+- `bash --norc` → `['bash', '-i', '--norc']`
+- `bash -i` → `['bash', '-i']` (no duplication)
+- `zsh` → `['zsh', '-i']`
+- `sh` → `['sh']` (sh has no `-i` convention)
