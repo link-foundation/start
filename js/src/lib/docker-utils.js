@@ -152,6 +152,21 @@ function dockerPullImage(image) {
 }
 
 /**
+ * Check if the Docker CLI is installed (command exists, regardless of daemon state)
+ * @returns {boolean} True if the docker command is found on PATH
+ */
+function isDockerInstalled() {
+  try {
+    const isWindows = process.platform === 'win32';
+    const checkCmd = isWindows ? 'where' : 'which';
+    execSync(`${checkCmd} docker`, { stdio: ['pipe', 'pipe', 'pipe'] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Check if Docker is available (command exists and daemon is running)
  * @returns {boolean} True if Docker is available
  */
@@ -203,6 +218,7 @@ module.exports = {
   getDefaultDockerImage,
   dockerImageExists,
   dockerPullImage,
+  isDockerInstalled,
   isDockerAvailable,
   canRunLinuxDockerImages,
 };

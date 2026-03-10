@@ -723,7 +723,7 @@ function runInDocker(command, options = {}) {
       success: false,
       containerName: null,
       message:
-        'docker is not installed. Install Docker from https://docs.docker.com/get-docker/',
+        'Docker is not installed. Install Docker from https://docs.docker.com/get-docker/',
     });
   }
 

@@ -591,6 +591,10 @@ async function runWithIsolation(
     result.exitCode !== undefined ? result.exitCode : result.success ? 0 : 1;
   const endTime = getTimestamp();
 
+  // Print failure message to stderr so user sees why isolation failed (e.g. Docker not installed)
+  if (!result.success && result.message) {
+    console.error(`Error: ${result.message}`);
+  }
   // Add result to log content
   logContent += `${result.message}\n`;
   logContent += createLogFooter(endTime, exitCode);
