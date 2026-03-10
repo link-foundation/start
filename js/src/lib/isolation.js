@@ -718,22 +718,22 @@ const {
  * @returns {Promise<{success: boolean, containerName: string, message: string}>}
  */
 function runInDocker(command, options = {}) {
-  if (!isCommandAvailable('docker')) {
-    return Promise.resolve({
-      success: false,
-      containerName: null,
-      message:
-        'Docker is not installed. Install Docker from https://docs.docker.com/get-docker/',
-    });
-  }
+  const dockerNotAvailableError = !isCommandAvailable('docker')
+    ? 'Docker is not installed. Install Docker from https://docs.docker.com/get-docker/'
+    : !isDockerAvailable()
+      ? 'Docker is installed but not running. Please start Docker Desktop or the Docker daemon, then try again.'
+      : null;
 
-  if (!isDockerAvailable()) {
-    return Promise.resolve({
-      success: false,
-      containerName: null,
-      message:
-        'Docker is installed but not running. Please start Docker Desktop or the Docker daemon, then try again.',
-    });
+  if (dockerNotAvailableError) {
+    if (options.image) {
+      // Show virtual docker pull command before error so user understands what was attempted (issue #89)
+      const { createVirtualCommandBlock: cvb, createVirtualCommandResult: cvr, createTimelineSeparator: cts } = require('./output-blocks');
+      console.log(cvb(`docker pull ${options.image}`));
+      console.log();
+      console.log(cvr(false));
+      console.log(cts());
+    }
+    return Promise.resolve({ success: false, containerName: null, message: dockerNotAvailableError });
   }
 
   if (!options.image) {
