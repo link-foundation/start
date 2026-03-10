@@ -53,7 +53,9 @@ describe('Virtual docker pull output before Docker error (issue #89)', () => {
     } = require('../src/lib/output-blocks');
 
     const image = 'konard/sandbox';
-    const expectedCommandLine = createVirtualCommandBlock(`docker pull ${image}`);
+    const expectedCommandLine = createVirtualCommandBlock(
+      `docker pull ${image}`
+    );
     const expectedFailureMarker = createVirtualCommandResult(false);
 
     // Verify the expected format
@@ -173,7 +175,7 @@ describe('runInDocker virtual pull output contract (issue #89)', () => {
 
     // Verify that the docker pull output code is present (fix for issue #89)
     assert.ok(
-      isolationSrc.includes("docker pull ${options.image}"),
+      isolationSrc.includes('docker pull ${options.image}'),
       'Source must contain docker pull with image variable (fix for issue #89)'
     );
 
@@ -187,14 +189,14 @@ describe('runInDocker virtual pull output contract (issue #89)', () => {
     // The docker pull output console.log must appear before the return statement
     // in the combined error block
     const dockerPullConsoleIdx = isolationSrc.indexOf(
-      'console.log(cvb(`docker pull'
+      'outputBlocks.createVirtualCommandBlock'
     );
     const returnDockerErrorIdx = isolationSrc.indexOf(
       'message: dockerNotAvailableError'
     );
     assert.ok(
       dockerPullConsoleIdx !== -1,
-      'Source must call console.log with docker pull command (via cvb alias)'
+      'Source must call outputBlocks.createVirtualCommandBlock for docker pull command'
     );
     assert.ok(
       returnDockerErrorIdx !== -1,

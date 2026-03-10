@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { generateSessionName } = require('./args-parser');
+const outputBlocks = require('./output-blocks');
 
 const setTimeout = globalThis.setTimeout;
 
@@ -702,7 +703,6 @@ function runInSsh(command, options = {}) {
   }
 }
 
-// Import docker utilities from docker-utils
 const {
   dockerImageExists,
   dockerPullImage,
@@ -726,14 +726,17 @@ function runInDocker(command, options = {}) {
 
   if (dockerNotAvailableError) {
     if (options.image) {
-      // Show virtual docker pull command before error so user understands what was attempted (issue #89)
-      const { createVirtualCommandBlock: cvb, createVirtualCommandResult: cvr, createTimelineSeparator: cts } = require('./output-blocks');
-      console.log(cvb(`docker pull ${options.image}`));
+      const pullCmd = `docker pull ${options.image}`;
+      console.log(outputBlocks.createVirtualCommandBlock(pullCmd));
       console.log();
-      console.log(cvr(false));
-      console.log(cts());
+      console.log(outputBlocks.createVirtualCommandResult(false));
+      console.log(outputBlocks.createTimelineSeparator());
     }
-    return Promise.resolve({ success: false, containerName: null, message: dockerNotAvailableError });
+    return Promise.resolve({
+      success: false,
+      containerName: null,
+      message: dockerNotAvailableError,
+    });
   }
 
   if (!options.image) {
@@ -765,8 +768,7 @@ function runInDocker(command, options = {}) {
     : detectShellInEnvironment('docker', options, options.shell);
   const shellInteractiveFlag = getShellInteractiveFlag(shellToUse);
 
-  const { createCommandLine } = require('./output-blocks');
-  console.log(createCommandLine(command));
+  console.log(outputBlocks.createCommandLine(command));
   console.log();
 
   try {
@@ -951,9 +953,7 @@ function runIsolated(backend, command, options = {}) {
   }
 }
 
-/**
- * Reset screen version cache (useful for testing)
- */
+/** Reset screen version cache (useful for testing) */
 function resetScreenVersionCache() {
   cachedScreenVersion = null;
   screenVersionChecked = false;
