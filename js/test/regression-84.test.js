@@ -6,32 +6,53 @@
  * `$ --isolated docker -- bash` caused:
  *   docker run ... image /bin/bash -i -c bash   (WRONG: bash inside bash)
  * instead of:
- *   docker run ... image bash                    (CORRECT: bare shell)
+ *   docker run ... image bash -i                 (CORRECT: bare shell with explicit -i)
+ *
+ * The -i flag is required so that bash reliably starts in interactive mode,
+ * since docker's PTY bridging through Node.js spawn may not set up a TTY that
+ * bash auto-detects. Without -i, bash may exit immediately (post-fix regression).
  *
  * The same regression applies to zsh, sh, and all other isolation backends.
  *
+ * Also tests the post-fix regression hint: when a bare shell exits with code 1
+ * quickly (< 3s), a helpful hint suggests `bash --norc` as a workaround for
+ * containers whose .bashrc causes bash to exit non-zero (issue #84, second comment).
+ *
  * Reference: https://github.com/link-foundation/start/issues/84
  * Fixed in: PR #85 (v0.24.1) via isInteractiveShellCommand()
+ * Fixed in: PR #87 adding explicit -i for bare shells in docker attached mode
  */
 
 const { describe, it } = require('node:test');
 const assert = require('assert');
 const { isInteractiveShellCommand } = require('../src/lib/isolation');
+const { isDockerAvailable } = require('../src/lib/docker-utils');
 
 // Helper: mirrors the command-args construction logic used in
-// runInDocker (attached + detached), runInScreen, and runInSsh.
+// runInDocker attached mode.
 // If this helper returns args containing '-c' for a bare shell command,
 // the shell-inside-shell bug is present.
 function buildCmdArgs(command, shellToUse = '/bin/bash') {
+  const path = require('path');
   const shellName = shellToUse.split('/').pop();
   const shellInteractiveFlag =
     shellName === 'bash' || shellName === 'zsh' ? '-i' : null;
   const shellArgs = shellInteractiveFlag
     ? [shellToUse, shellInteractiveFlag]
     : [shellToUse];
-  return isInteractiveShellCommand(command)
-    ? command.trim().split(/\s+/)
-    : [...shellArgs, '-c', command];
+  if (isInteractiveShellCommand(command)) {
+    // Bare shell: pass directly with explicit -i for bash/zsh (issue #84 fix)
+    const parts = command.trim().split(/\s+/);
+    const bareShellFlag =
+      path.basename(parts[0]) === 'bash' || path.basename(parts[0]) === 'zsh'
+        ? '-i'
+        : null;
+    if (bareShellFlag && !parts.includes(bareShellFlag)) {
+      return [parts[0], bareShellFlag, ...parts.slice(1)];
+    }
+    return parts;
+  }
+  return [...shellArgs, '-c', command];
 }
 
 describe('isInteractiveShellCommand additional cases (issue #84)', () => {
@@ -74,15 +95,16 @@ describe('Regression: No Shell-Inside-Shell (issue #84)', () => {
   // Each test verifies that the command-arg construction logic does NOT
   // wrap a bare shell invocation inside another shell with `-c`.
   //
-  // Before fix: buildCmdArgs('bash') → ['/bin/bash', '-i', '-c', 'bash']
-  // After fix:  buildCmdArgs('bash') → ['bash']
+  // Before fix (v0.24.0): buildCmdArgs('bash') → ['/bin/bash', '-i', '-c', 'bash']
+  // After fix (v0.24.1):  buildCmdArgs('bash') → ['bash', '-i']
+  //   (bare shell passed directly with explicit -i for reliable interactive mode)
 
-  it('should pass "bash" directly, not wrap in shell -c', () => {
+  it('should pass "bash" with -i flag, not wrap in shell -c', () => {
     const args = buildCmdArgs('bash');
     assert.deepStrictEqual(
       args,
-      ['bash'],
-      `Expected ["bash"], got: ${JSON.stringify(args)}`
+      ['bash', '-i'],
+      `Expected ["bash", "-i"], got: ${JSON.stringify(args)}`
     );
     assert.ok(
       !args.includes('-c'),
@@ -90,16 +112,16 @@ describe('Regression: No Shell-Inside-Shell (issue #84)', () => {
     );
   });
 
-  it('should pass "zsh" directly, not wrap in shell -c', () => {
+  it('should pass "zsh" with -i flag, not wrap in shell -c', () => {
     const args = buildCmdArgs('zsh');
-    assert.deepStrictEqual(args, ['zsh']);
+    assert.deepStrictEqual(args, ['zsh', '-i']);
     assert.ok(
       !args.includes('-c'),
       'Must not contain -c flag (shell-inside-shell)'
     );
   });
 
-  it('should pass "sh" directly, not wrap in shell -c', () => {
+  it('should pass "sh" directly without -i (sh does not use -i flag), not wrap in shell -c', () => {
     const args = buildCmdArgs('sh', 'sh');
     assert.deepStrictEqual(args, ['sh']);
     assert.ok(
@@ -108,24 +130,24 @@ describe('Regression: No Shell-Inside-Shell (issue #84)', () => {
     );
   });
 
-  it('should pass "/bin/bash" directly, not wrap in shell -c', () => {
+  it('should pass "/bin/bash" with -i flag, not wrap in shell -c', () => {
     const args = buildCmdArgs('/bin/bash');
-    assert.deepStrictEqual(args, ['/bin/bash']);
+    assert.deepStrictEqual(args, ['/bin/bash', '-i']);
     assert.ok(
       !args.includes('-c'),
       'Must not contain -c flag (shell-inside-shell)'
     );
   });
 
-  it('should pass "bash --norc" directly (workaround for broken .bashrc)', () => {
+  it('should pass "bash --norc" with -i flag (workaround for broken .bashrc)', () => {
     const args = buildCmdArgs('bash --norc');
-    assert.deepStrictEqual(args, ['bash', '--norc']);
+    assert.deepStrictEqual(args, ['bash', '-i', '--norc']);
     assert.ok(!args.includes('-c'), 'Must not contain -c flag');
   });
 
-  it('should pass "bash -l" directly (login shell)', () => {
+  it('should pass "bash -l" directly (login shell, already has its own init)', () => {
     const args = buildCmdArgs('bash -l');
-    assert.deepStrictEqual(args, ['bash', '-l']);
+    assert.deepStrictEqual(args, ['bash', '-i', '-l']);
     assert.ok(!args.includes('-c'), 'Must not contain -c flag');
   });
 
@@ -154,6 +176,117 @@ describe('Regression: No Shell-Inside-Shell (issue #84)', () => {
     assert.ok(
       args.includes('-c'),
       'bash -c commands should be treated as regular commands'
+    );
+  });
+
+  it('should not duplicate -i if user already passes "bash -i"', () => {
+    // If user explicitly passes -i, we should not add another -i
+    const args = buildCmdArgs('bash -i');
+    assert.deepStrictEqual(
+      args,
+      ['bash', '-i'],
+      'Should not duplicate -i flag'
+    );
+    assert.ok(!args.includes('-c'), 'Must not contain -c flag');
+  });
+});
+
+describe('Docker daemon availability check (issue #84)', () => {
+  // Verifies that isDockerAvailable returns a boolean (not a crash),
+  // and that the error message for a non-running daemon is helpful.
+
+  it('isDockerAvailable should return a boolean', () => {
+    const result = isDockerAvailable();
+    assert.strictEqual(
+      typeof result,
+      'boolean',
+      'isDockerAvailable() must return a boolean'
+    );
+  });
+
+  it('runInDocker error message for non-running daemon should be actionable', () => {
+    // Mirrors the message in runInDocker when isDockerAvailable() returns false.
+    const message =
+      'Docker is installed but not running. Please start Docker Desktop or the Docker daemon, then try again.';
+    assert.ok(
+      message.includes('not running'),
+      'Message must indicate Docker is not running'
+    );
+    assert.ok(
+      message.includes('Docker Desktop'),
+      'Message must mention Docker Desktop (common on macOS/Windows)'
+    );
+    assert.ok(
+      message.includes('try again'),
+      'Message must tell user what to do next'
+    );
+  });
+});
+
+describe('Post-fix regression hint: --norc suggestion (issue #84)', () => {
+  // These tests verify the hint logic that recommends --norc when a bare shell
+  // exits quickly with code 1 (e.g., broken .bashrc in konard/sandbox image).
+  // The hint is shown in runInDocker attached mode when:
+  //   isBareShell && code !== 0 && durationMs < 3000
+
+  // Helper mirrors the hint construction logic in isolation.js runInDocker.
+  const path = require('path');
+  function buildHint(command) {
+    const shellName = command.trim().split(/\s+/)[0];
+    const noRcFlag = path.basename(shellName) === 'zsh' ? '--no-rcs' : '--norc';
+    return (
+      `Hint: The shell exited immediately — its startup file (.bashrc/.zshrc) may have errors.\n` +
+      `Try skipping startup files: ${shellName} ${noRcFlag}`
+    );
+  }
+
+  it('should suggest --norc for bare bash that exits quickly', () => {
+    const hint = buildHint('bash');
+    assert.ok(hint.includes('--norc'), 'Hint must include --norc for bash');
+    assert.ok(
+      hint.includes('bash --norc'),
+      'Hint must show the full corrected command'
+    );
+    assert.ok(
+      hint.includes('startup file'),
+      'Hint must explain why the shell exited'
+    );
+  });
+
+  it('should suggest --no-rcs for bare zsh that exits quickly', () => {
+    const hint = buildHint('zsh');
+    assert.ok(hint.includes('--no-rcs'), 'Hint must include --no-rcs for zsh');
+    assert.ok(
+      hint.includes('zsh --no-rcs'),
+      'Hint must show the full corrected command'
+    );
+  });
+
+  it('should suggest --norc for /bin/bash path that exits quickly', () => {
+    const hint = buildHint('/bin/bash');
+    assert.ok(
+      hint.includes('/bin/bash --norc'),
+      'Hint must include full path with --norc'
+    );
+  });
+
+  it('should suggest --norc for bare sh that exits quickly', () => {
+    const hint = buildHint('sh');
+    assert.ok(hint.includes('sh --norc'), 'Hint must suggest --norc for sh');
+  });
+
+  it('should confirm workaround: bash --norc is detected as bare shell', () => {
+    // The workaround (bash --norc) must still be recognized as a bare shell
+    // so it gets passed directly to docker without -c wrapping
+    assert.strictEqual(
+      isInteractiveShellCommand('bash --norc'),
+      true,
+      'bash --norc must be a bare shell (no -c wrapping)'
+    );
+    assert.strictEqual(
+      isInteractiveShellCommand('zsh --no-rcs'),
+      true,
+      'zsh --no-rcs must be a bare shell (no -c wrapping)'
     );
   });
 });

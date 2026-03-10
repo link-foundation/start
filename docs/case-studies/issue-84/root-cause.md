@@ -1,6 +1,6 @@
 # Root Cause Analysis - Issue #84
 
-## Primary Root Cause: Unconditional Shell Wrapping
+## Primary Root Cause (Phase 1): Unconditional Shell Wrapping
 
 ### Location in Code
 
@@ -16,8 +16,8 @@ const shellCmdArgs = shellInteractiveFlag
 dockerArgs.push(options.image, ...shellCmdArgs, '-c', command);
 ```
 
-The code **always** appends `<shell> [-i] -c <command>` to the docker arguments. When the user's
-command is `bash`, this becomes `bash -i -c bash`.
+The code **always** appended `<shell> [-i] -c <command>` to the docker arguments. When the user's
+command is `bash`, this became `bash -i -c bash`.
 
 ### Why Shell Wrapping Exists
 
@@ -52,29 +52,93 @@ bash: /home/sandbox/.bashrc: line 167: syntax error: unexpected end of file
 
 ### The `.bashrc` Syntax Error Is a Symptom, Not the Root Cause
 
-The `.bashrc` error in `konard/sandbox:1.3.14` is a separate bug in that Docker image. However,
-it would not surface twice — and would not surface at all in normal operation — if `start-command`
-did not wrap `bash` inside `bash -i -c bash`.
+The `.bashrc` error in `konard/sandbox:1.3.14` was visible in Phase 1 output. **However**, this
+error does NOT cause bash to exit. The image works correctly: running `docker run -it konard/sandbox:1.3.14 bash`
+gives a functional shell. The error is a warning that bash continues past. The root cause of the
+double error was unconditional shell wrapping by `start-command`.
 
-When a user runs `docker run -it konard/sandbox:1.3.14 bash` directly (without `start-command`):
-- Docker runs `bash` as the container process
-- Bash starts interactively, sources `.bashrc` **once**
-- If `.bashrc` has an error, user sees it once and continues
+### Fix Applied (v0.24.1 PR #85)
 
-With `start-command` the wrapping doubles the sourcing.
+`isInteractiveShellCommand()` was added to detect bare shell invocations and pass them directly
+to docker without wrapping. This eliminated the shell-inside-shell problem.
 
-## Secondary Root Cause: No Detection of Shell-as-Command
+---
 
-The CLI does not detect when the user's command **is itself a shell binary** (bash, zsh, sh, fish,
-etc.). A simple check like:
+## Secondary Root Cause (Phase 2): Missing `-i` Flag After v0.24.1 Fix
 
-```javascript
-const KNOWN_SHELLS = ['bash', 'zsh', 'sh', 'fish', 'ksh', 'csh', 'tcsh', 'dash'];
-const commandName = command.trim().split(/\s+/)[0];
-const isShellCommand = KNOWN_SHELLS.includes(path.basename(commandName));
+### The Post-Fix Regression
+
+After v0.24.1, the command became:
+```
+docker run -it ... image bash
 ```
 
-...is absent. Without this check, the code always wraps the command in another shell.
+This is the correct form to avoid shell-inside-shell. However, the fix inadvertently removed the
+explicit `-i` flag that had been present in the original (buggy) command.
+
+### Why `-i` Matters for Bare Shell Invocations
+
+**Without explicit `-i`**, bash determines whether to enter interactive mode through TTY detection:
+- It checks if `stdin` is a terminal using `isatty(0)`
+- On Linux, direct `docker run -it` typically sets up a working PTY
+- On macOS with Docker Desktop, the process chain is longer:
+  ```
+  User's terminal → macOS kernel → Docker Desktop VM → QEMU/hypervisor → container → bash
+  ```
+- Through this chain, TTY propagation via `stdio: 'inherit'` in Node.js `spawn()` may not
+  reliably signal to bash that it is running interactively
+
+**With explicit `-i`**, bash is forced into interactive mode unconditionally, bypassing the
+unreliable TTY detection.
+
+### Comparison of Behavior
+
+```
+v0.24.0: docker run -it ... image /bin/bash -i -c bash
+  → Outer bash: explicit -i → interactive → sources .bashrc (error shown) → runs inner bash
+  → Inner bash: TTY from outer bash → interactive → sources .bashrc again (error shown twice)
+  → Result: user gets shell, but with two error messages and nested shells (WRONG behavior, WORKS)
+
+v0.24.1: docker run -it ... image bash
+  → No explicit -i → relies on TTY detection
+  → On macOS with Docker Desktop: TTY detection unreliable → bash may not be interactive
+  → Non-interactive bash: reads stdin, gets EOF → exits with code 1
+  → Result: 0.3-0.4s failure, user gets no shell (CORRECT intent, BROKEN in practice)
+
+Fixed:   docker run -it ... image bash -i
+  → Explicit -i → bash always enters interactive mode regardless of TTY detection
+  → Sources .bashrc once, user gets shell
+  → Result: works correctly
+```
+
+### Fix Applied (PR #87)
+
+Bare shell commands now receive `-i` explicitly in docker attached mode. The fix is in
+`runInDocker()` attached mode in `js/src/lib/isolation.js`:
+
+```javascript
+// Bare shell: pass directly with -i (avoids bash-inside-bash; -i ensures interactive).
+let attachedCmdArgs;
+if (isBareShell) {
+  const parts = command.trim().split(/\s+/);
+  const bareFlag = getShellInteractiveFlag(parts[0]);
+  attachedCmdArgs =
+    bareFlag && !parts.includes(bareFlag)
+      ? [parts[0], bareFlag, ...parts.slice(1)]
+      : parts;
+} else {
+  attachedCmdArgs = [...shellCmdArgs, '-c', command];
+}
+```
+
+Results:
+- `bash` → `['bash', '-i']`
+- `bash --norc` → `['bash', '-i', '--norc']`
+- `bash -i` → `['bash', '-i']` (no duplication)
+- `zsh` → `['zsh', '-i']`
+- `sh` → `['sh']` (sh has no `-i` convention)
+
+---
 
 ## Tertiary Root Cause: Design Tension Between "Convenience" and "Transparency"
 
@@ -83,7 +147,10 @@ redirects, and shell syntax. But this design creates a conflict when the user's 
 a shell:
 
 - **With wrapping:** `bash -i -c bash` — nested, interactive, sources .bashrc twice, unexpected behavior
-- **Without wrapping:** `bash` — direct, single process, sources .bashrc once, expected behavior
+- **Without wrapping:** `bash -i` — direct, single process, sources .bashrc once, expected behavior
+
+The `isInteractiveShellCommand()` detection function resolves this tension by routing bare shell
+invocations through a different code path.
 
 ## Same-Shell Detection in `runDirect`
 
@@ -96,7 +163,7 @@ const shellArgs = isWindows ? ['-Command', cmd] : ['-c', cmd];
 
 Here `cmd = "bash"` becomes `shellArgs = ['-c', 'bash']` and the host shell (e.g., `/bin/zsh`)
 runs `zsh -c bash`. This is less harmful (different shells) but still adds an unnecessary
-wrapper. The same detection logic should apply there.
+wrapper. The same detection logic could apply there.
 
 ## The SSH Path Has the Same Issue
 
@@ -112,3 +179,6 @@ If `command = "bash"`, this becomes: `nohup bash -i -c bash > ...` on the remote
 
 In `runInScreen` and `runInTmux`, the command is passed to the screen/tmux session inside a
 shell invocation like `<shell> -c '<command>'`. If `command = "bash"`, this becomes `bash -c bash`.
+
+The `isInteractiveShellCommand()` check is applied in these paths too, so they benefit from the
+same fix even though the `-i` injection only applies in docker attached mode.

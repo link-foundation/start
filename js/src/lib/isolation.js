@@ -162,7 +162,7 @@ function detectShellInEnvironment(
           return result.stdout.trim();
         }
       } catch {
-        // Continue to next shell
+        // ignore; try next shell
       }
     }
 
@@ -233,9 +233,7 @@ function wrapCommandWithUser(command, user) {
   if (!user) {
     return command;
   }
-  // Use sudo -u to run command as specified user
-  // -E preserves environment variables
-  // -n ensures non-interactive (fails if password required)
+  // sudo -n: non-interactive (fails if password required); -u: run as user
   return `sudo -n -u ${user} sh -c '${command.replace(/'/g, "'\\''")}'`;
 }
 
@@ -292,10 +290,7 @@ function runScreenWithLogCapture(command, sessionName, shellInfo, user = null) {
         }
       }
 
-      // Use spawnSync with array arguments to avoid shell quoting issues
-      // This is critical for commands containing quotes (e.g., echo "hello")
-      // Using execSync with a constructed string would break on nested quotes
-      // See issue #25 for details
+      // Use spawnSync with array args (not execSync string) to avoid quoting issues (issue #25)
       const result = spawnSync('screen', screenArgs, {
         stdio: 'inherit',
       });
@@ -433,14 +428,10 @@ function runInScreen(command, options = {}) {
 
     if (options.detached) {
       // Detached mode: screen -dmS <session> <shell> -c '<command>'
-      // By default (keepAlive=false), the session will exit after command completes
-      // With keepAlive=true, we start a shell that runs the command but stays alive
-
       if (options.keepAlive) {
         // With keep-alive: run command, then keep shell open
         effectiveCommand = `${effectiveCommand}; exec ${shell}`;
       }
-      // Without keep-alive: command runs and session exits naturally when done
 
       const screenArgs = isInteractiveShellCommand(command)
         ? ['-dmS', sessionName, ...command.trim().split(/\s+/)]
@@ -451,9 +442,7 @@ function runInScreen(command, options = {}) {
         console.log(`[DEBUG] keepAlive: ${options.keepAlive || false}`);
       }
 
-      // Use spawnSync with array arguments to avoid shell quoting issues
-      // This is critical for commands containing quotes (e.g., echo "hello")
-      // See issue #25 for details
+      // Use spawnSync with array args (not execSync string) to avoid quoting issues (issue #25)
       const result = spawnSync('screen', screenArgs, {
         stdio: 'inherit',
       });
@@ -476,15 +465,8 @@ function runInScreen(command, options = {}) {
         message,
       });
     } else {
-      // Attached mode: always use detached mode with log capture
-      // This ensures output is captured and displayed correctly, even for quick commands
-      // that would otherwise have their output lost in a rapidly-terminating screen session.
-      // Direct screen invocation (screen -S session shell -c command) loses output because:
-      // 1. Screen creates a virtual terminal for the session
-      // 2. Command output goes to that virtual terminal
-      // 3. When the command exits quickly, screen shows "[screen is terminating]"
-      // 4. The virtual terminal is destroyed and output is lost
-      // See issue #25 for details: https://github.com/link-foundation/start/issues/25
+      // Attached mode: use detached mode with log capture for reliable output
+      // (direct attached screen loses output for quick commands; see issue #25)
       if (DEBUG) {
         console.log(
           `[DEBUG] Using detached mode with log capture for reliable output`
@@ -533,14 +515,10 @@ function runInTmux(command, options = {}) {
   try {
     if (options.detached) {
       // Detached mode: tmux new-session -d -s <session> '<command>'
-      // By default (keepAlive=false), the session will exit after command completes
-      // With keepAlive=true, we keep the shell alive after the command
-
       if (options.keepAlive) {
         // With keep-alive: run command, then keep shell open
         effectiveCommand = `${effectiveCommand}; exec ${shell}`;
       }
-      // Without keep-alive: command runs and session exits naturally when done
 
       if (DEBUG) {
         console.log(
@@ -724,8 +702,14 @@ function runInSsh(command, options = {}) {
   }
 }
 
-// Import docker image utilities from docker-utils
-const { dockerImageExists, dockerPullImage } = require('./docker-utils');
+// Import docker utilities from docker-utils
+const {
+  dockerImageExists,
+  dockerPullImage,
+  isDockerAvailable,
+  getDefaultDockerImage,
+  canRunLinuxDockerImages,
+} = require('./docker-utils');
 
 /**
  * Run command in Docker container
@@ -740,6 +724,15 @@ function runInDocker(command, options = {}) {
       containerName: null,
       message:
         'docker is not installed. Install Docker from https://docs.docker.com/get-docker/',
+    });
+  }
+
+  if (!isDockerAvailable()) {
+    return Promise.resolve({
+      success: false,
+      containerName: null,
+      message:
+        'Docker is installed but not running. Please start Docker Desktop or the Docker daemon, then try again.',
     });
   }
 
@@ -772,7 +765,6 @@ function runInDocker(command, options = {}) {
     : detectShellInEnvironment('docker', options, options.shell);
   const shellInteractiveFlag = getShellInteractiveFlag(shellToUse);
 
-  // Print the user command (this appears after any virtual commands like docker pull)
   const { createCommandLine } = require('./output-blocks');
   console.log(createCommandLine(command));
   console.log();
@@ -781,13 +773,11 @@ function runInDocker(command, options = {}) {
     if (options.detached) {
       // Detached mode: docker run -d --name <name> [--user <user>] <image> <shell> -c '<command>'
       const dockerArgs = ['run', '-d', '--name', containerName];
-
-      // --rm must come before the image name
+      // --rm must come before the image name in args
       if (options.autoRemoveDockerContainer) {
         dockerArgs.splice(2, 0, '--rm');
       }
 
-      // Add --user flag if specified
       if (options.user) {
         dockerArgs.push('--user', options.user);
       }
@@ -846,13 +836,21 @@ function runInDocker(command, options = {}) {
       if (DEBUG) {
         console.log(`[DEBUG] shell: ${shellToUse}`);
       }
-
       const shellCmdArgs = shellInteractiveFlag
         ? [shellToUse, shellInteractiveFlag]
         : [shellToUse];
-      const attachedCmdArgs = isBareShell
-        ? command.trim().split(/\s+/)
-        : [...shellCmdArgs, '-c', command];
+      // Bare shell: pass directly with -i (avoids bash-inside-bash, issue #84; -i ensures interactive).
+      let attachedCmdArgs;
+      if (isBareShell) {
+        const parts = command.trim().split(/\s+/);
+        const bareFlag = getShellInteractiveFlag(parts[0]);
+        attachedCmdArgs =
+          bareFlag && !parts.includes(bareFlag)
+            ? [parts[0], bareFlag, ...parts.slice(1)]
+            : parts;
+      } else {
+        attachedCmdArgs = [...shellCmdArgs, '-c', command];
+      }
       dockerArgs.push(options.image, ...attachedCmdArgs);
 
       if (DEBUG) {
@@ -860,15 +858,25 @@ function runInDocker(command, options = {}) {
       }
 
       return new Promise((resolve) => {
-        const child = spawn('docker', dockerArgs, {
-          stdio: 'inherit',
-        });
+        const startTime = Date.now();
+        const child = spawn('docker', dockerArgs, { stdio: 'inherit' });
 
         child.on('exit', (code) => {
+          const durationMs = Date.now() - startTime;
+          let message = `Docker container "${containerName}" exited with code ${code}`;
+          // Bare shell exited non-zero quickly → startup file error; suggest --norc (issue #84).
+          if (isBareShell && code !== 0 && durationMs < 3000) {
+            const shell0 = command.trim().split(/\s+/)[0];
+            // prettier-ignore
+            const norc = path.basename(shell0) === 'zsh' ? '--no-rcs' : '--norc';
+            const hint = `Hint: The shell exited immediately — its startup file (.bashrc/.zshrc) may have errors.\nTry skipping startup files: ${shell0} ${norc}`;
+            console.log(hint);
+            message += `\n${hint}`;
+          }
           resolve({
             success: code === 0,
             containerName,
-            message: `Docker container "${containerName}" exited with code ${code}`,
+            message,
             exitCode: code,
           });
         });
@@ -951,7 +959,6 @@ function resetScreenVersionCache() {
   screenVersionChecked = false;
 }
 
-// Log utilities and runAsIsolatedUser extracted to isolation-log-utils.js
 const {
   getTimestamp,
   generateLogFilename,
@@ -962,12 +969,6 @@ const {
   createLogPath,
   runAsIsolatedUser,
 } = require('./isolation-log-utils');
-
-// Re-export docker utilities from docker-utils for backwards compatibility
-const {
-  getDefaultDockerImage,
-  canRunLinuxDockerImages,
-} = require('./docker-utils');
 
 module.exports = {
   isCommandAvailable,
@@ -992,7 +993,6 @@ module.exports = {
   supportsLogfileOption,
   resetScreenVersionCache,
   canRunLinuxDockerImages,
-  // Re-exported from docker-utils for backwards compatibility
   getDefaultDockerImage,
   dockerImageExists,
   dockerPullImage,
