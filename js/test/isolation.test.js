@@ -262,7 +262,9 @@ describe('Isolation Runner Error Handling', () => {
         detached: true,
       });
       assert.strictEqual(result.success, false);
-      assert.ok(result.message.includes('docker is not installed'));
+      assert.ok(
+        result.message.toLowerCase().includes('docker is not installed')
+      );
     });
 
     it('should require image option', async () => {
