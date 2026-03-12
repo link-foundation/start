@@ -8,10 +8,14 @@
  * the output should show:
  *   $ docker pull <image>
  *   (empty line)
+ *   Error: Docker is not installed...
+ *   (empty line)
  *   ✗
- *   │
+ *   │ finish ...
  *
- * before the error message, so the user understands what was attempted.
+ * The virtual command line shows BEFORE the error message.
+ * The failure marker (✗) and timeline separator come AFTER the error,
+ * as part of the finish block output.
  *
  * Reference: https://github.com/link-foundation/start/issues/89
  */
@@ -71,56 +75,68 @@ describe('Virtual docker pull output before Docker error (issue #89)', () => {
     );
   });
 
-  it('should show "$ docker pull <image>" before the "Docker is not installed" error', async () => {
-    // This test verifies the actual behavior by checking the isolation module's
-    // runInDocker function when Docker binary is missing.
-    //
-    // We simulate this by temporarily patching the isCommandAvailable check.
-    // Since we can't easily mock module internals, we test the output format contract:
-    // the virtual command line must appear before the error message in the output.
+  it('should show "$ docker pull <image>" before the error message (issue #89)', async () => {
+    // This test verifies the output format contract for issue #89:
+    // The virtual command line ("$ docker pull ...") must appear BEFORE the error message.
+    // The failure marker (✗) and timeline separator (│) come AFTER the error,
+    // as part of the finish block (not printed by runInDocker itself).
 
     const {
       createVirtualCommandBlock,
-      createVirtualCommandResult,
-      createTimelineSeparator,
+      createFinishBlock,
     } = require('../src/lib/output-blocks');
 
-    // Simulate what runInDocker should output when Docker is not installed and image is provided
+    // Simulate what the full output should look like
     const image = 'konard/sandbox';
     const lines = [];
 
-    // This is what the fix produces:
+    // Part 1: What runInDocker outputs (virtual command only)
     lines.push(createVirtualCommandBlock(`docker pull ${image}`));
-    lines.push(''); // empty line
-    lines.push(createVirtualCommandResult(false));
-    lines.push(createTimelineSeparator());
+    lines.push(''); // empty line after virtual command
+
+    // Part 2: Error message (printed by cli.js after runInDocker returns)
+    lines.push('Error: Docker is not installed. Install Docker from ...');
+    lines.push(''); // empty line before finish block
+
+    // Part 3: Finish block (includes ✗ and │ lines)
+    lines.push(
+      createFinishBlock({
+        sessionId: 'test-uuid',
+        timestamp: '2026-03-10 13:50:04',
+        exitCode: 1, // failure
+        logPath: '/tmp/test.log',
+        durationMs: 326,
+      })
+    );
 
     const output = lines.join('\n');
 
-    // Verify the virtual command appears first
+    // Verify ordering: docker pull → error message → ✗ marker
     const dockerPullIndex = output.indexOf(`$ docker pull ${image}`);
+    const errorIndex = output.indexOf('Docker is not installed');
     const failureMarkerIndex = output.indexOf('✗');
-    const separatorIndex = output.indexOf('│');
 
     assert.ok(
       dockerPullIndex !== -1,
       'Output must contain "$ docker pull konard/sandbox"'
     );
     assert.ok(
+      errorIndex !== -1,
+      'Output must contain error message "Docker is not installed"'
+    );
+    assert.ok(
       failureMarkerIndex !== -1,
       'Output must contain failure marker "✗"'
     );
+
+    // Key ordering requirements from issue #89:
     assert.ok(
-      separatorIndex !== -1,
-      'Output must contain timeline separator "│"'
+      dockerPullIndex < errorIndex,
+      '"$ docker pull" must appear BEFORE error message'
     );
     assert.ok(
-      dockerPullIndex < failureMarkerIndex,
-      '"$ docker pull" must appear before "✗" failure marker'
-    );
-    assert.ok(
-      failureMarkerIndex < separatorIndex,
-      '"✗" failure marker must appear before "│" separator'
+      errorIndex < failureMarkerIndex,
+      'Error message must appear BEFORE "✗" failure marker'
     );
   });
 
@@ -153,7 +169,7 @@ describe('runInDocker virtual pull output contract (issue #89)', () => {
   //
   // We verify this by reading the source to confirm the fix is present.
 
-  it('runInDocker should contain docker pull output code path before returning errors (issue #89)', () => {
+  it('runInDocker should output docker pull command but NOT ✗/│ markers before returning (issue #89)', () => {
     // Read the isolation.js source to verify the fix is present
     const fs = require('fs');
     const path = require('path');
@@ -180,14 +196,12 @@ describe('runInDocker virtual pull output contract (issue #89)', () => {
     );
 
     // Verify the dockerNotAvailableError combined approach is used
-    // (single block handles both "not installed" and "not running" cases)
     assert.ok(
       isolationSrc.includes('dockerNotAvailableError'),
       'Source must use combined dockerNotAvailableError variable for both error cases'
     );
 
     // The docker pull output console.log must appear before the return statement
-    // in the combined error block
     const dockerPullConsoleIdx = isolationSrc.indexOf(
       'outputBlocks.createVirtualCommandBlock'
     );
@@ -205,6 +219,34 @@ describe('runInDocker virtual pull output contract (issue #89)', () => {
     assert.ok(
       dockerPullConsoleIdx < returnDockerErrorIdx,
       'docker pull console.log must appear before the error return in source'
+    );
+
+    // Issue #89 key fix: The ✗ and │ markers should NOT be printed by runInDocker
+    // They come from createFinishBlock() AFTER the error message is displayed.
+    // Verify that createVirtualCommandResult is NOT called in the dockerNotAvailableError block.
+    const dockerNotAvailableBlockStart = isolationSrc.indexOf(
+      'if (dockerNotAvailableError) {'
+    );
+    const dockerNotAvailableBlockEnd = isolationSrc.indexOf(
+      'message: dockerNotAvailableError',
+      dockerNotAvailableBlockStart
+    );
+    const dockerNotAvailableBlock = isolationSrc.slice(
+      dockerNotAvailableBlockStart,
+      dockerNotAvailableBlockEnd + 100
+    );
+
+    // The block should NOT contain createVirtualCommandResult (which outputs ✗)
+    assert.ok(
+      !dockerNotAvailableBlock.includes('createVirtualCommandResult'),
+      'dockerNotAvailableError block must NOT call createVirtualCommandResult (issue #89 fix)'
+    );
+
+    // The block should have a comment explaining why ✗/│ are not printed here
+    assert.ok(
+      dockerNotAvailableBlock.includes('createFinishBlock') ||
+        dockerNotAvailableBlock.includes('AFTER the error message'),
+      'Source should document that ✗/│ come from createFinishBlock AFTER error'
     );
   });
 });

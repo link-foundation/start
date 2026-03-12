@@ -729,8 +729,7 @@ function runInDocker(command, options = {}) {
       const pullCmd = `docker pull ${options.image}`;
       console.log(outputBlocks.createVirtualCommandBlock(pullCmd));
       console.log();
-      console.log(outputBlocks.createVirtualCommandResult(false));
-      console.log(outputBlocks.createTimelineSeparator());
+      // ✗ and │ come from createFinishBlock() AFTER the error message (issue #89)
     }
     return Promise.resolve({
       success: false,
