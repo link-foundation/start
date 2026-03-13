@@ -150,7 +150,7 @@ mod is_gh_authenticated_tests {
     fn return_value_is_bool_type() {
         let result: bool = is_gh_authenticated();
         // Type assertion - if it compiles, it returns a bool
-        assert!(result == true || result == false);
+        let _ = result;
     }
 }
 
@@ -166,7 +166,7 @@ mod is_gh_upload_log_available_tests {
     #[test]
     fn return_value_is_bool_type() {
         let result: bool = is_gh_upload_log_available();
-        assert!(result == true || result == false);
+        let _ = result;
     }
 }
 
@@ -183,6 +183,6 @@ mod can_create_issue_tests {
     #[test]
     fn should_return_bool() {
         let result: bool = can_create_issue("some-owner", "some-repo");
-        assert!(result == true || result == false);
+        let _ = result;
     }
 }

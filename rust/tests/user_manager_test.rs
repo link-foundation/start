@@ -2,9 +2,9 @@
 //!
 //! Mirrors user_manager test coverage from the JS test suite.
 
-use start_command::user_manager::{
-    generate_isolated_username, get_current_user, get_current_user_groups, user_exists,
-};
+use start_command::user_manager::{generate_isolated_username, get_current_user, user_exists};
+#[cfg(unix)]
+use start_command::user_manager::get_current_user_groups;
 
 #[test]
 fn get_current_user_returns_non_empty_string() {
@@ -17,7 +17,7 @@ fn get_current_user_returns_known_user() {
     let user = get_current_user();
     // Should not be the fallback "unknown" value in a normal environment
     // (may be unknown in very constrained CI, so we just check it's a string)
-    assert!(user.len() > 0);
+    assert!(!user.is_empty());
 }
 
 #[test]
