@@ -214,18 +214,16 @@ function getShellInteractiveFlag(shellPath) {
   const shellName = shellPath.split('/').pop();
   return shellName === 'bash' || shellName === 'zsh' ? '-i' : null;
 }
+const SHELL_NAMES = ['bash', 'zsh', 'sh', 'fish', 'ksh', 'csh', 'tcsh', 'dash'];
 /** True if command is a bare shell invocation (no -c); avoids bash-inside-bash (issue #84). */
 function isInteractiveShellCommand(command) {
   const parts = command.trim().split(/\s+/);
-  const shells = ['bash', 'zsh', 'sh', 'fish', 'ksh', 'csh', 'tcsh', 'dash'];
-  return shells.includes(path.basename(parts[0])) && !parts.includes('-c');
+  return SHELL_NAMES.includes(path.basename(parts[0])) && !parts.includes('-c');
 }
-
 /** True if command is a shell invocation with -c (e.g. `bash -i -c "cmd"`); avoids double-wrapping (issue #91). */
 function isShellInvocationWithArgs(command) {
   const parts = command.trim().split(/\s+/);
-  const shells = ['bash', 'zsh', 'sh', 'fish', 'ksh', 'csh', 'tcsh', 'dash'];
-  return shells.includes(path.basename(parts[0])) && parts.includes('-c');
+  return SHELL_NAMES.includes(path.basename(parts[0])) && parts.includes('-c');
 }
 /** Build argv for shell-with-c command; everything after -c is one argument (reverses commandArgs.join(' ')). */
 function buildShellWithArgsCmdArgs(command) {
