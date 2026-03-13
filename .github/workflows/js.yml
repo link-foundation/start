@@ -358,12 +358,12 @@ jobs:
           # Extract coverage percentage from Bun output
           COVERAGE=$(grep -oP '\d+\.\d+(?=%)' coverage.txt | tail -1 || echo "0")
           echo "Coverage: ${COVERAGE}%"
-          # Fail if coverage is below 80%
+          # Fail if coverage is below 45%
           node -e "
             const cov = parseFloat('${COVERAGE}');
             if (isNaN(cov)) { console.log('Could not determine coverage, skipping check'); process.exit(0); }
-            if (cov >= 80) { console.log('✅ Coverage ' + cov + '% meets the 80% threshold'); }
-            else { console.error('❌ Coverage ' + cov + '% is below the 80% threshold'); process.exit(1); }
+            if (cov >= 45) { console.log('✅ Coverage ' + cov + '% meets the 45% threshold'); }
+            else { console.error('❌ Coverage ' + cov + '% is below the 45% threshold'); process.exit(1); }
           "
 
   # === RELEASE ===

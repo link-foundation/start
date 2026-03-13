@@ -24,6 +24,7 @@ const path = require('path');
 const {
   isCommandAvailable,
   canRunLinuxDockerImages,
+  hasTTY,
 } = require('../src/lib/isolation');
 
 // Path to the CLI
@@ -537,6 +538,14 @@ describe('Echo Integration Tests - Issue #55', () => {
     }
 
     describe('Attached Mode', () => {
+      if (!hasTTY()) {
+        it('should skip attached docker tests when no TTY is available', () => {
+          console.log('  ⚠ no TTY available, skipping attached docker tests');
+          assert.ok(true);
+        });
+        return;
+      }
+
       it('should execute echo hi in attached docker mode with proper formatting', () => {
         const containerName = `test-docker-attached-${Date.now()}`;
         const result = runCli(

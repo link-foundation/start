@@ -154,11 +154,8 @@ pub fn build_shell_with_args_cmd_args(command: &str) -> Vec<String> {
     }
 }
 
-/// Get the interactive flag for a shell, if supported.
-/// Returns "-i" for bash and zsh (which support interactive mode that sources startup files),
-/// returns None for sh and other shells that don't support this reliably.
+/// Returns "-i" for bash/zsh (interactive mode, sources startup files), None for other shells.
 fn get_shell_interactive_flag(shell_path: &str) -> Option<&'static str> {
-    // Extract the basename of the shell path
     let shell_name = shell_path.rsplit('/').next().unwrap_or(shell_path);
     match shell_name {
         "bash" => Some("-i"),
@@ -990,35 +987,12 @@ fn is_debug() -> bool {
     env::var("START_DEBUG").is_ok_and(|v| v == "1" || v == "true")
 }
 
-/// Escape a command string for use in shell -c argument
 fn shell_escape(command: &str) -> String {
-    // Wrap in single quotes, escaping any existing single quotes
     format!("'{}'", command.replace('\'', "'\\''"))
 }
 
-// Stub for atty crate functionality
-mod atty {
-    pub enum Stream {
-        Stdin,
-        Stdout,
-    }
-
-    pub fn is(_stream: Stream) -> bool {
-        // Simple check using isatty
-        #[cfg(unix)]
-        {
-            use std::os::unix::io::AsRawFd;
-            match _stream {
-                Stream::Stdin => unsafe { libc::isatty(std::io::stdin().as_raw_fd()) != 0 },
-                Stream::Stdout => unsafe { libc::isatty(std::io::stdout().as_raw_fd()) != 0 },
-            }
-        }
-        #[cfg(not(unix))]
-        {
-            false
-        }
-    }
-}
+#[path = "atty.rs"]
+mod atty;
 
 #[cfg(test)]
 #[path = "isolation_tests.rs"]

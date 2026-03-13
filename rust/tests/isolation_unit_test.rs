@@ -4,7 +4,10 @@
 //! Integration tests (requiring actual screen/tmux/docker/ssh) are in isolation_test.rs.
 
 use start_command::isolation::wrap_command_with_user;
-use start_command::{is_command_available, is_interactive_shell_command, IsolationOptions};
+use start_command::{
+    build_shell_with_args_cmd_args, is_command_available, is_interactive_shell_command,
+    is_shell_invocation_with_args, IsolationOptions,
+};
 
 mod wrap_command_with_user_tests {
     use super::*;
@@ -240,5 +243,111 @@ mod detect_shell_in_environment_tests {
             let shell = start_command::isolation::detect_shell_in_environment("docker", &opts);
             assert_eq!(&shell, preference);
         }
+    }
+}
+
+mod is_shell_invocation_with_args_tests {
+    use super::*;
+
+    #[test]
+    fn should_return_true_for_bash_c_echo() {
+        assert!(is_shell_invocation_with_args("bash -c echo"));
+    }
+
+    #[test]
+    fn should_return_true_for_zsh_c_cmd() {
+        assert!(is_shell_invocation_with_args("zsh -c 'some command'"));
+    }
+
+    #[test]
+    fn should_return_true_for_bash_i_c_cmd() {
+        assert!(is_shell_invocation_with_args("bash -i -c 'nvm --version'"));
+    }
+
+    #[test]
+    fn should_return_false_for_npm_run_test() {
+        assert!(!is_shell_invocation_with_args("npm run test"));
+    }
+
+    #[test]
+    fn should_return_false_for_empty_string() {
+        assert!(!is_shell_invocation_with_args(""));
+    }
+
+    #[test]
+    fn should_return_true_for_slash_bin_bash_c() {
+        assert!(is_shell_invocation_with_args("/bin/bash -c 'echo hello'"));
+    }
+}
+
+mod build_shell_with_args_cmd_args_tests {
+    use super::*;
+
+    #[test]
+    fn should_return_full_args_for_bash_c_echo() {
+        let args = build_shell_with_args_cmd_args("bash -c echo");
+        assert!(args.contains(&"bash".to_string()));
+        assert!(args.contains(&"-c".to_string()));
+        assert!(args.contains(&"echo".to_string()));
+    }
+
+    #[test]
+    fn should_join_script_parts_after_c() {
+        let args = build_shell_with_args_cmd_args("bash -c echo hello world");
+        // Everything after -c should be joined as one argument
+        let c_idx = args.iter().position(|a| a == "-c").expect("Should have -c");
+        let script = &args[c_idx + 1];
+        assert_eq!(script, "echo hello world");
+    }
+
+    #[test]
+    fn should_handle_bash_i_c_cmd() {
+        let args = build_shell_with_args_cmd_args("bash -i -c nvm --version");
+        assert!(args.contains(&"bash".to_string()));
+        assert!(args.contains(&"-i".to_string()));
+        assert!(args.contains(&"-c".to_string()));
+        // "nvm --version" should be joined
+        let c_idx = args.iter().position(|a| a == "-c").expect("Should have -c");
+        let script = &args[c_idx + 1];
+        assert_eq!(script, "nvm --version");
+    }
+
+    #[test]
+    fn should_return_all_parts_when_no_c_flag() {
+        let args = build_shell_with_args_cmd_args("npm run test");
+        assert_eq!(args, vec!["npm", "run", "test"]);
+    }
+}
+
+mod isolation_options_tests {
+    use super::*;
+
+    #[test]
+    fn should_have_correct_defaults() {
+        let opts = IsolationOptions::default();
+        assert_eq!(opts.shell, "auto");
+        assert!(!opts.detached);
+        assert!(!opts.keep_alive);
+        assert!(opts.session.is_none());
+        assert!(opts.image.is_none());
+        assert!(opts.user.is_none());
+    }
+
+    #[test]
+    fn should_allow_custom_shell() {
+        let opts = IsolationOptions {
+            shell: "bash".to_string(),
+            ..IsolationOptions::default()
+        };
+        assert_eq!(opts.shell, "bash");
+    }
+
+    #[test]
+    fn should_allow_detached_mode() {
+        let opts = IsolationOptions {
+            detached: true,
+            ..IsolationOptions::default()
+        };
+        assert!(opts.detached);
     }
 }

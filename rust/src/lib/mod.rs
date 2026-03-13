@@ -58,7 +58,10 @@ pub use output_blocks::{
     SUCCESS_MARKER,
     TIMELINE_MARKER,
 };
-pub use signal_handler::{clear_current_execution, set_current_execution, setup_signal_handlers};
+pub use signal_handler::{
+    clear_current_execution, get_signal_exit_code, set_current_execution, setup_signal_handlers,
+    was_signal_received,
+};
 pub use status_formatter::{
     format_record, format_record_as_links_notation, format_record_as_text, query_status,
     StatusQueryResult,

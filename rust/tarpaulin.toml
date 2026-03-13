@@ -1,0 +1,3 @@
+[default]
+# Exclude CLI entry point from coverage — it's application wiring, not library logic
+exclude-files = ["src/bin/main.rs"]
