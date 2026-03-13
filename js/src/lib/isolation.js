@@ -237,6 +237,14 @@ function buildShellWithArgsCmdArgs(command) {
     ? [...parts.slice(0, cIdx + 1), scriptArg]
     : parts.slice(0, cIdx + 1);
 }
+/** Build a display string for a command, quoting arguments that contain spaces (issue #91). */
+function buildDisplayCommand(command) {
+  if (!isShellInvocationWithArgs(command)) {
+    return command;
+  }
+  const argv = buildShellWithArgsCmdArgs(command);
+  return argv.map((arg) => (arg.includes(' ') ? `"${arg}"` : arg)).join(' ');
+}
 
 /** Returns true if the current process has a TTY attached. */
 function hasTTY() {
@@ -764,7 +772,7 @@ function runInDocker(command, options = {}) {
     : detectShellInEnvironment('docker', options, options.shell);
   const shellInteractiveFlag = getShellInteractiveFlag(shellToUse);
 
-  console.log(outputBlocks.createCommandLine(command));
+  console.log(outputBlocks.createCommandLine(buildDisplayCommand(command)));
   console.log();
 
   try {
@@ -974,6 +982,7 @@ module.exports = {
   isInteractiveShellCommand,
   isShellInvocationWithArgs,
   buildShellWithArgsCmdArgs,
+  buildDisplayCommand,
   detectShellInEnvironment,
   runInScreen,
   runInTmux,
