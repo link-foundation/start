@@ -106,10 +106,7 @@ function isCommandAvailable(command) {
   }
 }
 
-/**
- * Get the shell to use for command execution
- * @returns {{shell: string, shellArgs: string[]}} Shell path and args
- */
+/** Get the shell to use for command execution. */
 function getShell() {
   const isWindows = process.platform === 'win32';
   const shell = isWindows ? 'cmd.exe' : process.env.SHELL || '/bin/sh';
@@ -217,11 +214,28 @@ function getShellInteractiveFlag(shellPath) {
   const shellName = shellPath.split('/').pop();
   return shellName === 'bash' || shellName === 'zsh' ? '-i' : null;
 }
+const SHELL_NAMES = ['bash', 'zsh', 'sh', 'fish', 'ksh', 'csh', 'tcsh', 'dash'];
 /** True if command is a bare shell invocation (no -c); avoids bash-inside-bash (issue #84). */
 function isInteractiveShellCommand(command) {
   const parts = command.trim().split(/\s+/);
-  const shells = ['bash', 'zsh', 'sh', 'fish', 'ksh', 'csh', 'tcsh', 'dash'];
-  return shells.includes(path.basename(parts[0])) && !parts.includes('-c');
+  return SHELL_NAMES.includes(path.basename(parts[0])) && !parts.includes('-c');
+}
+/** True if command is a shell invocation with -c (e.g. `bash -i -c "cmd"`); avoids double-wrapping (issue #91). */
+function isShellInvocationWithArgs(command) {
+  const parts = command.trim().split(/\s+/);
+  return SHELL_NAMES.includes(path.basename(parts[0])) && parts.includes('-c');
+}
+/** Build argv for shell-with-c command; everything after -c is one argument (reverses commandArgs.join(' ')). */
+function buildShellWithArgsCmdArgs(command) {
+  const parts = command.trim().split(/\s+/);
+  const cIdx = parts.indexOf('-c');
+  if (cIdx === -1) {
+    return parts;
+  }
+  const scriptArg = parts.slice(cIdx + 1).join(' ');
+  return scriptArg.length > 0
+    ? [...parts.slice(0, cIdx + 1), scriptArg]
+    : parts.slice(0, cIdx + 1);
 }
 
 /** Returns true if the current process has a TTY attached. */
@@ -428,9 +442,7 @@ function runInScreen(command, options = {}) {
     let effectiveCommand = wrapCommandWithUser(command, options.user);
 
     if (options.detached) {
-      // Detached mode: screen -dmS <session> <shell> -c '<command>'
       if (options.keepAlive) {
-        // With keep-alive: run command, then keep shell open
         effectiveCommand = `${effectiveCommand}; exec ${shell}`;
       }
 
@@ -466,14 +478,6 @@ function runInScreen(command, options = {}) {
         message,
       });
     } else {
-      // Attached mode: use detached mode with log capture for reliable output
-      // (direct attached screen loses output for quick commands; see issue #25)
-      if (DEBUG) {
-        console.log(
-          `[DEBUG] Using detached mode with log capture for reliable output`
-        );
-      }
-
       return runScreenWithLogCapture(
         command,
         sessionName,
@@ -515,9 +519,7 @@ function runInTmux(command, options = {}) {
 
   try {
     if (options.detached) {
-      // Detached mode: tmux new-session -d -s <session> '<command>'
       if (options.keepAlive) {
-        // With keep-alive: run command, then keep shell open
         effectiveCommand = `${effectiveCommand}; exec ${shell}`;
       }
 
@@ -549,7 +551,6 @@ function runInTmux(command, options = {}) {
         message,
       });
     } else {
-      // Attached mode: tmux new-session -s <session> '<command>'
       if (DEBUG) {
         console.log(
           `[DEBUG] Running: tmux new-session -s "${sessionName}" "${effectiveCommand}"`
@@ -631,7 +632,6 @@ function runInSsh(command, options = {}) {
 
   try {
     if (options.detached) {
-      // Detached mode: Run command in background via nohup; continues after SSH closes
       const remoteShell = useExplicitShell || shellToUse;
       const shellInvocation = shellInteractiveFlag
         ? `${remoteShell} ${shellInteractiveFlag}`
@@ -658,7 +658,6 @@ function runInSsh(command, options = {}) {
         message: `Command started in detached SSH session on ${sshTarget}\nSession: ${sessionName}\nView logs: ssh ${sshTarget} "tail -f /tmp/${sessionName}.log"`,
       });
     } else {
-      // Attached mode: pass command directly (auto) or wrap with explicit shell + -i flag (bash/zsh).
       const extraFlags = shellInteractiveFlag ? [shellInteractiveFlag] : [];
       const sshArgs = isInteractiveShellCommand(command)
         ? [sshTarget, ...command.trim().split(/\s+/)]
@@ -747,8 +746,6 @@ function runInDocker(command, options = {}) {
   }
 
   const containerName = options.session || generateSessionName('docker');
-
-  // Check if image exists locally; if not, pull it as a virtual command
   if (!dockerImageExists(options.image)) {
     const pullResult = dockerPullImage(options.image);
     if (!pullResult.success) {
@@ -772,9 +769,7 @@ function runInDocker(command, options = {}) {
 
   try {
     if (options.detached) {
-      // Detached mode: docker run -d --name <name> [--user <user>] <image> <shell> -c '<command>'
       const dockerArgs = ['run', '-d', '--name', containerName];
-      // --rm must come before the image name in args
       if (options.autoRemoveDockerContainer) {
         dockerArgs.splice(2, 0, '--rm');
       }
@@ -791,7 +786,9 @@ function runInDocker(command, options = {}) {
         : [shellToUse];
       const cmdArgs = isBareShell
         ? command.trim().split(/\s+/)
-        : [...shellArgs, '-c', effectiveCommand];
+        : isShellInvocationWithArgs(command)
+          ? buildShellWithArgsCmdArgs(effectiveCommand)
+          : [...shellArgs, '-c', effectiveCommand];
       dockerArgs.push(options.image, ...cmdArgs);
 
       if (DEBUG) {
@@ -829,7 +826,6 @@ function runInDocker(command, options = {}) {
         message,
       });
     } else {
-      // Attached mode: docker run -it --rm --name <name> [--user <user>] <image> <shell> -c '<cmd>'
       const dockerArgs = ['run', '-it', '--rm', '--name', containerName];
       if (options.user) {
         dockerArgs.push('--user', options.user);
@@ -841,6 +837,7 @@ function runInDocker(command, options = {}) {
         ? [shellToUse, shellInteractiveFlag]
         : [shellToUse];
       // Bare shell: pass directly with -i (avoids bash-inside-bash, issue #84; -i ensures interactive).
+      // Shell with -c: pass directly as argv (avoids double-wrapping and quote-stripping, issue #91).
       let attachedCmdArgs;
       if (isBareShell) {
         const parts = command.trim().split(/\s+/);
@@ -849,6 +846,8 @@ function runInDocker(command, options = {}) {
           bareFlag && !parts.includes(bareFlag)
             ? [parts[0], bareFlag, ...parts.slice(1)]
             : parts;
+      } else if (isShellInvocationWithArgs(command)) {
+        attachedCmdArgs = buildShellWithArgsCmdArgs(command);
       } else {
         attachedCmdArgs = [...shellCmdArgs, '-c', command];
       }
@@ -973,6 +972,8 @@ module.exports = {
   isCommandAvailable,
   hasTTY,
   isInteractiveShellCommand,
+  isShellInvocationWithArgs,
+  buildShellWithArgsCmdArgs,
   detectShellInEnvironment,
   runInScreen,
   runInTmux,
