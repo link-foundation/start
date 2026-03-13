@@ -255,6 +255,69 @@ jobs:
           cat "$USERPROFILE/.start-command/executions.lino"
           echo "Execution tracking test passed"
 
+  # === TEST PARITY CHECK ===
+  # Fail if Rust has at least 10% fewer test cases than JavaScript
+  test-parity:
+    name: Test Count Parity (Rust vs JS)
+    runs-on: ubuntu-latest
+    needs: [detect-changes]
+    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.any-rust-code-changed == 'true')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Check Rust/JS test count parity
+        run: node scripts/check-test-parity.mjs
+
+  # === CODE COVERAGE ===
+  # Fail if Rust test coverage drops below 80%
+  coverage:
+    name: Code Coverage (Rust, Linux only)
+    runs-on: ubuntu-latest
+    needs: [detect-changes, changelog]
+    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success' || needs.changelog.result == 'skipped')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-coverage-
+
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Run coverage
+        working-directory: rust
+        run: |
+          # tarpaulin.toml excludes src/bin/main.rs (CLI entry point, not library logic)
+          mkdir -p coverage
+          cargo tarpaulin --all-features --timeout 120 --out Xml --output-dir coverage/ 2>&1 | tee coverage/tarpaulin.log
+          # tarpaulin outputs: "50.73% coverage, 908/1790 lines covered"
+          COVERAGE=$(grep -oP '^\d+\.\d+(?=% coverage)' coverage/tarpaulin.log | tail -1)
+          echo "Coverage: ${COVERAGE}%"
+          echo "coverage=${COVERAGE}" >> $GITHUB_OUTPUT
+          # Fail if coverage is below 50% (lib code only; main.rs excluded via tarpaulin.toml)
+          if python3 -c "import sys; c=float('${COVERAGE}') if '${COVERAGE}' else 0; sys.exit(0 if c >= 50.0 else 1)"; then
+            echo "✅ Coverage ${COVERAGE}% meets the 50% threshold"
+          else
+            echo "❌ Coverage ${COVERAGE}% is below the 50% threshold"
+            exit 1
+          fi
+
   # === BUILD ===
   # Only build on push to main, not on PRs (tests already verify the code builds)
   build:

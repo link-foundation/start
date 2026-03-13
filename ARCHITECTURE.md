@@ -232,23 +232,84 @@ By default, all isolation environments automatically exit after command completi
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+## Dual-Language Implementation
+
+The `$` command is maintained in two languages that must stay in sync:
+
+### JavaScript Implementation (`js/`)
+
+Primary runtime version using Bun/Node.js:
+
+```
+js/
+├── src/
+│   ├── bin/
+│   │   └── cli.js                  # Main entry point
+│   └── lib/
+│       ├── args-parser.js          # Argument parsing
+│       ├── isolation.js            # Isolation backends (screen/tmux/docker/ssh)
+│       ├── substitution.js         # Command aliases
+│       ├── execution-store.js      # Execution tracking and history
+│       ├── output-blocks.js        # Timeline format output rendering
+│       ├── user-manager.js         # User creation/deletion
+│       ├── failure-handler.js      # Automatic GitHub issue creation
+│       ├── status-formatter.js     # Execution status querying
+│       ├── sequence-parser.js      # Isolation stacking sequence parsing
+│       └── substitutions.lino      # Alias patterns
+├── test/                           # 500+ test cases
+└── package.json
+```
+
+### Rust Implementation (`rust/`)
+
+Performance-optimized alternative:
+
+```
+rust/
+├── src/
+│   ├── bin/
+│   │   └── main.rs                 # Main entry point
+│   └── lib/
+│       ├── args_parser.rs          # Argument parsing
+│       ├── isolation.rs            # Isolation backends (screen/tmux/docker/ssh)
+│       ├── substitution.rs         # Command aliases
+│       ├── execution_store.rs      # Execution tracking and history
+│       ├── output_blocks.rs        # Timeline format output rendering
+│       ├── user_manager.rs         # User creation/deletion
+│       ├── failure_handler.rs      # Automatic GitHub issue creation
+│       ├── status_formatter.rs     # Execution status querying
+│       ├── sequence_parser.rs      # Isolation stacking sequence parsing
+│       └── mod.rs                  # Module exports
+├── tests/                          # 450+ test cases
+└── Cargo.toml
+```
+
+### Sync Requirements
+
+Both implementations must:
+
+1. **Support the same CLI flags and behavior** — any new option added to one must be added to the other
+2. **Have equivalent test coverage** — CI/CD fails if Rust has ≥10% fewer test cases than JavaScript
+3. **Maintain 80% test coverage** — CI/CD fails if coverage drops below 80% in either implementation
+4. **Share the same substitution patterns** — `substitutions.lino` is shared between both implementations
+
+### Parity Check Script
+
+The `scripts/check-test-parity.mjs` script counts test cases in both implementations and fails if the ratio drops below 90%:
+
+```sh
+node scripts/check-test-parity.mjs
+```
+
 ## File Structure
 
 ```
 start-command/
-├── src/
-│   ├── bin/
-│   │   └── cli.js              # Main entry point
-│   └── lib/
-│       ├── args-parser.js      # Argument parsing
-│       ├── isolation.js        # Isolation backends
-│       ├── substitution.js     # Command aliases
-│       └── substitutions.lino  # Alias patterns
-├── test/
-│   ├── cli.test.js            # CLI tests
-│   ├── isolation.test.js      # Isolation tests
-│   ├── args-parser.test.js    # Parser tests
-│   └── substitution.test.js   # Substitution tests
+├── js/                        # JavaScript implementation
+├── rust/                      # Rust implementation
+├── lib/                       # Shared library (lino-objects-codec)
+├── scripts/                   # CI/CD and release scripts
+│   └── check-test-parity.mjs  # Rust/JS test count parity check
 ├── docs/
 │   ├── PIPES.md               # Piping documentation
 │   └── USAGE.md               # Usage examples

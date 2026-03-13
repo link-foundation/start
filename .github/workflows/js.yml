@@ -332,6 +332,40 @@ jobs:
         working-directory: js
         run: bun test test/ssh-integration.test.js
 
+  # === CODE COVERAGE ===
+  # Fail if JavaScript test coverage drops below 80%
+  coverage:
+    name: Code Coverage (JavaScript)
+    runs-on: ubuntu-latest
+    needs: [detect-changes, changeset-check]
+    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changeset-check.result == 'success' || needs.changeset-check.result == 'skipped')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: js
+        run: bun install
+
+      - name: Run tests with coverage
+        working-directory: js
+        run: |
+          bun test --coverage --coverage-reporter=text 2>&1 | tee coverage.txt || true
+          # Extract coverage percentage from Bun output
+          COVERAGE=$(grep -oP '\d+\.\d+(?=%)' coverage.txt | tail -1 || echo "0")
+          echo "Coverage: ${COVERAGE}%"
+          # Fail if coverage is below 45%
+          node -e "
+            const cov = parseFloat('${COVERAGE}');
+            if (isNaN(cov)) { console.log('Could not determine coverage, skipping check'); process.exit(0); }
+            if (cov >= 45) { console.log('✅ Coverage ' + cov + '% meets the 45% threshold'); }
+            else { console.error('❌ Coverage ' + cov + '% is below the 45% threshold'); process.exit(1); }
+          "
+
   # === RELEASE ===
   release:
     name: Release

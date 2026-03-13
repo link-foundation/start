@@ -106,11 +106,56 @@ pub fn wrap_command_with_user(command: &str, user: Option<&str>) -> String {
     }
 }
 
-/// Get the interactive flag for a shell, if supported.
-/// Returns "-i" for bash and zsh (which support interactive mode that sources startup files),
-/// returns None for sh and other shells that don't support this reliably.
+/// Shell names recognized as bare interactive shells (without -c flag).
+/// Mirrors JS SHELL_NAMES constant in isolation.js.
+const SHELL_NAMES: [&str; 8] = ["bash", "zsh", "sh", "fish", "ksh", "csh", "tcsh", "dash"];
+
+/// Returns true if command is a bare interactive shell invocation (no -c flag).
+/// Used to avoid double-wrapping shells in isolation environments (issue #84).
+///
+/// Examples: "bash", "zsh", "bash --norc", "/usr/local/bin/bash"
+/// Counter-examples: "bash -c echo hi", "npm test"
+pub fn is_interactive_shell_command(command: &str) -> bool {
+    let parts: Vec<&str> = command.split_whitespace().collect();
+    if parts.is_empty() {
+        return false;
+    }
+    let basename = parts[0].rsplit('/').next().unwrap_or(parts[0]);
+    SHELL_NAMES.contains(&basename) && !parts.contains(&"-c")
+}
+
+/// Returns true if command is a shell invocation that includes -c (e.g. `bash -i -c "cmd"`).
+/// Used to pass such commands directly without double-wrapping (issue #91).
+pub fn is_shell_invocation_with_args(command: &str) -> bool {
+    let parts: Vec<&str> = command.split_whitespace().collect();
+    if parts.is_empty() {
+        return false;
+    }
+    let basename = parts[0].rsplit('/').next().unwrap_or(parts[0]);
+    SHELL_NAMES.contains(&basename) && parts.contains(&"-c")
+}
+
+/// Build argv for a shell-with-c command; everything after -c is joined as one argument.
+/// Reverses the join(' ') that collapsed the original quoted argument.
+/// Used to pass `bash -i -c "nvm --version"` directly as argv (issue #91 fix).
+pub fn build_shell_with_args_cmd_args(command: &str) -> Vec<String> {
+    let parts: Vec<&str> = command.split_whitespace().collect();
+    let c_idx = parts.iter().position(|&p| p == "-c");
+    match c_idx {
+        None => parts.iter().map(|s| s.to_string()).collect(),
+        Some(idx) => {
+            let script_arg = parts[idx + 1..].join(" ");
+            let mut result: Vec<String> = parts[..idx + 1].iter().map(|s| s.to_string()).collect();
+            if !script_arg.is_empty() {
+                result.push(script_arg);
+            }
+            result
+        }
+    }
+}
+
+/// Returns "-i" for bash/zsh (interactive mode, sources startup files), None for other shells.
 fn get_shell_interactive_flag(shell_path: &str) -> Option<&'static str> {
-    // Extract the basename of the shell path
     let shell_name = shell_path.rsplit('/').next().unwrap_or(shell_path);
     match shell_name {
         "bash" => Some("-i"),
@@ -942,35 +987,12 @@ fn is_debug() -> bool {
     env::var("START_DEBUG").is_ok_and(|v| v == "1" || v == "true")
 }
 
-/// Escape a command string for use in shell -c argument
 fn shell_escape(command: &str) -> String {
-    // Wrap in single quotes, escaping any existing single quotes
     format!("'{}'", command.replace('\'', "'\\''"))
 }
 
-// Stub for atty crate functionality
-mod atty {
-    pub enum Stream {
-        Stdin,
-        Stdout,
-    }
-
-    pub fn is(_stream: Stream) -> bool {
-        // Simple check using isatty
-        #[cfg(unix)]
-        {
-            use std::os::unix::io::AsRawFd;
-            match _stream {
-                Stream::Stdin => unsafe { libc::isatty(std::io::stdin().as_raw_fd()) != 0 },
-                Stream::Stdout => unsafe { libc::isatty(std::io::stdout().as_raw_fd()) != 0 },
-            }
-        }
-        #[cfg(not(unix))]
-        {
-            false
-        }
-    }
-}
+#[path = "atty.rs"]
+mod atty;
 
 #[cfg(test)]
 #[path = "isolation_tests.rs"]
