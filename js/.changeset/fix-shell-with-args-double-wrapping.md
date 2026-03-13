@@ -1,5 +1,5 @@
 ---
-"start-command": patch
+'start-command': patch
 ---
 
 fix: pass `bash -c "..."` style commands directly to Docker without double-wrapping (issue #91)
