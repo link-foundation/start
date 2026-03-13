@@ -1,5 +1,15 @@
 # start-command
 
+## 0.24.8
+
+### Patch Changes
+
+- 1195fc1: Add CI/CD coverage enforcement and Rust/JS test parity checks (issue #93)
+  - Add `scripts/check-test-parity.mjs` script to enforce Rust/JS test count within 10%
+  - Add coverage job to JavaScript CI/CD workflow (80% minimum threshold)
+  - Update `ARCHITECTURE.md` to document dual-language sync requirements
+  - Update `REQUIREMENTS.md` to document test coverage requirements and parity rules
+
 ## 0.24.7
 
 ### Patch Changes
