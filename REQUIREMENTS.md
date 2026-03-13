@@ -355,3 +355,44 @@ Repository not detected - automatic issue creation skipped
 - Do not include authentication tokens in issue reports
 - Respect `.gitignore` patterns when detecting repositories
 - Only create issues in public repositories unless explicitly authorized
+
+## Dual-Language Sync Requirements
+
+The `$` command is implemented in both JavaScript and Rust. Both implementations must remain in sync:
+
+### Functional Parity
+
+- All CLI flags and options supported in JavaScript must also be supported in Rust
+- All isolation backends (screen, tmux, docker, ssh) must behave identically in both implementations
+- The substitution engine must produce identical results for the same input in both implementations
+- Output format (timeline/spine format) must be identical between implementations
+
+### Test Coverage Requirements
+
+The following are enforced by CI/CD:
+
+1. **Minimum test coverage**: Both JavaScript and Rust implementations must maintain at least **80%** test coverage
+   - JavaScript: measured with Bun's built-in `--coverage` flag
+   - Rust: measured with `cargo-tarpaulin`
+   - CI/CD fails if coverage drops below 80% in either implementation
+
+2. **Test count parity**: The Rust test count must be within 10% of the JavaScript test count
+   - CI/CD fails if Rust has ≥10% fewer test cases than JavaScript
+   - Checked by `scripts/check-test-parity.mjs`
+   - JavaScript test cases: count `it()` calls in `js/test/*.test.js`
+   - Rust test cases: count `#[test]` macros in `rust/tests/**/*.rs` and `rust/src/**/*.rs`
+
+### Adding New Features
+
+When adding a new feature or fixing a bug in one implementation:
+
+1. Implement the same logic in the other implementation
+2. Add equivalent tests in both `js/test/` and `rust/tests/`
+3. Ensure both implementations pass the parity check
+4. Update this document if the behavior changes
+
+### Shared Resources
+
+- `substitutions.lino` — command alias patterns shared between both implementations
+- `ARCHITECTURE.md` — documents the shared architecture
+- `REQUIREMENTS.md` — this file, documents all requirements for both implementations
