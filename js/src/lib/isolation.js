@@ -231,7 +231,9 @@ function isShellInvocationWithArgs(command) {
 function buildShellWithArgsCmdArgs(command) {
   const parts = command.trim().split(/\s+/);
   const cIdx = parts.indexOf('-c');
-  if (cIdx === -1) return parts;
+  if (cIdx === -1) {
+    return parts;
+  }
   const scriptArg = parts.slice(cIdx + 1).join(' ');
   return scriptArg.length > 0
     ? [...parts.slice(0, cIdx + 1), scriptArg]
