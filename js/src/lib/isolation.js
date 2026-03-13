@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { generateSessionName } = require('./args-parser');
+const outputBlocks = require('./output-blocks');
 
 const setTimeout = globalThis.setTimeout;
 
@@ -702,7 +703,6 @@ function runInSsh(command, options = {}) {
   }
 }
 
-// Import docker utilities from docker-utils
 const {
   dockerImageExists,
   dockerPullImage,
@@ -718,21 +718,23 @@ const {
  * @returns {Promise<{success: boolean, containerName: string, message: string}>}
  */
 function runInDocker(command, options = {}) {
-  if (!isCommandAvailable('docker')) {
-    return Promise.resolve({
-      success: false,
-      containerName: null,
-      message:
-        'Docker is not installed. Install Docker from https://docs.docker.com/get-docker/',
-    });
-  }
+  const dockerNotAvailableError = !isCommandAvailable('docker')
+    ? 'Docker is not installed. Install Docker from https://docs.docker.com/get-docker/'
+    : !isDockerAvailable()
+      ? 'Docker is installed but not running. Please start Docker Desktop or the Docker daemon, then try again.'
+      : null;
 
-  if (!isDockerAvailable()) {
+  if (dockerNotAvailableError) {
+    if (options.image) {
+      const pullCmd = `docker pull ${options.image}`;
+      console.log(outputBlocks.createVirtualCommandBlock(pullCmd));
+      console.log();
+      // ✗ and │ come from createFinishBlock() AFTER the error message (issue #89)
+    }
     return Promise.resolve({
       success: false,
       containerName: null,
-      message:
-        'Docker is installed but not running. Please start Docker Desktop or the Docker daemon, then try again.',
+      message: dockerNotAvailableError,
     });
   }
 
@@ -765,8 +767,7 @@ function runInDocker(command, options = {}) {
     : detectShellInEnvironment('docker', options, options.shell);
   const shellInteractiveFlag = getShellInteractiveFlag(shellToUse);
 
-  const { createCommandLine } = require('./output-blocks');
-  console.log(createCommandLine(command));
+  console.log(outputBlocks.createCommandLine(command));
   console.log();
 
   try {
@@ -951,9 +952,7 @@ function runIsolated(backend, command, options = {}) {
   }
 }
 
-/**
- * Reset screen version cache (useful for testing)
- */
+/** Reset screen version cache (useful for testing) */
 function resetScreenVersionCache() {
   cachedScreenVersion = null;
   screenVersionChecked = false;
