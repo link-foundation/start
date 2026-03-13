@@ -18,7 +18,12 @@ mod generate_uuid_tests {
         let id = generate_uuid();
         // UUID v4: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
         let parts: Vec<&str> = id.split('-').collect();
-        assert_eq!(parts.len(), 5, "UUID should have 5 hyphen-separated parts: {}", id);
+        assert_eq!(
+            parts.len(),
+            5,
+            "UUID should have 5 hyphen-separated parts: {}",
+            id
+        );
         assert_eq!(parts[0].len(), 8);
         assert_eq!(parts[1].len(), 4);
         assert_eq!(parts[2].len(), 4);

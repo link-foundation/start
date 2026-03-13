@@ -2,9 +2,9 @@
 //!
 //! Mirrors user_manager test coverage from the JS test suite.
 
-use start_command::user_manager::{generate_isolated_username, get_current_user, user_exists};
 #[cfg(unix)]
 use start_command::user_manager::get_current_user_groups;
+use start_command::user_manager::{generate_isolated_username, get_current_user, user_exists};
 
 #[test]
 fn get_current_user_returns_non_empty_string() {
