@@ -304,12 +304,14 @@ jobs:
         working-directory: rust
         run: |
           # tarpaulin.toml excludes src/bin/main.rs (CLI entry point, not library logic)
+          mkdir -p coverage
           cargo tarpaulin --all-features --timeout 120 --out Xml --output-dir coverage/ 2>&1 | tee coverage/tarpaulin.log
-          COVERAGE=$(grep -oP '(?<=Coverage: )\d+\.\d+' coverage/tarpaulin.log | tail -1)
+          # tarpaulin outputs: "50.73% coverage, 908/1790 lines covered"
+          COVERAGE=$(grep -oP '^\d+\.\d+(?=% coverage)' coverage/tarpaulin.log | tail -1)
           echo "Coverage: ${COVERAGE}%"
           echo "coverage=${COVERAGE}" >> $GITHUB_OUTPUT
           # Fail if coverage is below 50% (lib code only; main.rs excluded via tarpaulin.toml)
-          if python3 -c "import sys; sys.exit(0 if float('${COVERAGE}') >= 50.0 else 1)"; then
+          if python3 -c "import sys; c=float('${COVERAGE}') if '${COVERAGE}' else 0; sys.exit(0 if c >= 50.0 else 1)"; then
             echo "✅ Coverage ${COVERAGE}% meets the 50% threshold"
           else
             echo "❌ Coverage ${COVERAGE}% is below the 50% threshold"
