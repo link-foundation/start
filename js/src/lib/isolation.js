@@ -214,29 +214,12 @@ function getShellInteractiveFlag(shellPath) {
   const shellName = shellPath.split('/').pop();
   return shellName === 'bash' || shellName === 'zsh' ? '-i' : null;
 }
-const SHELL_NAMES = ['bash', 'zsh', 'sh', 'fish', 'ksh', 'csh', 'tcsh', 'dash'];
-/** True if command is a bare shell invocation (no -c); avoids bash-inside-bash (issue #84). */
-function isInteractiveShellCommand(command) {
-  const parts = command.trim().split(/\s+/);
-  return SHELL_NAMES.includes(path.basename(parts[0])) && !parts.includes('-c');
-}
-/** True if command is a shell invocation with -c (e.g. `bash -i -c "cmd"`); avoids double-wrapping (issue #91). */
-function isShellInvocationWithArgs(command) {
-  const parts = command.trim().split(/\s+/);
-  return SHELL_NAMES.includes(path.basename(parts[0])) && parts.includes('-c');
-}
-/** Build argv for shell-with-c command; everything after -c is one argument (reverses commandArgs.join(' ')). */
-function buildShellWithArgsCmdArgs(command) {
-  const parts = command.trim().split(/\s+/);
-  const cIdx = parts.indexOf('-c');
-  if (cIdx === -1) {
-    return parts;
-  }
-  const scriptArg = parts.slice(cIdx + 1).join(' ');
-  return scriptArg.length > 0
-    ? [...parts.slice(0, cIdx + 1), scriptArg]
-    : parts.slice(0, cIdx + 1);
-}
+const {
+  isInteractiveShellCommand,
+  isShellInvocationWithArgs,
+  buildShellWithArgsCmdArgs,
+  buildDisplayCommand,
+} = require('./shell-utils');
 
 /** Returns true if the current process has a TTY attached. */
 function hasTTY() {
@@ -764,7 +747,7 @@ function runInDocker(command, options = {}) {
     : detectShellInEnvironment('docker', options, options.shell);
   const shellInteractiveFlag = getShellInteractiveFlag(shellToUse);
 
-  console.log(outputBlocks.createCommandLine(command));
+  console.log(outputBlocks.createCommandLine(buildDisplayCommand(command)));
   console.log();
 
   try {
@@ -974,6 +957,7 @@ module.exports = {
   isInteractiveShellCommand,
   isShellInvocationWithArgs,
   buildShellWithArgsCmdArgs,
+  buildDisplayCommand,
   detectShellInEnvironment,
   runInScreen,
   runInTmux,

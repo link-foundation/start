@@ -34,6 +34,7 @@ const {
   isInteractiveShellCommand,
   isShellInvocationWithArgs,
   buildShellWithArgsCmdArgs,
+  buildDisplayCommand,
 } = require('../src/lib/isolation');
 
 // Helper: mirrors the attached-mode command-args construction logic in runInDocker.
@@ -257,4 +258,39 @@ describe('isShellInvocationWithArgs is mutually exclusive with isInteractiveShel
       );
     });
   }
+});
+
+describe('buildDisplayCommand (issue #91 display fix)', () => {
+  it('should quote the -c script argument when it contains spaces', () => {
+    assert.strictEqual(
+      buildDisplayCommand('bash -i -c nvm --version'),
+      'bash -i -c "nvm --version"'
+    );
+  });
+
+  it('should quote the -c script argument for plain "bash -c echo hello"', () => {
+    assert.strictEqual(
+      buildDisplayCommand('bash -c echo hello'),
+      'bash -c "echo hello"'
+    );
+  });
+
+  it('should not double-quote if script has no spaces', () => {
+    assert.strictEqual(buildDisplayCommand('bash -c ls'), 'bash -c ls');
+  });
+
+  it('should return command unchanged for non-shell-with-args commands', () => {
+    assert.strictEqual(buildDisplayCommand('nvm --version'), 'nvm --version');
+  });
+
+  it('should return command unchanged for bare shell invocations', () => {
+    assert.strictEqual(buildDisplayCommand('bash -i'), 'bash -i');
+  });
+
+  it('should handle zsh -c with spaces', () => {
+    assert.strictEqual(
+      buildDisplayCommand('zsh -c echo hello world'),
+      'zsh -c "echo hello world"'
+    );
+  });
 });
