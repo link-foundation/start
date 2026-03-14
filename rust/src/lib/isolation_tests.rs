@@ -109,14 +109,8 @@ fn test_run_in_screen_captures_exit_code() {
         },
     );
 
-    assert!(
-        !result.success,
-        "Command should fail (command not found)"
-    );
-    assert!(
-        result.exit_code.is_some(),
-        "Exit code should be captured"
-    );
+    assert!(!result.success, "Command should fail (command not found)");
+    assert!(result.exit_code.is_some(), "Exit code should be captured");
     let exit_code = result.exit_code.unwrap();
     assert_ne!(
         exit_code, 0,

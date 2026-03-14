@@ -106,10 +106,7 @@ pub fn run_screen_with_log_capture(
     );
     if let Err(e) = fs::write(&screenrc_path, &screenrc_content) {
         if is_debug() {
-            eprintln!(
-                "[screen-isolation] Failed to create screenrc: {}",
-                e
-            );
+            eprintln!("[screen-isolation] Failed to create screenrc: {}", e);
         }
         return IsolationResult {
             success: false,
@@ -127,7 +124,7 @@ pub fn run_screen_with_log_capture(
             "-c".to_string(),
             screenrc_path.to_string_lossy().to_string(),
         ];
-        args.extend(command.trim().split_whitespace().map(String::from));
+        args.extend(command.split_whitespace().map(String::from));
         args
     } else {
         vec![
@@ -143,10 +140,7 @@ pub fn run_screen_with_log_capture(
 
     if is_debug() {
         eprintln!("[screen-isolation] Running: screen {:?}", screen_args);
-        eprintln!(
-            "[screen-isolation] screenrc: {}",
-            screenrc_content.trim()
-        );
+        eprintln!("[screen-isolation] screenrc: {}", screenrc_content.trim());
         eprintln!("[screen-isolation] Log file: {}", log_file.display());
         eprintln!(
             "[screen-isolation] Exit code file: {}",
@@ -234,9 +228,7 @@ pub fn run_screen_with_log_capture(
             }
             Err(_) => {
                 if is_debug() {
-                    eprintln!(
-                        "[screen-isolation] Could not read exit code file, defaulting to 0"
-                    );
+                    eprintln!("[screen-isolation] Could not read exit code file, defaulting to 0");
                 }
                 0
             }
