@@ -7,12 +7,71 @@ $ --isolated screen -- agent --version
 
 ## User Environment
 - macOS (Apple Silicon / Intel)
-- GNU Screen 4.0.3 (bundled with macOS — older than 4.5.1 threshold)
-- OR: Linux with GNU Screen ≥ 4.5.1 where the race condition still exists under load
+- GNU Screen 4.00.03 (bundled with macOS — older than 4.5.1 threshold)
+- zsh 5.9
+- `agent` installed via `bun install -g start-command`
 
 ---
 
-## Sequence of Events (Tee Fallback Path — macOS Screen 4.0.3)
+## Fix Iteration 1: v0.24.9 / PR #97
+
+### Hypothesis
+The issue was attributed to two root causes:
+1. **Native logging** (screen ≥ 4.5.1): `log_flush = 10` (10-second buffer delay)
+2. **Tee fallback** (screen < 4.5.1): TOCTOU race when reading the log file
+
+### Fix Applied
+- Native path: `logfile flush 0` in screenrc + `-c` option
+- Tee path: Single 50ms retry when log file is empty
+
+### Result: Partial failure
+The fix worked on Linux (screen 4.09.01) but NOT on macOS (screen 4.00.03).
+User confirmed: "Fix didn't work."
+
+---
+
+## Fix Iteration 2: v0.25.0 / PR #98
+
+### Investigation
+
+#### Key observations from user's report
+1. macOS screen 4.00.03 → uses tee fallback (not native logging)
+2. Output is blank between `$ agent --version` and `✓` (exit 0)
+3. `--verbose` flag shows isolation metadata but no screen debug output
+4. The `START_DEBUG` env var was separate from `--verbose` CLI flag
+
+#### Experiments conducted
+1. **test-screen-capture-issue96.js**: Verified both paths work on Linux
+2. **test-screen-tee-forced.js**: Confirmed tee fallback works on Linux
+3. **test-screen-screenrc-logging.js**: Discovered `deflog on` + `logfile <path>`
+   works WITHOUT `-L` or `-Logfile` flags on ALL screen versions
+
+#### Key discovery
+Screen's `logfile` and `deflog on` screenrc directives are available since early
+screen versions (pre-4.0). By using:
+```
+logfile /path/to/output.log
+logfile flush 0
+deflog on
+```
+in a screenrc file, we can enable logging with a custom path on ANY screen version —
+completely eliminating the need for `-Logfile` (CLI option, 4.5.1+) or tee fallback.
+
+#### Additional discoveries
+1. **Exit code always 0**: The code always reported `exitCode: 0` regardless of
+   command outcome. Fixed by saving `$?` to a sidecar file.
+2. **Debug output gap**: `--verbose` CLI flag set `START_VERBOSE` but screen-isolation
+   only checked `START_DEBUG`. Fixed to respond to both.
+
+### Fix Applied
+- Unified screenrc-based logging for ALL screen versions
+- Exit code capture via sidecar file
+- Enhanced retry logic (3 retries, 50/100/200ms)
+- Debug output responds to both START_DEBUG and START_VERBOSE
+
+---
+
+## Sequence of Events (Unified Screenrc Path — ALL Screen Versions)
 
 ### Step 1: CLI parses command
 ```
@@ -21,67 +80,23 @@ $ --isolated screen -- agent --version
 → `command = "agent --version"`, `isolated = "screen"`, `mode = "attached"`
 
 ### Step 2: `runScreenWithLogCapture()` is called
-- `supportsLogfileOption()` returns `false` (screen 4.0.3 < 4.5.1)
-- Tee fallback path chosen
-- `effectiveCommand = "(agent --version) 2>&1 | tee \"/tmp/screen-output-...log\""`
-- Screen starts: `screen -dmS session /bin/zsh -c "(agent --version) 2>&1 | tee logfile"`
+- Creates screenrc with `logfile`, `logfile flush 0`, `deflog on`
+- Wraps command: `agent --version; echo $? > /tmp/screen-exit-xxx.code`
+- Starts: `screen -dmS session -c /tmp/screenrc-xxx /bin/zsh -c 'agent --version; echo $? > ...'`
 
-### Step 3: Screen session runs the command (t ≈ 0ms)
-- Screen starts its internal process
-- `agent --version` executes (very fast, ≈ 5ms)
-- `agent` writes `0.13.2\n` to stdout
-- The tee pipe receives the output and writes it to the log file
-- The zsh process exits
-- Screen detects child exit and terminates the session
-- Screen session is gone (t ≈ 50ms total)
+### Step 3: Screen session runs
+- Screen reads screenrc and enables logging to custom path with immediate flush
+- `/bin/zsh -c '...'` runs `agent --version`
+- Output is written to screen's virtual terminal
+- Screen's logger captures output and flushes immediately (logfile flush 0)
+- Exit code is written to sidecar file via `echo $?`
+- Shell exits, screen terminates session
 
-### Step 4: Our poller first checks at t = 100ms
-- `execSync('screen -ls')` runs
-- Session name NOT found → session is done
-- `fs.readFileSync(logFile)` reads the log file
+### Step 4: Poller detects session completion (t ≈ 100ms)
+- `screen -ls` no longer shows the session
+- Reads log file — output is present (already flushed by screen)
+- Reads exit code file — gets actual exit code
+- Displays output and reports correct exit code
 
-### Step 5 (BUG): Log file is empty or missing
-**Root cause 1 (screen ≥ 4.5.1, native logging path):**
-- Screen writes to a libc `FILE*` buffer via `fwrite`
-- GNU Screen's `log_flush` defaults to 10 seconds
-- With `log_flush = 10`, `WLogString()` in `ansi.c` does NOT call `logfflush` after each write
-- The periodic flush timer fires at t = 10,000ms, but the session terminated at t ≈ 50ms
-- If `fclose` is called properly in `Finit()→FreeWindow()→logfclose()`, libc's `fclose`
-  should flush the buffer (POSIX guarantees `fclose` flushes before closing)
-- However: on macOS with Homebrew screen / system screen, the `fclose` may be called from
-  a signal handler or cleanup path that uses `_exit()` instead of `exit()`, bypassing
-  stdio buffer flushing entirely
-
-**Root cause 2 (screen < 4.5.1, tee fallback path):**
-- The tee pipe's output buffering may not be complete when the screen session exits
-- The log file may exist but contain 0 bytes at the moment of reading
-- This is a TOCTOU (time-of-check-time-of-use) race condition
-
-### Step 6: Empty output displayed
-- `output.trim()` is falsy (empty string)
-- Nothing is written to `process.stdout`
-- The version string `0.13.2` is silently lost
-
----
-
-## Sequence of Events (Native Logging Path — Screen ≥ 4.5.1)
-
-### Step 3 (detail): Screen's internal log buffer
-- Screen writes `0.13.2\r\n` to its internal `FILE*` log buffer via `logfwrite()`
-- With default `log_flush = 10`, `WLogString()` does NOT call `logfflush()`
-- The session exits before the 10-second flush timer fires
-- If `Finit()` calls `fclose()` via the normal exit path, the buffer IS flushed (POSIX)
-- BUT: if any signal handler calls `_exit()`, the buffer is NOT flushed
-
-This explains why the issue is **intermittent** — it depends on whether screen exits
-via the normal `exit()` code path or a signal-triggered `_exit()` path.
-
----
-
-## Verified Behavior (Linux, Screen 4.09.01)
-On Linux with screen 4.09.01, the issue does NOT reproduce reliably because:
-1. The `fclose` path is taken in `logfclose()`, flushing the stdio buffer
-2. The tee fallback is not used (native logging is available)
-3. The fix (logfile flush 0) ensures the buffer is always flushed immediately
-
-The issue is most reproducible on macOS where the tee fallback is used.
+### Step 5: Cleanup
+- Removes temporary screenrc, log file, and exit code file

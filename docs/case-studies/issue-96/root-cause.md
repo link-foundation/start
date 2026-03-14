@@ -54,24 +54,6 @@ stdio buffers are NOT flushed. This can happen when:
 This makes the issue **intermittent** — it depends on the OS, screen version, and exact
 timing of the signal handling.
 
-### The fix
-
-Add `logfile flush 0` to a temporary screenrc passed via `screen -c`:
-
-```
-logfile flush 0
-```
-
-This sets `log_flush = 0` in screen's internal variable, causing `WLogString` to call
-`logfflush()` after every write:
-
-```c
-if (!log_flush)
-    logfflush(win->w_log);  // now always executes
-```
-
-This completely eliminates the flush delay for log file writes.
-
 ---
 
 ## Root Cause 2: Tee Pipe Buffering Race (Tee Fallback, Screen < 4.5.1)
@@ -79,13 +61,13 @@ This completely eliminates the flush delay for log file writes.
 ### macOS bundled screen 4.0.3
 
 On macOS, the system-bundled GNU Screen is version 4.0.3, which predates the `-Logfile`
-option (added in 4.5.1). The code falls back to:
+option (added in 4.5.1). The previous code fell back to:
 
 ```js
 effectiveCommand = `(${effectiveCommand}) 2>&1 | tee "${logFile}"`;
 ```
 
-The screen session runs:
+The screen session ran:
 ```
 screen -dmS session /bin/zsh -c "(agent --version) 2>&1 | tee /tmp/logfile"
 ```
@@ -108,41 +90,71 @@ there may be a brief window where:
 This is a TOCTOU (time-of-check-time-of-use) race between the session appearing gone in
 `screen -ls` and the log file having its complete content.
 
-### The fix
+### Why the v0.24.9 retry fix was insufficient
 
-The `logfile flush 0` fix in the screenrc does NOT directly help the tee fallback path
-(since tee is an external process, not governed by screen's log flush). However, an
-additional retry mechanism can be added: if the log file is empty when first read but the
-session just terminated, retry the read after a brief delay to let the OS flush complete.
-
-In practice, on Linux the tee fallback is not used (screen >= 4.5.1 is available), and
-on macOS the `logfile flush 0` option works on screen 4.0.3 as well (it's a screenrc
-command, not a version-gated feature).
+The v0.24.9 fix added a single 50ms retry when the log file was empty. However, on macOS:
+- The race window was larger than 50ms in many cases
+- `tee` itself could be killed by screen before flushing its buffer
+- The fundamental architecture of piping through tee in a detached session was inherently
+  unreliable for fast-completing commands
 
 ---
 
-## Why This Is Intermittent
+## Root Cause 3: Exit Code Always Reported as 0
 
-The issue doesn't always reproduce because:
+A secondary bug was discovered during the investigation: the screen isolation code
+**always reported exit code 0** regardless of what happened inside the screen session.
 
-1. **On Linux with screen 4.09.01**: The normal `fclose()` path usually flushes the buffer
-   correctly. Only under certain timing conditions (SIGCHLD handling, `_exit`) does it fail.
+```js
+resolve({
+  success: true,
+  exitCode: 0,  // Always 0!
+  message: `Screen session "${sessionName}" exited with code 0`,
+});
+```
 
-2. **On macOS with screen 4.0.3**: The tee fallback's race window is very small (~1ms).
-   Most of the time the file has content when read. But for very fast commands with a
-   busy system, the window widens.
-
-3. **The `screen -ls` timing**: The check `!sessions.includes(sessionName)` returns true
-   as soon as the session process exits, but the OS may still be in the middle of flushing
-   the log file's write buffers to the page cache.
+This meant that even if `agent --version` failed (e.g., `agent` not in PATH inside
+the screen session), the user would see exit code 0 and no output — making it
+impossible to diagnose whether the issue was output capture or command execution.
 
 ---
 
-## Test Coverage Gap
+## The Fix: Unified Screenrc-Based Logging
 
-There were no tests specifically for:
-1. Quick-completing commands (like `--version` flags) in screen isolation
-2. Verification that version-string output (short, non-whitespace text) is captured
+The root cause of both the native and tee paths was that they relied on mechanisms
+that had reliability edge cases:
+- Native `-Logfile`: buffer flush timing
+- Tee: pipe buffering and process lifecycle
 
-The existing tests use `echo "hello"` which is also fast but the string is longer and
-may flush more reliably in certain conditions.
+The fix replaces both with **screenrc-based logging**, using directives available
+since early screen versions:
+
+```
+logfile /path/to/output.log    # sets custom log file path
+logfile flush 0                # forces immediate flush
+deflog on                      # enables logging for all new windows
+```
+
+This approach:
+1. Uses screen's **own logging mechanism** consistently (no external tee process)
+2. Sets the **log file path via screenrc** (no need for -Logfile CLI option)
+3. Forces **immediate flush** (no 10-second buffer delay)
+4. Enables logging **at session creation** (no race with output timing)
+5. Works on **all screen versions** including macOS 4.00.03
+
+Additionally:
+- **Exit code capture** via `$?` saved to a sidecar file
+- **Enhanced retry** with 3 attempts and increasing delays (50/100/200ms)
+- **Better diagnostics** via `[screen-isolation]` debug prefix
+
+---
+
+## Test Coverage
+
+Tests added specifically for this issue:
+1. **Version-flag command output capture**: `node --version` output must be captured
+2. **Exit code capture from failed commands**: `nonexistent_command` must report non-zero
+3. **Stderr capture**: `echo "test" >&2` must appear in captured output
+4. **Multi-line output with correct exit code**: Multiple echo commands with exit 0
+
+Both JavaScript and Rust implementations have corresponding tests.

@@ -30,41 +30,42 @@ $ agent --version
 
 The expected output `0.13.2` is missing between `$ agent --version` and the `✓` marker.
 
-## Fix (v0.24.9 / PR #97)
+## Environment
 
-Two changes were made:
+- macOS with screen 4.00.03 (bundled with macOS, does not support `-Logfile` option)
+- `agent` installed via `bun install -g start-command` (added to `~/.bun/bin/`)
+- zsh 5.9 as default shell
 
-### 1. Add `logfile flush 0` to screen's configuration
+## Fix History
 
-For the **native logging path** (`-L -Logfile`, screen ≥ 4.5.1), screen uses a periodic
-flush timer that fires every **10 seconds** by default. If the command completes and the
-screen session terminates before this timer fires, output buffered inside screen's internal
-`FILE*` buffer may not be flushed to the log file before the session ends.
+### v0.24.9 / PR #97 (partial fix)
 
-The fix passes a temporary screenrc with `logfile flush 0` via screen's `-c` option. This
-forces screen to flush the log after every write, eliminating the race condition.
+Added `logfile flush 0` screenrc for the native logging path (screen ≥ 4.5.1) and
+a 50ms retry for the tee fallback (screen < 4.5.1). This fixed the issue on Linux
+but **did not fix macOS** because the tee fallback had inherent reliability issues.
 
-Before fix:
+### v0.25.0 / PR #98 (complete fix)
+
+Replaced the entire version-dependent logging approach with a **unified
+screenrc-based strategy** that works on ALL screen versions:
+
 ```
-screen -dmS <session> -L -Logfile <logfile> <shell> -c '<command>'
+logfile /path/to/output.log    # custom log file path
+logfile flush 0                # immediate buffer flush
+deflog on                      # enable logging for all windows
 ```
 
-After fix:
-```
-screen -dmS <session> -c <screenrc> -L -Logfile <logfile> <shell> -c '<command>'
-```
+This eliminates both the native `-L -Logfile` path and the tee fallback,
+using only screenrc directives available since early screen versions.
 
-where `<screenrc>` contains `logfile flush 0`.
-
-### 2. Add integration test for quick-completing commands
-
-Added a test case specifically for the issue: `runInScreen('agent --version')` must
-capture the version output correctly.
+Additional improvements:
+1. **Exit code capture** — real exit code from command ($? via sidecar file)
+2. **Enhanced retry logic** — 3 retries with increasing delays (50/100/200ms)
+3. **Debug output** — responds to both `START_DEBUG` and `START_VERBOSE`
+4. **New tests** — exit code capture, stderr capture, multi-line verification
 
 ## See Also
 
 - [root-cause.md](root-cause.md) — Detailed root cause analysis
 - [timeline.md](timeline.md) — Sequence of events
 - [solutions.md](solutions.md) — Solutions considered and chosen
-- Related: [Case Study issue-15](../issue-15/README.md) — Original screen output capture fix
-- Related: [Case Study issue-25](../issue-25/README.md) — Screen quoting fix
