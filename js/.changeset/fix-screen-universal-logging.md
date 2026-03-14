@@ -13,6 +13,7 @@ that work on ALL screen versions, eliminating both the version-dependent branchi
 and the unreliable tee fallback entirely.
 
 Additional improvements:
+
 - **Exit code capture**: Commands now report their actual exit code via a sidecar
   file, instead of always reporting 0.
 - **Enhanced retry logic**: 3 retries with increasing delays (50/100/200ms) instead
