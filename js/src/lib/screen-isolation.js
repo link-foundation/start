@@ -7,9 +7,12 @@ const path = require('path');
 
 const setTimeout = globalThis.setTimeout;
 
-// Debug mode from environment
+// Debug mode from environment (START_DEBUG or START_VERBOSE)
 const DEBUG =
-  process.env.START_DEBUG === '1' || process.env.START_DEBUG === 'true';
+  process.env.START_DEBUG === '1' ||
+  process.env.START_DEBUG === 'true' ||
+  process.env.START_VERBOSE === '1' ||
+  process.env.START_VERBOSE === 'true';
 
 // Cache for screen version detection
 let cachedScreenVersion = null;
@@ -41,8 +44,8 @@ function getScreenVersion() {
       };
 
       if (DEBUG) {
-        console.log(
-          `[DEBUG] Detected screen version: ${cachedScreenVersion.major}.${cachedScreenVersion.minor}.${cachedScreenVersion.patch}`
+        console.error(
+          `[screen-isolation] Detected screen version: ${cachedScreenVersion.major}.${cachedScreenVersion.minor}.${cachedScreenVersion.patch}`
         );
       }
 
@@ -50,7 +53,7 @@ function getScreenVersion() {
     }
   } catch {
     if (DEBUG) {
-      console.log('[DEBUG] Could not detect screen version');
+      console.error('[screen-isolation] Could not detect screen version');
     }
   }
 
@@ -90,14 +93,30 @@ function supportsLogfileOption() {
 
 /**
  * Run command in GNU Screen using detached mode with log capture.
- * Supports screen >= 4.5.1 (native -Logfile) and older versions (tee fallback).
+ *
+ * Uses a unified screenrc-based approach that works on ALL screen versions:
+ * - `logfile <path>` sets the log file path (available since early screen versions)
+ * - `logfile flush 0` forces immediate flushing (no 10-second delay)
+ * - `deflog on` enables logging for all windows by default
+ *
+ * This replaces the previous version-dependent approach that used:
+ * - `-L -Logfile` for screen >= 4.5.1 (native logging)
+ * - `tee` fallback for screen < 4.5.1 (e.g., macOS bundled 4.0.3)
+ *
+ * The tee fallback had reliability issues on macOS (issue #96) because:
+ * - tee's write buffers may not be flushed before the session ends
+ * - The TOCTOU race between session detection and file read was hard to mitigate
+ *
+ * The screenrc approach eliminates both issues because screen's internal logging
+ * is part of the session lifecycle and `logfile flush 0` ensures immediate writes.
+ *
  * @param {string} command - Command to execute
  * @param {string} sessionName - Session name
  * @param {object} shellInfo - Shell info from getShell()
  * @param {string|null} user - Username to run command as (optional)
  * @param {Function} wrapCommandWithUser - Function to wrap command with user
  * @param {Function} isInteractiveShellCommand - Function to check if command is interactive shell
- * @returns {Promise<{success: boolean, sessionName: string, message: string, output: string}>}
+ * @returns {Promise<{success: boolean, sessionName: string, message: string, output: string, exitCode: number}>}
  */
 function runScreenWithLogCapture(
   command,
@@ -109,63 +128,73 @@ function runScreenWithLogCapture(
 ) {
   const { shell, shellArg } = shellInfo;
   const logFile = path.join(os.tmpdir(), `screen-output-${sessionName}.log`);
-
-  // Check if screen supports -Logfile option (added in 4.5.1)
-  const useNativeLogging = supportsLogfileOption();
+  const exitCodeFile = path.join(
+    os.tmpdir(),
+    `screen-exit-${sessionName}.code`
+  );
 
   return new Promise((resolve) => {
     try {
-      let screenArgs;
       // Wrap command with user switch if specified
       let effectiveCommand = wrapCommandWithUser(command, user);
 
-      // Temporary screenrc file for native logging path (issue #96)
-      // Setting logfile flush 0 forces screen to flush its log buffer after every write,
-      // preventing output loss for quick-completing commands like `agent --version`.
-      // Without this, screen buffers log writes and flushes every 10 seconds by default.
-      let screenrcFile = null;
+      // Wrap command to capture exit code in a sidecar file.
+      // We save $? after the command completes so we can report the real exit code
+      // instead of always assuming 0 (previous behavior).
+      const isBareShell = isInteractiveShellCommand(command);
+      if (!isBareShell) {
+        effectiveCommand = `${effectiveCommand}; echo $? > "${exitCodeFile}"`;
+      }
 
-      if (useNativeLogging) {
-        // Modern screen (>= 4.5.1): Use -L -Logfile option for native log capture
-        // Use a temporary screenrc with `logfile flush 0` to force immediate log flushing
-        // (issue #96: quick commands like `agent --version` lose output without this)
-        screenrcFile = path.join(os.tmpdir(), `screenrc-${sessionName}`);
-        try {
-          fs.writeFileSync(screenrcFile, 'logfile flush 0\n');
-        } catch {
-          // If we can't create the screenrc, proceed without it (best effort)
-          screenrcFile = null;
-        }
+      // Create temporary screenrc with logging configuration.
+      // This approach works on ALL screen versions (including macOS 4.00.03):
+      // - `logfile <path>` sets the output log path (replaces -Logfile CLI option)
+      // - `logfile flush 0` forces immediate buffer flush (prevents output loss)
+      // - `deflog on` enables logging for all new windows (replaces -L CLI flag)
+      const screenrcFile = path.join(os.tmpdir(), `screenrc-${sessionName}`);
+      const screenrcContent = [
+        `logfile ${logFile}`,
+        'logfile flush 0',
+        'deflog on',
+        '',
+      ].join('\n');
 
-        // screen -dmS <session> -c <screenrc> -L -Logfile <logfile> <shell> -c '<command>'
-        const logArgs = screenrcFile
-          ? ['-dmS', sessionName, '-c', screenrcFile, '-L', '-Logfile', logFile]
-          : ['-dmS', sessionName, '-L', '-Logfile', logFile];
-        screenArgs = isInteractiveShellCommand(command)
-          ? [...logArgs, ...command.trim().split(/\s+/)]
-          : [...logArgs, shell, shellArg, effectiveCommand];
-
+      try {
+        fs.writeFileSync(screenrcFile, screenrcContent);
+      } catch (err) {
         if (DEBUG) {
-          console.log(
-            `[DEBUG] Running screen with native log capture (-Logfile): screen ${screenArgs.join(' ')}`
+          console.error(
+            `[screen-isolation] Failed to create screenrc: ${err.message}`
           );
         }
-      } else {
-        // Older screen (< 4.5.1, e.g., macOS bundled 4.0.3): Use tee fallback
-        // The parentheses ensure proper grouping of the command and its stderr
-        const isBareShell = isInteractiveShellCommand(command);
-        if (!isBareShell) {
-          effectiveCommand = `(${effectiveCommand}) 2>&1 | tee "${logFile}"`;
-        }
-        screenArgs = isBareShell
-          ? ['-dmS', sessionName, ...command.trim().split(/\s+/)]
-          : ['-dmS', sessionName, shell, shellArg, effectiveCommand];
+        resolve({
+          success: false,
+          sessionName,
+          message: `Failed to create screenrc for logging: ${err.message}`,
+        });
+        return;
+      }
 
-        if (DEBUG) {
-          console.log(
-            `[DEBUG] Running screen with tee fallback (older screen version): screen ${screenArgs.join(' ')}`
-          );
-        }
+      // Build screen arguments: screen -dmS <session> -c <screenrc> <shell> -c '<command>'
+      const screenArgs = isBareShell
+        ? [
+            '-dmS',
+            sessionName,
+            '-c',
+            screenrcFile,
+            ...command.trim().split(/\s+/),
+          ]
+        : ['-dmS', sessionName, '-c', screenrcFile, shell, shellArg, effectiveCommand];
+
+      if (DEBUG) {
+        console.error(
+          `[screen-isolation] Running: screen ${screenArgs.join(' ')}`
+        );
+        console.error(
+          `[screen-isolation] screenrc: ${screenrcContent.trim()}`
+        );
+        console.error(`[screen-isolation] Log file: ${logFile}`);
+        console.error(`[screen-isolation] Exit code file: ${exitCodeFile}`);
       }
 
       // Use spawnSync with array args (not execSync string) to avoid quoting issues (issue #25)
@@ -177,11 +206,14 @@ function runScreenWithLogCapture(
         throw result.error;
       }
 
-      // Helper to read log file output and write to stdout
-      // Includes a short retry for the tee fallback path to handle the TOCTOU race
-      // condition where the session appears gone but the log file isn't fully written yet
-      // (issue #96)
+      // Helper to read log file output and write to stdout.
+      // Uses multiple retries with increasing delays to handle the race condition
+      // where the screen session disappears from `screen -ls` but the log file
+      // hasn't been fully flushed yet (issue #96).
       const readAndDisplayOutput = (retryCount = 0) => {
+        const MAX_RETRIES = 3;
+        const RETRY_DELAYS = [50, 100, 200]; // ms
+
         let output = '';
         try {
           output = fs.readFileSync(logFile, 'utf8');
@@ -189,15 +221,34 @@ function runScreenWithLogCapture(
           // Log file might not exist if command produced no output
         }
 
-        // If output is empty and we haven't retried yet, wait briefly and retry once.
-        // This handles the race where tee's write hasn't been flushed to disk yet
-        // when the screen session appears done in `screen -ls` (issue #96).
-        if (!output.trim() && retryCount === 0) {
+        // If output is empty and we haven't exhausted retries, wait and retry.
+        if (!output.trim() && retryCount < MAX_RETRIES) {
+          const delay = RETRY_DELAYS[retryCount] || 200;
+          if (DEBUG) {
+            console.error(
+              `[screen-isolation] Log file empty, retry ${retryCount + 1}/${MAX_RETRIES} after ${delay}ms`
+            );
+          }
           return new Promise((resolveRetry) => {
             setTimeout(() => {
-              resolveRetry(readAndDisplayOutput(1));
-            }, 50);
+              resolveRetry(readAndDisplayOutput(retryCount + 1));
+            }, delay);
           });
+        }
+
+        if (DEBUG && !output.trim()) {
+          console.error(
+            `[screen-isolation] Log file still empty after ${MAX_RETRIES} retries`
+          );
+          // Check if log file exists at all
+          try {
+            const stats = fs.statSync(logFile);
+            console.error(
+              `[screen-isolation] Log file exists, size: ${stats.size} bytes`
+            );
+          } catch {
+            console.error(`[screen-isolation] Log file does not exist`);
+          }
         }
 
         // Display the output
@@ -211,16 +262,35 @@ function runScreenWithLogCapture(
         return Promise.resolve(output);
       };
 
+      // Read exit code from sidecar file
+      const readExitCode = () => {
+        if (isBareShell) {
+          return 0; // Can't capture exit code for interactive shells
+        }
+        try {
+          const content = fs.readFileSync(exitCodeFile, 'utf8').trim();
+          const code = parseInt(content, 10);
+          if (DEBUG) {
+            console.error(
+              `[screen-isolation] Captured exit code: ${code}`
+            );
+          }
+          return isNaN(code) ? 0 : code;
+        } catch {
+          if (DEBUG) {
+            console.error(
+              `[screen-isolation] Could not read exit code file, defaulting to 0`
+            );
+          }
+          return 0;
+        }
+      };
+
       // Clean up temp files
       const cleanupTempFiles = () => {
-        try {
-          fs.unlinkSync(logFile);
-        } catch {
-          // Ignore cleanup errors
-        }
-        if (screenrcFile) {
+        for (const f of [logFile, screenrcFile, exitCodeFile]) {
           try {
-            fs.unlinkSync(screenrcFile);
+            fs.unlinkSync(f);
           } catch {
             // Ignore cleanup errors
           }
@@ -241,14 +311,15 @@ function runScreenWithLogCapture(
           });
 
           if (!sessions.includes(sessionName)) {
-            // Session ended, read output (with retry for tee path race condition)
+            // Session ended, read output and exit code
             readAndDisplayOutput().then((output) => {
+              const exitCode = readExitCode();
               cleanupTempFiles();
               resolve({
-                success: true,
+                success: exitCode === 0,
                 sessionName,
-                message: `Screen session "${sessionName}" exited with code 0`,
-                exitCode: 0,
+                message: `Screen session "${sessionName}" exited with code ${exitCode}`,
+                exitCode,
                 output,
               });
             });
@@ -271,12 +342,13 @@ function runScreenWithLogCapture(
         } catch {
           // screen -ls failed, session probably ended
           readAndDisplayOutput().then((output) => {
+            const exitCode = readExitCode();
             cleanupTempFiles();
             resolve({
-              success: true,
+              success: exitCode === 0,
               sessionName,
-              message: `Screen session "${sessionName}" exited with code 0`,
-              exitCode: 0,
+              message: `Screen session "${sessionName}" exited with code ${exitCode}`,
+              exitCode,
               output,
             });
           });
