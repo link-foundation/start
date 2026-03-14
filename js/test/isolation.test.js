@@ -711,6 +711,87 @@ describe('Isolation Runner with Available Backends', () => {
       );
       console.log(`  Captured version output: "${result.output.trim()}"`);
     });
+
+    it('should capture exit code from failed commands (issue #96)', async () => {
+      if (!isCommandAvailable('screen')) {
+        console.log('  Skipping: screen not installed');
+        return;
+      }
+
+      // This test verifies that screen isolation captures the actual exit code
+      // from the command, not always reporting 0.
+      // Previous behavior: always reported exitCode: 0 regardless of command result.
+      // Fix: save $? to a sidecar file and read it back.
+      const result = await runInScreen('nonexistent_command_12345', {
+        session: `test-exit-code-${Date.now()}`,
+        detached: false,
+      });
+
+      assert.strictEqual(
+        result.success,
+        false,
+        'Command should fail (command not found)'
+      );
+      assert.ok(
+        result.exitCode !== undefined,
+        'Exit code should be captured'
+      );
+      assert.ok(
+        result.exitCode !== 0,
+        `Exit code should be non-zero for failed command, got: ${result.exitCode}`
+      );
+      console.log(`  Captured exit code: ${result.exitCode}`);
+    });
+
+    it('should capture stderr output in screen isolation (issue #96)', async () => {
+      if (!isCommandAvailable('screen')) {
+        console.log('  Skipping: screen not installed');
+        return;
+      }
+
+      // Verify that stderr is captured alongside stdout via screen's logging
+      const result = await runInScreen('echo "stderr-test" >&2', {
+        session: `test-stderr-${Date.now()}`,
+        detached: false,
+      });
+
+      assert.strictEqual(result.success, true, 'Command should succeed');
+      assert.ok(
+        result.output !== undefined,
+        'Output should be captured'
+      );
+      assert.ok(
+        result.output.includes('stderr-test'),
+        'stderr output should be captured via screen logging'
+      );
+      console.log(`  Captured stderr output: "${result.output.trim()}"`);
+    });
+
+    it('should capture multi-line output with correct exit code (issue #96)', async () => {
+      if (!isCommandAvailable('screen')) {
+        console.log('  Skipping: screen not installed');
+        return;
+      }
+
+      const result = await runInScreen(
+        'echo "line1" && echo "line2" && echo "line3"',
+        {
+          session: `test-multiline-exit-${Date.now()}`,
+          detached: false,
+        }
+      );
+
+      assert.strictEqual(result.success, true, 'Command should succeed');
+      assert.strictEqual(
+        result.exitCode,
+        0,
+        'Exit code should be 0 for successful command'
+      );
+      assert.ok(result.output.includes('line1'), 'Should contain line1');
+      assert.ok(result.output.includes('line2'), 'Should contain line2');
+      assert.ok(result.output.includes('line3'), 'Should contain line3');
+      console.log(`  Multi-line output with exit code 0: verified`);
+    });
   });
 
   describe('runInTmux (if available)', () => {
