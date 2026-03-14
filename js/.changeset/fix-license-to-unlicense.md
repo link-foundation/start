@@ -1,0 +1,9 @@
+---
+'start-command': patch
+---
+
+fix: correct license field from MIT to Unlicense (public domain)
+
+Updated `package.json` to correctly reflect the Unlicense (public domain) license instead of MIT. The project's `LICENSE` file has always contained the Unlicense text; this change aligns the metadata with the actual license.
+
+Fixes #99
