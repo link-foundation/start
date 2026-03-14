@@ -84,3 +84,69 @@ fn test_run_in_screen_captures_version_output() {
         output
     );
 }
+
+#[test]
+fn test_run_in_screen_captures_exit_code() {
+    // Issue #96: screen isolation should capture the actual exit code from the command,
+    // not always report 0.
+    if !is_command_available("screen") {
+        eprintln!("Skipping: screen not installed");
+        return;
+    }
+
+    let result = run_in_screen(
+        "nonexistent_command_12345",
+        &IsolationOptions {
+            session: Some(format!(
+                "test-exit-code-{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis()
+            )),
+            detached: false,
+            ..Default::default()
+        },
+    );
+
+    assert!(!result.success, "Command should fail (command not found)");
+    assert!(result.exit_code.is_some(), "Exit code should be captured");
+    let exit_code = result.exit_code.unwrap();
+    assert_ne!(
+        exit_code, 0,
+        "Exit code should be non-zero for failed command, got: {}",
+        exit_code
+    );
+}
+
+#[test]
+fn test_run_in_screen_captures_stderr() {
+    // Issue #96: stderr should be captured via screen's logging mechanism
+    if !is_command_available("screen") {
+        eprintln!("Skipping: screen not installed");
+        return;
+    }
+
+    let result = run_in_screen(
+        "echo stderr-test >&2",
+        &IsolationOptions {
+            session: Some(format!(
+                "test-stderr-{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis()
+            )),
+            detached: false,
+            ..Default::default()
+        },
+    );
+
+    assert!(result.success, "Command should succeed");
+    let output = result.output.unwrap_or_default();
+    assert!(
+        output.contains("stderr-test"),
+        "stderr output should be captured, got: {:?}",
+        output
+    );
+}

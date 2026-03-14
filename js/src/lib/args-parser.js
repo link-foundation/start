@@ -18,6 +18,7 @@
  * --auto-remove-docker-container   Automatically remove docker container after exit (disabled by default)
  * --shell <shell>                  Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
  * --use-command-stream             Use command-stream library for command execution (experimental)
+ * --verbose                        Enable verbose/debug output (sets START_VERBOSE=1)
  * --status <uuid>                  Show status of a previous command execution by UUID
  * --output-format <format>         Output format for status (links-notation, json, text)
  * --cleanup                        Clean up stale "executing" records (processes that crashed or were killed)
@@ -392,6 +393,12 @@ function parseOption(args, index, options) {
   // --use-command-stream
   if (arg === '--use-command-stream') {
     options.useCommandStream = true;
+    return 1;
+  }
+
+  // --verbose (enable verbose/debug output, sets START_VERBOSE env var)
+  if (arg === '--verbose') {
+    process.env.START_VERBOSE = '1';
     return 1;
   }
 

@@ -51,7 +51,21 @@ pub fn supports_logfile_option() -> bool {
     }
 }
 
-/// Run screen with log capture (for attached mode without TTY)
+/// Run screen with log capture using `-L` flag + screenrc directives (for attached mode without TTY).
+///
+/// Uses a unified approach combining the `-L` flag with screenrc directives:
+/// - `-L` flag enables logging for the initial window (available on ALL screen versions)
+/// - `logfile <path>` in screenrc sets the log file path (replaces `-Logfile` CLI option)
+/// - `logfile flush 0` forces immediate flushing (no 10-second delay)
+/// - `deflog on` enables logging for any additional windows
+///
+/// Key insight: `deflog on` only applies to windows created AFTER screenrc processing,
+/// but the default window is created BEFORE screenrc is processed. The `-L` flag is
+/// needed to enable logging for that initial window.
+///
+/// This replaces the previous version-dependent approach that used:
+/// - `-L -Logfile` for screen >= 4.5.1 (native logging)
+/// - `tee` fallback for screen < 4.5.1 (e.g., macOS bundled 4.0.3)
 pub fn run_screen_with_log_capture(
     command: &str,
     session_name: &str,
@@ -59,59 +73,94 @@ pub fn run_screen_with_log_capture(
 ) -> IsolationResult {
     let (shell, shell_arg) = get_shell();
     let log_file = env::temp_dir().join(format!("screen-output-{}.log", session_name));
+    let exit_code_file = env::temp_dir().join(format!("screen-exit-{}.code", session_name));
     let effective_command = wrap_command_with_user(command, user);
 
-    let use_native_logging = supports_logfile_option();
+    // Check if command is an interactive shell (bare shell invocation)
+    let is_bare_shell = command.trim() == "bash"
+        || command.trim() == "zsh"
+        || command.trim() == "sh"
+        || command.trim() == "/bin/bash"
+        || command.trim() == "/bin/zsh"
+        || command.trim() == "/bin/sh";
 
-    // Temporary screenrc file for native logging path (issue #96)
-    // Setting logfile flush 0 forces screen to flush its log buffer after every write,
-    // preventing output loss for quick-completing commands like `agent --version`.
-    // Without this, screen buffers log writes and flushes every 10 seconds by default.
-    let screenrc_file = if use_native_logging {
-        let screenrc_path = env::temp_dir().join(format!("screenrc-{}", session_name));
-        match fs::write(&screenrc_path, "logfile flush 0\n") {
-            Ok(()) => Some(screenrc_path),
-            Err(_) => None, // If we can't create the screenrc, proceed without it (best effort)
-        }
+    // Wrap command to capture exit code in a sidecar file
+    let final_command = if is_bare_shell {
+        effective_command.clone()
     } else {
-        None
+        format!(
+            "{}; echo $? > \"{}\"",
+            effective_command,
+            exit_code_file.display()
+        )
     };
 
-    let screen_args: Vec<String> = if use_native_logging {
-        // Use a temporary screenrc with `logfile flush 0` to force immediate log flushing
-        // (issue #96: quick commands like `agent --version` lose output without this)
-        let mut args = vec!["-dmS".to_string(), session_name.to_string()];
-        if let Some(ref rc_path) = screenrc_file {
-            args.push("-c".to_string());
-            args.push(rc_path.to_string_lossy().to_string());
+    // Create temporary screenrc with logging configuration.
+    // Combined with the -L flag (which enables logging for the initial window),
+    // these directives work on ALL screen versions (including macOS 4.00.03):
+    // - `logfile <path>` sets the output log path (replaces -Logfile CLI option)
+    // - `logfile flush 0` forces immediate buffer flush (prevents output loss)
+    // - `deflog on` enables logging for any subsequently created windows
+    let screenrc_path = env::temp_dir().join(format!("screenrc-{}", session_name));
+    let screenrc_content = format!(
+        "logfile {}\nlogfile flush 0\ndeflog on\n",
+        log_file.display()
+    );
+    if let Err(e) = fs::write(&screenrc_path, &screenrc_content) {
+        if is_debug() {
+            eprintln!("[screen-isolation] Failed to create screenrc: {}", e);
         }
-        args.extend([
+        return IsolationResult {
+            success: false,
+            session_name: Some(session_name.to_string()),
+            message: format!("Failed to create screenrc for logging: {}", e),
+            ..Default::default()
+        };
+    }
+
+    // Build screen arguments:
+    //   screen -dmS <session> -L -c <screenrc> <shell> -c '<command>'
+    //
+    // The -L flag explicitly enables logging for the initial window.
+    // Without -L, `deflog on` in screenrc only applies to windows created
+    // AFTER the screenrc is processed — but the default window is created
+    // BEFORE screenrc processing. This caused output to be silently lost
+    // on macOS screen 4.00.03 (issue #96).
+    //
+    // The -L flag is available on ALL screen versions (including 4.00.03).
+    // Combined with `logfile <path>` in screenrc, -L logs to our custom path
+    // instead of the default `screenlog.0`.
+    let screen_args: Vec<String> = if is_bare_shell {
+        let mut args = vec![
+            "-dmS".to_string(),
+            session_name.to_string(),
             "-L".to_string(),
-            "-Logfile".to_string(),
-            log_file.to_string_lossy().to_string(),
-            shell.clone(),
-            shell_arg.clone(),
-            effective_command.clone(),
-        ]);
+            "-c".to_string(),
+            screenrc_path.to_string_lossy().to_string(),
+        ];
+        args.extend(command.split_whitespace().map(String::from));
         args
     } else {
-        // Use tee fallback for older screen versions
-        let tee_command = format!(
-            "({}) 2>&1 | tee \"{}\"",
-            effective_command,
-            log_file.display()
-        );
         vec![
             "-dmS".to_string(),
             session_name.to_string(),
+            "-L".to_string(),
+            "-c".to_string(),
+            screenrc_path.to_string_lossy().to_string(),
             shell.clone(),
             shell_arg.clone(),
-            tee_command,
+            final_command.clone(),
         ]
     };
 
     if is_debug() {
-        eprintln!("[DEBUG] Running: screen {:?}", screen_args);
+        eprintln!("[screen-isolation] Running: screen {:?}", screen_args);
+        eprintln!("[screen-isolation] screenrc: {}", screenrc_content.trim());
+        eprintln!("[screen-isolation] Log file: {}", log_file.display());
+        eprintln!(
+            "[screen-isolation] Exit code file: {}",
+            exit_code_file.display()
+        );
     }
 
     let status = Command::new("screen")
@@ -121,10 +170,8 @@ pub fn run_screen_with_log_capture(
         .status();
 
     if status.is_err() {
-        // Clean up screenrc temp file on error
-        if let Some(ref rc_path) = screenrc_file {
-            let _ = fs::remove_file(rc_path);
-        }
+        // Clean up temp files on error
+        let _ = fs::remove_file(&screenrc_path);
         return IsolationResult {
             success: false,
             session_name: Some(session_name.to_string()),
@@ -133,28 +180,81 @@ pub fn run_screen_with_log_capture(
         };
     }
 
-    // Helper to read log file with retry for the tee fallback TOCTOU race condition
-    // (issue #96: session may appear done in `screen -ls` before tee finishes writing)
-    let read_log_with_retry = |retry_count: u32| -> Option<String> {
+    // Helper to read log file with retries for race conditions.
+    // Uses multiple retries with increasing delays (50ms, 100ms, 200ms).
+    let read_log_with_retry = || -> Option<String> {
+        let retry_delays = [50u64, 100, 200];
+
         let content = fs::read_to_string(&log_file).ok();
-        if retry_count == 0 {
-            if let Some(ref s) = content {
-                if s.trim().is_empty() {
-                    // Brief wait then retry once for tee path race condition
-                    thread::sleep(Duration::from_millis(50));
-                    return fs::read_to_string(&log_file).ok();
+        if let Some(ref s) = content {
+            if !s.trim().is_empty() {
+                return content;
+            }
+        }
+
+        // Retry with increasing delays
+        for (i, delay) in retry_delays.iter().enumerate() {
+            if is_debug() {
+                eprintln!(
+                    "[screen-isolation] Log file empty, retry {}/{} after {}ms",
+                    i + 1,
+                    retry_delays.len(),
+                    delay
+                );
+            }
+            thread::sleep(Duration::from_millis(*delay));
+            let retry_content = fs::read_to_string(&log_file).ok();
+            if let Some(ref s) = retry_content {
+                if !s.trim().is_empty() {
+                    return retry_content;
                 }
             }
         }
+
+        if is_debug() {
+            eprintln!(
+                "[screen-isolation] Log file still empty after {} retries",
+                retry_delays.len()
+            );
+            match fs::metadata(&log_file) {
+                Ok(meta) => eprintln!(
+                    "[screen-isolation] Log file exists, size: {} bytes",
+                    meta.len()
+                ),
+                Err(_) => eprintln!("[screen-isolation] Log file does not exist"),
+            }
+        }
+
         content
+    };
+
+    // Read exit code from sidecar file
+    let read_exit_code = || -> i32 {
+        if is_bare_shell {
+            return 0;
+        }
+        match fs::read_to_string(&exit_code_file) {
+            Ok(content) => {
+                let code = content.trim().parse::<i32>().unwrap_or(0);
+                if is_debug() {
+                    eprintln!("[screen-isolation] Captured exit code: {}", code);
+                }
+                code
+            }
+            Err(_) => {
+                if is_debug() {
+                    eprintln!("[screen-isolation] Could not read exit code file, defaulting to 0");
+                }
+                0
+            }
+        }
     };
 
     // Clean up temp files helper
     let cleanup = || {
         let _ = fs::remove_file(&log_file);
-        if let Some(ref rc_path) = screenrc_file {
-            let _ = fs::remove_file(rc_path);
-        }
+        let _ = fs::remove_file(&screenrc_path);
+        let _ = fs::remove_file(&exit_code_file);
     };
 
     // Poll for session completion
@@ -171,8 +271,9 @@ pub fn run_screen_with_log_capture(
             .unwrap_or_default();
 
         if !sessions.contains(session_name) {
-            // Session ended, read output (with retry for tee path race condition)
-            let output = read_log_with_retry(0);
+            // Session ended, read output and exit code
+            let output = read_log_with_retry();
+            let exit_code = read_exit_code();
 
             // Display output
             if let Some(ref out) = output {
@@ -185,11 +286,14 @@ pub fn run_screen_with_log_capture(
             cleanup();
 
             return IsolationResult {
-                success: true,
+                success: exit_code == 0,
                 session_name: Some(session_name.to_string()),
                 container_id: None,
-                message: format!("Screen session \"{}\" exited with code 0", session_name),
-                exit_code: Some(0),
+                message: format!(
+                    "Screen session \"{}\" exited with code {}",
+                    session_name, exit_code
+                ),
+                exit_code: Some(exit_code),
                 output,
             };
         }
