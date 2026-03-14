@@ -119,33 +119,64 @@ impossible to diagnose whether the issue was output capture or command execution
 
 ---
 
-## The Fix: Unified Screenrc-Based Logging
+## Root Cause 4: `deflog on` Applies Only to New Windows (v0.25.0 failure on macOS)
 
-The root cause of both the native and tee paths was that they relied on mechanisms
-that had reliability edge cases:
-- Native `-Logfile`: buffer flush timing
-- Tee: pipe buffering and process lifecycle
+The v0.25.0 fix used `deflog on` in screenrc to enable logging for all windows.
+However, this directive only applies to windows created **AFTER** the screenrc is
+processed. In `screen -dmS` mode, the default window is created **BEFORE** screenrc
+processing begins.
 
-The fix replaces both with **screenrc-based logging**, using directives available
-since early screen versions:
+This means:
+1. `screen -dmS session -c screenrc shell -c 'command'` creates the initial window
+2. Screen then processes the screenrc (including `deflog on`)
+3. `deflog on` takes effect for any NEW windows, but the initial window already exists
+4. The initial window (where the command runs) has logging disabled
+5. All output is lost
 
+This is why the v0.25.0 fix worked on Linux (screen 4.09.01 may handle the timing
+differently or process screenrc before creating the initial window) but failed on
+macOS (screen 4.00.03 strictly creates the window first).
+
+**Source:** GNU Screen manual documents `deflog on` as setting "the default log state
+for all new windows" — the word "new" is key.
+
+---
+
+## The Fix: `-L` Flag + Screenrc Logging Directives
+
+The fix uses the `-L` command-line flag to explicitly enable logging for the initial
+window, combined with screenrc directives for configuration:
+
+```
+screen -dmS session -L -c screenrc shell -c 'command'
+```
+
+Where the screenrc contains:
 ```
 logfile /path/to/output.log    # sets custom log file path
 logfile flush 0                # forces immediate flush
-deflog on                      # enables logging for all new windows
+deflog on                      # enables logging for any additional windows
 ```
+
+The `-L` flag:
+1. Is available on **ALL screen versions** (including macOS 4.00.03)
+2. Enables logging for the **initial window** at creation time
+3. Combined with `logfile <path>` in screenrc, logs to our custom path
+   (not the default `screenlog.0`)
+4. Does NOT require the `-Logfile` CLI option (which is 4.5.1+)
 
 This approach:
 1. Uses screen's **own logging mechanism** consistently (no external tee process)
 2. Sets the **log file path via screenrc** (no need for -Logfile CLI option)
 3. Forces **immediate flush** (no 10-second buffer delay)
-4. Enables logging **at session creation** (no race with output timing)
+4. Enables logging for the initial window via **-L flag** (not just deflog on)
 5. Works on **all screen versions** including macOS 4.00.03
 
 Additionally:
 - **Exit code capture** via `$?` saved to a sidecar file
 - **Enhanced retry** with 3 attempts and increasing delays (50/100/200ms)
 - **Better diagnostics** via `[screen-isolation]` debug prefix
+- **`--verbose` flag** now properly enables debug output in screen isolation
 
 ---
 
