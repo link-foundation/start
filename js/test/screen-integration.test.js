@@ -8,10 +8,7 @@
 const { describe, it } = require('node:test');
 const assert = require('assert');
 const { execSync } = require('child_process');
-const {
-  isCommandAvailable,
-  runInScreen,
-} = require('../src/lib/isolation');
+const { isCommandAvailable, runInScreen } = require('../src/lib/isolation');
 
 describe('Screen Integration Tests', () => {
   describe('runInScreen (if available)', () => {
@@ -203,10 +200,7 @@ describe('Screen Integration Tests', () => {
         false,
         'Command should fail (command not found)'
       );
-      assert.ok(
-        result.exitCode !== undefined,
-        'Exit code should be captured'
-      );
+      assert.ok(result.exitCode !== undefined, 'Exit code should be captured');
       assert.ok(
         result.exitCode !== 0,
         `Exit code should be non-zero for failed command, got: ${result.exitCode}`
@@ -226,10 +220,7 @@ describe('Screen Integration Tests', () => {
       });
 
       assert.strictEqual(result.success, true, 'Command should succeed');
-      assert.ok(
-        result.output !== undefined,
-        'Output should be captured'
-      );
+      assert.ok(result.output !== undefined, 'Output should be captured');
       assert.ok(
         result.output.includes('stderr-test'),
         'stderr output should be captured via screen logging'

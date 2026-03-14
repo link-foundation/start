@@ -7,12 +7,16 @@ const path = require('path');
 
 const setTimeout = globalThis.setTimeout;
 
-// Debug mode from environment (START_DEBUG or START_VERBOSE)
-const DEBUG =
-  process.env.START_DEBUG === '1' ||
-  process.env.START_DEBUG === 'true' ||
-  process.env.START_VERBOSE === '1' ||
-  process.env.START_VERBOSE === 'true';
+// Debug mode from environment (START_DEBUG or START_VERBOSE).
+// Evaluated as a function so that env vars set after module load (e.g., by --verbose flag) are respected.
+function isDebug() {
+  return (
+    process.env.START_DEBUG === '1' ||
+    process.env.START_DEBUG === 'true' ||
+    process.env.START_VERBOSE === '1' ||
+    process.env.START_VERBOSE === 'true'
+  );
+}
 
 // Cache for screen version detection
 let cachedScreenVersion = null;
@@ -43,7 +47,7 @@ function getScreenVersion() {
         patch: parseInt(match[3], 10),
       };
 
-      if (DEBUG) {
+      if (isDebug()) {
         console.error(
           `[screen-isolation] Detected screen version: ${cachedScreenVersion.major}.${cachedScreenVersion.minor}.${cachedScreenVersion.patch}`
         );
@@ -52,7 +56,7 @@ function getScreenVersion() {
       return cachedScreenVersion;
     }
   } catch {
-    if (DEBUG) {
+    if (isDebug()) {
       console.error('[screen-isolation] Could not detect screen version');
     }
   }
@@ -94,21 +98,24 @@ function supportsLogfileOption() {
 /**
  * Run command in GNU Screen using detached mode with log capture.
  *
- * Uses a unified screenrc-based approach that works on ALL screen versions:
- * - `logfile <path>` sets the log file path (available since early screen versions)
+ * Uses a unified approach combining the `-L` flag with screenrc directives:
+ * - `-L` flag enables logging for the initial window (available on ALL screen versions)
+ * - `logfile <path>` in screenrc sets the log file path (replaces `-Logfile` CLI option)
  * - `logfile flush 0` forces immediate flushing (no 10-second delay)
- * - `deflog on` enables logging for all windows by default
+ * - `deflog on` enables logging for any additional windows
+ *
+ * Key insight: `deflog on` only applies to windows created AFTER screenrc processing,
+ * but the default window is created BEFORE screenrc is processed. The `-L` flag is
+ * needed to enable logging for that initial window. Without it, output is silently
+ * lost on macOS screen 4.00.03 (issue #96).
  *
  * This replaces the previous version-dependent approach that used:
  * - `-L -Logfile` for screen >= 4.5.1 (native logging)
  * - `tee` fallback for screen < 4.5.1 (e.g., macOS bundled 4.0.3)
  *
- * The tee fallback had reliability issues on macOS (issue #96) because:
+ * The tee fallback had reliability issues on macOS because:
  * - tee's write buffers may not be flushed before the session ends
  * - The TOCTOU race between session detection and file read was hard to mitigate
- *
- * The screenrc approach eliminates both issues because screen's internal logging
- * is part of the session lifecycle and `logfile flush 0` ensures immediate writes.
  *
  * @param {string} command - Command to execute
  * @param {string} sessionName - Session name
@@ -147,10 +154,11 @@ function runScreenWithLogCapture(
       }
 
       // Create temporary screenrc with logging configuration.
-      // This approach works on ALL screen versions (including macOS 4.00.03):
+      // Combined with the -L flag (which enables logging for the initial window),
+      // these directives work on ALL screen versions (including macOS 4.00.03):
       // - `logfile <path>` sets the output log path (replaces -Logfile CLI option)
       // - `logfile flush 0` forces immediate buffer flush (prevents output loss)
-      // - `deflog on` enables logging for all new windows (replaces -L CLI flag)
+      // - `deflog on` enables logging for any subsequently created windows
       const screenrcFile = path.join(os.tmpdir(), `screenrc-${sessionName}`);
       const screenrcContent = [
         `logfile ${logFile}`,
@@ -162,7 +170,7 @@ function runScreenWithLogCapture(
       try {
         fs.writeFileSync(screenrcFile, screenrcContent);
       } catch (err) {
-        if (DEBUG) {
+        if (isDebug()) {
           console.error(
             `[screen-isolation] Failed to create screenrc: ${err.message}`
           );
@@ -175,24 +183,43 @@ function runScreenWithLogCapture(
         return;
       }
 
-      // Build screen arguments: screen -dmS <session> -c <screenrc> <shell> -c '<command>'
+      // Build screen arguments:
+      //   screen -dmS <session> -L -c <screenrc> <shell> -c '<command>'
+      //
+      // The -L flag explicitly enables logging for the initial window.
+      // Without -L, `deflog on` in screenrc only applies to windows created
+      // AFTER the screenrc is processed — but the default window is created
+      // BEFORE screenrc processing. This caused output to be silently lost
+      // on macOS screen 4.00.03 (issue #96).
+      //
+      // The -L flag is available on ALL screen versions (including 4.00.03).
+      // Combined with `logfile <path>` in screenrc, -L logs to our custom path
+      // instead of the default `screenlog.0`.
       const screenArgs = isBareShell
         ? [
             '-dmS',
             sessionName,
+            '-L',
             '-c',
             screenrcFile,
             ...command.trim().split(/\s+/),
           ]
-        : ['-dmS', sessionName, '-c', screenrcFile, shell, shellArg, effectiveCommand];
+        : [
+            '-dmS',
+            sessionName,
+            '-L',
+            '-c',
+            screenrcFile,
+            shell,
+            shellArg,
+            effectiveCommand,
+          ];
 
-      if (DEBUG) {
+      if (isDebug()) {
         console.error(
           `[screen-isolation] Running: screen ${screenArgs.join(' ')}`
         );
-        console.error(
-          `[screen-isolation] screenrc: ${screenrcContent.trim()}`
-        );
+        console.error(`[screen-isolation] screenrc: ${screenrcContent.trim()}`);
         console.error(`[screen-isolation] Log file: ${logFile}`);
         console.error(`[screen-isolation] Exit code file: ${exitCodeFile}`);
       }
@@ -224,7 +251,7 @@ function runScreenWithLogCapture(
         // If output is empty and we haven't exhausted retries, wait and retry.
         if (!output.trim() && retryCount < MAX_RETRIES) {
           const delay = RETRY_DELAYS[retryCount] || 200;
-          if (DEBUG) {
+          if (isDebug()) {
             console.error(
               `[screen-isolation] Log file empty, retry ${retryCount + 1}/${MAX_RETRIES} after ${delay}ms`
             );
@@ -236,7 +263,7 @@ function runScreenWithLogCapture(
           });
         }
 
-        if (DEBUG && !output.trim()) {
+        if (isDebug() && !output.trim()) {
           console.error(
             `[screen-isolation] Log file still empty after ${MAX_RETRIES} retries`
           );
@@ -270,14 +297,12 @@ function runScreenWithLogCapture(
         try {
           const content = fs.readFileSync(exitCodeFile, 'utf8').trim();
           const code = parseInt(content, 10);
-          if (DEBUG) {
-            console.error(
-              `[screen-isolation] Captured exit code: ${code}`
-            );
+          if (isDebug()) {
+            console.error(`[screen-isolation] Captured exit code: ${code}`);
           }
           return isNaN(code) ? 0 : code;
         } catch {
-          if (DEBUG) {
+          if (isDebug()) {
             console.error(
               `[screen-isolation] Could not read exit code file, defaulting to 0`
             );

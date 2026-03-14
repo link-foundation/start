@@ -51,20 +51,21 @@ pub fn supports_logfile_option() -> bool {
     }
 }
 
-/// Run screen with log capture using screenrc-based logging (for attached mode without TTY).
+/// Run screen with log capture using `-L` flag + screenrc directives (for attached mode without TTY).
 ///
-/// Uses a unified screenrc-based approach that works on ALL screen versions:
-/// - `logfile <path>` sets the log file path (available since early screen versions)
+/// Uses a unified approach combining the `-L` flag with screenrc directives:
+/// - `-L` flag enables logging for the initial window (available on ALL screen versions)
+/// - `logfile <path>` in screenrc sets the log file path (replaces `-Logfile` CLI option)
 /// - `logfile flush 0` forces immediate flushing (no 10-second delay)
-/// - `deflog on` enables logging for all windows by default
+/// - `deflog on` enables logging for any additional windows
+///
+/// Key insight: `deflog on` only applies to windows created AFTER screenrc processing,
+/// but the default window is created BEFORE screenrc is processed. The `-L` flag is
+/// needed to enable logging for that initial window.
 ///
 /// This replaces the previous version-dependent approach that used:
 /// - `-L -Logfile` for screen >= 4.5.1 (native logging)
 /// - `tee` fallback for screen < 4.5.1 (e.g., macOS bundled 4.0.3)
-///
-/// The tee fallback had reliability issues on macOS (issue #96) because:
-/// - tee's write buffers may not be flushed before the session ends
-/// - The TOCTOU race between session detection and file read was hard to mitigate
 pub fn run_screen_with_log_capture(
     command: &str,
     session_name: &str,
@@ -95,10 +96,11 @@ pub fn run_screen_with_log_capture(
     };
 
     // Create temporary screenrc with logging configuration.
-    // This approach works on ALL screen versions (including macOS 4.00.03):
+    // Combined with the -L flag (which enables logging for the initial window),
+    // these directives work on ALL screen versions (including macOS 4.00.03):
     // - `logfile <path>` sets the output log path (replaces -Logfile CLI option)
     // - `logfile flush 0` forces immediate buffer flush (prevents output loss)
-    // - `deflog on` enables logging for all new windows (replaces -L CLI flag)
+    // - `deflog on` enables logging for any subsequently created windows
     let screenrc_path = env::temp_dir().join(format!("screenrc-{}", session_name));
     let screenrc_content = format!(
         "logfile {}\nlogfile flush 0\ndeflog on\n",
@@ -116,11 +118,23 @@ pub fn run_screen_with_log_capture(
         };
     }
 
-    // Build screen arguments: screen -dmS <session> -c <screenrc> <shell> -c '<command>'
+    // Build screen arguments:
+    //   screen -dmS <session> -L -c <screenrc> <shell> -c '<command>'
+    //
+    // The -L flag explicitly enables logging for the initial window.
+    // Without -L, `deflog on` in screenrc only applies to windows created
+    // AFTER the screenrc is processed — but the default window is created
+    // BEFORE screenrc processing. This caused output to be silently lost
+    // on macOS screen 4.00.03 (issue #96).
+    //
+    // The -L flag is available on ALL screen versions (including 4.00.03).
+    // Combined with `logfile <path>` in screenrc, -L logs to our custom path
+    // instead of the default `screenlog.0`.
     let screen_args: Vec<String> = if is_bare_shell {
         let mut args = vec![
             "-dmS".to_string(),
             session_name.to_string(),
+            "-L".to_string(),
             "-c".to_string(),
             screenrc_path.to_string_lossy().to_string(),
         ];
@@ -130,6 +144,7 @@ pub fn run_screen_with_log_capture(
         vec![
             "-dmS".to_string(),
             session_name.to_string(),
+            "-L".to_string(),
             "-c".to_string(),
             screenrc_path.to_string_lossy().to_string(),
             shell.clone(),
