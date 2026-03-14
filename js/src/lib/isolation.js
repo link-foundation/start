@@ -1,94 +1,20 @@
 /** Isolation Runners for start-command (screen, tmux, docker, ssh) */
 
 const { execSync, spawn, spawnSync } = require('child_process');
-const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { generateSessionName } = require('./args-parser');
 const outputBlocks = require('./output-blocks');
-
-const setTimeout = globalThis.setTimeout;
 
 // Debug mode from environment
 const DEBUG =
   process.env.START_DEBUG === '1' || process.env.START_DEBUG === 'true';
 
-// Cache for screen version detection
-let cachedScreenVersion = null;
-let screenVersionChecked = false;
-
-/**
- * Get the installed screen version
- * @returns {{major: number, minor: number, patch: number}|null} Version object or null if detection fails
- */
-function getScreenVersion() {
-  if (screenVersionChecked) {
-    return cachedScreenVersion;
-  }
-
-  screenVersionChecked = true;
-
-  try {
-    const output = execSync('screen --version', {
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    // Match patterns like "4.09.01", "4.00.03", "4.5.1"
-    const match = output.match(/(\d+)\.(\d+)\.(\d+)/);
-    if (match) {
-      cachedScreenVersion = {
-        major: parseInt(match[1], 10),
-        minor: parseInt(match[2], 10),
-        patch: parseInt(match[3], 10),
-      };
-
-      if (DEBUG) {
-        console.log(
-          `[DEBUG] Detected screen version: ${cachedScreenVersion.major}.${cachedScreenVersion.minor}.${cachedScreenVersion.patch}`
-        );
-      }
-
-      return cachedScreenVersion;
-    }
-  } catch {
-    if (DEBUG) {
-      console.log('[DEBUG] Could not detect screen version');
-    }
-  }
-
-  return null;
-}
-
-/**
- * Check if screen supports the -Logfile option
- * The -Logfile option was introduced in GNU Screen 4.5.1
- * @returns {boolean} True if -Logfile is supported
- */
-function supportsLogfileOption() {
-  const version = getScreenVersion();
-  if (!version) {
-    // If we can't detect version, assume older version and use fallback
-    return false;
-  }
-
-  // -Logfile was added in 4.5.1
-  // Compare: version >= 4.5.1
-  if (version.major > 4) {
-    return true;
-  }
-  if (version.major < 4) {
-    return false;
-  }
-  // major === 4
-  if (version.minor > 5) {
-    return true;
-  }
-  if (version.minor < 5) {
-    return false;
-  }
-  // minor === 5
-  return version.patch >= 1;
-}
+const {
+  getScreenVersion,
+  supportsLogfileOption,
+  runScreenWithLogCapture: _runScreenWithLogCapture,
+  resetScreenVersionCache,
+} = require('./screen-isolation');
 
 /**
  * Check if a command is available on the system
@@ -245,159 +171,14 @@ function wrapCommandWithUser(command, user) {
  * @returns {Promise<{success: boolean, sessionName: string, message: string, output: string}>}
  */
 function runScreenWithLogCapture(command, sessionName, shellInfo, user = null) {
-  const { shell, shellArg } = shellInfo;
-  const logFile = path.join(os.tmpdir(), `screen-output-${sessionName}.log`);
-
-  // Check if screen supports -Logfile option (added in 4.5.1)
-  const useNativeLogging = supportsLogfileOption();
-
-  return new Promise((resolve) => {
-    try {
-      let screenArgs;
-      // Wrap command with user switch if specified
-      let effectiveCommand = wrapCommandWithUser(command, user);
-
-      if (useNativeLogging) {
-        // Modern screen (>= 4.5.1): Use -L -Logfile option for native log capture
-        // screen -dmS <session> -L -Logfile <logfile> <shell> -c '<command>'
-        const logArgs = ['-dmS', sessionName, '-L', '-Logfile', logFile];
-        screenArgs = isInteractiveShellCommand(command)
-          ? [...logArgs, ...command.trim().split(/\s+/)]
-          : [...logArgs, shell, shellArg, effectiveCommand];
-
-        if (DEBUG) {
-          console.log(
-            `[DEBUG] Running screen with native log capture (-Logfile): screen ${screenArgs.join(' ')}`
-          );
-        }
-      } else {
-        // Older screen (< 4.5.1, e.g., macOS bundled 4.0.3): Use tee fallback
-        // The parentheses ensure proper grouping of the command and its stderr
-        const isBareShell = isInteractiveShellCommand(command);
-        if (!isBareShell) {
-          effectiveCommand = `(${effectiveCommand}) 2>&1 | tee "${logFile}"`;
-        }
-        screenArgs = isBareShell
-          ? ['-dmS', sessionName, ...command.trim().split(/\s+/)]
-          : ['-dmS', sessionName, shell, shellArg, effectiveCommand];
-
-        if (DEBUG) {
-          console.log(
-            `[DEBUG] Running screen with tee fallback (older screen version): screen ${screenArgs.join(' ')}`
-          );
-        }
-      }
-
-      // Use spawnSync with array args (not execSync string) to avoid quoting issues (issue #25)
-      const result = spawnSync('screen', screenArgs, {
-        stdio: 'inherit',
-      });
-
-      if (result.error) {
-        throw result.error;
-      }
-
-      // Poll for session completion
-      const checkInterval = 100; // ms
-      const maxWait = 300000; // 5 minutes max
-      let waited = 0;
-
-      const checkCompletion = () => {
-        try {
-          // Check if session still exists
-          const sessions = execSync('screen -ls', {
-            encoding: 'utf8',
-            stdio: ['pipe', 'pipe', 'pipe'],
-          });
-
-          if (!sessions.includes(sessionName)) {
-            // Session ended, read output
-            let output = '';
-            try {
-              output = fs.readFileSync(logFile, 'utf8');
-              // Display the output with surrounding empty lines for consistency
-              if (output.trim()) {
-                process.stdout.write(output);
-                // Add trailing newline if output doesn't end with one
-                if (!output.endsWith('\n')) {
-                  process.stdout.write('\n');
-                }
-              }
-            } catch {
-              // Log file might not exist if command was very quick
-            }
-
-            // Clean up log file
-            try {
-              fs.unlinkSync(logFile);
-            } catch {
-              // Ignore cleanup errors
-            }
-
-            resolve({
-              success: true,
-              sessionName,
-              message: `Screen session "${sessionName}" exited with code 0`,
-              exitCode: 0,
-              output,
-            });
-            return;
-          }
-
-          waited += checkInterval;
-          if (waited >= maxWait) {
-            resolve({
-              success: false,
-              sessionName,
-              message: `Screen session "${sessionName}" timed out after ${maxWait / 1000} seconds`,
-              exitCode: 1,
-            });
-            return;
-          }
-
-          setTimeout(checkCompletion, checkInterval);
-        } catch {
-          // screen -ls failed, session probably ended
-          let output = '';
-          try {
-            output = fs.readFileSync(logFile, 'utf8');
-            if (output.trim()) {
-              process.stdout.write(output);
-              // Add trailing newline if output doesn't end with one
-              if (!output.endsWith('\n')) {
-                process.stdout.write('\n');
-              }
-            }
-          } catch {
-            // Ignore
-          }
-
-          try {
-            fs.unlinkSync(logFile);
-          } catch {
-            // Ignore
-          }
-
-          resolve({
-            success: true,
-            sessionName,
-            message: `Screen session "${sessionName}" exited with code 0`,
-            exitCode: 0,
-            output,
-          });
-        }
-      };
-
-      // Start checking after a brief delay
-      setTimeout(checkCompletion, checkInterval);
-    } catch (err) {
-      resolve({
-        success: false,
-        sessionName,
-        message: `Failed to run in screen: ${err.message}`,
-      });
-    }
-  });
+  return _runScreenWithLogCapture(
+    command,
+    sessionName,
+    shellInfo,
+    user,
+    wrapCommandWithUser,
+    isInteractiveShellCommand
+  );
 }
 
 /**
@@ -932,12 +713,6 @@ function runIsolated(backend, command, options = {}) {
         message: `Unknown isolation environment: ${backend}`,
       });
   }
-}
-
-/** Reset screen version cache (useful for testing) */
-function resetScreenVersionCache() {
-  cachedScreenVersion = null;
-  screenVersionChecked = false;
 }
 
 const {

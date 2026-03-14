@@ -678,6 +678,39 @@ describe('Isolation Runner with Available Backends', () => {
       );
       console.log(`  Verified output capture: "${result.output.trim()}"`);
     });
+
+    it('should capture output from version-flag commands (issue #96)', async () => {
+      if (!isCommandAvailable('screen')) {
+        console.log('  Skipping: screen not installed');
+        return;
+      }
+
+      // This test verifies that screen isolation captures output from quick-completing
+      // commands like `agent --version` or `node --version`.
+      // Issue #96: output was silently lost because screen's internal log buffer was
+      // not flushed before the session terminated (default 10s flush interval).
+      // Fix: use a temporary screenrc with `logfile flush 0` to force immediate flushing.
+      const result = await runInScreen('node --version', {
+        session: `test-version-flag-${Date.now()}`,
+        detached: false,
+      });
+
+      assert.strictEqual(result.success, true, 'Command should succeed');
+      assert.ok(
+        result.output !== undefined,
+        'Attached mode should always return output property'
+      );
+      assert.ok(
+        result.output.trim().length > 0,
+        'Output should not be empty (issue #96: version output was silently lost)'
+      );
+      // node --version outputs something like "v20.0.0"
+      assert.ok(
+        result.output.includes('v') || /\d+\.\d+/.test(result.output),
+        'Output should contain version string'
+      );
+      console.log(`  Captured version output: "${result.output.trim()}"`);
+    });
   });
 
   describe('runInTmux (if available)', () => {

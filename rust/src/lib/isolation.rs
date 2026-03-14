@@ -7,10 +7,7 @@
 //! - ssh: Remote SSH execution
 
 use std::env;
-use std::fs;
 use std::process::{Command, Stdio};
-use std::thread;
-use std::time::Duration;
 
 use crate::args_parser::generate_session_name;
 
@@ -272,48 +269,9 @@ pub fn detect_shell_in_environment(environment: &str, options: &IsolationOptions
     "sh".to_string()
 }
 
-/// Get the installed screen version
-pub fn get_screen_version() -> Option<(u32, u32, u32)> {
-    let output = Command::new("screen").arg("--version").output().ok()?;
-
-    let output_str = String::from_utf8_lossy(&output.stdout);
-    let stderr_str = String::from_utf8_lossy(&output.stderr);
-    let combined = format!("{}{}", output_str, stderr_str);
-
-    // Match patterns like "4.09.01", "4.00.03", "4.5.1"
-    let re = regex::Regex::new(r"(\d+)\.(\d+)\.(\d+)").ok()?;
-    let caps = re.captures(&combined)?;
-
-    Some((
-        caps.get(1)?.as_str().parse().ok()?,
-        caps.get(2)?.as_str().parse().ok()?,
-        caps.get(3)?.as_str().parse().ok()?,
-    ))
-}
-
-/// Check if screen supports the -Logfile option (added in 4.5.1)
-pub fn supports_logfile_option() -> bool {
-    match get_screen_version() {
-        Some((major, minor, patch)) => {
-            if major > 4 {
-                return true;
-            }
-            if major < 4 {
-                return false;
-            }
-            // major == 4
-            if minor > 5 {
-                return true;
-            }
-            if minor < 5 {
-                return false;
-            }
-            // minor == 5
-            patch >= 1
-        }
-        None => false,
-    }
-}
+#[path = "isolation_screen.rs"]
+pub mod isolation_screen;
+pub use self::isolation_screen::{get_screen_version, supports_logfile_option};
 
 /// Run command in GNU Screen
 pub fn run_in_screen(command: &str, options: &IsolationOptions) -> IsolationResult {
@@ -374,117 +332,11 @@ pub fn run_in_screen(command: &str, options: &IsolationOptions) -> IsolationResu
         }
     } else {
         // Attached mode with log capture
-        run_screen_with_log_capture(command, &session_name, options.user.as_deref())
-    }
-}
-
-/// Run screen with log capture (for attached mode without TTY)
-fn run_screen_with_log_capture(
-    command: &str,
-    session_name: &str,
-    user: Option<&str>,
-) -> IsolationResult {
-    let (shell, shell_arg) = get_shell();
-    let log_file = env::temp_dir().join(format!("screen-output-{}.log", session_name));
-    let effective_command = wrap_command_with_user(command, user);
-
-    let use_native_logging = supports_logfile_option();
-
-    let screen_args: Vec<String> = if use_native_logging {
-        vec![
-            "-dmS".to_string(),
-            session_name.to_string(),
-            "-L".to_string(),
-            "-Logfile".to_string(),
-            log_file.to_string_lossy().to_string(),
-            shell.clone(),
-            shell_arg.clone(),
-            effective_command.clone(),
-        ]
-    } else {
-        // Use tee fallback for older screen versions
-        let tee_command = format!(
-            "({}) 2>&1 | tee \"{}\"",
-            effective_command,
-            log_file.display()
-        );
-        vec![
-            "-dmS".to_string(),
-            session_name.to_string(),
-            shell.clone(),
-            shell_arg.clone(),
-            tee_command,
-        ]
-    };
-
-    if is_debug() {
-        eprintln!("[DEBUG] Running: screen {:?}", screen_args);
-    }
-
-    let status = Command::new("screen").args(&screen_args).status();
-
-    if status.is_err() {
-        return IsolationResult {
-            success: false,
-            session_name: Some(session_name.to_string()),
-            message: "Failed to start screen session".to_string(),
-            ..Default::default()
-        };
-    }
-
-    // Poll for session completion
-    let max_wait = Duration::from_secs(300);
-    let check_interval = Duration::from_millis(100);
-    let mut waited = Duration::ZERO;
-
-    loop {
-        // Check if session still exists
-        let sessions = Command::new("screen")
-            .arg("-ls")
-            .output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
-            .unwrap_or_default();
-
-        if !sessions.contains(session_name) {
-            // Session ended, read output
-            let output = fs::read_to_string(&log_file).ok();
-
-            // Display output
-            if let Some(ref out) = output {
-                if !out.trim().is_empty() {
-                    print!("{}", out);
-                }
-            }
-
-            // Clean up log file
-            let _ = fs::remove_file(&log_file);
-
-            return IsolationResult {
-                success: true,
-                session_name: Some(session_name.to_string()),
-                container_id: None,
-                message: format!("Screen session \"{}\" exited with code 0", session_name),
-                exit_code: Some(0),
-                output,
-            };
-        }
-
-        thread::sleep(check_interval);
-        waited += check_interval;
-
-        if waited >= max_wait {
-            return IsolationResult {
-                success: false,
-                session_name: Some(session_name.to_string()),
-                message: format!(
-                    "Screen session \"{}\" timed out after {} seconds",
-                    session_name,
-                    max_wait.as_secs()
-                ),
-                exit_code: Some(1),
-                ..Default::default()
-            };
-        }
+        isolation_screen::run_screen_with_log_capture(
+            command,
+            &session_name,
+            options.user.as_deref(),
+        )
     }
 }
 
