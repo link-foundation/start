@@ -358,4 +358,6 @@ The log file itself contains the raw command output and execution metadata.
 
 ## License
 
-MIT
+[Unlicense](LICENSE) (public domain)
+
+This project is released into the public domain under the Unlicense. It has fewer restrictions and more freedoms than MIT — especially for commercial use. You can copy, modify, publish, use, compile, sell, or distribute this software without any conditions or attribution requirements.

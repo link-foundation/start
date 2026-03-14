@@ -32,7 +32,7 @@
     "automation"
   ],
   "author": "",
-  "license": "MIT",
+  "license": "Unlicense",
   "engines": {
     "bun": ">=1.0.0"
   },
