@@ -257,10 +257,28 @@ function runScreenWithLogCapture(command, sessionName, shellInfo, user = null) {
       // Wrap command with user switch if specified
       let effectiveCommand = wrapCommandWithUser(command, user);
 
+      // Temporary screenrc file for native logging path (issue #96)
+      // Setting logfile flush 0 forces screen to flush its log buffer after every write,
+      // preventing output loss for quick-completing commands like `agent --version`.
+      // Without this, screen buffers log writes and flushes every 10 seconds by default.
+      let screenrcFile = null;
+
       if (useNativeLogging) {
         // Modern screen (>= 4.5.1): Use -L -Logfile option for native log capture
-        // screen -dmS <session> -L -Logfile <logfile> <shell> -c '<command>'
-        const logArgs = ['-dmS', sessionName, '-L', '-Logfile', logFile];
+        // Use a temporary screenrc with `logfile flush 0` to force immediate log flushing
+        // (issue #96: quick commands like `agent --version` lose output without this)
+        screenrcFile = path.join(os.tmpdir(), `screenrc-${sessionName}`);
+        try {
+          fs.writeFileSync(screenrcFile, 'logfile flush 0\n');
+        } catch {
+          // If we can't create the screenrc, proceed without it (best effort)
+          screenrcFile = null;
+        }
+
+        // screen -dmS <session> -c <screenrc> -L -Logfile <logfile> <shell> -c '<command>'
+        const logArgs = screenrcFile
+          ? ['-dmS', sessionName, '-c', screenrcFile, '-L', '-Logfile', logFile]
+          : ['-dmS', sessionName, '-L', '-Logfile', logFile];
         screenArgs = isInteractiveShellCommand(command)
           ? [...logArgs, ...command.trim().split(/\s+/)]
           : [...logArgs, shell, shellArg, effectiveCommand];
@@ -297,6 +315,56 @@ function runScreenWithLogCapture(command, sessionName, shellInfo, user = null) {
         throw result.error;
       }
 
+      // Helper to read log file output and write to stdout
+      // Includes a short retry for the tee fallback path to handle the TOCTOU race
+      // condition where the session appears gone but the log file isn't fully written yet
+      // (issue #96)
+      const readAndDisplayOutput = (retryCount = 0) => {
+        let output = '';
+        try {
+          output = fs.readFileSync(logFile, 'utf8');
+        } catch {
+          // Log file might not exist if command produced no output
+        }
+
+        // If output is empty and we haven't retried yet, wait briefly and retry once.
+        // This handles the race where tee's write hasn't been flushed to disk yet
+        // when the screen session appears done in `screen -ls` (issue #96).
+        if (!output.trim() && retryCount === 0) {
+          return new Promise((resolveRetry) => {
+            setTimeout(() => {
+              resolveRetry(readAndDisplayOutput(1));
+            }, 50);
+          });
+        }
+
+        // Display the output
+        if (output.trim()) {
+          process.stdout.write(output);
+          // Add trailing newline if output doesn't end with one
+          if (!output.endsWith('\n')) {
+            process.stdout.write('\n');
+          }
+        }
+        return Promise.resolve(output);
+      };
+
+      // Clean up temp files
+      const cleanupTempFiles = () => {
+        try {
+          fs.unlinkSync(logFile);
+        } catch {
+          // Ignore cleanup errors
+        }
+        if (screenrcFile) {
+          try {
+            fs.unlinkSync(screenrcFile);
+          } catch {
+            // Ignore cleanup errors
+          }
+        }
+      };
+
       // Poll for session completion
       const checkInterval = 100; // ms
       const maxWait = 300000; // 5 minutes max
@@ -311,41 +379,23 @@ function runScreenWithLogCapture(command, sessionName, shellInfo, user = null) {
           });
 
           if (!sessions.includes(sessionName)) {
-            // Session ended, read output
-            let output = '';
-            try {
-              output = fs.readFileSync(logFile, 'utf8');
-              // Display the output with surrounding empty lines for consistency
-              if (output.trim()) {
-                process.stdout.write(output);
-                // Add trailing newline if output doesn't end with one
-                if (!output.endsWith('\n')) {
-                  process.stdout.write('\n');
-                }
-              }
-            } catch {
-              // Log file might not exist if command was very quick
-            }
-
-            // Clean up log file
-            try {
-              fs.unlinkSync(logFile);
-            } catch {
-              // Ignore cleanup errors
-            }
-
-            resolve({
-              success: true,
-              sessionName,
-              message: `Screen session "${sessionName}" exited with code 0`,
-              exitCode: 0,
-              output,
+            // Session ended, read output (with retry for tee path race condition)
+            readAndDisplayOutput().then((output) => {
+              cleanupTempFiles();
+              resolve({
+                success: true,
+                sessionName,
+                message: `Screen session "${sessionName}" exited with code 0`,
+                exitCode: 0,
+                output,
+              });
             });
             return;
           }
 
           waited += checkInterval;
           if (waited >= maxWait) {
+            cleanupTempFiles();
             resolve({
               success: false,
               sessionName,
@@ -358,32 +408,15 @@ function runScreenWithLogCapture(command, sessionName, shellInfo, user = null) {
           setTimeout(checkCompletion, checkInterval);
         } catch {
           // screen -ls failed, session probably ended
-          let output = '';
-          try {
-            output = fs.readFileSync(logFile, 'utf8');
-            if (output.trim()) {
-              process.stdout.write(output);
-              // Add trailing newline if output doesn't end with one
-              if (!output.endsWith('\n')) {
-                process.stdout.write('\n');
-              }
-            }
-          } catch {
-            // Ignore
-          }
-
-          try {
-            fs.unlinkSync(logFile);
-          } catch {
-            // Ignore
-          }
-
-          resolve({
-            success: true,
-            sessionName,
-            message: `Screen session "${sessionName}" exited with code 0`,
-            exitCode: 0,
-            output,
+          readAndDisplayOutput().then((output) => {
+            cleanupTempFiles();
+            resolve({
+              success: true,
+              sessionName,
+              message: `Screen session "${sessionName}" exited with code 0`,
+              exitCode: 0,
+              output,
+            });
           });
         }
       };

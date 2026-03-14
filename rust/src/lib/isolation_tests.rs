@@ -42,3 +42,45 @@ fn test_create_log_path() {
     let path = create_log_path("test");
     assert!(path.to_string_lossy().contains("start-command-test-"));
 }
+
+#[test]
+fn test_run_in_screen_captures_version_output() {
+    // Issue #96: quick-completing commands like `node --version` must have their
+    // output captured in screen isolation (was silently lost due to log flush timing).
+    if !is_command_available("screen") {
+        eprintln!("Skipping: screen not installed");
+        return;
+    }
+    if !is_command_available("node") {
+        eprintln!("Skipping: node not installed");
+        return;
+    }
+
+    let result = run_in_screen(
+        "node --version",
+        &IsolationOptions {
+            session: Some(format!(
+                "test-version-flag-{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis()
+            )),
+            detached: false,
+            ..Default::default()
+        },
+    );
+
+    assert!(result.success, "Command should succeed");
+    let output = result.output.unwrap_or_default();
+    assert!(
+        !output.trim().is_empty(),
+        "Output should not be empty (issue #96: version output was silently lost)"
+    );
+    // node --version outputs something like "v20.0.0"
+    assert!(
+        output.contains('v') || output.chars().any(|c| c.is_ascii_digit()),
+        "Output should contain version string, got: {:?}",
+        output
+    );
+}

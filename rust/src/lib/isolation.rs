@@ -390,17 +390,37 @@ fn run_screen_with_log_capture(
 
     let use_native_logging = supports_logfile_option();
 
+    // Temporary screenrc file for native logging path (issue #96)
+    // Setting logfile flush 0 forces screen to flush its log buffer after every write,
+    // preventing output loss for quick-completing commands like `agent --version`.
+    // Without this, screen buffers log writes and flushes every 10 seconds by default.
+    let screenrc_file = if use_native_logging {
+        let screenrc_path = env::temp_dir().join(format!("screenrc-{}", session_name));
+        match fs::write(&screenrc_path, "logfile flush 0\n") {
+            Ok(()) => Some(screenrc_path),
+            Err(_) => None, // If we can't create the screenrc, proceed without it (best effort)
+        }
+    } else {
+        None
+    };
+
     let screen_args: Vec<String> = if use_native_logging {
-        vec![
-            "-dmS".to_string(),
-            session_name.to_string(),
+        // Use a temporary screenrc with `logfile flush 0` to force immediate log flushing
+        // (issue #96: quick commands like `agent --version` lose output without this)
+        let mut args = vec!["-dmS".to_string(), session_name.to_string()];
+        if let Some(ref rc_path) = screenrc_file {
+            args.push("-c".to_string());
+            args.push(rc_path.to_string_lossy().to_string());
+        }
+        args.extend([
             "-L".to_string(),
             "-Logfile".to_string(),
             log_file.to_string_lossy().to_string(),
             shell.clone(),
             shell_arg.clone(),
             effective_command.clone(),
-        ]
+        ]);
+        args
     } else {
         // Use tee fallback for older screen versions
         let tee_command = format!(
@@ -424,6 +444,10 @@ fn run_screen_with_log_capture(
     let status = Command::new("screen").args(&screen_args).status();
 
     if status.is_err() {
+        // Clean up screenrc temp file on error
+        if let Some(ref rc_path) = screenrc_file {
+            let _ = fs::remove_file(rc_path);
+        }
         return IsolationResult {
             success: false,
             session_name: Some(session_name.to_string()),
@@ -431,6 +455,30 @@ fn run_screen_with_log_capture(
             ..Default::default()
         };
     }
+
+    // Helper to read log file with retry for the tee fallback TOCTOU race condition
+    // (issue #96: session may appear done in `screen -ls` before tee finishes writing)
+    let read_log_with_retry = |retry_count: u32| -> Option<String> {
+        let content = fs::read_to_string(&log_file).ok();
+        if retry_count == 0 {
+            if let Some(ref s) = content {
+                if s.trim().is_empty() {
+                    // Brief wait then retry once for tee path race condition
+                    thread::sleep(Duration::from_millis(50));
+                    return fs::read_to_string(&log_file).ok();
+                }
+            }
+        }
+        content
+    };
+
+    // Clean up temp files helper
+    let cleanup = || {
+        let _ = fs::remove_file(&log_file);
+        if let Some(ref rc_path) = screenrc_file {
+            let _ = fs::remove_file(rc_path);
+        }
+    };
 
     // Poll for session completion
     let max_wait = Duration::from_secs(300);
@@ -446,8 +494,8 @@ fn run_screen_with_log_capture(
             .unwrap_or_default();
 
         if !sessions.contains(session_name) {
-            // Session ended, read output
-            let output = fs::read_to_string(&log_file).ok();
+            // Session ended, read output (with retry for tee path race condition)
+            let output = read_log_with_retry(0);
 
             // Display output
             if let Some(ref out) = output {
@@ -456,8 +504,8 @@ fn run_screen_with_log_capture(
                 }
             }
 
-            // Clean up log file
-            let _ = fs::remove_file(&log_file);
+            // Clean up temp files
+            cleanup();
 
             return IsolationResult {
                 success: true,
@@ -473,6 +521,7 @@ fn run_screen_with_log_capture(
         waited += check_interval;
 
         if waited >= max_wait {
+            cleanup();
             return IsolationResult {
                 success: false,
                 session_name: Some(session_name.to_string()),
