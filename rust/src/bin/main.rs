@@ -389,7 +389,7 @@ Options:
   --auto-remove-docker-container  Auto-remove docker container after exit
   --shell <shell>       Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
   --use-command-stream  Use command-stream library for execution (experimental)
-  --status <uuid>       Show status of execution by UUID (--output-format: links-notation|json|text)
+  --status <id>         Show status of execution by UUID or session name (--output-format: links-notation|json|text)
   --cleanup             Clean up stale "executing" records (crashed/killed processes)
   --cleanup-dry-run     Show stale records that would be cleaned up (without cleaning)
   --version, -v         Show version information
@@ -421,7 +421,7 @@ Features:
 
 /// Run command with isolation
 fn run_with_isolation(
-    _config: &Config,
+    config: &Config,
     wrapper_options: &start_command::WrapperOptions,
     command: &str,
     _use_command_stream: bool,
@@ -559,6 +559,82 @@ fn run_with_isolation(
         start_time: start_time.clone(),
     });
 
+    // Create execution tracking record with isolation options
+    let execution_store = config.create_execution_store();
+    let mut isolation_options_map = std::collections::HashMap::new();
+    if let Some(env) = environment {
+        isolation_options_map.insert(
+            "isolated".to_string(),
+            serde_json::Value::String(env.to_string()),
+        );
+    }
+    isolation_options_map.insert(
+        "isolationMode".to_string(),
+        serde_json::Value::String(mode.to_string()),
+    );
+    isolation_options_map.insert(
+        "sessionName".to_string(),
+        serde_json::Value::String(session_name.clone()),
+    );
+    if let Some(ref image) = effective_image {
+        isolation_options_map.insert(
+            "image".to_string(),
+            serde_json::Value::String(image.clone()),
+        );
+    }
+    if let Some(ref endpoint) = wrapper_options.endpoint {
+        isolation_options_map.insert(
+            "endpoint".to_string(),
+            serde_json::Value::String(endpoint.clone()),
+        );
+    }
+    if let Some(ref user) = created_user {
+        isolation_options_map.insert(
+            "user".to_string(),
+            serde_json::Value::String(user.clone()),
+        );
+    }
+    isolation_options_map.insert(
+        "keepAlive".to_string(),
+        serde_json::Value::Bool(wrapper_options.keep_alive),
+    );
+
+    let mut execution_record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        uuid: Some(session_id.to_string()),
+        command: command.to_string(),
+        log_path: Some(log_file_path.to_string_lossy().to_string()),
+        pid: Some(process::id()),
+        options: Some(isolation_options_map),
+        ..Default::default()
+    });
+
+    // Save initial execution record and set up signal cleanup
+    if let Some(ref store) = execution_store {
+        if let Err(e) = store.save(&execution_record) {
+            if config.verbose {
+                eprintln!(
+                    "[ExecutionStore] Warning: Failed to save initial record: {}",
+                    e
+                );
+            }
+        } else {
+            if config.verbose {
+                println!("[ExecutionStore] Execution ID: {}", execution_record.uuid);
+            }
+            set_current_execution(execution_record.clone(), store.clone());
+        }
+    }
+
+    // Add execution ID to log content
+    log_content = log_content.replacen(
+        "=== Start Command Log ===\n",
+        &format!(
+            "=== Start Command Log ===\nExecution ID: {}\n",
+            execution_record.uuid
+        ),
+        1,
+    );
+
     let result = if let Some(env) = environment {
         // Run in isolation backend
         let options = IsolationOptions {
@@ -597,6 +673,26 @@ fn run_with_isolation(
 
     // Write log file
     write_log_file(&log_file_path, &log_content);
+
+    // Update execution record
+    // For detached mode, keep record as "executing" since the actual session
+    // continues running after the wrapper process exits. The real status will be
+    // determined at query time by checking if the session is still alive.
+    if let Some(ref store) = execution_store {
+        let is_detached = mode == "detached";
+        if !is_detached {
+            execution_record.complete(exit_code);
+        }
+        if let Err(e) = store.save(&execution_record) {
+            if config.verbose {
+                eprintln!(
+                    "[ExecutionStore] Warning: Failed to update execution record: {}",
+                    e
+                );
+            }
+        }
+        clear_current_execution();
+    }
 
     // Cleanup: delete the created user if we created one (unless --keep-user)
     // This output goes to stdout but NOT inside the boxes - it's operational info

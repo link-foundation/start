@@ -5,9 +5,90 @@
 //! - JSON: Standard JSON output
 //! - Text: Human-readable text format
 
-use crate::execution_store::{ExecutionRecord, ExecutionStore};
+use crate::execution_store::{ExecutionRecord, ExecutionStatus, ExecutionStore};
 use crate::output_blocks::{escape_for_links_notation, format_value_for_links_notation};
 use serde_json::Value;
+use std::process::Command;
+
+/// Check if a detached isolation session is still running
+/// Returns Some(true) if running, Some(false) if not, None if unable to determine
+pub fn is_detached_session_alive(record: &ExecutionRecord) -> Option<bool> {
+    let session_name = record.options.get("sessionName")?.as_str()?;
+    let isolation_mode = record.options.get("isolationMode")?.as_str()?;
+    let isolated = record.options.get("isolated")?.as_str()?;
+
+    if isolation_mode != "detached" {
+        return None;
+    }
+
+    match isolated {
+        "screen" => {
+            let output = Command::new("screen")
+                .args(["-ls"])
+                .output()
+                .ok()?;
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            Some(stdout.contains(session_name))
+        }
+        "tmux" => {
+            let status = Command::new("tmux")
+                .args(["has-session", "-t", session_name])
+                .output()
+                .ok()?;
+            Some(status.status.success())
+        }
+        "docker" => {
+            let output = Command::new("docker")
+                .args(["inspect", "-f", "{{.State.Running}}", session_name])
+                .output()
+                .ok()?;
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            Some(stdout.trim() == "true")
+        }
+        "ssh" => {
+            // For SSH, check if the local wrapper PID is still running
+            if let Some(pid) = record.pid {
+                // Check if process exists by sending signal 0
+                let result = unsafe { libc::kill(pid as i32, 0) };
+                Some(result == 0)
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Enrich execution record with live session status for detached executions.
+/// If a record shows "executing" but the detached session has actually ended,
+/// returns an updated copy with status "executed". If it shows "executed" but
+/// the session is still running, returns a copy with status "executing".
+pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
+    let alive = match is_detached_session_alive(record) {
+        Some(v) => v,
+        None => return record.clone(),
+    };
+
+    let mut enriched = record.clone();
+
+    if alive && enriched.status == ExecutionStatus::Executed {
+        // Session still running but record says executed - correct it
+        enriched.status = ExecutionStatus::Executing;
+        enriched.exit_code = None;
+        enriched.end_time = None;
+    } else if !alive && enriched.status == ExecutionStatus::Executing {
+        // Session ended but record says executing - correct it
+        enriched.status = ExecutionStatus::Executed;
+        if enriched.exit_code.is_none() {
+            enriched.exit_code = Some(-1); // Unknown exit code
+        }
+        if enriched.end_time.is_none() {
+            enriched.end_time = Some(chrono::Utc::now().to_rfc3339());
+        }
+    }
+
+    enriched
+}
 
 /// Format execution record as Links Notation (indented style)
 /// Uses nested Links notation for object values (like options) instead of JSON
@@ -127,7 +208,7 @@ pub struct StatusQueryResult {
 /// Handle status query and return the result
 pub fn query_status(
     store: Option<&ExecutionStore>,
-    uuid: &str,
+    identifier: &str,
     output_format: Option<&str>,
 ) -> StatusQueryResult {
     let store = match store {
@@ -141,19 +222,25 @@ pub fn query_status(
         }
     };
 
-    let record = match store.get(uuid) {
+    let record = match store.get(identifier) {
         Some(r) => r,
         None => {
             return StatusQueryResult {
                 success: false,
                 output: None,
-                error: Some(format!("No execution found with UUID: {}", uuid)),
+                error: Some(format!(
+                    "No execution found with UUID or session name: {}",
+                    identifier
+                )),
             }
         }
     };
 
+    // Enrich detached execution status with live session check
+    let enriched = enrich_detached_status(&record);
+
     let format = output_format.unwrap_or("links-notation");
-    match format_record(&record, format) {
+    match format_record(&enriched, format) {
         Ok(output) => StatusQueryResult {
             success: true,
             output: Some(output),

@@ -518,11 +518,22 @@ impl ExecutionStore {
         Ok(())
     }
 
-    /// Get an execution record by UUID
-    pub fn get(&self, uuid: &str) -> Option<ExecutionRecord> {
-        self.read_lino_records()
-            .into_iter()
-            .find(|r| r.uuid == uuid)
+    /// Get an execution record by UUID or session name
+    /// First tries exact UUID match, then falls back to session name lookup
+    pub fn get(&self, identifier: &str) -> Option<ExecutionRecord> {
+        let records = self.read_lino_records();
+        // First try exact UUID match
+        if let Some(record) = records.iter().find(|r| r.uuid == identifier) {
+            return Some(record.clone());
+        }
+        // Fall back to session name lookup (stored in options.sessionName)
+        records.into_iter().find(|r| {
+            r.options
+                .get("sessionName")
+                .and_then(|v| v.as_str())
+                .map(|name| name == identifier)
+                .unwrap_or(false)
+        })
     }
 
     /// Get all execution records
