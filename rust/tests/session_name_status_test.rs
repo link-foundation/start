@@ -269,7 +269,11 @@ fn test_get_most_recent_session_name_match() {
         command: "echo first".to_string(),
         uuid: Some("older-uuid-101".to_string()),
         pid: Some(111),
-        options: Some(make_isolation_options("reused-session", "screen", "attached")),
+        options: Some(make_isolation_options(
+            "reused-session",
+            "screen",
+            "attached",
+        )),
         ..Default::default()
     });
     record1.complete(0);
@@ -279,7 +283,11 @@ fn test_get_most_recent_session_name_match() {
         command: "echo second".to_string(),
         uuid: Some("newer-uuid-101".to_string()),
         pid: Some(222),
-        options: Some(make_isolation_options("reused-session", "screen", "detached")),
+        options: Some(make_isolation_options(
+            "reused-session",
+            "screen",
+            "detached",
+        )),
         ..Default::default()
     });
     store.save(&record2).unwrap();
