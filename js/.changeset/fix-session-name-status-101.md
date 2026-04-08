@@ -1,5 +1,5 @@
 ---
-"start-command": patch
+'start-command': patch
 ---
 
 fix: support --session name lookups in --status and track detached session lifecycle
