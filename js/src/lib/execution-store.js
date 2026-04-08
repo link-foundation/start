@@ -470,14 +470,21 @@ class ExecutionStore {
   }
 
   /**
-   * Get an execution record by UUID
-   * @param {string} uuid
+   * Get an execution record by UUID or session name
+   * First tries exact UUID match, then falls back to session name lookup
+   * @param {string} identifier - UUID or session name
    * @returns {ExecutionRecord|null}
    */
-  get(uuid) {
+  get(identifier) {
     const records = this.readLinoRecords();
-    const found = records.find((r) => r.uuid === uuid);
-    return found || null;
+    // First try exact UUID match
+    const byUuid = records.find((r) => r.uuid === identifier);
+    if (byUuid) return byUuid;
+    // Fall back to session name lookup (stored in options.sessionName)
+    const bySessionName = records.find(
+      (r) => r.options && r.options.sessionName === identifier
+    );
+    return bySessionName || null;
   }
 
   /**

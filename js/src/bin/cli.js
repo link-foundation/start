@@ -333,7 +333,7 @@ Options:
   --auto-remove-docker-container  Auto-remove docker container after exit
   --shell <shell>       Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
   --use-command-stream  Use command-stream library for execution (experimental)
-  --status <uuid>       Show status of execution by UUID (--output-format: links-notation|json|text)
+  --status <id>         Show status of execution by UUID or session name (--output-format: links-notation|json|text)
   --cleanup             Clean up stale "executing" records (crashed/killed processes)
   --cleanup-dry-run     Show stale records that would be cleaned up (without cleaning)
   --version, -v         Show version information
@@ -602,9 +602,15 @@ async function runWithIsolation(
   // Write log file
   writeLogFile(logFilePath, logContent);
 
-  // Update execution record as completed and clear global reference
+  // Update execution record and clear global reference
+  // For detached mode, keep record as "executing" since the actual session
+  // continues running after the wrapper process exits. The real status will be
+  // determined at query time by checking if the session is still alive.
   if (executionRecord && store) {
-    executionRecord.complete(exitCode);
+    const isDetached = mode === 'detached';
+    if (!isDetached) {
+      executionRecord.complete(exitCode);
+    }
     try {
       store.save(executionRecord);
     } catch (err) {
