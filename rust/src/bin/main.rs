@@ -434,20 +434,12 @@ fn run_with_isolation(
 
     // Docker image is now set in validate_options (defaults to OS-matched image)
     let effective_image = wrapper_options.image.clone();
-
-    // Create log file path
     let log_file_path = create_log_path(environment.unwrap_or("direct"));
-
-    // Get session name
     let session_name = wrapper_options
         .session
         .clone()
         .unwrap_or_else(|| generate_session_name(Some(environment.unwrap_or("start"))));
-
-    // Collect extra lines for start block
     let mut extra_lines: Vec<String> = Vec::new();
-
-    // Handle --isolated-user option
     let mut created_user: Option<String> = None;
 
     if wrapper_options.user {
@@ -505,12 +497,9 @@ fn run_with_isolation(
         created_user = Some(username);
     }
 
-    // Add isolation info to extra lines
+    // Add isolation info to extra lines (session name for reconnecting, see issue #67)
     if let Some(env) = environment {
         extra_lines.push(format!("[Isolation] Environment: {}, Mode: {}", env, mode));
-        // Always add the session name so users can reconnect to detached sessions
-        // This is important for screen, tmux, docker where the session/container name
-        // is different from the session UUID used for tracking (see issue #67)
         extra_lines.push(format!("[Isolation] Session: {}", session_name));
     }
     if let Some(ref image) = effective_image {
@@ -561,68 +550,52 @@ fn run_with_isolation(
 
     // Create execution tracking record with isolation options
     let execution_store = config.create_execution_store();
-    let mut isolation_options_map = std::collections::HashMap::new();
+    let mut opts_map: std::collections::HashMap<String, serde_json::Value> =
+        std::collections::HashMap::new();
+    let str_val = |s: &str| serde_json::Value::String(s.to_string());
     if let Some(env) = environment {
-        isolation_options_map.insert(
-            "isolated".to_string(),
-            serde_json::Value::String(env.to_string()),
-        );
+        opts_map.insert("isolated".into(), str_val(env));
     }
-    isolation_options_map.insert(
-        "isolationMode".to_string(),
-        serde_json::Value::String(mode.to_string()),
-    );
-    isolation_options_map.insert(
-        "sessionName".to_string(),
-        serde_json::Value::String(session_name.clone()),
-    );
-    if let Some(ref image) = effective_image {
-        isolation_options_map.insert(
-            "image".to_string(),
-            serde_json::Value::String(image.clone()),
-        );
+    opts_map.insert("isolationMode".into(), str_val(mode));
+    opts_map.insert("sessionName".into(), str_val(&session_name));
+    if let Some(ref v) = effective_image {
+        opts_map.insert("image".into(), str_val(v));
     }
-    if let Some(ref endpoint) = wrapper_options.endpoint {
-        isolation_options_map.insert(
-            "endpoint".to_string(),
-            serde_json::Value::String(endpoint.clone()),
-        );
+    if let Some(ref v) = wrapper_options.endpoint {
+        opts_map.insert("endpoint".into(), str_val(v));
     }
-    if let Some(ref user) = created_user {
-        isolation_options_map.insert("user".to_string(), serde_json::Value::String(user.clone()));
+    if let Some(ref v) = created_user {
+        opts_map.insert("user".into(), str_val(v));
     }
-    isolation_options_map.insert(
-        "keepAlive".to_string(),
+    opts_map.insert(
+        "keepAlive".into(),
         serde_json::Value::Bool(wrapper_options.keep_alive),
     );
-
     let mut execution_record = ExecutionRecord::with_options(ExecutionRecordOptions {
         uuid: Some(session_id.to_string()),
         command: command.to_string(),
         log_path: Some(log_file_path.to_string_lossy().to_string()),
         pid: Some(process::id()),
-        options: Some(isolation_options_map),
+        options: Some(opts_map),
         ..Default::default()
     });
-
-    // Save initial execution record and set up signal cleanup
     if let Some(ref store) = execution_store {
-        if let Err(e) = store.save(&execution_record) {
-            if config.verbose {
+        match store.save(&execution_record) {
+            Err(e) if config.verbose => {
                 eprintln!(
                     "[ExecutionStore] Warning: Failed to save initial record: {}",
                     e
                 );
             }
-        } else {
-            if config.verbose {
-                println!("[ExecutionStore] Execution ID: {}", execution_record.uuid);
+            Ok(()) => {
+                if config.verbose {
+                    println!("[ExecutionStore] Execution ID: {}", execution_record.uuid);
+                }
+                set_current_execution(execution_record.clone(), store.clone());
             }
-            set_current_execution(execution_record.clone(), store.clone());
+            _ => {}
         }
     }
-
-    // Add execution ID to log content
     log_content = log_content.replacen(
         "=== Start Command Log ===\n",
         &format!(
@@ -671,21 +644,14 @@ fn run_with_isolation(
     // Write log file
     write_log_file(&log_file_path, &log_content);
 
-    // Update execution record
-    // For detached mode, keep record as "executing" since the actual session
-    // continues running after the wrapper process exits. The real status will be
-    // determined at query time by checking if the session is still alive.
+    // Update execution record: detached keeps "executing" (resolved at query time)
     if let Some(ref store) = execution_store {
-        let is_detached = mode == "detached";
-        if !is_detached {
+        if mode != "detached" {
             execution_record.complete(exit_code);
         }
         if let Err(e) = store.save(&execution_record) {
             if config.verbose {
-                eprintln!(
-                    "[ExecutionStore] Warning: Failed to update execution record: {}",
-                    e
-                );
+                eprintln!("[ExecutionStore] Warning: Failed to update record: {}", e);
             }
         }
         clear_current_execution();

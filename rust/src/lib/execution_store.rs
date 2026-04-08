@@ -518,29 +518,24 @@ impl ExecutionStore {
         Ok(())
     }
 
-    /// Get an execution record by UUID or session name
-    /// First tries exact UUID match, then falls back to session name lookup
+    /// Get an execution record by UUID or session name (falls back to options.sessionName)
     pub fn get(&self, identifier: &str) -> Option<ExecutionRecord> {
         let records = self.read_lino_records();
-        // First try exact UUID match
-        if let Some(record) = records.iter().find(|r| r.uuid == identifier) {
-            return Some(record.clone());
-        }
-        // Fall back to session name lookup (stored in options.sessionName)
-        records.into_iter().find(|r| {
-            r.options
-                .get("sessionName")
-                .and_then(|v| v.as_str())
-                .map(|name| name == identifier)
-                .unwrap_or(false)
-        })
+        records
+            .iter()
+            .find(|r| r.uuid == identifier)
+            .cloned()
+            .or_else(|| {
+                records.into_iter().find(|r| {
+                    r.options.get("sessionName").and_then(|v| v.as_str()) == Some(identifier)
+                })
+            })
     }
 
     /// Get all execution records
     pub fn get_all(&self) -> Vec<ExecutionRecord> {
         self.read_lino_records()
     }
-
     /// Get records filtered by status
     pub fn get_by_status(&self, status: ExecutionStatus) -> Vec<ExecutionRecord> {
         self.read_lino_records()
@@ -548,21 +543,17 @@ impl ExecutionStore {
             .filter(|r| r.status == status)
             .collect()
     }
-
     /// Get currently executing commands
     pub fn get_executing(&self) -> Vec<ExecutionRecord> {
         self.get_by_status(ExecutionStatus::Executing)
     }
-
-    /// Get recently executed commands
+    /// Get recently executed commands (sorted by start_time descending)
     pub fn get_recent(&self, limit: usize) -> Vec<ExecutionRecord> {
         let mut records = self.read_lino_records();
-        // Sort by start_time descending
         records.sort_by(|a, b| b.start_time.cmp(&a.start_time));
         records.truncate(limit);
         records
     }
-
     /// Clean up stale "executing" records (processes no longer running or aged out)
     pub fn cleanup_stale(&self, options: CleanupOptions) -> CleanupResult {
         let max_age_ms = options.max_age_ms.unwrap_or(24 * 60 * 60 * 1000);

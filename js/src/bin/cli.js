@@ -468,12 +468,9 @@ async function runWithIsolation(
     }
   }
 
-  // Add isolation info to extra lines
+  // Add isolation info to extra lines (session name for reconnecting, see issue #67)
   if (environment) {
     extraLines.push(`[Isolation] Environment: ${environment}, Mode: ${mode}`);
-    // Always add the session name so users can reconnect to detached sessions
-    // This is important for screen, tmux, docker where the session/container name
-    // is different from the session UUID used for tracking (see issue #67)
     extraLines.push(`[Isolation] Session: ${sessionName}`);
   }
   if (effectiveImage) {
@@ -602,13 +599,9 @@ async function runWithIsolation(
   // Write log file
   writeLogFile(logFilePath, logContent);
 
-  // Update execution record and clear global reference
-  // For detached mode, keep record as "executing" since the actual session
-  // continues running after the wrapper process exits. The real status will be
-  // determined at query time by checking if the session is still alive.
+  // Update execution record: detached keeps "executing" (resolved at query time)
   if (executionRecord && store) {
-    const isDetached = mode === 'detached';
-    if (!isDetached) {
+    if (mode !== 'detached') {
       executionRecord.complete(exitCode);
     }
     try {
@@ -620,7 +613,6 @@ async function runWithIsolation(
         );
       }
     }
-    // Clear global reference since we've completed normally
     currentExecutionRecord = null;
   }
 
