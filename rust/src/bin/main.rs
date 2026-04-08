@@ -589,10 +589,7 @@ fn run_with_isolation(
         );
     }
     if let Some(ref user) = created_user {
-        isolation_options_map.insert(
-            "user".to_string(),
-            serde_json::Value::String(user.clone()),
-        );
+        isolation_options_map.insert("user".to_string(), serde_json::Value::String(user.clone()));
     }
     isolation_options_map.insert(
         "keepAlive".to_string(),

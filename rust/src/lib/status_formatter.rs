@@ -23,10 +23,7 @@ pub fn is_detached_session_alive(record: &ExecutionRecord) -> Option<bool> {
 
     match isolated {
         "screen" => {
-            let output = Command::new("screen")
-                .args(["-ls"])
-                .output()
-                .ok()?;
+            let output = Command::new("screen").args(["-ls"]).output().ok()?;
             let stdout = String::from_utf8_lossy(&output.stdout);
             Some(stdout.contains(session_name))
         }

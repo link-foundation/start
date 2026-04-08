@@ -479,7 +479,9 @@ class ExecutionStore {
     const records = this.readLinoRecords();
     // First try exact UUID match
     const byUuid = records.find((r) => r.uuid === identifier);
-    if (byUuid) return byUuid;
+    if (byUuid) {
+      return byUuid;
+    }
     // Fall back to session name lookup (stored in options.sessionName)
     const bySessionName = records.find(
       (r) => r.options && r.options.sessionName === identifier

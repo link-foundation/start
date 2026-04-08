@@ -63,8 +63,8 @@ pub use signal_handler::{
     was_signal_received,
 };
 pub use status_formatter::{
-    enrich_detached_status, format_record, format_record_as_links_notation,
-    format_record_as_text, is_detached_session_alive, query_status, StatusQueryResult,
+    enrich_detached_status, format_record, format_record_as_links_notation, format_record_as_text,
+    is_detached_session_alive, query_status, StatusQueryResult,
 };
 pub use substitution::{process_command, ProcessOptions, SubstitutionResult};
 pub use user_manager::{

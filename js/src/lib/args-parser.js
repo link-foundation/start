@@ -424,9 +424,7 @@ function parseOption(args, index, options) {
       options.status = args[index + 1];
       return 2;
     } else {
-      throw new Error(
-        `Option ${arg} requires a UUID or session name argument`
-      );
+      throw new Error(`Option ${arg} requires a UUID or session name argument`);
     }
   }
 

@@ -24,7 +24,9 @@ function isDetachedSessionAlive(record) {
   const isolationMode = opts.isolationMode;
   const isolated = opts.isolated;
 
-  if (!sessionName || isolationMode !== 'detached') return null;
+  if (!sessionName || isolationMode !== 'detached') {
+    return null;
+  }
 
   try {
     switch (isolated) {
@@ -80,7 +82,9 @@ function isDetachedSessionAlive(record) {
  */
 function enrichDetachedStatus(record) {
   const alive = isDetachedSessionAlive(record);
-  if (alive === null) return record;
+  if (alive === null) {
+    return record;
+  }
 
   // Create a shallow copy to avoid mutating the original
   const enriched = Object.create(Object.getPrototypeOf(record));
