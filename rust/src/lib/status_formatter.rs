@@ -44,11 +44,18 @@ pub fn is_detached_session_alive(record: &ExecutionRecord) -> Option<bool> {
         }
         "ssh" => {
             // For SSH, check if the local wrapper PID is still running
-            if let Some(pid) = record.pid {
-                // Check if process exists by sending signal 0
-                let result = unsafe { libc::kill(pid as i32, 0) };
-                Some(result == 0)
-            } else {
+            #[cfg(unix)]
+            {
+                if let Some(pid) = record.pid {
+                    let result = unsafe { libc::kill(pid as i32, 0) };
+                    Some(result == 0)
+                } else {
+                    None
+                }
+            }
+            #[cfg(not(unix))]
+            {
+                let _ = record.pid;
                 None
             }
         }
