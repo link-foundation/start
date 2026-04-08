@@ -333,7 +333,7 @@ Options:
   --auto-remove-docker-container  Auto-remove docker container after exit
   --shell <shell>       Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
   --use-command-stream  Use command-stream library for execution (experimental)
-  --status <uuid>       Show status of execution by UUID (--output-format: links-notation|json|text)
+  --status <id>         Show status of execution by UUID or session name (--output-format: links-notation|json|text)
   --cleanup             Clean up stale "executing" records (crashed/killed processes)
   --cleanup-dry-run     Show stale records that would be cleaned up (without cleaning)
   --version, -v         Show version information
@@ -468,12 +468,9 @@ async function runWithIsolation(
     }
   }
 
-  // Add isolation info to extra lines
+  // Add isolation info to extra lines (session name for reconnecting, see issue #67)
   if (environment) {
     extraLines.push(`[Isolation] Environment: ${environment}, Mode: ${mode}`);
-    // Always add the session name so users can reconnect to detached sessions
-    // This is important for screen, tmux, docker where the session/container name
-    // is different from the session UUID used for tracking (see issue #67)
     extraLines.push(`[Isolation] Session: ${sessionName}`);
   }
   if (effectiveImage) {
@@ -602,9 +599,11 @@ async function runWithIsolation(
   // Write log file
   writeLogFile(logFilePath, logContent);
 
-  // Update execution record as completed and clear global reference
+  // Update execution record: detached keeps "executing" (resolved at query time)
   if (executionRecord && store) {
-    executionRecord.complete(exitCode);
+    if (mode !== 'detached') {
+      executionRecord.complete(exitCode);
+    }
     try {
       store.save(executionRecord);
     } catch (err) {
@@ -614,7 +613,6 @@ async function runWithIsolation(
         );
       }
     }
-    // Clear global reference since we've completed normally
     currentExecutionRecord = null;
   }
 

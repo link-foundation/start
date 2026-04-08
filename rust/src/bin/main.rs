@@ -389,7 +389,7 @@ Options:
   --auto-remove-docker-container  Auto-remove docker container after exit
   --shell <shell>       Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
   --use-command-stream  Use command-stream library for execution (experimental)
-  --status <uuid>       Show status of execution by UUID (--output-format: links-notation|json|text)
+  --status <id>         Show status of execution by UUID or session name (--output-format: links-notation|json|text)
   --cleanup             Clean up stale "executing" records (crashed/killed processes)
   --cleanup-dry-run     Show stale records that would be cleaned up (without cleaning)
   --version, -v         Show version information
@@ -421,7 +421,7 @@ Features:
 
 /// Run command with isolation
 fn run_with_isolation(
-    _config: &Config,
+    config: &Config,
     wrapper_options: &start_command::WrapperOptions,
     command: &str,
     _use_command_stream: bool,
@@ -434,20 +434,12 @@ fn run_with_isolation(
 
     // Docker image is now set in validate_options (defaults to OS-matched image)
     let effective_image = wrapper_options.image.clone();
-
-    // Create log file path
     let log_file_path = create_log_path(environment.unwrap_or("direct"));
-
-    // Get session name
     let session_name = wrapper_options
         .session
         .clone()
         .unwrap_or_else(|| generate_session_name(Some(environment.unwrap_or("start"))));
-
-    // Collect extra lines for start block
     let mut extra_lines: Vec<String> = Vec::new();
-
-    // Handle --isolated-user option
     let mut created_user: Option<String> = None;
 
     if wrapper_options.user {
@@ -505,12 +497,9 @@ fn run_with_isolation(
         created_user = Some(username);
     }
 
-    // Add isolation info to extra lines
+    // Add isolation info to extra lines (session name for reconnecting, see issue #67)
     if let Some(env) = environment {
         extra_lines.push(format!("[Isolation] Environment: {}, Mode: {}", env, mode));
-        // Always add the session name so users can reconnect to detached sessions
-        // This is important for screen, tmux, docker where the session/container name
-        // is different from the session UUID used for tracking (see issue #67)
         extra_lines.push(format!("[Isolation] Session: {}", session_name));
     }
     if let Some(ref image) = effective_image {
@@ -559,6 +548,63 @@ fn run_with_isolation(
         start_time: start_time.clone(),
     });
 
+    // Create execution tracking record with isolation options
+    let execution_store = config.create_execution_store();
+    let mut opts_map: std::collections::HashMap<String, serde_json::Value> =
+        std::collections::HashMap::new();
+    let str_val = |s: &str| serde_json::Value::String(s.to_string());
+    if let Some(env) = environment {
+        opts_map.insert("isolated".into(), str_val(env));
+    }
+    opts_map.insert("isolationMode".into(), str_val(mode));
+    opts_map.insert("sessionName".into(), str_val(&session_name));
+    if let Some(ref v) = effective_image {
+        opts_map.insert("image".into(), str_val(v));
+    }
+    if let Some(ref v) = wrapper_options.endpoint {
+        opts_map.insert("endpoint".into(), str_val(v));
+    }
+    if let Some(ref v) = created_user {
+        opts_map.insert("user".into(), str_val(v));
+    }
+    opts_map.insert(
+        "keepAlive".into(),
+        serde_json::Value::Bool(wrapper_options.keep_alive),
+    );
+    let mut execution_record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        uuid: Some(session_id.to_string()),
+        command: command.to_string(),
+        log_path: Some(log_file_path.to_string_lossy().to_string()),
+        pid: Some(process::id()),
+        options: Some(opts_map),
+        ..Default::default()
+    });
+    if let Some(ref store) = execution_store {
+        match store.save(&execution_record) {
+            Err(e) if config.verbose => {
+                eprintln!(
+                    "[ExecutionStore] Warning: Failed to save initial record: {}",
+                    e
+                );
+            }
+            Ok(()) => {
+                if config.verbose {
+                    println!("[ExecutionStore] Execution ID: {}", execution_record.uuid);
+                }
+                set_current_execution(execution_record.clone(), store.clone());
+            }
+            _ => {}
+        }
+    }
+    log_content = log_content.replacen(
+        "=== Start Command Log ===\n",
+        &format!(
+            "=== Start Command Log ===\nExecution ID: {}\n",
+            execution_record.uuid
+        ),
+        1,
+    );
+
     let result = if let Some(env) = environment {
         // Run in isolation backend
         let options = IsolationOptions {
@@ -597,6 +643,19 @@ fn run_with_isolation(
 
     // Write log file
     write_log_file(&log_file_path, &log_content);
+
+    // Update execution record: detached keeps "executing" (resolved at query time)
+    if let Some(ref store) = execution_store {
+        if mode != "detached" {
+            execution_record.complete(exit_code);
+        }
+        if let Err(e) = store.save(&execution_record) {
+            if config.verbose {
+                eprintln!("[ExecutionStore] Warning: Failed to update record: {}", e);
+            }
+        }
+        clear_current_execution();
+    }
 
     // Cleanup: delete the created user if we created one (unless --keep-user)
     // This output goes to stdout but NOT inside the boxes - it's operational info

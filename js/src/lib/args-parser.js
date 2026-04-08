@@ -418,13 +418,13 @@ function parseOption(args, index, options) {
     return 1;
   }
 
-  // --status <uuid>
+  // --status <uuid-or-session-name>
   if (arg === '--status') {
     if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
       options.status = args[index + 1];
       return 2;
     } else {
-      throw new Error(`Option ${arg} requires a UUID argument`);
+      throw new Error(`Option ${arg} requires a UUID or session name argument`);
     }
   }
 

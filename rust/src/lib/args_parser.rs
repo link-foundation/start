@@ -359,13 +359,16 @@ fn parse_option(
         return Ok(1);
     }
 
-    // --status <uuid>
+    // --status <uuid-or-session-name>
     if arg == "--status" {
         if index + 1 < args.len() && !args[index + 1].starts_with('-') {
             options.status = Some(args[index + 1].clone());
             return Ok(2);
         } else {
-            return Err(format!("Option {} requires a UUID argument", arg));
+            return Err(format!(
+                "Option {} requires a UUID or session name argument",
+                arg
+            ));
         }
     }
 
