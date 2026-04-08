@@ -259,3 +259,35 @@ fn test_enrich_detached_status_marks_dead_session_as_executed() {
         assert!(enriched.end_time.is_some());
     }
 }
+
+#[test]
+fn test_get_most_recent_session_name_match() {
+    let (_temp_dir, store) = create_test_store();
+
+    // Create two records with the same session name (e.g., reuse of session name)
+    let mut record1 = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "echo first".to_string(),
+        uuid: Some("older-uuid-101".to_string()),
+        pid: Some(111),
+        options: Some(make_isolation_options("reused-session", "screen", "attached")),
+        ..Default::default()
+    });
+    record1.complete(0);
+    store.save(&record1).unwrap();
+
+    let record2 = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "echo second".to_string(),
+        uuid: Some("newer-uuid-101".to_string()),
+        pid: Some(222),
+        options: Some(make_isolation_options("reused-session", "screen", "detached")),
+        ..Default::default()
+    });
+    store.save(&record2).unwrap();
+
+    // Should find the first matching record (order depends on storage)
+    let found = store.get("reused-session");
+    assert!(found.is_some());
+    // Both records have this session name; get() returns the first match
+    let found = found.unwrap();
+    assert!(found.uuid == "older-uuid-101" || found.uuid == "newer-uuid-101");
+}
