@@ -1,0 +1,21 @@
+│ session   33333333-3333-4333-8333-333333333333
+│ start     2026-04-19 06:55:06.167
+│
+│ isolation screen
+│ mode      detached
+│ screen    repro-js-fixed-screen-3
+│
+$ for i in 1 2 3; do echo fixed-tick-$i; sleep 1; done
+
+
+✓
+│ finish    2026-04-19 06:55:06.198
+│ duration  0.034s
+│ exit      0
+│
+│ isolation screen
+│ mode      detached
+│ screen    repro-js-fixed-screen-3
+│
+│ log       /tmp/start-command/logs/isolation/screen/33333333-3333-4333-8333-333333333333.log
+│ session   33333333-3333-4333-8333-333333333333

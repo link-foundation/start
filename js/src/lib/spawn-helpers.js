@@ -11,6 +11,20 @@
 
 const { spawn } = require('child_process');
 const fs = require('fs');
+const path = require('path');
+
+function ensureParentDirectory(filePath) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+}
+
+function writeInitialLog(logFilePath, logContent) {
+  ensureParentDirectory(logFilePath);
+  fs.writeFileSync(logFilePath, logContent || '', 'utf8');
+}
+
+function appendLog(logFilePath, content) {
+  fs.appendFileSync(logFilePath, content, 'utf8');
+}
 
 /**
  * Run command using Bun.spawn (for Bun runtime)
@@ -44,6 +58,8 @@ async function runWithBunSpawn(options) {
   let logContent = options.logContent || '';
 
   try {
+    writeInitialLog(logFilePath, logContent);
+
     // Spawn the process using Bun's native API
     const proc = Bun.spawn([shell, ...shellArgs], {
       stdout: 'pipe',
@@ -87,6 +103,7 @@ async function runWithBunSpawn(options) {
           }
           const text = decoder.decode(value);
           process.stdout.write(text);
+          appendLog(logFilePath, text);
           output += text;
         }
       } catch (err) {
@@ -109,6 +126,7 @@ async function runWithBunSpawn(options) {
           }
           const text = decoder.decode(value);
           process.stderr.write(text);
+          appendLog(logFilePath, text);
           output += text;
         }
       } catch (err) {
@@ -133,12 +151,11 @@ async function runWithBunSpawn(options) {
     const durationMs = Date.now() - startTimeMs;
     const endTime = new Date().toISOString().replace('T', ' ').substring(0, 23);
 
-    // Write log file
+    // Write log footer
     try {
-      logContent += `\n${'='.repeat(50)}\n`;
-      logContent += `Finished: ${endTime}\n`;
-      logContent += `Exit Code: ${exitCode}\n`;
-      fs.writeFileSync(logFilePath, logContent, 'utf8');
+      const footer = `\n${'='.repeat(50)}\nFinished: ${endTime}\nExit Code: ${exitCode}\n`;
+      logContent += footer;
+      appendLog(logFilePath, footer);
     } catch (err) {
       console.error(`\nWarning: Could not save log file: ${err.message}`);
     }
@@ -175,7 +192,7 @@ async function runWithBunSpawn(options) {
 
     // Write log file
     try {
-      fs.writeFileSync(logFilePath, logContent, 'utf8');
+      writeInitialLog(logFilePath, logContent);
     } catch (writeErr) {
       console.error(`\nWarning: Could not save log file: ${writeErr.message}`);
     }
@@ -223,6 +240,7 @@ function runWithNodeSpawn(options) {
   } = options;
 
   let logContent = options.logContent || '';
+  writeInitialLog(logFilePath, logContent);
 
   // Execute the command with captured output
   const child = spawn(shell, shellArgs, {
@@ -248,6 +266,7 @@ function runWithNodeSpawn(options) {
   child.stdout.on('data', (data) => {
     const text = data.toString();
     process.stdout.write(text);
+    appendLog(logFilePath, text);
     logContent += text;
   });
 
@@ -255,6 +274,7 @@ function runWithNodeSpawn(options) {
   child.stderr.on('data', (data) => {
     const text = data.toString();
     process.stderr.write(text);
+    appendLog(logFilePath, text);
     logContent += text;
   });
 
@@ -272,9 +292,12 @@ function runWithNodeSpawn(options) {
     logContent += `Finished: ${endTime}\n`;
     logContent += `Exit Code: ${exitCode}\n`;
 
-    // Write log file
+    // Write log footer
     try {
-      fs.writeFileSync(logFilePath, logContent, 'utf8');
+      appendLog(
+        logFilePath,
+        `\n${'='.repeat(50)}\nFinished: ${endTime}\nExit Code: ${exitCode}\n`
+      );
     } catch (err) {
       console.error(`\nWarning: Could not save log file: ${err.message}`);
     }
@@ -312,7 +335,7 @@ function runWithNodeSpawn(options) {
 
     // Write log file
     try {
-      fs.writeFileSync(logFilePath, logContent, 'utf8');
+      writeInitialLog(logFilePath, logContent);
     } catch (writeErr) {
       console.error(`\nWarning: Could not save log file: ${writeErr.message}`);
     }

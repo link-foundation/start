@@ -5,6 +5,18 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+function getTempRoot() {
+  return process.env.START_TEMP_ROOT || path.join(os.tmpdir(), 'start-command');
+}
+
+function ensureDirectory(dirPath) {
+  fs.mkdirSync(dirPath, { recursive: true });
+}
+
+function ensureParentDirectory(filePath) {
+  ensureDirectory(path.dirname(filePath));
+}
+
 /**
  * Generate timestamp for logging
  * @returns {string} ISO timestamp without 'T' and 'Z'
@@ -77,6 +89,7 @@ function createLogFooter(endTime, exitCode) {
  */
 function writeLogFile(logPath, content) {
   try {
+    ensureParentDirectory(logPath);
     fs.writeFileSync(logPath, content, 'utf8');
     return true;
   } catch (err) {
@@ -86,22 +99,78 @@ function writeLogFile(logPath, content) {
 }
 
 /**
+ * Append to a log file, creating its parent directory when needed.
+ * @param {string} logPath - Path to log file
+ * @param {string} content - Log content to append
+ * @returns {boolean} Success status
+ */
+function appendLogFile(logPath, content) {
+  try {
+    ensureParentDirectory(logPath);
+    fs.appendFileSync(logPath, content, 'utf8');
+    return true;
+  } catch (err) {
+    console.error(`\nWarning: Could not append log file: ${err.message}`);
+    return false;
+  }
+}
+
+/**
  * Get log directory from environment or use system temp
  * @returns {string} Log directory path
  */
 function getLogDir() {
-  return process.env.START_LOG_DIR || os.tmpdir();
+  return process.env.START_LOG_DIR || path.join(getTempRoot(), 'logs');
+}
+
+/**
+ * Get a start-command temporary directory for sidecar files.
+ * @param {...string} segments - Optional path segments below the temp directory
+ * @returns {string} Directory path
+ */
+function getTempDir(...segments) {
+  const dir = path.join(getTempRoot(), 'tmp', ...segments);
+  ensureDirectory(dir);
+  return dir;
 }
 
 /**
  * Create log file path
  * @param {string} environment - The isolation environment
+ * @param {string|null} executionId - Optional execution UUID/session ID
  * @returns {string} Full path to log file
  */
-function createLogPath(environment) {
+function createLogPath(environment, executionId = null) {
   const logDir = getLogDir();
+  if (executionId) {
+    return environment === 'direct'
+      ? path.join(logDir, 'direct', `${executionId}.log`)
+      : path.join(logDir, 'isolation', environment, `${executionId}.log`);
+  }
   const logFilename = generateLogFilename(environment);
-  return path.join(logDir, logFilename);
+  return environment === 'direct'
+    ? path.join(logDir, 'direct', logFilename)
+    : path.join(logDir, 'isolation', environment, logFilename);
+}
+
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, "'\\''")}'`;
+}
+
+function createShellLogFooterSnippet() {
+  const dateCommand =
+    "date '+%Y-%m-%d %H:%M:%S.%3N' 2>/dev/null || date '+%Y-%m-%d %H:%M:%S'";
+  return `printf '\\n==================================================\\nFinished: %s\\nExit Code: %s\\n' "$(${dateCommand})" "$__start_command_exit"`;
+}
+
+function wrapCommandWithLogFooter(command, options = {}) {
+  const shell = options.shell || 'sh';
+  const keepAlive = Boolean(options.keepAlive);
+  const footer = createShellLogFooterSnippet();
+  const afterFooter = keepAlive
+    ? `exec ${shellQuote(shell)}`
+    : 'exit "$__start_command_exit"';
+  return `(${command}); __start_command_exit=$?; ${footer}; ${afterFooter}`;
 }
 
 /**
@@ -136,12 +205,20 @@ function runAsIsolatedUser(cmd, username) {
 }
 
 module.exports = {
+  getTempRoot,
+  ensureDirectory,
+  ensureParentDirectory,
   getTimestamp,
   generateLogFilename,
   createLogHeader,
   createLogFooter,
   writeLogFile,
+  appendLogFile,
   getLogDir,
+  getTempDir,
   createLogPath,
+  shellQuote,
+  createShellLogFooterSnippet,
+  wrapCommandWithLogFooter,
   runAsIsolatedUser,
 };

@@ -8,6 +8,7 @@
  */
 
 const { execSync } = require('child_process');
+const fs = require('fs');
 const {
   escapeForLinksNotation,
   formatAsNestedLinksNotation,
@@ -72,6 +73,22 @@ function isDetachedSessionAlive(record) {
   }
 }
 
+function readExitCodeFromLog(logPath) {
+  if (!logPath) {
+    return null;
+  }
+  try {
+    const content = fs.readFileSync(logPath, 'utf8');
+    const matches = [...content.matchAll(/Exit Code:\s*(-?\d+)/g)];
+    if (matches.length === 0) {
+      return null;
+    }
+    return parseInt(matches[matches.length - 1][1], 10);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Enrich execution record with live session status for detached executions.
  * If a record shows "executing" but the detached session has actually ended,
@@ -99,7 +116,7 @@ function enrichDetachedStatus(record) {
     // Session ended but record says executing - correct it
     enriched.status = 'executed';
     if (enriched.exitCode === null || enriched.exitCode === undefined) {
-      enriched.exitCode = -1; // Unknown exit code
+      enriched.exitCode = readExitCodeFromLog(enriched.logPath) ?? -1;
     }
     if (!enriched.endTime) {
       enriched.endTime = new Date().toISOString();

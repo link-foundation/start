@@ -7,6 +7,7 @@
 //! - ssh: Remote SSH execution
 
 use std::env;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 use crate::args_parser::generate_session_name;
@@ -47,6 +48,8 @@ pub struct IsolationOptions {
     pub auto_remove_docker_container: bool,
     /// Shell to use in isolation environments: auto, bash, zsh, sh
     pub shell: String,
+    /// Log path where isolation backends should append live output
+    pub log_path: Option<PathBuf>,
 }
 
 impl Default for IsolationOptions {
@@ -60,6 +63,7 @@ impl Default for IsolationOptions {
             keep_alive: false,
             auto_remove_docker_container: false,
             shell: "auto".to_string(),
+            log_path: None,
         }
     }
 }
@@ -288,54 +292,21 @@ pub fn run_in_screen(command: &str, options: &IsolationOptions) -> IsolationResu
         .clone()
         .unwrap_or_else(|| generate_session_name(Some("screen")));
 
-    let (shell, shell_arg) = get_shell();
-    let effective_command = wrap_command_with_user(command, options.user.as_deref());
-
     if options.detached {
-        // Detached mode
-        let final_command = if options.keep_alive {
-            format!("{}; exec {}", effective_command, shell)
-        } else {
-            effective_command.clone()
-        };
-
-        let status = Command::new("screen")
-            .args(["-dmS", &session_name, &shell, &shell_arg, &final_command])
-            .status();
-
-        match status {
-            Ok(s) if s.success() => {
-                let mut message = format!(
-                    "Command started in detached screen session: {}",
-                    session_name
-                );
-                if options.keep_alive {
-                    message.push_str("\nSession will stay alive after command completes.");
-                } else {
-                    message.push_str("\nSession will exit automatically after command completes.");
-                }
-                message.push_str(&format!("\nReattach with: screen -r {}", session_name));
-
-                IsolationResult {
-                    success: true,
-                    session_name: Some(session_name),
-                    message,
-                    ..Default::default()
-                }
-            }
-            _ => IsolationResult {
-                success: false,
-                session_name: Some(session_name),
-                message: "Failed to start screen session".to_string(),
-                ..Default::default()
-            },
-        }
+        isolation_screen::start_detached_screen_with_log_capture(
+            command,
+            &session_name,
+            options.user.as_deref(),
+            options.keep_alive,
+            options.log_path.as_deref(),
+        )
     } else {
         // Attached mode with log capture
         isolation_screen::run_screen_with_log_capture(
             command,
             &session_name,
             options.user.as_deref(),
+            options.log_path.as_deref(),
         )
     }
 }
@@ -359,15 +330,41 @@ pub fn run_in_tmux(command: &str, options: &IsolationOptions) -> IsolationResult
     let effective_command = wrap_command_with_user(command, options.user.as_deref());
 
     if options.detached {
-        let final_command = if options.keep_alive {
+        let final_command = if options.log_path.is_some() {
+            crate::isolation::isolation_log::wrap_command_with_log_footer(
+                &effective_command,
+                &shell,
+                options.keep_alive,
+            )
+        } else if options.keep_alive {
             format!("{}; exec {}", effective_command, shell)
         } else {
             effective_command.clone()
         };
 
-        let status = Command::new("tmux")
-            .args(["new-session", "-d", "-s", &session_name, &final_command])
-            .status();
+        let status = if let Some(log_path) = options.log_path.as_ref() {
+            let start_status = Command::new("tmux")
+                .args(["new-session", "-d", "-s", &session_name, &shell])
+                .status();
+            if start_status.as_ref().is_ok_and(|s| s.success()) {
+                let pipe_command = format!(
+                    "cat >> {}",
+                    crate::isolation::isolation_log::shell_quote(&log_path.to_string_lossy())
+                );
+                let _ = Command::new("tmux")
+                    .args(["pipe-pane", "-t", &session_name, "-o", &pipe_command])
+                    .status();
+                Command::new("tmux")
+                    .args(["send-keys", "-t", &session_name, &final_command, "C-m"])
+                    .status()
+            } else {
+                start_status
+            }
+        } else {
+            Command::new("tmux")
+                .args(["new-session", "-d", "-s", &session_name, &final_command])
+                .status()
+        };
 
         match status {
             Ok(s) if s.success() => {
@@ -379,6 +376,9 @@ pub fn run_in_tmux(command: &str, options: &IsolationOptions) -> IsolationResult
                     message.push_str("\nSession will exit automatically after command completes.");
                 }
                 message.push_str(&format!("\nReattach with: tmux attach -t {}", session_name));
+                if let Some(log_path) = options.log_path.as_ref() {
+                    message.push_str(&format!("\nLive log: {}", log_path.display()));
+                }
 
                 IsolationResult {
                     success: true,
@@ -463,7 +463,7 @@ pub fn run_in_ssh(command: &str, options: &IsolationOptions) -> IsolationResult 
             shell_to_use.clone()
         };
         let remote_command = format!(
-            "nohup {} -c {} > /tmp/{}.log 2>&1 &",
+            "mkdir -p /tmp/start-command/logs/isolation/ssh && nohup {} -c {} > /tmp/start-command/logs/isolation/ssh/{}.log 2>&1 &",
             shell_invocation,
             shell_escape(command),
             session_name
@@ -482,7 +482,7 @@ pub fn run_in_ssh(command: &str, options: &IsolationOptions) -> IsolationResult 
                 success: true,
                 session_name: Some(session_name.clone()),
                 message: format!(
-                    "Command started in detached SSH session on {}\nSession: {}\nView logs: ssh {} \"tail -f /tmp/{}.log\"",
+                    "Command started in detached SSH session on {}\nSession: {}\nView logs: ssh {} \"tail -f /tmp/start-command/logs/isolation/ssh/{}.log\"",
                     endpoint, session_name, endpoint, session_name
                 ),
                 ..Default::default()
@@ -697,6 +697,22 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
             Ok(output) if output.status.success() => {
                 let container_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
+                if let Some(log_path) = options.log_path.as_ref() {
+                    let logger_script = format!(
+                        "docker logs -f {} >> {} 2>&1; __start_command_exit=$(docker inspect -f '{{{{.State.ExitCode}}}}' {} 2>/dev/null || printf '%s' '-1'); {} >> {}",
+                        crate::isolation::isolation_log::shell_quote(&container_name),
+                        crate::isolation::isolation_log::shell_quote(&log_path.to_string_lossy()),
+                        crate::isolation::isolation_log::shell_quote(&container_name),
+                        crate::isolation::isolation_log::create_shell_log_footer_snippet(),
+                        crate::isolation::isolation_log::shell_quote(&log_path.to_string_lossy())
+                    );
+                    let _ = Command::new("sh")
+                        .args(["-c", &logger_script])
+                        .stdout(Stdio::null())
+                        .stderr(Stdio::null())
+                        .spawn();
+                }
+
                 let mut message = format!(
                     "Command started in detached docker container: {}",
                     container_name
@@ -718,6 +734,9 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                 }
                 message.push_str(&format!("\nAttach with: docker attach {}", container_name));
                 message.push_str(&format!("\nView logs: docker logs {}", container_name));
+                if let Some(log_path) = options.log_path.as_ref() {
+                    message.push_str(&format!("\nLive log: {}", log_path.display()));
+                }
 
                 IsolationResult {
                     success: true,
@@ -831,8 +850,9 @@ pub fn run_as_isolated_user(command: &str, username: &str) -> IsolationResult {
 #[path = "isolation_log.rs"]
 pub mod isolation_log;
 pub use self::isolation_log::{
-    create_log_footer, create_log_header, create_log_path, generate_log_filename,
-    get_default_docker_image, get_log_dir, get_timestamp, write_log_file, LogHeaderParams,
+    append_log_file, create_log_footer, create_log_header, create_log_path,
+    create_log_path_for_execution, generate_log_filename, get_default_docker_image, get_log_dir,
+    get_temp_dir, get_temp_root, get_timestamp, write_log_file, LogHeaderParams,
 };
 
 fn is_debug() -> bool {

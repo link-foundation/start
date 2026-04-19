@@ -7,8 +7,26 @@
 
 const { describe, it } = require('node:test');
 const assert = require('assert');
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
+const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const { isCommandAvailable, runInScreen } = require('../src/lib/isolation');
+
+function waitForFileContent(filePath, predicate, timeoutMs = 5000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      if (predicate(content)) {
+        return content;
+      }
+    }
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
+  }
+  return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
+}
 
 describe('Screen Integration Tests', () => {
   describe('runInScreen (if available)', () => {
@@ -36,6 +54,85 @@ describe('Screen Integration Tests', () => {
       } catch {
         // Session may have already exited
       }
+    });
+
+    it('should stream detached screen output to the tracked CLI log path', () => {
+      if (!isCommandAvailable('screen')) {
+        console.log('  Skipping: screen not installed');
+        return;
+      }
+
+      const executionId = crypto.randomUUID();
+      const sessionName = `test-screen-log-${Date.now()}`;
+      const appFolder = fs.mkdtempSync(
+        path.join(os.tmpdir(), 'start-command-test-store-')
+      );
+      const cliPath = path.join(__dirname, '..', 'src', 'bin', 'cli.js');
+      const command =
+        'printf "detached-log-test-1\\n"; sleep 0.2; printf "detached-log-test-2\\n"';
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          cliPath,
+          '--session-id',
+          executionId,
+          '-i',
+          'screen',
+          '-d',
+          '--session',
+          sessionName,
+          '--',
+          command,
+        ],
+        {
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            START_APP_FOLDER: appFolder,
+            START_DISABLE_AUTO_ISSUE: '1',
+          },
+        }
+      );
+
+      assert.strictEqual(
+        result.status,
+        0,
+        `CLI failed:\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`
+      );
+
+      const logPathMatch = result.stdout.match(/│ log\s+(.+)/);
+      assert.ok(result.stdout.includes(`│ screen    ${sessionName}`));
+      assert.ok(logPathMatch, `Expected log path in output:\n${result.stdout}`);
+
+      const logPath = logPathMatch[1].trim();
+      assert.ok(
+        logPath.endsWith(
+          path.join('logs', 'isolation', 'screen', `${executionId}.log`)
+        ),
+        `Unexpected log path: ${logPath}`
+      );
+
+      const logContent = waitForFileContent(
+        logPath,
+        (content) =>
+          content.includes('detached-log-test-1') &&
+          content.includes('detached-log-test-2') &&
+          content.includes('Exit Code: 0')
+      );
+
+      assert.ok(
+        logContent.includes('detached-log-test-1'),
+        `Missing first output line in log:\n${logContent}`
+      );
+      assert.ok(
+        logContent.includes('detached-log-test-2'),
+        `Missing second output line in log:\n${logContent}`
+      );
+      assert.ok(
+        logContent.includes('Command started in detached screen session'),
+        `Missing detached start message in log:\n${logContent}`
+      );
     });
 
     it('should run command in attached mode and capture output (issue #15)', async () => {
