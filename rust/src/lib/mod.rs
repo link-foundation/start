@@ -25,11 +25,11 @@ pub use execution_store::{
 };
 pub use failure_handler::{handle_failure, Config as FailureConfig};
 pub use isolation::{
-    build_shell_with_args_cmd_args, create_log_footer, create_log_header, create_log_path,
-    docker_image_exists, docker_pull_image, get_default_docker_image, get_timestamp,
-    is_command_available, is_interactive_shell_command, is_shell_invocation_with_args,
-    run_as_isolated_user, run_isolated, write_log_file, IsolationOptions, IsolationResult,
-    LogHeaderParams,
+    append_log_file, build_shell_with_args_cmd_args, create_log_footer, create_log_header,
+    create_log_path, create_log_path_for_execution, docker_image_exists, docker_pull_image,
+    get_default_docker_image, get_timestamp, is_command_available, is_interactive_shell_command,
+    is_shell_invocation_with_args, run_as_isolated_user, run_isolated, write_log_file,
+    IsolationOptions, IsolationResult, LogHeaderParams,
 };
 #[allow(deprecated)]
 pub use output_blocks::{

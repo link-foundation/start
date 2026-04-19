@@ -111,7 +111,7 @@ $ npm test
 │ duration  7.456s
 │ exit      0
 │
-│ log       /tmp/start-command-1705312245123-abc123.log
+│ log       /tmp/start-command/logs/direct/abc-123-def-456-ghi.log
 │ session   abc-123-def-456-ghi
 ```
 
@@ -146,7 +146,7 @@ $ some-npm-tool --broken-arg
 │ duration  1.789s
 │ exit      1
 │
-│ log       /tmp/start-command-1705312246789-def456.log
+│ log       /tmp/start-command/logs/direct/abc-123-def-456-ghi.log
 │ session   abc-123-def-456-ghi
 
 Detected repository: https://github.com/owner/some-npm-tool
@@ -335,7 +335,7 @@ You can create your own substitution patterns by placing a `substitutions.lino` 
 
 ## Log File Format
 
-Log files are saved as `start-command-{timestamp}-{random}.log` and contain the command output along with metadata. The console output uses a "timeline" format:
+Log files are saved under `/tmp/start-command/logs/` by default and contain the command output along with metadata. When an execution UUID is available, the log path is stable, for example `/tmp/start-command/logs/direct/<uuid>.log` or `/tmp/start-command/logs/isolation/screen/<uuid>.log`. The console output uses a "timeline" format:
 
 ```
 │ session   abc-123-def-456-ghi
@@ -350,7 +350,7 @@ $ bun test
 │ duration  7.456s
 │ exit      0
 │
-│ log       /tmp/start-command-1705312245123-abc123.log
+│ log       /tmp/start-command/logs/direct/abc-123-def-456-ghi.log
 │ session   abc-123-def-456-ghi
 ```
 

@@ -3,8 +3,9 @@
 //! Mirrors isolation_log test coverage from the JS test suite.
 
 use start_command::isolation::isolation_log::{
-    create_log_footer, create_log_header, create_log_path, generate_log_filename,
-    get_default_docker_image, get_log_dir, get_timestamp, write_log_file, LogHeaderParams,
+    create_log_footer, create_log_header, create_log_path, create_log_path_for_execution,
+    generate_log_filename, get_default_docker_image, get_log_dir, get_temp_root, get_timestamp,
+    write_log_file, LogHeaderParams,
 };
 use std::path::PathBuf;
 
@@ -236,10 +237,10 @@ mod get_log_dir_tests {
 
     #[test]
     fn should_return_temp_dir_by_default() {
-        // Without START_LOG_DIR env var, should use system temp dir
-        // (We can't unset env vars easily, but we can verify it returns something)
+        // Without START_LOG_DIR env var, should use start-command's temp log root.
         let dir = get_log_dir();
-        assert!(dir.is_absolute() || !dir.as_os_str().is_empty());
+        assert!(dir.ends_with("logs"));
+        assert!(dir.starts_with(get_temp_root()));
     }
 }
 
@@ -264,6 +265,28 @@ mod create_log_path_tests {
         assert!(
             path_str.contains("screen"),
             "Expected environment in path: {}",
+            path_str
+        );
+    }
+
+    #[test]
+    fn should_create_stable_isolation_path_for_execution_id() {
+        let path = create_log_path_for_execution("screen", "uuid-123");
+        let path_str = path.to_string_lossy();
+        assert!(
+            path_str.ends_with("logs/isolation/screen/uuid-123.log"),
+            "Expected stable execution path, got: {}",
+            path_str
+        );
+    }
+
+    #[test]
+    fn should_create_stable_direct_path_without_duplicate_environment() {
+        let path = create_log_path_for_execution("direct", "uuid-123");
+        let path_str = path.to_string_lossy();
+        assert!(
+            path_str.ends_with("logs/direct/uuid-123.log"),
+            "Expected stable direct execution path, got: {}",
             path_str
         );
     }

@@ -13,8 +13,15 @@ const {
   getScreenVersion,
   supportsLogfileOption,
   runScreenWithLogCapture: _runScreenWithLogCapture,
+  startDetachedScreenWithLogCapture,
   resetScreenVersionCache,
 } = require('./screen-isolation');
+const {
+  appendLogFile,
+  createShellLogFooterSnippet,
+  shellQuote,
+  wrapCommandWithLogFooter,
+} = require('./isolation-log-utils');
 
 /**
  * Check if a command is available on the system
@@ -170,14 +177,21 @@ function wrapCommandWithUser(command, user) {
  * @param {string|null} user - Username to run command as (optional)
  * @returns {Promise<{success: boolean, sessionName: string, message: string, output: string}>}
  */
-function runScreenWithLogCapture(command, sessionName, shellInfo, user = null) {
+function runScreenWithLogCapture(
+  command,
+  sessionName,
+  shellInfo,
+  user = null,
+  logPath = null
+) {
   return _runScreenWithLogCapture(
     command,
     sessionName,
     shellInfo,
     user,
     wrapCommandWithUser,
-    isInteractiveShellCommand
+    isInteractiveShellCommand,
+    logPath
   );
 }
 
@@ -199,54 +213,24 @@ function runInScreen(command, options = {}) {
 
   const sessionName = options.session || generateSessionName('screen');
   const shellInfo = getShell();
-  const { shell, shellArg } = shellInfo;
 
   try {
-    // Wrap command with user switch if specified
-    let effectiveCommand = wrapCommandWithUser(command, options.user);
-
     if (options.detached) {
-      if (options.keepAlive) {
-        effectiveCommand = `${effectiveCommand}; exec ${shell}`;
-      }
-
-      const screenArgs = isInteractiveShellCommand(command)
-        ? ['-dmS', sessionName, ...command.trim().split(/\s+/)]
-        : ['-dmS', sessionName, shell, shellArg, effectiveCommand];
-
-      if (DEBUG) {
-        console.log(`[DEBUG] Running: screen ${screenArgs.join(' ')}`);
-        console.log(`[DEBUG] keepAlive: ${options.keepAlive || false}`);
-      }
-
-      // Use spawnSync with array args (not execSync string) to avoid quoting issues (issue #25)
-      const result = spawnSync('screen', screenArgs, {
-        stdio: 'inherit',
-      });
-
-      if (result.error) {
-        throw result.error;
-      }
-
-      let message = `Command started in detached screen session: ${sessionName}`;
-      if (options.keepAlive) {
-        message += `\nSession will stay alive after command completes.`;
-      } else {
-        message += `\nSession will exit automatically after command completes.`;
-      }
-      message += `\nReattach with: screen -r ${sessionName}`;
-
-      return Promise.resolve({
-        success: true,
-        sessionName,
-        message,
-      });
+      return Promise.resolve(
+        startDetachedScreenWithLogCapture(command, sessionName, shellInfo, {
+          user: options.user,
+          keepAlive: options.keepAlive,
+          logPath: options.logPath,
+          wrapCommandWithUser,
+        })
+      );
     } else {
       return runScreenWithLogCapture(
         command,
         sessionName,
         shellInfo,
-        options.user
+        options.user,
+        options.logPath
       );
     }
   } catch (err) {
@@ -294,12 +278,40 @@ function runInTmux(command, options = {}) {
         console.log(`[DEBUG] keepAlive: ${options.keepAlive || false}`);
       }
 
-      execSync(
-        `tmux new-session -d -s "${sessionName}" "${effectiveCommand}"`,
-        {
+      if (options.logPath) {
+        const loggedCommand = wrapCommandWithLogFooter(effectiveCommand, {
+          shell,
+          keepAlive: options.keepAlive,
+        });
+        spawnSync('tmux', ['new-session', '-d', '-s', sessionName, shell], {
           stdio: 'inherit',
-        }
-      );
+        });
+        spawnSync(
+          'tmux',
+          [
+            'pipe-pane',
+            '-t',
+            sessionName,
+            '-o',
+            `cat >> ${shellQuote(options.logPath)}`,
+          ],
+          { stdio: 'inherit' }
+        );
+        spawnSync(
+          'tmux',
+          ['send-keys', '-t', sessionName, loggedCommand, 'C-m'],
+          {
+            stdio: 'inherit',
+          }
+        );
+      } else {
+        execSync(
+          `tmux new-session -d -s "${sessionName}" "${effectiveCommand}"`,
+          {
+            stdio: 'inherit',
+          }
+        );
+      }
 
       let message = `Command started in detached tmux session: ${sessionName}`;
       if (options.keepAlive) {
@@ -401,8 +413,8 @@ function runInSsh(command, options = {}) {
         ? `${remoteShell} ${shellInteractiveFlag}`
         : remoteShell;
       const remoteCommand = isInteractiveShellCommand(command)
-        ? `nohup ${command} > /tmp/${sessionName}.log 2>&1 &`
-        : `nohup ${shellInvocation} -c ${JSON.stringify(command)} > /tmp/${sessionName}.log 2>&1 &`;
+        ? `mkdir -p /tmp/start-command/logs/isolation/ssh && nohup ${command} > /tmp/start-command/logs/isolation/ssh/${sessionName}.log 2>&1 &`
+        : `mkdir -p /tmp/start-command/logs/isolation/ssh && nohup ${shellInvocation} -c ${JSON.stringify(command)} > /tmp/start-command/logs/isolation/ssh/${sessionName}.log 2>&1 &`;
       const sshArgs = [sshTarget, remoteCommand];
 
       if (DEBUG) {
@@ -419,7 +431,7 @@ function runInSsh(command, options = {}) {
       return Promise.resolve({
         success: true,
         sessionName,
-        message: `Command started in detached SSH session on ${sshTarget}\nSession: ${sessionName}\nView logs: ssh ${sshTarget} "tail -f /tmp/${sessionName}.log"`,
+        message: `Command started in detached SSH session on ${sshTarget}\nSession: ${sessionName}\nView logs: ssh ${sshTarget} "tail -f /tmp/start-command/logs/isolation/ssh/${sessionName}.log"`,
       });
     } else {
       const extraFlags = shellInteractiveFlag ? [shellInteractiveFlag] : [];
@@ -568,6 +580,19 @@ function runInDocker(command, options = {}) {
         encoding: 'utf8',
       }).trim();
 
+      if (options.logPath) {
+        const loggerScript = [
+          `docker logs -f ${shellQuote(containerName)} >> ${shellQuote(options.logPath)} 2>&1`,
+          `__start_command_exit=$(docker inspect -f '{{.State.ExitCode}}' ${shellQuote(containerName)} 2>/dev/null || printf '%s' '-1')`,
+          `${createShellLogFooterSnippet()} >> ${shellQuote(options.logPath)}`,
+        ].join('; ');
+        const logger = spawn('sh', ['-c', loggerScript], {
+          detached: true,
+          stdio: 'ignore',
+        });
+        logger.unref();
+      }
+
       let message = `Command started in detached docker container: ${containerName}`;
       message += `\nContainer ID: ${containerId.substring(0, 12)}`;
       if (options.keepAlive) {
@@ -582,6 +607,9 @@ function runInDocker(command, options = {}) {
       }
       message += `\nAttach with: docker attach ${containerName}`;
       message += `\nView logs: docker logs ${containerName}`;
+      if (options.logPath) {
+        message += `\nLive log: ${options.logPath}`;
+      }
 
       return Promise.resolve({
         success: true,
@@ -696,6 +724,7 @@ function runIsolated(backend, command, options = {}) {
       ? options.endpointStack[0]
       : options.endpoint,
     session: options.sessionStack ? options.sessionStack[0] : options.session,
+    logPath: options.logPath,
   };
 
   switch (backend) {
@@ -746,6 +775,7 @@ module.exports = {
   createLogHeader,
   createLogFooter,
   writeLogFile,
+  appendLogFile,
   getLogDir,
   createLogPath,
   getScreenVersion,

@@ -2,8 +2,12 @@
 
 const { execSync, spawnSync } = require('child_process');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
+const {
+  ensureParentDirectory,
+  getTempDir,
+  wrapCommandWithLogFooter,
+} = require('./isolation-log-utils');
 
 const setTimeout = globalThis.setTimeout;
 
@@ -131,14 +135,21 @@ function runScreenWithLogCapture(
   shellInfo,
   user = null,
   wrapCommandWithUser,
-  isInteractiveShellCommand
+  isInteractiveShellCommand,
+  logPath = null
 ) {
   const { shell, shellArg } = shellInfo;
-  const logFile = path.join(os.tmpdir(), `screen-output-${sessionName}.log`);
+  const screenTempDir = getTempDir('isolation', 'screen');
+  const logFile =
+    logPath || path.join(screenTempDir, `screen-output-${sessionName}.log`);
+  const shouldCleanupLogFile = !logPath;
   const exitCodeFile = path.join(
-    os.tmpdir(),
+    screenTempDir,
     `screen-exit-${sessionName}.code`
   );
+  ensureParentDirectory(logFile);
+  const logStartOffset =
+    logPath && fs.existsSync(logFile) ? fs.statSync(logFile).size : 0;
 
   return new Promise((resolve) => {
     try {
@@ -159,7 +170,7 @@ function runScreenWithLogCapture(
       // - `logfile <path>` sets the output log path (replaces -Logfile CLI option)
       // - `logfile flush 0` forces immediate buffer flush (prevents output loss)
       // - `deflog on` enables logging for any subsequently created windows
-      const screenrcFile = path.join(os.tmpdir(), `screenrc-${sessionName}`);
+      const screenrcFile = path.join(screenTempDir, `screenrc-${sessionName}`);
       const screenrcContent = [
         `logfile ${logFile}`,
         'logfile flush 0',
@@ -243,7 +254,7 @@ function runScreenWithLogCapture(
 
         let output = '';
         try {
-          output = fs.readFileSync(logFile, 'utf8');
+          output = fs.readFileSync(logFile, 'utf8').slice(logStartOffset);
         } catch {
           // Log file might not exist if command produced no output
         }
@@ -313,7 +324,10 @@ function runScreenWithLogCapture(
 
       // Clean up temp files
       const cleanupTempFiles = () => {
-        for (const f of [logFile, screenrcFile, exitCodeFile]) {
+        const filesToRemove = shouldCleanupLogFile
+          ? [logFile, screenrcFile, exitCodeFile]
+          : [screenrcFile, exitCodeFile];
+        for (const f of filesToRemove) {
           try {
             fs.unlinkSync(f);
           } catch {
@@ -392,6 +406,105 @@ function runScreenWithLogCapture(
   });
 }
 
+/**
+ * Start a detached GNU Screen session with live command output appended to logPath.
+ * The command itself prints the final footer through the terminal so screen writes it
+ * after the command output in the same log stream.
+ */
+function startDetachedScreenWithLogCapture(
+  command,
+  sessionName,
+  shellInfo,
+  options = {}
+) {
+  const { shell, shellArg } = shellInfo;
+  const {
+    user = null,
+    keepAlive = false,
+    logPath = null,
+    wrapCommandWithUser,
+  } = options;
+
+  const screenTempDir = getTempDir('isolation', 'screen');
+  const logFile =
+    logPath || path.join(screenTempDir, `screen-output-${sessionName}.log`);
+  ensureParentDirectory(logFile);
+
+  const screenrcFile = path.join(screenTempDir, `screenrc-${sessionName}`);
+  const screenrcContent = [
+    `logfile ${logFile}`,
+    'logfile flush 0',
+    'deflog on',
+    '',
+  ].join('\n');
+
+  try {
+    fs.writeFileSync(screenrcFile, screenrcContent);
+  } catch (err) {
+    return {
+      success: false,
+      sessionName,
+      message: `Failed to create screenrc for logging: ${err.message}`,
+    };
+  }
+
+  const effectiveCommand = wrapCommandWithLogFooter(
+    wrapCommandWithUser ? wrapCommandWithUser(command, user) : command,
+    { shell, keepAlive }
+  );
+  const screenArgs = [
+    '-dmS',
+    sessionName,
+    '-L',
+    '-c',
+    screenrcFile,
+    shell,
+    shellArg,
+    effectiveCommand,
+  ];
+
+  if (isDebug()) {
+    console.error(`[screen-isolation] Running: screen ${screenArgs.join(' ')}`);
+    console.error(`[screen-isolation] screenrc: ${screenrcContent.trim()}`);
+    console.error(`[screen-isolation] Log file: ${logFile}`);
+  }
+
+  try {
+    const result = spawnSync('screen', screenArgs, { stdio: 'inherit' });
+    if (result.error) {
+      throw result.error;
+    }
+    if (result.status !== 0) {
+      return {
+        success: false,
+        sessionName,
+        message: `Failed to start screen session (exit code ${result.status})`,
+      };
+    }
+  } catch (err) {
+    return {
+      success: false,
+      sessionName,
+      message: `Failed to run in screen: ${err.message}`,
+    };
+  }
+
+  let message = `Command started in detached screen session: ${sessionName}`;
+  if (keepAlive) {
+    message += `\nSession will stay alive after command completes.`;
+  } else {
+    message += `\nSession will exit automatically after command completes.`;
+  }
+  message += `\nReattach with: screen -r ${sessionName}`;
+  message += `\nLive log: ${logFile}`;
+
+  return {
+    success: true,
+    sessionName,
+    message,
+  };
+}
+
 /** Reset screen version cache (useful for testing) */
 function resetScreenVersionCache() {
   cachedScreenVersion = null;
@@ -402,5 +515,6 @@ module.exports = {
   getScreenVersion,
   supportsLogfileOption,
   runScreenWithLogCapture,
+  startDetachedScreenWithLogCapture,
   resetScreenVersionCache,
 };

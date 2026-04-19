@@ -1,0 +1,21 @@
+│ session   497e164d-0cb5-4791-9327-f889e85c9830
+│ start     2026-04-19 06:42:57.595
+│
+│ isolation screen
+│ mode      detached
+│ screen    screen-1776580977595-em8b1c
+│
+$ for i in 1 2 3; do echo tick-$i; sleep 1; done
+
+
+✓
+│ finish    2026-04-19 06:42:57.631
+│ duration  0.039s
+│ exit      0
+│
+│ isolation screen
+│ mode      detached
+│ screen    screen-1776580977595-em8b1c
+│
+│ log       /tmp/start-command-screen-1776580977595-znmb4h.log
+│ session   497e164d-0cb5-4791-9327-f889e85c9830

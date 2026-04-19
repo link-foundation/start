@@ -150,3 +150,65 @@ fn test_run_in_screen_captures_stderr() {
         output
     );
 }
+
+#[test]
+fn test_run_in_screen_detached_writes_to_provided_log_path() {
+    if !is_command_available("screen") {
+        eprintln!("Skipping: screen not installed");
+        return;
+    }
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    let execution_id = format!("00000000-0000-4000-8000-{:012x}", now % 0xffffffffffff);
+    let session_name = format!("test-detached-screen-log-{}", now);
+    let log_path = create_log_path_for_execution("screen", &execution_id);
+    write_log_file(&log_path, "=== test log header ===\n");
+
+    let result = run_in_screen(
+        "printf 'rust-detached-log-1\\n'; sleep 0.2; printf 'rust-detached-log-2\\n'",
+        &IsolationOptions {
+            session: Some(session_name.clone()),
+            detached: true,
+            log_path: Some(log_path.clone()),
+            ..Default::default()
+        },
+    );
+
+    assert!(result.success, "Detached screen should start: {:?}", result);
+    assert_eq!(result.session_name.as_deref(), Some(session_name.as_str()));
+
+    let mut content = String::new();
+    for _ in 0..50 {
+        content = std::fs::read_to_string(&log_path).unwrap_or_default();
+        if content.contains("rust-detached-log-1")
+            && content.contains("rust-detached-log-2")
+            && content.contains("Exit Code: 0")
+        {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+
+    assert!(
+        content.contains("rust-detached-log-1"),
+        "Missing first detached output line in log:\n{}",
+        content
+    );
+    assert!(
+        content.contains("rust-detached-log-2"),
+        "Missing second detached output line in log:\n{}",
+        content
+    );
+    assert!(
+        content.contains("Exit Code: 0"),
+        "Missing detached command footer in log:\n{}",
+        content
+    );
+
+    let _ = std::process::Command::new("screen")
+        .args(["-S", &session_name, "-X", "quit"])
+        .output();
+}

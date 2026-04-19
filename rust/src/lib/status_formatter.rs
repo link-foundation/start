@@ -8,6 +8,7 @@
 use crate::execution_store::{ExecutionRecord, ExecutionStatus, ExecutionStore};
 use crate::output_blocks::{escape_for_links_notation, format_value_for_links_notation};
 use serde_json::Value;
+use std::fs;
 use std::process::Command;
 
 /// Check if a detached isolation session is still running
@@ -63,6 +64,15 @@ pub fn is_detached_session_alive(record: &ExecutionRecord) -> Option<bool> {
     }
 }
 
+fn read_exit_code_from_log(log_path: &str) -> Option<i32> {
+    let content = fs::read_to_string(log_path).ok()?;
+    content
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("Exit Code:"))
+        .filter_map(|value| value.trim().parse::<i32>().ok())
+        .last()
+}
+
 /// Enrich execution record with live session status for detached executions.
 /// If a record shows "executing" but the detached session has actually ended,
 /// returns an updated copy with status "executed". If it shows "executed" but
@@ -84,7 +94,7 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
         // Session ended but record says executing - correct it
         enriched.status = ExecutionStatus::Executed;
         if enriched.exit_code.is_none() {
-            enriched.exit_code = Some(-1); // Unknown exit code
+            enriched.exit_code = Some(read_exit_code_from_log(&enriched.log_path).unwrap_or(-1));
         }
         if enriched.end_time.is_none() {
             enriched.end_time = Some(chrono::Utc::now().to_rfc3339());

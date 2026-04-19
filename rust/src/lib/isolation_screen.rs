@@ -1,12 +1,13 @@
 //! Screen-specific isolation helpers extracted from isolation.rs
 
-use std::env;
 use std::fs;
+use std::path::Path;
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
 use super::{get_shell, is_debug, wrap_command_with_user, IsolationResult};
+use crate::isolation::isolation_log::{get_temp_dir, wrap_command_with_log_footer};
 
 /// Get the installed screen version
 pub fn get_screen_version() -> Option<(u32, u32, u32)> {
@@ -70,10 +71,25 @@ pub fn run_screen_with_log_capture(
     command: &str,
     session_name: &str,
     user: Option<&str>,
+    log_path: Option<&Path>,
 ) -> IsolationResult {
     let (shell, shell_arg) = get_shell();
-    let log_file = env::temp_dir().join(format!("screen-output-{}.log", session_name));
-    let exit_code_file = env::temp_dir().join(format!("screen-exit-{}.code", session_name));
+    let screen_temp_dir = get_temp_dir(&["isolation", "screen"]);
+    let log_file = log_path
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| screen_temp_dir.join(format!("screen-output-{}.log", session_name)));
+    let should_cleanup_log_file = log_path.is_none();
+    let exit_code_file = screen_temp_dir.join(format!("screen-exit-{}.code", session_name));
+    if let Some(parent) = log_file.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let log_start_offset = if log_path.is_some() {
+        fs::metadata(&log_file)
+            .map(|m| m.len() as usize)
+            .unwrap_or(0)
+    } else {
+        0
+    };
     let effective_command = wrap_command_with_user(command, user);
 
     // Check if command is an interactive shell (bare shell invocation)
@@ -101,7 +117,7 @@ pub fn run_screen_with_log_capture(
     // - `logfile <path>` sets the output log path (replaces -Logfile CLI option)
     // - `logfile flush 0` forces immediate buffer flush (prevents output loss)
     // - `deflog on` enables logging for any subsequently created windows
-    let screenrc_path = env::temp_dir().join(format!("screenrc-{}", session_name));
+    let screenrc_path = screen_temp_dir.join(format!("screenrc-{}", session_name));
     let screenrc_content = format!(
         "logfile {}\nlogfile flush 0\ndeflog on\n",
         log_file.display()
@@ -185,7 +201,9 @@ pub fn run_screen_with_log_capture(
     let read_log_with_retry = || -> Option<String> {
         let retry_delays = [50u64, 100, 200];
 
-        let content = fs::read_to_string(&log_file).ok();
+        let content = fs::read_to_string(&log_file)
+            .ok()
+            .map(|s| s.chars().skip(log_start_offset).collect::<String>());
         if let Some(ref s) = content {
             if !s.trim().is_empty() {
                 return content;
@@ -203,7 +221,9 @@ pub fn run_screen_with_log_capture(
                 );
             }
             thread::sleep(Duration::from_millis(*delay));
-            let retry_content = fs::read_to_string(&log_file).ok();
+            let retry_content = fs::read_to_string(&log_file)
+                .ok()
+                .map(|s| s.chars().skip(log_start_offset).collect::<String>());
             if let Some(ref s) = retry_content {
                 if !s.trim().is_empty() {
                     return retry_content;
@@ -252,7 +272,9 @@ pub fn run_screen_with_log_capture(
 
     // Clean up temp files helper
     let cleanup = || {
-        let _ = fs::remove_file(&log_file);
+        if should_cleanup_log_file {
+            let _ = fs::remove_file(&log_file);
+        }
         let _ = fs::remove_file(&screenrc_path);
         let _ = fs::remove_file(&exit_code_file);
     };
@@ -315,5 +337,96 @@ pub fn run_screen_with_log_capture(
                 ..Default::default()
             };
         }
+    }
+}
+
+/// Start detached screen with live logging to the provided log path.
+pub fn start_detached_screen_with_log_capture(
+    command: &str,
+    session_name: &str,
+    user: Option<&str>,
+    keep_alive: bool,
+    log_path: Option<&Path>,
+) -> IsolationResult {
+    let (shell, shell_arg) = get_shell();
+    let screen_temp_dir = get_temp_dir(&["isolation", "screen"]);
+    let log_file = log_path
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| screen_temp_dir.join(format!("screen-output-{}.log", session_name)));
+    if let Some(parent) = log_file.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+
+    let screenrc_path = screen_temp_dir.join(format!("screenrc-{}", session_name));
+    let screenrc_content = format!(
+        "logfile {}\nlogfile flush 0\ndeflog on\n",
+        log_file.display()
+    );
+    if let Err(e) = fs::write(&screenrc_path, &screenrc_content) {
+        if is_debug() {
+            eprintln!("[screen-isolation] Failed to create screenrc: {}", e);
+        }
+        return IsolationResult {
+            success: false,
+            session_name: Some(session_name.to_string()),
+            message: format!("Failed to create screenrc for logging: {}", e),
+            ..Default::default()
+        };
+    }
+
+    let effective_command = wrap_command_with_user(command, user);
+    let final_command = wrap_command_with_log_footer(&effective_command, &shell, keep_alive);
+    let screen_args = vec![
+        "-dmS".to_string(),
+        session_name.to_string(),
+        "-L".to_string(),
+        "-c".to_string(),
+        screenrc_path.to_string_lossy().to_string(),
+        shell.clone(),
+        shell_arg,
+        final_command,
+    ];
+
+    if is_debug() {
+        eprintln!("[screen-isolation] Running: screen {:?}", screen_args);
+        eprintln!("[screen-isolation] screenrc: {}", screenrc_content.trim());
+        eprintln!("[screen-isolation] Log file: {}", log_file.display());
+    }
+
+    match Command::new("screen").args(&screen_args).status() {
+        Ok(status) if status.success() => {
+            let mut message = format!(
+                "Command started in detached screen session: {}",
+                session_name
+            );
+            if keep_alive {
+                message.push_str("\nSession will stay alive after command completes.");
+            } else {
+                message.push_str("\nSession will exit automatically after command completes.");
+            }
+            message.push_str(&format!("\nReattach with: screen -r {}", session_name));
+            message.push_str(&format!("\nLive log: {}", log_file.display()));
+            IsolationResult {
+                success: true,
+                session_name: Some(session_name.to_string()),
+                message,
+                ..Default::default()
+            }
+        }
+        Ok(status) => IsolationResult {
+            success: false,
+            session_name: Some(session_name.to_string()),
+            message: format!(
+                "Failed to start screen session (exit code {})",
+                status.code().unwrap_or(-1)
+            ),
+            ..Default::default()
+        },
+        Err(e) => IsolationResult {
+            success: false,
+            session_name: Some(session_name.to_string()),
+            message: format!("Failed to start screen session: {}", e),
+            ..Default::default()
+        },
     }
 }

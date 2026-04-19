@@ -14,6 +14,7 @@ const {
   createLogFooter,
   getLogDir,
   createLogPath,
+  getTempRoot,
 } = require('../src/lib/isolation-log-utils');
 
 describe('isolation-log-utils', () => {
@@ -194,13 +195,12 @@ describe('isolation-log-utils', () => {
       }
     });
 
-    it('should fall back to os.tmpdir() when START_LOG_DIR is not set', () => {
-      const os = require('os');
+    it('should fall back to /tmp/start-command/logs when START_LOG_DIR is not set', () => {
       const original = process.env.START_LOG_DIR;
       delete process.env.START_LOG_DIR;
       try {
         const dir = getLogDir();
-        assert.strictEqual(dir, os.tmpdir());
+        assert.strictEqual(dir, path.join(getTempRoot(), 'logs'));
       } finally {
         if (original !== undefined) {
           process.env.START_LOG_DIR = original;
@@ -229,6 +229,20 @@ describe('isolation-log-utils', () => {
       const logDir = getLogDir();
       const logPath = createLogPath('screen');
       assert.ok(logPath.startsWith(logDir));
+    });
+
+    it('should create stable isolation log path when execution id is provided', () => {
+      const logPath = createLogPath('screen', 'uuid-123');
+      assert.ok(
+        logPath.endsWith(
+          path.join('logs', 'isolation', 'screen', 'uuid-123.log')
+        )
+      );
+    });
+
+    it('should create stable direct log path without duplicated environment segment', () => {
+      const logPath = createLogPath('direct', 'uuid-123');
+      assert.ok(logPath.endsWith(path.join('logs', 'direct', 'uuid-123.log')));
     });
   });
 });

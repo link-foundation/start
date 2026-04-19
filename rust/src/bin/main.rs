@@ -7,17 +7,17 @@
 //! - Automatic failure reporting (GitHub issues)
 
 use std::env;
-use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{self, Command, Stdio};
 
 use start_command::{
+    append_log_file,
     args_parser::{
         generate_session_name, generate_uuid, get_effective_mode, has_isolation, parse_args,
     },
     clear_current_execution, create_finish_block, create_log_footer, create_log_header,
-    create_log_path, create_start_block,
+    create_log_path_for_execution, create_start_block,
     execution_store::{
         CleanupOptions, ExecutionRecord, ExecutionRecordOptions, ExecutionStore,
         ExecutionStoreOptions,
@@ -42,8 +42,6 @@ struct Config {
     disable_auto_issue: bool,
     /// Disable log upload
     disable_log_upload: bool,
-    /// Custom log directory
-    log_dir: Option<String>,
     /// Verbose mode
     verbose: bool,
     /// Disable substitutions/aliases
@@ -67,7 +65,6 @@ impl Config {
         Self {
             disable_auto_issue: env_bool("START_DISABLE_AUTO_ISSUE"),
             disable_log_upload: env_bool("START_DISABLE_LOG_UPLOAD"),
-            log_dir: env::var("START_LOG_DIR").ok(),
             verbose: env_bool("START_VERBOSE"),
             disable_substitutions: env_bool("START_DISABLE_SUBSTITUTIONS"),
             substitutions_path: env::var("START_SUBSTITUTIONS_PATH").ok(),
@@ -434,7 +431,7 @@ fn run_with_isolation(
 
     // Docker image is now set in validate_options (defaults to OS-matched image)
     let effective_image = wrapper_options.image.clone();
-    let log_file_path = create_log_path(environment.unwrap_or("direct"));
+    let log_file_path = create_log_path_for_execution(environment.unwrap_or("direct"), session_id);
     let session_name = wrapper_options
         .session
         .clone()
@@ -604,6 +601,7 @@ fn run_with_isolation(
         ),
         1,
     );
+    write_log_file(&log_file_path, &log_content);
 
     let result = if let Some(env) = environment {
         // Run in isolation backend
@@ -616,6 +614,7 @@ fn run_with_isolation(
             keep_alive: wrapper_options.keep_alive,
             auto_remove_docker_container: wrapper_options.auto_remove_docker_container,
             shell: wrapper_options.shell.clone(),
+            log_path: Some(log_file_path.clone()),
         };
         run_isolated(env, command, &options)
     } else if let Some(ref user) = created_user {
@@ -636,13 +635,12 @@ fn run_with_isolation(
         .unwrap_or(if result.success { 0 } else { 1 });
     let end_time = get_timestamp();
 
-    // Add result to log
-    log_content.push_str(&result.message);
-    log_content.push('\n');
-    log_content.push_str(&create_log_footer(&end_time, exit_code));
-
-    // Write log file
-    write_log_file(&log_file_path, &log_content);
+    if mode == "detached" && result.success {
+        append_log_file(&log_file_path, &format!("{}\n", result.message));
+    } else {
+        append_log_file(&log_file_path, &format!("{}\n", result.message));
+        append_log_file(&log_file_path, &create_log_footer(&end_time, exit_code));
+    }
 
     // Update execution record: detached keeps "executing" (resolved at query time)
     if let Some(ref store) = execution_store {
@@ -753,34 +751,7 @@ fn run_direct(
         vec!["-c", command]
     };
 
-    // Setup logging
-    let log_dir = config
-        .log_dir
-        .as_ref()
-        .map(PathBuf::from)
-        .unwrap_or_else(env::temp_dir);
-    let log_filename = format!(
-        "start-command-{}-{}.log",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis(),
-        (0..6)
-            .map(|_| {
-                let idx = (std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_nanos()
-                    % 36) as u8;
-                if idx < 10 {
-                    (b'0' + idx) as char
-                } else {
-                    (b'a' + idx - 10) as char
-                }
-            })
-            .collect::<String>()
-    );
-    let log_file_path = log_dir.join(&log_filename);
+    let log_file_path = create_log_path_for_execution("direct", session_id);
 
     let mut log_content = String::new();
 
@@ -834,6 +805,7 @@ fn run_direct(
         env::current_dir().unwrap_or_default().display()
     ));
     log_content.push_str(&format!("{}\n\n", "=".repeat(50)));
+    write_log_file(&log_file_path, &log_content);
 
     // Execute the command with piped stdout/stderr so we can capture and display output
     // Using spawn() instead of output() to stream data in real-time (Issue #57)
@@ -854,9 +826,7 @@ fn run_direct(
             log_content.push_str(&format!("Finished: {}\n", end_time));
             log_content.push_str("Exit Code: 1\n");
 
-            if let Ok(mut file) = File::create(&log_file_path) {
-                let _ = file.write_all(log_content.as_bytes());
-            }
+            write_log_file(&log_file_path, &log_content);
 
             let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
             println!();
@@ -884,12 +854,14 @@ fn run_direct(
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
 
+    let stdout_log_path = log_file_path.clone();
     let stdout_handle = std::thread::spawn(move || {
         let mut output = String::new();
         if let Some(stdout) = stdout {
             let reader = BufReader::new(stdout);
             for line in reader.lines().map_while(Result::ok) {
                 println!("{}", line);
+                append_log_file(&stdout_log_path, &format!("{}\n", line));
                 output.push_str(&line);
                 output.push('\n');
             }
@@ -897,12 +869,14 @@ fn run_direct(
         output
     });
 
+    let stderr_log_path = log_file_path.clone();
     let stderr_handle = std::thread::spawn(move || {
         let mut output = String::new();
         if let Some(stderr) = stderr {
             let reader = BufReader::new(stderr);
             for line in reader.lines().map_while(Result::ok) {
                 eprintln!("{}", line);
+                append_log_file(&stderr_log_path, &format!("{}\n", line));
                 output.push_str(&line);
                 output.push('\n');
             }
@@ -920,6 +894,7 @@ fn run_direct(
         Err(e) => {
             let error_msg = format!("Error waiting for command: {}", e);
             log_content.push_str(&format!("\n{}\n", error_msg));
+            append_log_file(&log_file_path, &format!("\n{}\n", error_msg));
             eprintln!("\n{}", error_msg);
             1
         }
@@ -940,10 +915,15 @@ fn run_direct(
     log_content.push_str(&format!("Finished: {}\n", end_time));
     log_content.push_str(&format!("Exit Code: {}\n", exit_code));
 
-    // Write log file
-    if let Ok(mut file) = File::create(&log_file_path) {
-        let _ = file.write_all(log_content.as_bytes());
-    }
+    append_log_file(
+        &log_file_path,
+        &format!(
+            "\n{}\nFinished: {}\nExit Code: {}\n",
+            "=".repeat(50),
+            end_time,
+            exit_code
+        ),
+    );
 
     // Print finish block (no result_message for direct execution)
     let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
