@@ -3,9 +3,9 @@
 //! Mirrors isolation_log test coverage from the JS test suite.
 
 use start_command::isolation::isolation_log::{
-    create_log_footer, create_log_header, create_log_path, create_log_path_for_execution,
-    generate_log_filename, get_default_docker_image, get_log_dir, get_temp_root, get_timestamp,
-    write_log_file, LogHeaderParams,
+    append_log_file, create_log_footer, create_log_header, create_log_path,
+    create_log_path_for_execution, generate_log_filename, get_default_docker_image, get_log_dir,
+    get_temp_root, get_timestamp, write_log_file, LogHeaderParams,
 };
 use std::path::PathBuf;
 
@@ -217,12 +217,34 @@ mod write_log_file_tests {
 
     #[test]
     fn should_return_false_for_invalid_path() {
-        let invalid_path = PathBuf::from("/nonexistent/deeply/nested/dir/test.log");
+        let blocking_file = std::env::temp_dir().join(format!(
+            "test_isolation_log_blocking_parent_{}",
+            std::process::id()
+        ));
+        std::fs::write(&blocking_file, "not a directory").expect("should create blocking file");
+
+        let invalid_path = blocking_file.join("nested").join("test.log");
         let result = write_log_file(&invalid_path, "content");
+        let _ = std::fs::remove_file(&blocking_file);
+
         assert!(
             !result,
             "Expected write_log_file to return false for invalid path"
         );
+    }
+
+    #[test]
+    fn should_append_to_existing_log_file() {
+        let temp_path = std::env::temp_dir().join("test_isolation_log_append.log");
+        let _ = std::fs::remove_file(&temp_path);
+
+        assert!(append_log_file(&temp_path, "first\n"));
+        assert!(append_log_file(&temp_path, "second\n"));
+
+        let content = std::fs::read_to_string(&temp_path).expect("should read appended log");
+        let _ = std::fs::remove_file(&temp_path);
+
+        assert_eq!(content, "first\nsecond\n");
     }
 }
 
@@ -272,22 +294,25 @@ mod create_log_path_tests {
     #[test]
     fn should_create_stable_isolation_path_for_execution_id() {
         let path = create_log_path_for_execution("screen", "uuid-123");
-        let path_str = path.to_string_lossy();
+        let expected = PathBuf::from("logs")
+            .join("isolation")
+            .join("screen")
+            .join("uuid-123.log");
         assert!(
-            path_str.ends_with("logs/isolation/screen/uuid-123.log"),
+            path.ends_with(&expected),
             "Expected stable execution path, got: {}",
-            path_str
+            path.display()
         );
     }
 
     #[test]
     fn should_create_stable_direct_path_without_duplicate_environment() {
         let path = create_log_path_for_execution("direct", "uuid-123");
-        let path_str = path.to_string_lossy();
+        let expected = PathBuf::from("logs").join("direct").join("uuid-123.log");
         assert!(
-            path_str.ends_with("logs/direct/uuid-123.log"),
+            path.ends_with(&expected),
             "Expected stable direct execution path, got: {}",
-            path_str
+            path.display()
         );
     }
 }

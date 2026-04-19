@@ -68,9 +68,9 @@ fn read_exit_code_from_log(log_path: &str) -> Option<i32> {
     let content = fs::read_to_string(log_path).ok()?;
     content
         .lines()
-        .filter_map(|line| line.trim().strip_prefix("Exit Code:"))
-        .filter_map(|value| value.trim().parse::<i32>().ok())
-        .last()
+        .rev()
+        .find_map(|line| line.trim().strip_prefix("Exit Code:"))
+        .and_then(|value| value.trim().parse::<i32>().ok())
 }
 
 /// Enrich execution record with live session status for detached executions.
