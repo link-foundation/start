@@ -1,5 +1,11 @@
 # start-command
 
+## 0.25.3
+
+### Patch Changes
+
+- 873781e: Record detached isolation output in the tracked log path in real time.
+
 ## 0.25.2
 
 ### Patch Changes
