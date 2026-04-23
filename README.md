@@ -1,6 +1,18 @@
 # start-command (`$`)
 
+[![JavaScript CI/CD](https://github.com/link-foundation/start/actions/workflows/js.yml/badge.svg)](https://github.com/link-foundation/start/actions/workflows/js.yml)
+[![Rust CI/CD](https://github.com/link-foundation/start/actions/workflows/rust.yml/badge.svg)](https://github.com/link-foundation/start/actions/workflows/rust.yml)
+[![npm version](https://img.shields.io/npm/v/start-command?label=npm&style=flat)](https://www.npmjs.com/package/start-command)
+[![Crates.io](https://img.shields.io/crates/v/start-command?label=crates.io&style=flat)](https://crates.io/crates/start-command)
+[![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](LICENSE)
+
 Gamification of coding - execute any command with automatic logging and ability to auto-report issues on GitHub.
+
+This repository contains two implementations that share the same behaviour and
+documentation:
+
+- **[JavaScript / Bun](js/README.md)** — published to [npm](https://www.npmjs.com/package/start-command); release tags `js-v<version>`, titles `[JavaScript] <version>`.
+- **[Rust](rust/README.md)** — published to [crates.io](https://crates.io/crates/start-command); release tags `rust-v<version>`, titles `[Rust] <version>`.
 
 ## Installation
 
@@ -8,6 +20,12 @@ Install using [Bun](https://bun.sh):
 
 ```bash
 bun install -g start-command
+```
+
+Or install the Rust version:
+
+```bash
+cargo install start-command
 ```
 
 ## Usage
