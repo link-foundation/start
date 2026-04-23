@@ -63,7 +63,9 @@ pub use signal_handler::{
     was_signal_received,
 };
 pub use status_formatter::{
-    enrich_detached_status, format_record, format_record_as_links_notation, format_record_as_text,
+    attach_current_time, enrich_detached_status, format_record, format_record_as_links_notation,
+    format_record_as_links_notation_with_current_time, format_record_as_text,
+    format_record_as_text_with_current_time, format_record_with_current_time,
     is_detached_session_alive, query_status, StatusQueryResult,
 };
 pub use substitution::{process_command, ProcessOptions, SubstitutionResult};

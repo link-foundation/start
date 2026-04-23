@@ -3,7 +3,9 @@
 //! Tests for execution record formatting in various output formats.
 
 use start_command::{
-    format_record, format_record_as_links_notation, format_record_as_text, query_status,
+    attach_current_time, format_record, format_record_as_links_notation,
+    format_record_as_links_notation_with_current_time, format_record_as_text,
+    format_record_as_text_with_current_time, format_record_with_current_time, query_status,
     ExecutionRecord, ExecutionRecordOptions, ExecutionStatus, ExecutionStore,
     ExecutionStoreOptions,
 };
@@ -135,4 +137,113 @@ fn test_query_status_default_format() {
     assert!(output.starts_with("test-uuid-1234\n"));
     // UUID without special chars is not quoted
     assert!(output.contains("  uuid test-uuid-1234"));
+}
+
+// ===== Issue #105: currentTime in formatter output =====
+
+fn create_executing_record() -> ExecutionRecord {
+    ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sleep 60".to_string(),
+        uuid: Some("test-executing-uuid".to_string()),
+        pid: Some(54321),
+        status: Some(ExecutionStatus::Executing),
+        log_path: Some("/tmp/executing.log".to_string()),
+        start_time: Some("2026-04-23T10:00:00Z".to_string()),
+        working_directory: Some("/home/user".to_string()),
+        shell: Some("/bin/bash".to_string()),
+        platform: Some("linux".to_string()),
+        ..Default::default()
+    })
+}
+
+#[test]
+fn test_attach_current_time_none_for_completed() {
+    let record = create_test_record();
+    assert!(attach_current_time(&record).is_none());
+}
+
+#[test]
+fn test_attach_current_time_some_for_executing() {
+    let record = create_executing_record();
+    let ct = attach_current_time(&record).expect("executing record should get currentTime");
+    assert!(chrono::DateTime::parse_from_rfc3339(&ct).is_ok());
+}
+
+#[test]
+fn test_links_notation_includes_current_time_when_provided() {
+    let record = create_executing_record();
+    let output = format_record_as_links_notation_with_current_time(
+        &record,
+        Some("2026-04-23T10:10:13.042Z"),
+    );
+    assert!(output.contains("  currentTime \"2026-04-23T10:10:13.042Z\""));
+    // currentTime must appear right after startTime
+    let start_idx = output.find("  startTime ").expect("startTime present");
+    let ct_idx = output.find("  currentTime ").expect("currentTime present");
+    assert!(
+        ct_idx > start_idx,
+        "currentTime must appear after startTime, output: {}",
+        output
+    );
+    let between = &output[start_idx..ct_idx];
+    // Only one newline between the two lines (i.e. currentTime is the immediate next line)
+    assert_eq!(between.matches('\n').count(), 1);
+}
+
+#[test]
+fn test_links_notation_no_current_time_when_absent() {
+    let record = create_executing_record();
+    let output = format_record_as_links_notation_with_current_time(&record, None);
+    assert!(!output.contains("currentTime"));
+}
+
+#[test]
+fn test_text_format_includes_current_time_when_provided() {
+    let record = create_executing_record();
+    let output = format_record_as_text_with_current_time(&record, Some("2026-04-23T10:10:13.042Z"));
+    assert!(output.contains("Current Time:      2026-04-23T10:10:13.042Z"));
+    // Current Time must appear between Start Time and End Time
+    let start_idx = output.find("Start Time:").expect("Start Time present");
+    let current_idx = output.find("Current Time:").expect("Current Time present");
+    let end_idx = output.find("End Time:").expect("End Time present");
+    assert!(start_idx < current_idx);
+    assert!(current_idx < end_idx);
+}
+
+#[test]
+fn test_text_format_no_current_time_when_absent() {
+    let record = create_executing_record();
+    let output = format_record_as_text_with_current_time(&record, None);
+    assert!(!output.contains("Current Time:"));
+}
+
+#[test]
+fn test_json_format_includes_current_time_when_provided() {
+    let record = create_executing_record();
+    let output =
+        format_record_with_current_time(&record, "json", Some("2026-04-23T10:10:13.042Z")).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+    assert_eq!(parsed["currentTime"], "2026-04-23T10:10:13.042Z");
+    assert_eq!(parsed["status"], "executing");
+}
+
+#[test]
+fn test_json_format_no_current_time_when_absent() {
+    let record = create_executing_record();
+    let output = format_record_with_current_time(&record, "json", None).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+    assert!(parsed.get("currentTime").is_none());
+}
+
+#[test]
+fn test_format_record_unchanged_when_no_current_time() {
+    let record = create_executing_record();
+    assert_eq!(
+        format_record(&record, "links-notation").unwrap(),
+        format_record_as_links_notation(&record)
+    );
+    assert_eq!(
+        format_record(&record, "text").unwrap(),
+        format_record_as_text(&record)
+    );
 }

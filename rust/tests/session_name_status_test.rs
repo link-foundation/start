@@ -1,9 +1,11 @@
 //! Tests for --status lookup by session name and detached status enrichment
 //! Issue #101: --session name not usable with --status, and --detached reports immediate completion
+//! Issue #105: currentTime added to --status output for executing commands
 
 use start_command::{
-    enrich_detached_status, is_detached_session_alive, query_status, ExecutionRecord,
-    ExecutionRecordOptions, ExecutionStatus, ExecutionStore, ExecutionStoreOptions,
+    attach_current_time, enrich_detached_status, is_detached_session_alive, query_status,
+    ExecutionRecord, ExecutionRecordOptions, ExecutionStatus, ExecutionStore,
+    ExecutionStoreOptions,
 };
 use std::collections::HashMap;
 use tempfile::TempDir;
@@ -298,4 +300,198 @@ fn test_get_most_recent_session_name_match() {
     // Both records have this session name; get() returns the first match
     let found = found.unwrap();
     assert!(found.uuid == "older-uuid-101" || found.uuid == "newer-uuid-101");
+}
+
+// ===== Issue #105: attach_current_time for executing status =====
+
+#[test]
+fn test_attach_current_time_returns_some_for_executing_record() {
+    let record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sleep 60".to_string(),
+        uuid: Some("issue-105-executing".to_string()),
+        pid: Some(12345),
+        status: Some(ExecutionStatus::Executing),
+        log_path: Some("/tmp/test.log".to_string()),
+        ..Default::default()
+    });
+
+    let before = chrono::Utc::now();
+    let current_time = attach_current_time(&record);
+    let after = chrono::Utc::now();
+
+    assert!(current_time.is_some());
+    let ct = current_time.unwrap();
+    let parsed = chrono::DateTime::parse_from_rfc3339(&ct)
+        .expect("currentTime must be a valid RFC3339 timestamp");
+    assert!(parsed >= before - chrono::Duration::milliseconds(1));
+    assert!(parsed <= after + chrono::Duration::milliseconds(1));
+}
+
+#[test]
+fn test_attach_current_time_returns_none_for_executed_record() {
+    let mut record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "echo hello".to_string(),
+        uuid: Some("issue-105-executed".to_string()),
+        pid: Some(12345),
+        log_path: Some("/tmp/test.log".to_string()),
+        ..Default::default()
+    });
+    record.complete(0);
+
+    assert_eq!(record.status, ExecutionStatus::Executed);
+    assert!(attach_current_time(&record).is_none());
+}
+
+#[test]
+fn test_attach_current_time_does_not_mutate_record() {
+    let record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sleep 60".to_string(),
+        uuid: Some("issue-105-no-mutation".to_string()),
+        pid: Some(12345),
+        status: Some(ExecutionStatus::Executing),
+        log_path: Some("/tmp/test.log".to_string()),
+        ..Default::default()
+    });
+    let snapshot = record.clone();
+    let _ = attach_current_time(&record);
+    assert_eq!(record.uuid, snapshot.uuid);
+    assert_eq!(record.status, snapshot.status);
+    assert_eq!(record.start_time, snapshot.start_time);
+    assert_eq!(record.end_time, snapshot.end_time);
+    assert_eq!(record.exit_code, snapshot.exit_code);
+}
+
+// ===== Issue #105: query_status surfaces currentTime via all formats =====
+
+#[test]
+fn test_query_status_json_includes_current_time_for_executing() {
+    let (_temp_dir, store) = create_test_store();
+    let before = chrono::Utc::now();
+
+    let record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sleep 100".to_string(),
+        uuid: Some("issue-105-json-executing".to_string()),
+        pid: Some(99999),
+        status: Some(ExecutionStatus::Executing),
+        log_path: Some("/tmp/executing.log".to_string()),
+        ..Default::default()
+    });
+    store.save(&record).unwrap();
+
+    let result = query_status(Some(&store), "issue-105-json-executing", Some("json"));
+    assert!(result.success);
+    let output = result.output.unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+
+    let ct = parsed["currentTime"]
+        .as_str()
+        .expect("currentTime should be present and a string");
+    let parsed_ct = chrono::DateTime::parse_from_rfc3339(ct)
+        .expect("currentTime must be a valid RFC3339 timestamp");
+    let after = chrono::Utc::now();
+    assert!(parsed_ct >= before - chrono::Duration::seconds(1));
+    assert!(parsed_ct <= after + chrono::Duration::seconds(1));
+}
+
+#[test]
+fn test_query_status_json_omits_current_time_for_executed() {
+    let (_temp_dir, store) = create_test_store();
+
+    let mut record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "echo done".to_string(),
+        uuid: Some("issue-105-json-executed".to_string()),
+        pid: Some(11111),
+        log_path: Some("/tmp/done.log".to_string()),
+        ..Default::default()
+    });
+    record.complete(0);
+    store.save(&record).unwrap();
+
+    let result = query_status(Some(&store), "issue-105-json-executed", Some("json"));
+    assert!(result.success);
+    let output = result.output.unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+
+    assert_eq!(parsed["status"], "executed");
+    assert!(
+        parsed.get("currentTime").is_none() || parsed["currentTime"].is_null(),
+        "currentTime must not be present on completed records, got: {}",
+        output
+    );
+}
+
+#[test]
+fn test_query_status_links_notation_includes_current_time_for_executing() {
+    let (_temp_dir, store) = create_test_store();
+
+    let record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sleep 100".to_string(),
+        uuid: Some("issue-105-links-executing".to_string()),
+        pid: Some(99999),
+        status: Some(ExecutionStatus::Executing),
+        log_path: Some("/tmp/executing.log".to_string()),
+        ..Default::default()
+    });
+    store.save(&record).unwrap();
+
+    let result = query_status(Some(&store), "issue-105-links-executing", None);
+    assert!(result.success);
+    let output = result.output.unwrap();
+
+    assert!(output.contains("status executing"));
+    // currentTime should appear as an indented property with an ISO-like timestamp value
+    let re = regex::Regex::new(r"\n  currentTime .*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}").unwrap();
+    assert!(
+        re.is_match(&output),
+        "currentTime missing or unrecognized in links-notation output: {}",
+        output
+    );
+}
+
+#[test]
+fn test_query_status_text_includes_current_time_for_executing() {
+    let (_temp_dir, store) = create_test_store();
+
+    let record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sleep 100".to_string(),
+        uuid: Some("issue-105-text-executing".to_string()),
+        pid: Some(99999),
+        status: Some(ExecutionStatus::Executing),
+        log_path: Some("/tmp/executing.log".to_string()),
+        ..Default::default()
+    });
+    store.save(&record).unwrap();
+
+    let result = query_status(Some(&store), "issue-105-text-executing", Some("text"));
+    assert!(result.success);
+    let output = result.output.unwrap();
+
+    assert!(output.contains("Status:"));
+    assert!(output.contains("executing"));
+    assert!(output.contains("Current Time:"));
+    // Current Time should appear right after Start Time
+    let start_idx = output.find("Start Time:").expect("Start Time line");
+    let current_idx = output.find("Current Time:").expect("Current Time line");
+    assert!(current_idx > start_idx);
+}
+
+#[test]
+fn test_query_status_text_omits_current_time_for_executed() {
+    let (_temp_dir, store) = create_test_store();
+
+    let mut record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "echo done".to_string(),
+        uuid: Some("issue-105-text-executed".to_string()),
+        pid: Some(11111),
+        log_path: Some("/tmp/done.log".to_string()),
+        ..Default::default()
+    });
+    record.complete(0);
+    store.save(&record).unwrap();
+
+    let result = query_status(Some(&store), "issue-105-text-executed", Some("text"));
+    assert!(result.success);
+    let output = result.output.unwrap();
+
+    assert!(!output.contains("Current Time:"));
 }

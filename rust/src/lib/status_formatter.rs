@@ -104,6 +104,18 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
     enriched
 }
 
+/// Compute a `currentTime` value for a record if its status is `executing`.
+/// Returns `None` for completed records. Wrapping this in a helper makes it
+/// easy to attach the same timestamp to all output formats and to test the
+/// behavior deterministically.
+pub fn attach_current_time(record: &ExecutionRecord) -> Option<String> {
+    if record.status == ExecutionStatus::Executing {
+        Some(chrono::Utc::now().to_rfc3339())
+    } else {
+        None
+    }
+}
+
 /// Format execution record as Links Notation (indented style)
 /// Uses nested Links notation for object values (like options) instead of JSON
 ///
@@ -116,6 +128,15 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
 ///   ...
 /// ```
 pub fn format_record_as_links_notation(record: &ExecutionRecord) -> String {
+    format_record_as_links_notation_with_current_time(record, None)
+}
+
+/// Same as [`format_record_as_links_notation`] but injects a `currentTime`
+/// field (right after `startTime`) when a value is supplied.
+pub fn format_record_as_links_notation_with_current_time(
+    record: &ExecutionRecord,
+    current_time: Option<&str>,
+) -> String {
     let json = record.to_json();
     let mut lines = vec![record.uuid.clone()];
 
@@ -149,6 +170,13 @@ pub fn format_record_as_links_notation(record: &ExecutionRecord) -> String {
                     lines.push(format!("  {} {}", key, formatted_value));
                 }
             }
+
+            // Insert currentTime right after startTime for readability
+            if key == "startTime" {
+                if let Some(ct) = current_time {
+                    lines.push(format!("  currentTime {}", escape_for_links_notation(ct)));
+                }
+            }
         }
     }
 
@@ -157,6 +185,15 @@ pub fn format_record_as_links_notation(record: &ExecutionRecord) -> String {
 
 /// Format execution record as human-readable text
 pub fn format_record_as_text(record: &ExecutionRecord) -> String {
+    format_record_as_text_with_current_time(record, None)
+}
+
+/// Same as [`format_record_as_text`] but adds a `Current Time:` line right
+/// after `Start Time:` when a value is supplied.
+pub fn format_record_as_text_with_current_time(
+    record: &ExecutionRecord,
+    current_time: Option<&str>,
+) -> String {
     let exit_code_str = record
         .exit_code
         .map(|c| c.to_string())
@@ -179,9 +216,12 @@ pub fn format_record_as_text(record: &ExecutionRecord) -> String {
         format!("Shell:             {}", record.shell),
         format!("Platform:          {}", record.platform),
         format!("Start Time:        {}", record.start_time),
-        format!("End Time:          {}", end_time_str),
-        format!("Log Path:          {}", record.log_path),
     ];
+    if let Some(ct) = current_time {
+        lines.push(format!("Current Time:      {}", ct));
+    }
+    lines.push(format!("End Time:          {}", end_time_str));
+    lines.push(format!("Log Path:          {}", record.log_path));
 
     // Format options as nested list instead of JSON
     if !record.options.is_empty() {
@@ -201,13 +241,41 @@ pub fn format_record_as_text(record: &ExecutionRecord) -> String {
     lines.join("\n")
 }
 
+/// Build the JSON value for a record, optionally including `currentTime`.
+fn record_json_with_current_time(record: &ExecutionRecord, current_time: Option<&str>) -> Value {
+    let mut json = record.to_json();
+    if let (Some(ct), Value::Object(map)) = (current_time, &mut json) {
+        map.insert("currentTime".to_string(), Value::String(ct.to_string()));
+    }
+    json
+}
+
 /// Format execution record based on format type
 pub fn format_record(record: &ExecutionRecord, format: &str) -> Result<String, String> {
+    format_record_with_current_time(record, format, None)
+}
+
+/// Same as [`format_record`] but the output includes `currentTime` when a
+/// value is supplied. Use this from [`query_status`] so all three formats
+/// stay in sync.
+pub fn format_record_with_current_time(
+    record: &ExecutionRecord,
+    format: &str,
+    current_time: Option<&str>,
+) -> Result<String, String> {
     match format {
-        "links-notation" => Ok(format_record_as_links_notation(record)),
-        "json" => serde_json::to_string_pretty(&record.to_json())
-            .map_err(|e| format!("Failed to serialize to JSON: {}", e)),
-        "text" => Ok(format_record_as_text(record)),
+        "links-notation" => Ok(format_record_as_links_notation_with_current_time(
+            record,
+            current_time,
+        )),
+        "json" => {
+            serde_json::to_string_pretty(&record_json_with_current_time(record, current_time))
+                .map_err(|e| format!("Failed to serialize to JSON: {}", e))
+        }
+        "text" => Ok(format_record_as_text_with_current_time(
+            record,
+            current_time,
+        )),
         _ => Err(format!("Unknown output format: {}", format)),
     }
 }
@@ -252,9 +320,11 @@ pub fn query_status(
 
     // Enrich detached execution status with live session check
     let enriched = enrich_detached_status(&record);
+    // Attach currentTime so callers can see how long an executing command has been running
+    let current_time = attach_current_time(&enriched);
 
     let format = output_format.unwrap_or("links-notation");
-    match format_record(&enriched, format) {
+    match format_record_with_current_time(&enriched, format, current_time.as_deref()) {
         Ok(output) => StatusQueryResult {
             success: true,
             output: Some(output),
