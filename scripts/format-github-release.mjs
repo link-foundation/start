@@ -2,16 +2,22 @@
 
 /**
  * Format GitHub release notes using the format-release-notes.mjs script
- * Usage: node scripts/format-github-release.mjs --release-version <version> --repository <repository> --commit-sha <commit_sha>
+ * Usage: node scripts/format-github-release.mjs --release-version <version> --repository <repository> --commit-sha <commit_sha> [--prefix <prefix>]
  *   release-version: Version number (e.g., 1.0.0)
- *   repository: GitHub repository (e.g., owner/repo)
- *   commit_sha: Commit SHA for PR detection
+ *   repository:      GitHub repository (e.g., owner/repo)
+ *   commit_sha:      Commit SHA for PR detection
+ *   prefix:          Optional tag prefix applied by create-github-release.mjs
+ *                    (e.g., "js-", "rust-"). Must match the prefix used when
+ *                    the release was created so the correct tag can be
+ *                    looked up via the GitHub API.
  *
  * Uses link-foundation libraries:
  * - use-m: Dynamic package loading without package.json dependencies
  * - command-stream: Modern shell command execution with streaming support
  * - lino-arguments: Unified configuration from CLI args, env vars, and .lenv files
  */
+
+import { releaseTag } from './release-name.mjs';
 
 // Load use-m dynamically
 const { use } = eval(
@@ -41,20 +47,26 @@ const config = makeConfig({
         type: 'string',
         default: getenv('COMMIT_SHA', ''),
         describe: 'Commit SHA for PR detection',
+      })
+      .option('prefix', {
+        type: 'string',
+        default: getenv('PREFIX', ''),
+        describe:
+          'Optional language/package prefix for the tag (e.g., "js-" or "rust-")',
       }),
 });
 
-const { releaseVersion: version, repository, commitSha } = config;
+const { releaseVersion: version, repository, commitSha, prefix } = config;
 
 if (!version || !repository || !commitSha) {
   console.error('Error: Missing required arguments');
   console.error(
-    'Usage: node scripts/format-github-release.mjs --release-version <version> --repository <repository> --commit-sha <commit_sha>'
+    'Usage: node scripts/format-github-release.mjs --release-version <version> --repository <repository> --commit-sha <commit_sha> [--prefix <prefix>]'
   );
   process.exit(1);
 }
 
-const tag = `v${version}`;
+const tag = releaseTag(version, prefix);
 
 try {
   // Get the release ID for this version
