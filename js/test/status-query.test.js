@@ -191,6 +191,102 @@ describe('--status query functionality', () => {
       expect(parsed.exitCode).toBeNull();
       expect(parsed.endTime).toBeNull();
     });
+
+    it('should include currentTime for executing commands (JSON)', () => {
+      const beforeQuery = Date.now();
+      const executingRecord = new ExecutionRecord({
+        command: 'sleep 100',
+        pid: 99999,
+        logPath: '/tmp/executing.log',
+      });
+      store.save(executingRecord);
+
+      const result = runCli([
+        '--status',
+        executingRecord.uuid,
+        '--output-format',
+        'json',
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.currentTime).toBeDefined();
+      // currentTime should be a valid ISO timestamp at or after the query started
+      const currentTimeMs = new Date(parsed.currentTime).getTime();
+      expect(Number.isNaN(currentTimeMs)).toBe(false);
+      expect(currentTimeMs).toBeGreaterThanOrEqual(beforeQuery - 1);
+      expect(currentTimeMs).toBeLessThanOrEqual(Date.now() + 1);
+      // Should be >= startTime
+      expect(currentTimeMs).toBeGreaterThanOrEqual(
+        new Date(parsed.startTime).getTime()
+      );
+    });
+
+    it('should not include currentTime for completed commands (JSON)', () => {
+      // testRecord from beforeEach is already completed
+      const result = runCli([
+        '--status',
+        testRecord.uuid,
+        '--output-format',
+        'json',
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.status).toBe('executed');
+      expect(parsed.currentTime).toBeUndefined();
+    });
+
+    it('should include currentTime in links-notation for executing commands', () => {
+      const executingRecord = new ExecutionRecord({
+        command: 'sleep 100',
+        pid: 99999,
+        logPath: '/tmp/executing.log',
+      });
+      store.save(executingRecord);
+
+      const result = runCli(['--status', executingRecord.uuid]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('status executing');
+      // currentTime should appear as an indented property with an ISO timestamp value
+      expect(result.stdout).toMatch(
+        /\n {2}currentTime "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+      );
+    });
+
+    it('should include Current Time in text format for executing commands', () => {
+      const executingRecord = new ExecutionRecord({
+        command: 'sleep 100',
+        pid: 99999,
+        logPath: '/tmp/executing.log',
+      });
+      store.save(executingRecord);
+
+      const result = runCli([
+        '--status',
+        executingRecord.uuid,
+        '--output-format',
+        'text',
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Status:');
+      expect(result.stdout).toContain('executing');
+      expect(result.stdout).toContain('Current Time:');
+    });
+
+    it('should not include Current Time in text format for completed commands', () => {
+      const result = runCli([
+        '--status',
+        testRecord.uuid,
+        '--output-format',
+        'text',
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).not.toContain('Current Time:');
+    });
   });
 });
 

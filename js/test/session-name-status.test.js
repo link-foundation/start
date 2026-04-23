@@ -18,6 +18,7 @@ const {
   queryStatus,
   isDetachedSessionAlive,
   enrichDetachedStatus,
+  attachCurrentTime,
 } = require('../src/lib/status-formatter');
 
 // Use temp directory for tests
@@ -305,6 +306,74 @@ describe('Issue #101: Detached status enrichment', () => {
         expect(enriched.endTime).not.toBeNull();
       }
     });
+  });
+});
+
+describe('Issue #105: attachCurrentTime for executing status', () => {
+  it('should add currentTime to serialization when status is executing', () => {
+    const record = new ExecutionRecord({
+      command: 'sleep 60',
+      pid: 12345,
+      logPath: '/tmp/test.log',
+    });
+
+    const before = Date.now();
+    const wrapped = attachCurrentTime(record);
+    const obj = wrapped.toObject();
+    const after = Date.now();
+
+    expect(obj.currentTime).toBeDefined();
+    const currentTimeMs = new Date(obj.currentTime).getTime();
+    expect(Number.isNaN(currentTimeMs)).toBe(false);
+    expect(currentTimeMs).toBeGreaterThanOrEqual(before - 1);
+    expect(currentTimeMs).toBeLessThanOrEqual(after + 1);
+  });
+
+  it('should not add currentTime when status is executed', () => {
+    const record = new ExecutionRecord({
+      command: 'echo hello',
+      pid: 12345,
+      logPath: '/tmp/test.log',
+    });
+    record.complete(0);
+
+    const wrapped = attachCurrentTime(record);
+    // attachCurrentTime should return the original record unchanged
+    expect(wrapped).toBe(record);
+    const obj = wrapped.toObject();
+    expect(obj.currentTime).toBeUndefined();
+  });
+
+  it('should not mutate the original record', () => {
+    const record = new ExecutionRecord({
+      command: 'sleep 60',
+      pid: 12345,
+      logPath: '/tmp/test.log',
+    });
+
+    const wrapped = attachCurrentTime(record);
+    expect(wrapped).not.toBe(record);
+    // The original record's toObject output should not include currentTime
+    const originalObj = record.toObject();
+    expect(originalObj.currentTime).toBeUndefined();
+  });
+
+  it('should place currentTime right after startTime in serialization order', () => {
+    const record = new ExecutionRecord({
+      command: 'sleep 60',
+      pid: 12345,
+      logPath: '/tmp/test.log',
+    });
+
+    const wrapped = attachCurrentTime(record);
+    const keys = Object.keys(wrapped.toObject());
+    const startIndex = keys.indexOf('startTime');
+    expect(startIndex).toBeGreaterThanOrEqual(0);
+    expect(keys[startIndex + 1]).toBe('currentTime');
+  });
+
+  it('should handle null record gracefully', () => {
+    expect(attachCurrentTime(null)).toBeNull();
   });
 });
 
