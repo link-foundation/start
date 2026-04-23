@@ -1,5 +1,11 @@
 # start-command
 
+## 0.25.4
+
+### Patch Changes
+
+- 038b6db: Add `currentTime` to `--status` output when an execution is still `executing`, so users can see the query time alongside `startTime` and compute how long a command has been running.
+
 ## 0.25.3
 
 ### Patch Changes
