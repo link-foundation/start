@@ -127,6 +127,45 @@ function enrichDetachedStatus(record) {
 }
 
 /**
+ * Wrap a record so its serialized form includes a `currentTime` field when
+ * the status is "executing". This reflects the moment `--status` was invoked,
+ * making it easy to compute how long a command has been running.
+ * The original record is not mutated.
+ * @param {Object} record - Execution record
+ * @returns {Object} Record-like object with `toObject()` augmented when executing
+ */
+function attachCurrentTime(record) {
+  if (!record || record.status !== 'executing') {
+    return record;
+  }
+
+  const currentTime = new Date().toISOString();
+  const wrapped = Object.create(Object.getPrototypeOf(record));
+  Object.assign(wrapped, record);
+  wrapped.currentTime = currentTime;
+  wrapped.toObject = function () {
+    const base =
+      typeof record.toObject === 'function'
+        ? record.toObject.call(this)
+        : { ...this };
+    // Insert currentTime right after startTime for readability
+    const ordered = {};
+    for (const [key, value] of Object.entries(base)) {
+      ordered[key] = value;
+      if (key === 'startTime') {
+        ordered.currentTime = currentTime;
+      }
+    }
+    if (!('currentTime' in ordered)) {
+      ordered.currentTime = currentTime;
+    }
+    return ordered;
+  };
+
+  return wrapped;
+}
+
+/**
  * Format execution record as Links Notation (indented style)
  * Uses nested Links notation for object values (like options) instead of JSON
  *
@@ -192,9 +231,14 @@ function formatRecordAsText(record) {
     `Shell:             ${obj.shell}`,
     `Platform:          ${obj.platform}`,
     `Start Time:        ${obj.startTime}`,
-    `End Time:          ${obj.endTime || 'N/A'}`,
-    `Log Path:          ${obj.logPath}`,
   ];
+  if (obj.currentTime) {
+    lines.push(`Current Time:      ${obj.currentTime}`);
+  }
+  lines.push(
+    `End Time:          ${obj.endTime || 'N/A'}`,
+    `Log Path:          ${obj.logPath}`
+  );
 
   // Format options as nested list instead of JSON
   const optionEntries = Object.entries(obj.options || {}).filter(
@@ -250,9 +294,11 @@ function queryStatus(store, identifier, outputFormat) {
   try {
     // Enrich detached execution status with live session check
     const enrichedRecord = enrichDetachedStatus(record);
+    // Attach currentTime so callers can see how long an executing command has been running
+    const withCurrentTime = attachCurrentTime(enrichedRecord);
     return {
       success: true,
-      output: formatRecord(enrichedRecord, outputFormat || 'links-notation'),
+      output: formatRecord(withCurrentTime, outputFormat || 'links-notation'),
     };
   } catch (err) {
     return { success: false, error: err.message };
@@ -266,4 +312,5 @@ module.exports = {
   queryStatus,
   isDetachedSessionAlive,
   enrichDetachedStatus,
+  attachCurrentTime,
 };
