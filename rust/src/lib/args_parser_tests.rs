@@ -286,6 +286,28 @@ fn test_output_format_equals_syntax() {
 }
 
 #[test]
+fn test_list_option() {
+    let args: Vec<String> = vec!["--list"].into_iter().map(String::from).collect();
+    let result = parse_args(&args).unwrap();
+    assert!(result.wrapper_options.list);
+    assert!(result.command.is_empty());
+}
+
+#[test]
+fn test_list_with_output_format() {
+    let args: Vec<String> = vec!["--list", "--output-format", "json"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let result = parse_args(&args).unwrap();
+    assert!(result.wrapper_options.list);
+    assert_eq!(
+        result.wrapper_options.output_format,
+        Some("json".to_string())
+    );
+}
+
+#[test]
 fn test_status_requires_uuid() {
     let args: Vec<String> = vec!["--status"].into_iter().map(String::from).collect();
     assert!(parse_args(&args).is_err());

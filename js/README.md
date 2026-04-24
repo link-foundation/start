@@ -21,6 +21,7 @@ npm install -g start-command
 $ ls -la
 $ npm test
 $ git status
+$ --list
 ```
 
 See the project-wide [README](../README.md), [docs/USAGE.md](../docs/USAGE.md),

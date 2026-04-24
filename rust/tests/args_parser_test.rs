@@ -557,6 +557,42 @@ mod status_tests {
     }
 }
 
+mod list_tests {
+    use super::*;
+
+    #[test]
+    fn should_parse_list_flag() {
+        let result = parse_args(&args(&["--list"])).unwrap();
+        assert!(result.wrapper_options.list);
+        assert!(result.command.is_empty());
+    }
+
+    #[test]
+    fn should_parse_list_with_json_output_format() {
+        let result = parse_args(&args(&["--list", "--output-format", "json"])).unwrap();
+        assert!(result.wrapper_options.list);
+        assert_eq!(
+            result.wrapper_options.output_format,
+            Some("json".to_string())
+        );
+    }
+
+    #[test]
+    fn should_normalize_output_format_with_list() {
+        let result = parse_args(&args(&["--list", "--output-format", "TEXT"])).unwrap();
+        assert_eq!(
+            result.wrapper_options.output_format,
+            Some("text".to_string())
+        );
+    }
+
+    #[test]
+    fn should_default_list_to_false() {
+        let result = parse_args(&args(&["ls"])).unwrap();
+        assert!(!result.wrapper_options.list);
+    }
+}
+
 mod valid_output_formats_tests {
     use start_command::VALID_OUTPUT_FORMATS;
 

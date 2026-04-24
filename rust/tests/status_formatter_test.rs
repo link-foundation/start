@@ -5,9 +5,9 @@
 use start_command::{
     attach_current_time, format_record, format_record_as_links_notation,
     format_record_as_links_notation_with_current_time, format_record_as_text,
-    format_record_as_text_with_current_time, format_record_with_current_time, query_status,
-    ExecutionRecord, ExecutionRecordOptions, ExecutionStatus, ExecutionStore,
-    ExecutionStoreOptions,
+    format_record_as_text_with_current_time, format_record_list, format_record_with_current_time,
+    list_executions, query_status, ExecutionRecord, ExecutionRecordOptions, ExecutionStatus,
+    ExecutionStore, ExecutionStoreOptions,
 };
 use tempfile::TempDir;
 
@@ -137,6 +137,96 @@ fn test_query_status_default_format() {
     assert!(output.starts_with("test-uuid-1234\n"));
     // UUID without special chars is not quoted
     assert!(output.contains("  uuid test-uuid-1234"));
+}
+
+#[test]
+fn test_format_record_list_as_links_notation() {
+    let executing = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sleep 60".to_string(),
+        uuid: Some("test-executing-uuid".to_string()),
+        status: Some(ExecutionStatus::Executing),
+        start_time: Some("2026-04-24T10:00:00Z".to_string()),
+        ..Default::default()
+    });
+    let mut completed = create_test_record();
+    completed.start_time = "2026-04-24T09:00:00Z".to_string();
+
+    let records = vec![executing, completed];
+    let output =
+        format_record_list(&records, "links-notation").expect("links-notation list should format");
+
+    assert!(output.starts_with("executions\n"));
+    assert!(output.contains("  count 2"));
+    assert!(output.contains("    test-executing-uuid"));
+    assert!(output.contains("      status executing"));
+    assert!(output.contains("      command \"sleep 60\""));
+    assert!(output.contains("    test-uuid-1234"));
+    assert!(output.contains("      status executed"));
+}
+
+#[test]
+fn test_list_executions_json_includes_all_records() {
+    let temp_dir = TempDir::new().unwrap();
+    let store = ExecutionStore::with_options(ExecutionStoreOptions {
+        app_folder: Some(temp_dir.path().to_path_buf()),
+        use_links: Some(false),
+        verbose: false,
+    });
+
+    let completed = create_test_record();
+    let executing = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sleep 60".to_string(),
+        uuid: Some("test-executing-uuid".to_string()),
+        status: Some(ExecutionStatus::Executing),
+        start_time: Some("2026-04-24T10:00:00Z".to_string()),
+        ..Default::default()
+    });
+    store.save(&completed).unwrap();
+    store.save(&executing).unwrap();
+
+    let result = list_executions(Some(&store), Some("json"));
+    assert!(result.success);
+    let output = result.output.unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+    assert_eq!(parsed["count"], 2);
+    assert_eq!(parsed["executions"].as_array().unwrap().len(), 2);
+    assert!(parsed["executions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|record| record["uuid"] == "test-uuid-1234"));
+    let executing_json = parsed["executions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|record| record["uuid"] == "test-executing-uuid")
+        .unwrap();
+    assert_eq!(executing_json["status"], "executing");
+    assert!(executing_json.get("currentTime").is_some());
+}
+
+#[test]
+fn test_list_executions_empty_store() {
+    let temp_dir = TempDir::new().unwrap();
+    let store = ExecutionStore::with_options(ExecutionStoreOptions {
+        app_folder: Some(temp_dir.path().to_path_buf()),
+        use_links: Some(false),
+        verbose: false,
+    });
+
+    let result = list_executions(Some(&store), None);
+    assert!(result.success);
+    let output = result.output.unwrap();
+    assert!(output.starts_with("executions\n"));
+    assert!(output.contains("  count 0"));
+    assert!(output.contains("  records ()"));
+}
+
+#[test]
+fn test_list_executions_no_store() {
+    let result = list_executions(None, None);
+    assert!(!result.success);
+    assert!(result.error.unwrap().contains("tracking is disabled"));
 }
 
 // ===== Issue #105: currentTime in formatter output =====

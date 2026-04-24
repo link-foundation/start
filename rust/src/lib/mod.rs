@@ -65,8 +65,10 @@ pub use signal_handler::{
 pub use status_formatter::{
     attach_current_time, enrich_detached_status, format_record, format_record_as_links_notation,
     format_record_as_links_notation_with_current_time, format_record_as_text,
-    format_record_as_text_with_current_time, format_record_with_current_time,
-    is_detached_session_alive, query_status, StatusQueryResult,
+    format_record_as_text_with_current_time, format_record_list,
+    format_record_list_as_links_notation, format_record_list_as_text,
+    format_record_with_current_time, is_detached_session_alive, list_executions, query_status,
+    StatusQueryResult,
 };
 pub use substitution::{process_command, ProcessOptions, SubstitutionResult};
 pub use user_manager::{

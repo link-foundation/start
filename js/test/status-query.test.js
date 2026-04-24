@@ -168,6 +168,77 @@ describe('--status query functionality', () => {
     });
   });
 
+  describe('--list query functionality', () => {
+    it('should output all tracked executions in links-notation format by default', () => {
+      const executingRecord = new ExecutionRecord({
+        command: 'sleep 100',
+        pid: 99999,
+        logPath: '/tmp/executing.log',
+        startTime: '2026-04-24T10:00:00.000Z',
+      });
+      store.save(executingRecord);
+
+      const result = runCli(['--list']);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toMatch(/^executions\n/);
+      expect(result.stdout).toContain('  count 2');
+      expect(result.stdout).toContain(`    ${testRecord.uuid}`);
+      expect(result.stdout).toContain(`    ${executingRecord.uuid}`);
+      expect(result.stdout).toContain('      command "echo hello world"');
+      expect(result.stdout).toContain('      command "sleep 100"');
+      expect(result.stdout).toContain('      status executed');
+      expect(result.stdout).toContain('      status executing');
+    });
+
+    it('should output all tracked executions in JSON format', () => {
+      const executingRecord = new ExecutionRecord({
+        command: 'sleep 100',
+        pid: 99999,
+        logPath: '/tmp/executing.log',
+      });
+      store.save(executingRecord);
+
+      const result = runCli(['--list', '--output-format', 'json']);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.count).toBe(2);
+      expect(parsed.executions.length).toBe(2);
+      expect(parsed.executions.map((record) => record.uuid)).toContain(
+        testRecord.uuid
+      );
+      expect(parsed.executions.map((record) => record.uuid)).toContain(
+        executingRecord.uuid
+      );
+      const executing = parsed.executions.find(
+        (record) => record.uuid === executingRecord.uuid
+      );
+      expect(executing.status).toBe('executing');
+      expect(executing.currentTime).toBeDefined();
+    });
+
+    it('should show count zero when no records are stored', () => {
+      cleanupTestDir();
+
+      const result = runCli(['--list']);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toMatch(/^executions\n/);
+      expect(result.stdout).toContain('  count 0');
+      expect(result.stdout).toContain('  records ()');
+    });
+
+    it('should show error when tracking is disabled', () => {
+      const result = runCli(['--list'], {
+        START_DISABLE_TRACKING: '1',
+      });
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('tracking is disabled');
+    });
+  });
+
   describe('executing status', () => {
     it('should show executing status for ongoing commands', () => {
       // Create an executing (not completed) record

@@ -20,7 +20,8 @@
  * --use-command-stream             Use command-stream library for command execution (experimental)
  * --verbose                        Enable verbose/debug output (sets START_VERBOSE=1)
  * --status <uuid>                  Show status of a previous command execution by UUID
- * --output-format <format>         Output format for status (links-notation, json, text)
+ * --list                           List all tracked command executions
+ * --output-format <format>         Output format for status/list (links-notation, json, text)
  * --cleanup                        Clean up stale "executing" records (processes that crashed or were killed)
  * --cleanup-dry-run                Show stale records that would be cleaned up (without actually cleaning)
  */
@@ -169,7 +170,8 @@ function parseArgs(args) {
     shell: 'auto', // Shell to use in isolation environments: auto, bash, zsh, sh
     useCommandStream: false, // Use command-stream library for command execution
     status: null, // UUID to show status for
-    outputFormat: null, // Output format for status (links-notation, json, text)
+    list: false, // List all tracked execution records
+    outputFormat: null, // Output format for status/list (links-notation, json, text)
     cleanup: false, // Clean up stale "executing" records
     cleanupDryRun: false, // Show what would be cleaned without actually cleaning
   };
@@ -434,6 +436,12 @@ function parseOption(args, index, options) {
     return 1;
   }
 
+  // --list
+  if (arg === '--list') {
+    options.list = true;
+    return 1;
+  }
+
   // --output-format <format>
   if (arg === '--output-format') {
     if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
@@ -656,9 +664,16 @@ function validateOptions(options) {
     }
   }
 
-  // Output format is only valid with --status
-  if (options.outputFormat && !options.status) {
-    throw new Error('--output-format option is only valid with --status');
+  // Single-record and list query modes are mutually exclusive
+  if (options.status && options.list) {
+    throw new Error('Cannot use both --status and --list at the same time');
+  }
+
+  // Output format is only valid with query modes
+  if (options.outputFormat && !options.status && !options.list) {
+    throw new Error(
+      '--output-format option is only valid with --status or --list'
+    );
   }
 
   // Validate shell option

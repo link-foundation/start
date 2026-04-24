@@ -280,11 +280,164 @@ pub fn format_record_with_current_time(
     }
 }
 
+fn sort_records_by_start_time_desc(records: &mut [ExecutionRecord]) {
+    records.sort_by(|a, b| b.start_time.cmp(&a.start_time));
+}
+
+fn indent_block(block: &str, spaces: usize) -> String {
+    let prefix = " ".repeat(spaces);
+    block
+        .lines()
+        .map(|line| format!("{}{}", prefix, line))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Format execution records as a Links Notation list.
+pub fn format_record_list_as_links_notation(records: &[ExecutionRecord]) -> String {
+    let current_times: Vec<Option<String>> = records.iter().map(attach_current_time).collect();
+    format_record_list_as_links_notation_with_current_times(records, &current_times)
+}
+
+fn format_record_list_as_links_notation_with_current_times(
+    records: &[ExecutionRecord],
+    current_times: &[Option<String>],
+) -> String {
+    let mut lines = vec![
+        "executions".to_string(),
+        format!("  count {}", records.len()),
+    ];
+
+    if records.is_empty() {
+        lines.push("  records ()".to_string());
+        return lines.join("\n");
+    }
+
+    lines.push("  records".to_string());
+    for (record, current_time) in records.iter().zip(current_times.iter()) {
+        let block =
+            format_record_as_links_notation_with_current_time(record, current_time.as_deref());
+        lines.push(indent_block(&block, 4));
+    }
+
+    lines.join("\n")
+}
+
+/// Format execution records as human-readable text.
+pub fn format_record_list_as_text(records: &[ExecutionRecord]) -> String {
+    let current_times: Vec<Option<String>> = records.iter().map(attach_current_time).collect();
+    format_record_list_as_text_with_current_times(records, &current_times)
+}
+
+fn format_record_list_as_text_with_current_times(
+    records: &[ExecutionRecord],
+    current_times: &[Option<String>],
+) -> String {
+    let mut lines = vec![
+        "Executions".to_string(),
+        "=".repeat(50),
+        format!("Count: {}", records.len()),
+    ];
+
+    for (record, current_time) in records.iter().zip(current_times.iter()) {
+        lines.push(String::new());
+        lines.push(format_record_as_text_with_current_time(
+            record,
+            current_time.as_deref(),
+        ));
+    }
+
+    lines.join("\n")
+}
+
+fn record_list_json_with_current_times(
+    records: &[ExecutionRecord],
+    current_times: &[Option<String>],
+) -> Value {
+    let executions: Vec<Value> = records
+        .iter()
+        .zip(current_times.iter())
+        .map(|(record, current_time)| {
+            record_json_with_current_time(record, current_time.as_deref())
+        })
+        .collect();
+
+    serde_json::json!({
+        "count": records.len(),
+        "executions": executions,
+    })
+}
+
+/// Format execution records based on format type.
+pub fn format_record_list(records: &[ExecutionRecord], format: &str) -> Result<String, String> {
+    let current_times: Vec<Option<String>> = records.iter().map(attach_current_time).collect();
+    format_record_list_with_current_times(records, format, &current_times)
+}
+
+fn format_record_list_with_current_times(
+    records: &[ExecutionRecord],
+    format: &str,
+    current_times: &[Option<String>],
+) -> Result<String, String> {
+    match format {
+        "links-notation" => Ok(format_record_list_as_links_notation_with_current_times(
+            records,
+            current_times,
+        )),
+        "json" => serde_json::to_string_pretty(&record_list_json_with_current_times(
+            records,
+            current_times,
+        ))
+        .map_err(|e| format!("Failed to serialize to JSON: {}", e)),
+        "text" => Ok(format_record_list_as_text_with_current_times(
+            records,
+            current_times,
+        )),
+        _ => Err(format!("Unknown output format: {}", format)),
+    }
+}
+
 /// Query result from status lookup
 pub struct StatusQueryResult {
     pub success: bool,
     pub output: Option<String>,
     pub error: Option<String>,
+}
+
+/// Handle execution list query and return the result
+pub fn list_executions(
+    store: Option<&ExecutionStore>,
+    output_format: Option<&str>,
+) -> StatusQueryResult {
+    let store = match store {
+        Some(s) => s,
+        None => {
+            return StatusQueryResult {
+                success: false,
+                output: None,
+                error: Some("Execution tracking is disabled.".to_string()),
+            }
+        }
+    };
+
+    let mut records: Vec<ExecutionRecord> =
+        store.get_all().iter().map(enrich_detached_status).collect();
+    sort_records_by_start_time_desc(&mut records);
+    let current_times: Vec<Option<String>> = records.iter().map(attach_current_time).collect();
+    let format = output_format.unwrap_or("links-notation");
+
+    match format_record_list_with_current_times(&records, format, &current_times) {
+        Ok(output) => StatusQueryResult {
+            success: true,
+            output: Some(output),
+            error: None,
+        },
+        Err(e) => StatusQueryResult {
+            success: false,
+            output: None,
+            error: Some(e),
+        },
+    }
 }
 
 /// Handle status query and return the result
