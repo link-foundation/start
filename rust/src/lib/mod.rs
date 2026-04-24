@@ -11,6 +11,7 @@ pub mod sequence_parser;
 pub mod signal_handler;
 pub mod status_formatter;
 pub mod substitution;
+pub mod usage;
 pub mod user_manager;
 
 // Re-export commonly used items
@@ -71,6 +72,7 @@ pub use status_formatter::{
     StatusQueryResult,
 };
 pub use substitution::{process_command, ProcessOptions, SubstitutionResult};
+pub use usage::print_usage;
 pub use user_manager::{
     create_isolated_user, delete_user, get_current_user, get_current_user_groups, has_sudo_access,
     CreateIsolatedUserOptions, DeleteUserOptions, UserOperationResult,
