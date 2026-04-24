@@ -351,10 +351,19 @@ jobs:
         run: cargo package --list
 
   # === AUTO RELEASE ===
+  # Automatic release on push to main using changelog fragments.
+  # `always() && !cancelled()` is required so this job runs even though
+  # its transitive dependencies (build, test) use `if: always()`. Without
+  # it, GitHub Actions propagates the `skipped` status down the chain and
+  # no Rust release is ever created (see docs/case-studies/issue-108/).
   auto-release:
     name: Auto Release
     needs: [lint, test, build]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: |
+      always() && !cancelled() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.build.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -434,10 +443,15 @@ jobs:
             --prefix "rust-"
 
   # === MANUAL RELEASE ===
+  # Same always()/!cancelled() guard as `auto-release` — without it the
+  # job is silently skipped when its dependencies use `if: always()`.
   manual-release:
     name: Manual Release
     needs: [lint, test, build]
-    if: github.event_name == 'workflow_dispatch'
+    if: |
+      always() && !cancelled() &&
+      github.event_name == 'workflow_dispatch' &&
+      needs.build.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write

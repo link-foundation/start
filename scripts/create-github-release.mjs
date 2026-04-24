@@ -2,9 +2,17 @@
 
 /**
  * Create GitHub Release from CHANGELOG.md
- * Usage: node scripts/create-github-release.mjs --release-version <version> --repository <repository>
+ * Usage: node scripts/create-github-release.mjs --release-version <version> --repository <repository> [--prefix <prefix>]
  *   release-version: Version number (e.g., 1.0.0)
- *   repository: GitHub repository (e.g., owner/repo)
+ *   repository:      GitHub repository (e.g., owner/repo)
+ *   prefix:          Optional language/package prefix added to the tag and
+ *                    release title. Supported values: "" (default), "js-",
+ *                    "rust-". The tag becomes "${prefix}v${version}" and the
+ *                    release title becomes "[JavaScript] ${version}" or
+ *                    "[Rust] ${version}" when the prefix matches a known
+ *                    language; other prefixes pass through as
+ *                    "${prefix}${version}". An empty prefix preserves the
+ *                    original behaviour ("v${version}" tag, "${version}" title).
  *
  * Uses link-foundation libraries:
  * - use-m: Dynamic package loading without package.json dependencies
@@ -13,6 +21,7 @@
  */
 
 import { readFileSync } from 'fs';
+import { releaseTag, releaseName } from './release-name.mjs';
 
 // Load use-m dynamically
 const { use } = eval(
@@ -37,22 +46,31 @@ const config = makeConfig({
         type: 'string',
         default: getenv('REPOSITORY', ''),
         describe: 'GitHub repository (e.g., owner/repo)',
+      })
+      .option('prefix', {
+        type: 'string',
+        default: getenv('PREFIX', ''),
+        describe:
+          'Optional language/package prefix for the tag and title (e.g., "js-" or "rust-")',
       }),
 });
 
-const { releaseVersion: version, repository } = config;
+const { releaseVersion: version, repository, prefix } = config;
 
 if (!version || !repository) {
   console.error('Error: Missing required arguments');
   console.error(
-    'Usage: node scripts/create-github-release.mjs --release-version <version> --repository <repository>'
+    'Usage: node scripts/create-github-release.mjs --release-version <version> --repository <repository> [--prefix <prefix>]'
   );
   process.exit(1);
 }
 
-const tag = `v${version}`;
+const tag = releaseTag(version, prefix);
+const name = releaseName(version, prefix);
 
-console.log(`Creating GitHub release for ${tag}...`);
+console.log(
+  `Creating GitHub release: tag=${tag}, name=${name}, prefix=${prefix || '(none)'}`
+);
 
 try {
   // Read CHANGELOG.md
@@ -78,7 +96,7 @@ try {
   // (Previously caused apostrophes like "didn't" to appear as "didn'''" in releases)
   const payload = JSON.stringify({
     tag_name: tag,
-    name: version,
+    name,
     body: releaseNotes,
   });
 
@@ -86,7 +104,7 @@ try {
     stdin: payload,
   });
 
-  console.log(`\u2705 Created GitHub release: ${tag}`);
+  console.log(`\u2705 Created GitHub release: ${tag} (${name})`);
 } catch (error) {
   console.error('Error creating release:', error.message);
   process.exit(1);
