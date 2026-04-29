@@ -16,6 +16,7 @@
 //! --keep-alive, -k                 Keep isolation environment alive after command exits
 //! --auto-remove-docker-container   Automatically remove docker container after exit
 //! --shell <shell>                  Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
+//! --list                           List all tracked command executions
 
 use std::env;
 
@@ -27,7 +28,7 @@ pub const VALID_BACKENDS: [&str; 4] = ["screen", "tmux", "docker", "ssh"];
 /// Valid shell options for --shell
 pub const VALID_SHELLS: [&str; 4] = ["auto", "bash", "zsh", "sh"];
 
-/// Valid output formats for --status
+/// Valid output formats for query output
 pub const VALID_OUTPUT_FORMATS: [&str; 3] = ["links-notation", "json", "text"];
 
 /// UUID v4 regex pattern for validation
@@ -78,7 +79,9 @@ pub struct WrapperOptions {
     pub use_command_stream: bool,
     /// UUID to query status for
     pub status: Option<String>,
-    /// Output format for status (links-notation, json, text)
+    /// List all tracked execution records
+    pub list: bool,
+    /// Output format for status/list (links-notation, json, text)
     pub output_format: Option<String>,
     /// Clean up stale "executing" records
     pub cleanup: bool,
@@ -104,6 +107,7 @@ impl Default for WrapperOptions {
             shell: "auto".to_string(),
             use_command_stream: false,
             status: None,
+            list: false,
             output_format: None,
             cleanup: false,
             cleanup_dry_run: false,
@@ -378,6 +382,12 @@ fn parse_option(
         return Ok(1);
     }
 
+    // --list
+    if arg == "--list" {
+        options.list = true;
+        return Ok(1);
+    }
+
     // --output-format <format>
     if arg == "--output-format" {
         if index + 1 < args.len() && !args[index + 1].starts_with('-') {
@@ -516,9 +526,14 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
         }
     }
 
-    // Output format is only valid with --status
-    if options.output_format.is_some() && options.status.is_none() {
-        return Err("--output-format option is only valid with --status".to_string());
+    // Single-record and list query modes are mutually exclusive
+    if options.status.is_some() && options.list {
+        return Err("Cannot use both --status and --list at the same time".to_string());
+    }
+
+    // Output format is only valid with query modes
+    if options.output_format.is_some() && options.status.is_none() && !options.list {
+        return Err("--output-format option is only valid with --status or --list".to_string());
     }
 
     // Validate shell option

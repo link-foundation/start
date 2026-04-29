@@ -135,6 +135,24 @@ $ npm test
 
 The `│` prefix indicates tool metadata, `$` shows the executed command, and `✓`/`✗` indicates success/failure.
 
+### Execution Tracking
+
+Every command gets an execution record that can be queried later:
+
+```bash
+# Show one execution by UUID or isolation session name
+$ --status abc-123-def-456-ghi
+
+# List all stored executions, newest first
+$ --list
+
+# Machine-readable list output
+$ --list --output-format json
+```
+
+`--status` and `--list` default to Links Notation. Both also support
+`--output-format json` and `--output-format text`.
+
 ### Exit Code Display
 
 The exit code is always prominently displayed after command completion, making it clear whether the command succeeded or failed.

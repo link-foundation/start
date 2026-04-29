@@ -273,6 +273,86 @@ function formatRecord(record, format) {
   }
 }
 
+function sortRecordsByStartTimeDesc(records) {
+  return [...records].sort(
+    (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+  );
+}
+
+function indentBlock(block, spaces) {
+  const prefix = ' '.repeat(spaces);
+  return block
+    .split('\n')
+    .map((line) => `${prefix}${line}`)
+    .join('\n');
+}
+
+function prepareRecordForList(record) {
+  return attachCurrentTime(enrichDetachedStatus(record));
+}
+
+/**
+ * Format execution records as a Links Notation list.
+ * @param {Object[]} records - Execution records
+ * @returns {string} Links Notation formatted list
+ */
+function formatRecordListAsLinksNotation(records) {
+  const lines = ['executions', `  count ${records.length}`];
+
+  if (records.length === 0) {
+    lines.push('  records ()');
+    return lines.join('\n');
+  }
+
+  lines.push('  records');
+  for (const record of records) {
+    lines.push(indentBlock(formatRecordAsLinksNotation(record), 4));
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Format execution records as human-readable text.
+ * @param {Object[]} records - Execution records
+ * @returns {string} Human-readable list
+ */
+function formatRecordListAsText(records) {
+  const lines = ['Executions', `${'='.repeat(50)}`, `Count: ${records.length}`];
+
+  for (const record of records) {
+    lines.push('', formatRecordAsText(record));
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Format execution records based on format type.
+ * @param {Object[]} records - Execution records
+ * @param {string} format - Output format (links-notation, json, text)
+ * @returns {string} Formatted output string
+ */
+function formatRecordList(records, format) {
+  switch (format) {
+    case 'links-notation':
+      return formatRecordListAsLinksNotation(records);
+    case 'json':
+      return JSON.stringify(
+        {
+          count: records.length,
+          executions: records.map((record) => record.toObject()),
+        },
+        null,
+        2
+      );
+    case 'text':
+      return formatRecordListAsText(records);
+    default:
+      throw new Error(`Unknown output format: ${format}`);
+  }
+}
+
 /**
  * Handle status query and output the result
  * @param {Object} store - ExecutionStore instance
@@ -305,11 +385,39 @@ function queryStatus(store, identifier, outputFormat) {
   }
 }
 
+/**
+ * Handle execution list query and output the result
+ * @param {Object} store - ExecutionStore instance
+ * @param {string|null} outputFormat - Output format (links-notation, json, text)
+ * @returns {{success: boolean, output?: string, error?: string}}
+ */
+function listExecutions(store, outputFormat) {
+  if (!store) {
+    return { success: false, error: 'Execution tracking is disabled.' };
+  }
+
+  try {
+    const records = sortRecordsByStartTimeDesc(
+      store.getAll().map(prepareRecordForList)
+    );
+    return {
+      success: true,
+      output: formatRecordList(records, outputFormat || 'links-notation'),
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
 module.exports = {
   formatRecordAsLinksNotation,
   formatRecordAsText,
   formatRecord,
+  formatRecordListAsLinksNotation,
+  formatRecordListAsText,
+  formatRecordList,
   queryStatus,
+  listExecutions,
   isDetachedSessionAlive,
   enrichDetachedStatus,
   attachCurrentTime,

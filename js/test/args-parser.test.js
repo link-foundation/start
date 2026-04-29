@@ -817,18 +817,42 @@ describe('status option', () => {
   it('should throw error for missing UUID argument', () => {
     assert.throws(() => {
       parseArgs(['--status']);
-    }, /requires a UUID argument/);
+    }, /requires a UUID or session name argument/);
   });
 
   it('should throw error for --status with -flag as next argument', () => {
     assert.throws(() => {
       parseArgs(['--status', '--output-format']);
-    }, /requires a UUID argument/);
+    }, /requires a UUID or session name argument/);
   });
 
   it('should default status to null', () => {
     const result = parseArgs(['echo', 'hello']);
     assert.strictEqual(result.wrapperOptions.status, null);
+  });
+});
+
+describe('list option', () => {
+  it('should parse --list flag', () => {
+    const result = parseArgs(['--list']);
+    assert.strictEqual(result.wrapperOptions.list, true);
+    assert.strictEqual(result.command, '');
+  });
+
+  it('should parse --list with JSON output format', () => {
+    const result = parseArgs(['--list', '--output-format', 'json']);
+    assert.strictEqual(result.wrapperOptions.list, true);
+    assert.strictEqual(result.wrapperOptions.outputFormat, 'json');
+  });
+
+  it('should normalize output format with --list', () => {
+    const result = parseArgs(['--list', '--output-format', 'TEXT']);
+    assert.strictEqual(result.wrapperOptions.outputFormat, 'text');
+  });
+
+  it('should default list to false', () => {
+    const result = parseArgs(['echo', 'hello']);
+    assert.strictEqual(result.wrapperOptions.list, false);
   });
 });
 
@@ -874,7 +898,7 @@ describe('output-format option', () => {
   it('should throw error for output-format without status', () => {
     assert.throws(() => {
       parseArgs(['--output-format', 'json', '--', 'npm', 'test']);
-    }, /--output-format option is only valid with --status/);
+    }, /--output-format option is only valid with --status or --list/);
   });
 
   it('should accept all valid output formats', () => {

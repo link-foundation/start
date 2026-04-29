@@ -11,6 +11,7 @@ pub mod sequence_parser;
 pub mod signal_handler;
 pub mod status_formatter;
 pub mod substitution;
+pub mod usage;
 pub mod user_manager;
 
 // Re-export commonly used items
@@ -65,10 +66,13 @@ pub use signal_handler::{
 pub use status_formatter::{
     attach_current_time, enrich_detached_status, format_record, format_record_as_links_notation,
     format_record_as_links_notation_with_current_time, format_record_as_text,
-    format_record_as_text_with_current_time, format_record_with_current_time,
-    is_detached_session_alive, query_status, StatusQueryResult,
+    format_record_as_text_with_current_time, format_record_list,
+    format_record_list_as_links_notation, format_record_list_as_text,
+    format_record_with_current_time, is_detached_session_alive, list_executions, query_status,
+    StatusQueryResult,
 };
 pub use substitution::{process_command, ProcessOptions, SubstitutionResult};
+pub use usage::print_usage;
 pub use user_manager::{
     create_isolated_user, delete_user, get_current_user, get_current_user_groups, has_sudo_access,
     CreateIsolatedUserOptions, DeleteUserOptions, UserOperationResult,

@@ -25,6 +25,7 @@ cargo install --path .
 start ls -la
 start npm test
 start git status
+start --list
 ```
 
 See the project-wide [README](../README.md), [docs/USAGE.md](../docs/USAGE.md),

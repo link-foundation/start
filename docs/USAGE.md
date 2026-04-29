@@ -19,7 +19,12 @@ The `$` command wraps any shell command with automatic logging and failure repor
 $ echo "Hello World"
 $ npm test
 $ git status
+$ --list
 ```
+
+Use `--status <id>` to inspect one stored execution, or `--list` to see all
+stored executions. Query output defaults to Links Notation and can be changed
+with `--output-format json` or `--output-format text`.
 
 ## Using Pipes
 
