@@ -9,21 +9,24 @@ When making changes to the Rust code, create a new `.md` file in this directory 
 ### File Naming
 
 Name your file using one of these patterns:
+
 - `{pr-number}.md` - For changes associated with a PR
 - `{descriptive-name}.md` - For other changes
 
 ### File Contents
 
-The file should contain a brief description of your changes. The first line determines the release type:
+The file should contain YAML-style frontmatter with the release type, followed by a brief description of your changes:
 
-- Lines starting with `BREAKING:` - Major version bump
-- Lines starting with `feat:` or `feature:` - Minor version bump
-- All other changes - Patch version bump
+- `bump: major` - Major version bump
+- `bump: minor` - Minor version bump
+- `bump: patch` - Patch version bump
 
 ### Example
 
 ```markdown
-feat: Add new command substitution feature
+---
+bump: minor
+---
 
 Added support for natural language command substitution using .lino files.
 ```

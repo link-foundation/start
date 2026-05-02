@@ -24,141 +24,152 @@ async function waitFor(conditionFn, timeout = 5000, interval = 100) {
 // Use the canRunLinuxDockerImages function from isolation module
 // to properly detect if Linux containers can run (handles Windows containers mode)
 const { canRunLinuxDockerImages } = require('../src/lib/isolation');
+const DOCKER_TEST_TIMEOUT = 20000;
 
 describe('Docker Auto-Remove Container Feature', () => {
   // These tests verify the --auto-remove-docker-container option
   // which automatically removes the container after exit (disabled by default)
 
   describe('auto-remove enabled', () => {
-    it('should automatically remove container when autoRemoveDockerContainer is true', async () => {
-      if (!canRunLinuxDockerImages()) {
-        console.log(
-          '  Skipping: docker not available, daemon not running, or Linux containers not supported'
+    it(
+      'should automatically remove container when autoRemoveDockerContainer is true',
+      { timeout: DOCKER_TEST_TIMEOUT },
+      async () => {
+        if (!canRunLinuxDockerImages()) {
+          console.log(
+            '  Skipping: docker not available, daemon not running, or Linux containers not supported'
+          );
+          return;
+        }
+
+        const containerName = `test-autoremove-${Date.now()}`;
+
+        // Run command with autoRemoveDockerContainer enabled
+        const result = await runInDocker('echo "test" && sleep 0.5', {
+          image: 'alpine:latest',
+          session: containerName,
+          detached: true,
+          keepAlive: false,
+          autoRemoveDockerContainer: true,
+        });
+
+        assert.strictEqual(result.success, true);
+        assert.ok(
+          result.message.includes('automatically removed'),
+          'Message should indicate auto-removal'
         );
-        return;
-      }
 
-      const containerName = `test-autoremove-${Date.now()}`;
+        // Wait for container to finish and be removed
+        const containerRemoved = await waitFor(() => {
+          try {
+            execSync(`docker inspect -f '{{.State.Status}}' ${containerName}`, {
+              encoding: 'utf8',
+              stdio: ['pipe', 'pipe', 'pipe'],
+            });
+            return false; // Container still exists
+          } catch {
+            return true; // Container does not exist (removed)
+          }
+        }, 10000);
 
-      // Run command with autoRemoveDockerContainer enabled
-      const result = await runInDocker('echo "test" && sleep 0.5', {
-        image: 'alpine:latest',
-        session: containerName,
-        detached: true,
-        keepAlive: false,
-        autoRemoveDockerContainer: true,
-      });
+        assert.ok(
+          containerRemoved,
+          'Container should be automatically removed after exit with --auto-remove-docker-container'
+        );
 
-      assert.strictEqual(result.success, true);
-      assert.ok(
-        result.message.includes('automatically removed'),
-        'Message should indicate auto-removal'
-      );
-
-      // Wait for container to finish and be removed
-      const containerRemoved = await waitFor(() => {
+        // Double-check with docker ps -a that container is completely removed
         try {
-          execSync(`docker inspect -f '{{.State.Status}}' ${containerName}`, {
+          const allContainers = execSync('docker ps -a', {
             encoding: 'utf8',
             stdio: ['pipe', 'pipe', 'pipe'],
           });
-          return false; // Container still exists
-        } catch {
-          return true; // Container does not exist (removed)
+          assert.ok(
+            !allContainers.includes(containerName),
+            'Container should NOT appear in docker ps -a (completely removed)'
+          );
+          console.log(
+            '  ✓ Docker container auto-removed after exit (filesystem not preserved)'
+          );
+        } catch (err) {
+          assert.fail(`Failed to verify container removal: ${err.message}`);
         }
-      }, 10000);
 
-      assert.ok(
-        containerRemoved,
-        'Container should be automatically removed after exit with --auto-remove-docker-container'
-      );
-
-      // Double-check with docker ps -a that container is completely removed
-      try {
-        const allContainers = execSync('docker ps -a', {
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe'],
-        });
-        assert.ok(
-          !allContainers.includes(containerName),
-          'Container should NOT appear in docker ps -a (completely removed)'
-        );
-        console.log(
-          '  ✓ Docker container auto-removed after exit (filesystem not preserved)'
-        );
-      } catch (err) {
-        assert.fail(`Failed to verify container removal: ${err.message}`);
+        // No cleanup needed - container should already be removed
       }
-
-      // No cleanup needed - container should already be removed
-    });
+    );
   });
 
   describe('auto-remove disabled (default)', () => {
-    it('should preserve container filesystem by default (without autoRemoveDockerContainer)', async () => {
-      if (!canRunLinuxDockerImages()) {
-        console.log(
-          '  Skipping: docker not available, daemon not running, or Linux containers not supported'
-        );
-        return;
-      }
-
-      const containerName = `test-preserve-${Date.now()}`;
-
-      // Run command without autoRemoveDockerContainer
-      const result = await runInDocker('echo "test" && sleep 0.1', {
-        image: 'alpine:latest',
-        session: containerName,
-        detached: true,
-        keepAlive: false,
-        autoRemoveDockerContainer: false,
-      });
-
-      assert.strictEqual(result.success, true);
-      assert.ok(
-        result.message.includes('filesystem will be preserved'),
-        'Message should indicate filesystem preservation'
-      );
-
-      // Wait for container to exit
-      await waitFor(() => {
-        try {
-          const status = execSync(
-            `docker inspect -f '{{.State.Status}}' ${containerName}`,
-            {
-              encoding: 'utf8',
-              stdio: ['pipe', 'pipe', 'pipe'],
-            }
-          ).trim();
-          return status === 'exited';
-        } catch {
-          return false;
+    it(
+      'should preserve container filesystem by default (without autoRemoveDockerContainer)',
+      { timeout: DOCKER_TEST_TIMEOUT },
+      async () => {
+        if (!canRunLinuxDockerImages()) {
+          console.log(
+            '  Skipping: docker not available, daemon not running, or Linux containers not supported'
+          );
+          return;
         }
-      }, 10000);
 
-      // Container should still exist (in exited state)
-      try {
-        const allContainers = execSync('docker ps -a', {
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe'],
+        const containerName = `test-preserve-${Date.now()}`;
+
+        // Run command without autoRemoveDockerContainer
+        const result = await runInDocker('echo "test" && sleep 0.1', {
+          image: 'alpine:latest',
+          session: containerName,
+          detached: true,
+          keepAlive: false,
+          autoRemoveDockerContainer: false,
         });
-        assert.ok(
-          allContainers.includes(containerName),
-          'Container should appear in docker ps -a (filesystem preserved)'
-        );
-        console.log(
-          '  ✓ Docker container filesystem preserved by default (can be re-entered)'
-        );
-      } catch (err) {
-        assert.fail(`Failed to verify container preservation: ${err.message}`);
-      }
 
-      // Clean up
-      try {
-        execSync(`docker rm -f ${containerName}`, { stdio: 'ignore' });
-      } catch {
-        // Ignore cleanup errors
+        assert.strictEqual(result.success, true);
+        assert.ok(
+          result.message.includes('filesystem will be preserved'),
+          'Message should indicate filesystem preservation'
+        );
+
+        // Wait for container to exit
+        await waitFor(() => {
+          try {
+            const status = execSync(
+              `docker inspect -f '{{.State.Status}}' ${containerName}`,
+              {
+                encoding: 'utf8',
+                stdio: ['pipe', 'pipe', 'pipe'],
+              }
+            ).trim();
+            return status === 'exited';
+          } catch {
+            return false;
+          }
+        }, 10000);
+
+        // Container should still exist (in exited state)
+        try {
+          const allContainers = execSync('docker ps -a', {
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe'],
+          });
+          assert.ok(
+            allContainers.includes(containerName),
+            'Container should appear in docker ps -a (filesystem preserved)'
+          );
+          console.log(
+            '  ✓ Docker container filesystem preserved by default (can be re-entered)'
+          );
+        } catch (err) {
+          assert.fail(
+            `Failed to verify container preservation: ${err.message}`
+          );
+        }
+
+        // Clean up
+        try {
+          execSync(`docker rm -f ${containerName}`, { stdio: 'ignore' });
+        } catch {
+          // Ignore cleanup errors
+        }
       }
-    });
+    );
   });
 });

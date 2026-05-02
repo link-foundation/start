@@ -9,6 +9,7 @@
  */
 
 import { readdirSync, readFileSync } from 'fs';
+import { execFileSync } from 'child_process';
 import { join } from 'path';
 
 // Parse command line arguments
@@ -25,12 +26,75 @@ for (let i = 0; i < args.length; i++) {
 // TODO: Update this to match your package name in package.json
 const PACKAGE_NAME = 'start-command';
 
+const isChangesetFile = (file) => file.endsWith('.md') && file !== 'README.md';
+
+const toGitPath = (filePath) => filePath.replace(/\\/g, '/');
+
+const getChangedChangesetFiles = (changesetDir) => {
+  const baseSha = process.env.GITHUB_BASE_SHA;
+  const headSha = process.env.GITHUB_HEAD_SHA;
+
+  if (!baseSha || !headSha) {
+    return null;
+  }
+
+  const normalizedChangesetDir = toGitPath(changesetDir).replace(/\/$/, '');
+
+  try {
+    const output = execFileSync(
+      'git',
+      [
+        'diff',
+        '--name-only',
+        '--diff-filter=AMR',
+        `${baseSha}...${headSha}`,
+        '--',
+        normalizedChangesetDir,
+      ],
+      { encoding: 'utf8' }
+    );
+
+    console.log(
+      `Using PR diff ${baseSha.slice(0, 7)}...${headSha.slice(0, 7)} for changeset validation`
+    );
+
+    return [
+      ...new Set(
+        output
+          .split(/\r?\n/)
+          .map((filePath) => {
+            const normalizedPath = toGitPath(filePath.trim());
+            const prefix = `${normalizedChangesetDir}/`;
+
+            if (!normalizedPath.startsWith(prefix)) {
+              return null;
+            }
+
+            const file = normalizedPath.slice(prefix.length);
+
+            if (file.includes('/') || !isChangesetFile(file)) {
+              return null;
+            }
+
+            return file;
+          })
+          .filter(Boolean)
+      ),
+    ];
+  } catch (error) {
+    console.warn(
+      `Could not determine PR changesets from git diff (${error.message}); falling back to scanning ${changesetDir}`
+    );
+    return null;
+  }
+};
+
 try {
   // Count changeset files (excluding README.md and config.json)
   const changesetDir = join(workingDir, '.changeset');
-  const changesetFiles = readdirSync(changesetDir).filter(
-    (file) => file.endsWith('.md') && file !== 'README.md'
-  );
+  const changedChangesetFiles = getChangedChangesetFiles(changesetDir);
+  const changesetFiles =
+    changedChangesetFiles ?? readdirSync(changesetDir).filter(isChangesetFile);
 
   const changesetCount = changesetFiles.length;
   console.log(`Found ${changesetCount} changeset file(s)`);
