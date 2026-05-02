@@ -5,6 +5,8 @@ pub fn print_usage() {
        start <command> [args...]
        start --status <uuid> [--output-format <format>]
        start --list [--output-format <format>]
+       start --stop <uuid-or-session-name>
+       start --terminate <uuid-or-session-name>
 
 Options:
   --isolated, -i <env>  Run in isolated environment (screen, tmux, docker, ssh)
@@ -23,6 +25,8 @@ Options:
   --use-command-stream  Use command-stream library for execution (experimental)
   --status <id>         Show status of execution by UUID or session name (--output-format: links-notation|json|text)
   --list                List all tracked executions (--output-format: links-notation|json|text)
+  --stop <id>           Send CTRL+C/SIGINT to a detached isolated execution
+  --terminate <id>      Terminate a detached isolated execution immediately
   --cleanup             Clean up stale "executing" records (crashed/killed processes)
   --cleanup-dry-run     Show stale records that would be cleaned up (without cleaning)
   --version, -v         Show version information
@@ -42,6 +46,8 @@ Examples:
   start --status a1b2c3d4 --output-format json
   start --list
   start --list --output-format json
+  start --stop my-screen-session
+  start --terminate my-screen-session
   start --cleanup-dry-run
   start --cleanup
 

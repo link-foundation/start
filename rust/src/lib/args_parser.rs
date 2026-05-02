@@ -16,7 +16,10 @@
 //! --keep-alive, -k                 Keep isolation environment alive after command exits
 //! --auto-remove-docker-container   Automatically remove docker container after exit
 //! --shell <shell>                  Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
+//! --status <uuid-or-session-name>  Show status of a tracked execution
 //! --list                           List all tracked command executions
+//! --stop <uuid-or-session-name>    Send CTRL+C/SIGINT to a detached execution
+//! --terminate <uuid-or-session-name> Terminate a detached execution immediately
 
 use std::env;
 
@@ -83,6 +86,10 @@ pub struct WrapperOptions {
     pub list: bool,
     /// Output format for status/list (links-notation, json, text)
     pub output_format: Option<String>,
+    /// UUID/session name to stop gracefully
+    pub stop: Option<String>,
+    /// UUID/session name to terminate immediately
+    pub terminate: Option<String>,
     /// Clean up stale "executing" records
     pub cleanup: bool,
     /// Show what would be cleaned without actually cleaning
@@ -109,6 +116,8 @@ impl Default for WrapperOptions {
             status: None,
             list: false,
             output_format: None,
+            stop: None,
+            terminate: None,
             cleanup: false,
             cleanup_dry_run: false,
         }
@@ -377,8 +386,55 @@ fn parse_option(
     }
 
     // --status=<value>
-    if arg.starts_with("--status=") {
-        options.status = Some(arg.split('=').nth(1).unwrap_or("").to_string());
+    if let Some(value) = arg.strip_prefix("--status=") {
+        if value.is_empty() {
+            return Err("Option --status requires a UUID or session name argument".to_string());
+        }
+        options.status = Some(value.to_string());
+        return Ok(1);
+    }
+
+    // --stop <uuid-or-session-name>
+    if arg == "--stop" {
+        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
+            options.stop = Some(args[index + 1].clone());
+            return Ok(2);
+        } else {
+            return Err(format!(
+                "Option {} requires a UUID or session name argument",
+                arg
+            ));
+        }
+    }
+
+    // --stop=<value>
+    if let Some(value) = arg.strip_prefix("--stop=") {
+        if value.is_empty() {
+            return Err("Option --stop requires a UUID or session name argument".to_string());
+        }
+        options.stop = Some(value.to_string());
+        return Ok(1);
+    }
+
+    // --terminate <uuid-or-session-name>
+    if arg == "--terminate" {
+        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
+            options.terminate = Some(args[index + 1].clone());
+            return Ok(2);
+        } else {
+            return Err(format!(
+                "Option {} requires a UUID or session name argument",
+                arg
+            ));
+        }
+    }
+
+    // --terminate=<value>
+    if let Some(value) = arg.strip_prefix("--terminate=") {
+        if value.is_empty() {
+            return Err("Option --terminate requires a UUID or session name argument".to_string());
+        }
+        options.terminate = Some(value.to_string());
         return Ok(1);
     }
 
@@ -526,12 +582,26 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
         }
     }
 
-    // Single-record and list query modes are mutually exclusive
-    if options.status.is_some() && options.list {
-        return Err("Cannot use both --status and --list at the same time".to_string());
+    // Query/control modes are mutually exclusive
+    let query_modes = [
+        options.status.is_some(),
+        options.list,
+        options.stop.is_some(),
+        options.terminate.is_some(),
+        options.cleanup,
+    ]
+    .into_iter()
+    .filter(|enabled| *enabled)
+    .count();
+
+    if query_modes > 1 {
+        return Err(
+            "Cannot combine --status, --list, --stop, --terminate, or --cleanup in the same invocation"
+                .to_string(),
+        );
     }
 
-    // Output format is only valid with query modes
+    // Output format is only valid with read-only query modes
     if options.output_format.is_some() && options.status.is_none() && !options.list {
         return Err("--output-format option is only valid with --status or --list".to_string());
     }

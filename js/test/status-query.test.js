@@ -123,6 +123,7 @@ describe('--status query functionality', () => {
       expect(parsed.status).toBe('executed');
       expect(parsed.exitCode).toBe(0);
       expect(parsed.pid).toBe(12345);
+      expect(parsed.processIds).toEqual({ wrapperPid: 12345 });
     });
   });
 
@@ -215,6 +216,7 @@ describe('--status query functionality', () => {
         (record) => record.uuid === executingRecord.uuid
       );
       expect(executing.status).toBe('executing');
+      expect(executing.processIds).toEqual({ wrapperPid: 99999 });
       expect(executing.currentTime).toBeDefined();
     });
 

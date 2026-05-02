@@ -22,6 +22,8 @@
  * --status <uuid>                  Show status of a previous command execution by UUID
  * --list                           List all tracked command executions
  * --output-format <format>         Output format for status/list (links-notation, json, text)
+ * --stop <uuid-or-session-name>     Send CTRL+C/SIGINT to a detached execution
+ * --terminate <uuid-or-session-name> Terminate a detached execution immediately
  * --cleanup                        Clean up stale "executing" records (processes that crashed or were killed)
  * --cleanup-dry-run                Show stale records that would be cleaned up (without actually cleaning)
  */
@@ -52,6 +54,10 @@ const MAX_ISOLATION_DEPTH = 7;
  * Valid output formats for --status
  */
 const VALID_OUTPUT_FORMATS = ['links-notation', 'json', 'text'];
+
+function hasValue(value) {
+  return value !== null && value !== undefined;
+}
 
 /**
  * UUID v4 regex pattern for validation
@@ -172,6 +178,8 @@ function parseArgs(args) {
     status: null, // UUID to show status for
     list: false, // List all tracked execution records
     outputFormat: null, // Output format for status/list (links-notation, json, text)
+    stop: null, // UUID/session name to stop gracefully
+    terminate: null, // UUID/session name to terminate immediately
     cleanup: false, // Clean up stale "executing" records
     cleanupDryRun: false, // Show what would be cleaned without actually cleaning
   };
@@ -432,7 +440,55 @@ function parseOption(args, index, options) {
 
   // --status=<value>
   if (arg.startsWith('--status=')) {
-    options.status = arg.split('=')[1];
+    const value = arg.slice('--status='.length);
+    if (!value) {
+      throw new Error(
+        `Option --status requires a UUID or session name argument`
+      );
+    }
+    options.status = value;
+    return 1;
+  }
+
+  // --stop <uuid-or-session-name>
+  if (arg === '--stop') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.stop = args[index + 1];
+      return 2;
+    } else {
+      throw new Error(`Option ${arg} requires a UUID or session name argument`);
+    }
+  }
+
+  // --stop=<value>
+  if (arg.startsWith('--stop=')) {
+    const value = arg.slice('--stop='.length);
+    if (!value) {
+      throw new Error(`Option --stop requires a UUID or session name argument`);
+    }
+    options.stop = value;
+    return 1;
+  }
+
+  // --terminate <uuid-or-session-name>
+  if (arg === '--terminate') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.terminate = args[index + 1];
+      return 2;
+    } else {
+      throw new Error(`Option ${arg} requires a UUID or session name argument`);
+    }
+  }
+
+  // --terminate=<value>
+  if (arg.startsWith('--terminate=')) {
+    const value = arg.slice('--terminate='.length);
+    if (!value) {
+      throw new Error(
+        `Option --terminate requires a UUID or session name argument`
+      );
+    }
+    options.terminate = value;
     return 1;
   }
 
@@ -656,7 +712,7 @@ function validateOptions(options) {
   }
 
   // Validate output format
-  if (options.outputFormat !== null && options.outputFormat !== undefined) {
+  if (hasValue(options.outputFormat)) {
     if (!VALID_OUTPUT_FORMATS.includes(options.outputFormat)) {
       throw new Error(
         `Invalid output format: "${options.outputFormat}". Valid options are: ${VALID_OUTPUT_FORMATS.join(', ')}`
@@ -664,12 +720,22 @@ function validateOptions(options) {
     }
   }
 
-  // Single-record and list query modes are mutually exclusive
-  if (options.status && options.list) {
-    throw new Error('Cannot use both --status and --list at the same time');
+  // Query/control modes are mutually exclusive
+  const queryModes = [
+    hasValue(options.status),
+    options.list,
+    hasValue(options.stop),
+    hasValue(options.terminate),
+    options.cleanup,
+  ].filter(Boolean).length;
+
+  if (queryModes > 1) {
+    throw new Error(
+      'Cannot combine --status, --list, --stop, --terminate, or --cleanup in the same invocation'
+    );
   }
 
-  // Output format is only valid with query modes
+  // Output format is only valid with read-only query modes
   if (options.outputFormat && !options.status && !options.list) {
     throw new Error(
       '--output-format option is only valid with --status or --list'

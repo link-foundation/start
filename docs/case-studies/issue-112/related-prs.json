@@ -1,0 +1,37 @@
+[
+  {
+    "number": 69,
+    "title": "fix: Always display session/container name in isolation output",
+    "url": "https://github.com/link-foundation/start/pull/69",
+    "mergedAt": "2026-01-08T03:52:54Z",
+    "relevance": "Established that native session/container names are user-visible and should be available for follow-up commands."
+  },
+  {
+    "number": 102,
+    "title": "fix: support --session name lookups in --status and track detached session lifecycle (#101)",
+    "url": "https://github.com/link-foundation/start/pull/102",
+    "mergedAt": "2026-04-08T09:24:50Z",
+    "relevance": "Added UUID-or-session lookup and detached lifecycle enrichment reused by this issue."
+  },
+  {
+    "number": 104,
+    "title": "Fix real-time detached isolation logs",
+    "url": "https://github.com/link-foundation/start/pull/104",
+    "mergedAt": "2026-04-19T07:29:07Z",
+    "relevance": "Stabilized detached log/session handling and Docker/screen metadata paths."
+  },
+  {
+    "number": 106,
+    "title": "feat(js): add currentTime to --status output for executing commands",
+    "url": "https://github.com/link-foundation/start/pull/106",
+    "mergedAt": "2026-04-23T11:21:05Z",
+    "relevance": "JS precedent for status enrichment without mutating stored records."
+  },
+  {
+    "number": 107,
+    "title": "feat(rust): add currentTime to --status output for executing commands",
+    "url": "https://github.com/link-foundation/start/pull/107",
+    "mergedAt": "2026-04-23T13:59:08Z",
+    "relevance": "Rust parity precedent for status enrichment."
+  }
+]

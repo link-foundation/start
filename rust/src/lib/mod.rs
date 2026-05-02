@@ -3,6 +3,7 @@
 //! Provides command execution with isolation, substitution, and failure handling.
 
 pub mod args_parser;
+pub mod execution_control;
 pub mod execution_store;
 pub mod failure_handler;
 pub mod isolation;
@@ -19,6 +20,13 @@ pub use args_parser::{
     generate_session_name, generate_uuid, get_effective_mode, has_isolation, is_valid_uuid,
     parse_args, validate_options, ParsedArgs, WrapperOptions, VALID_BACKENDS, VALID_OUTPUT_FORMATS,
     VALID_SHELLS,
+};
+pub use execution_control::{
+    collect_descendant_pids, collect_descendant_pids_with_runner, collect_process_ids,
+    collect_process_ids_with_runner, control_execution, control_execution_with_runner,
+    format_control_result_as_links_notation, get_control_command, parse_screen_pid,
+    CommandRunOutput, CommandRunner, ControlAction, ControlCommand, ExecutionControlResult,
+    SystemCommandRunner,
 };
 pub use execution_store::{
     is_clink_installed, CleanupOptions, CleanupResult, ExecutionRecord, ExecutionRecordOptions,
