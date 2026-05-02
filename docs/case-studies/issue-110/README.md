@@ -66,8 +66,7 @@ Focused checks added for this issue:
 
 ```bash
 cd js
-bun test test/args-parser.test.js test/status-query.test.js
+bun run test test/args-parser.js test/status-query.js
 
-cargo test --manifest-path rust/Cargo.toml --test args_parser_test --test status_formatter_test
+cargo test --manifest-path rust/Cargo.toml --test args_parser --test status_formatter
 ```
-

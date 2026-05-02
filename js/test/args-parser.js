@@ -952,4 +952,4 @@ describe('cleanup options', () => {
   });
 });
 
-// Shell option tests moved to args-parser-shell.test.js
+// Shell option tests moved to args-parser-shell.js

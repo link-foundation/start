@@ -94,7 +94,7 @@ Alternative approach: Try to use the session UUID as the session name when possi
 ### JavaScript Implementation (completed)
 
 1. Modified `js/src/bin/cli.js` to always add `[Isolation] Session: ${sessionName}` to extraLines
-2. Added tests in `js/test/cli.test.js` to verify the session name is displayed for screen, tmux, and docker
+2. Added tests in `js/test/cli.js` to verify the session name is displayed for screen, tmux, and docker
 3. Created changeset `js/.changeset/issue-67-display-session-name.md`
 
 ### Rust Implementation (completed)
@@ -121,7 +121,7 @@ Alternative approach: Try to use the session UUID as the session name when possi
     - `js/src/lib/output-blocks.js` - Output formatting
     - `js/src/lib/isolation.js` - Isolation backend runners
     - `js/src/lib/args-parser.js` - Argument parsing
-    - `js/test/cli.test.js` - Tests for issue #67 fix
+    - `js/test/cli.js` - Tests for issue #67 fix
   - Rust:
     - `rust/src/bin/main.rs` - Main CLI logic
     - `rust/src/lib/output_blocks.rs` - Output formatting (with tests)

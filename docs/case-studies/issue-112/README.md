@@ -50,7 +50,7 @@ Focused checks for this issue:
 
 ```bash
 cd js
-bun test test/args-parser.test.js test/status-query.test.js test/execution-control.test.js
+bun run test test/args-parser.js test/status-query.js test/execution-control.js
 
-cargo test --manifest-path rust/Cargo.toml --test args_parser_test --test status_formatter_test --test execution_control_test
+cargo test --manifest-path rust/Cargo.toml --test args_parser --test status_formatter --test execution_control
 ```

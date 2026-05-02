@@ -684,5 +684,5 @@ pub fn get_effective_mode(options: &WrapperOptions) -> &'static str {
 }
 
 #[cfg(test)]
-#[path = "args_parser_tests.rs"]
+#[path = "args_parser_cases.rs"]
 mod tests;

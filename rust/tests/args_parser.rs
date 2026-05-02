@@ -1,6 +1,6 @@
 //! Comprehensive unit tests for the argument parser.
 //!
-//! Mirrors js/test/args-parser.test.js - covers gaps not already in args_parser_tests.rs (inline).
+//! Mirrors js/test/args-parser.js - covers gaps not already in args_parser_cases.rs (inline).
 
 use start_command::{parse_args, validate_options, WrapperOptions, VALID_BACKENDS};
 
@@ -448,7 +448,7 @@ mod keep_user_tests {
     }
 }
 
-mod user_isolation_tests {
+mod user_isolation_cases {
     use super::*;
 
     #[test]
@@ -677,7 +677,7 @@ mod valid_output_formats_tests {
     }
 }
 
-mod cleanup_tests {
+mod cleanup_cases {
     use super::*;
 
     #[test]

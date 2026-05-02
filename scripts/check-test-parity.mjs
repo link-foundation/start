@@ -2,7 +2,7 @@
 /**
  * Checks that the Rust test count is within 10% of the JavaScript test count.
  *
- * JavaScript tests: count `it(` calls in js/test/*.test.js
+ * JavaScript tests: count `it(` calls in js/test/*.js and js/test/*.mjs
  * Rust tests:       count `#[test]` and `fn test_` in rust/tests/**\/*.rs and rust/src/**\/*.rs
  *
  * CI/CD fails if Rust has at least 10% fewer test cases than JavaScript.

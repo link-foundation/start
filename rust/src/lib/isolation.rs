@@ -867,5 +867,5 @@ fn shell_escape(command: &str) -> String {
 mod atty;
 
 #[cfg(test)]
-#[path = "isolation_tests.rs"]
+#[path = "isolation_cases.rs"]
 mod tests;

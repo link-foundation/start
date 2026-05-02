@@ -525,7 +525,7 @@ describe('Isolation Runner with Available Backends', () => {
   } = require('../src/lib/isolation');
   const { execSync } = require('child_process');
 
-  // Screen integration tests moved to screen-integration.test.js
+  // Screen integration tests moved to screen-integration.js
   // to keep file under the 1000-line limit.
 
   describe('runInTmux (if available)', () => {

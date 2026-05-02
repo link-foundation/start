@@ -125,8 +125,8 @@ Added `ExecutionRecord` creation, saving, and completion to `run_with_isolation(
 
 ## Testing
 
-- **JS:** 15 new tests in `test/session-name-status.test.js`
-- **Rust:** 12 new tests in `tests/session_name_status_test.rs`
+- **JS:** 15 new tests in `test/session-name-status.js`
+- **Rust:** 12 new tests in `tests/session_name_status.rs`
 - All existing tests pass (7 JS status-query tests, full Rust test suite)
 
 ## Workarounds (from hive-mind)

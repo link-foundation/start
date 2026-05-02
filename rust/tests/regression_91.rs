@@ -118,7 +118,7 @@ mod build_shell_with_args_cmd_args_tests {
     }
 }
 
-mod docker_attached_cmd_args_regression_91_tests {
+mod docker_attached_cmd_args_regression_91_cases {
     use super::*;
 
     /// Helper: mirrors the attached-mode command-args construction in run_in_docker.

@@ -171,7 +171,7 @@ return runScreenWithLogCapture(command, sessionName, shellInfo);
 
 ### New Regression Tests Added
 
-Two new tests were added to `test/isolation.test.js`:
+Two new tests were added to `test/isolation.js`:
 
 1. **Test: should capture output from commands with quoted strings (issue #25)**
    - Tests: `echo "hello"`
@@ -186,7 +186,7 @@ Two new tests were added to `test/isolation.test.js`:
 All 25 isolation tests pass:
 
 ```
-bun test test/isolation.test.js
+bun run test test/isolation.js
 
   Captured quoted output: "hello"
   Captured complex quote output: "hello from attached mode"
@@ -220,7 +220,7 @@ Both issues together ensure screen isolation works on:
 ## Files Modified
 
 1. `src/lib/isolation.js` - Core fix: use `spawnSync` instead of `execSync`
-2. `test/isolation.test.js` - Added 2 regression tests for issue #25
+2. `test/isolation.js` - Added 2 regression tests for issue #25
 3. `experiments/test-screen-tee-fallback.js` - Experiment script (new)
 4. `experiments/test-screen-tee-debug.js` - Debug experiment script (new)
 

@@ -307,7 +307,7 @@ if ((args.length === 1 && hasVersionFlag) || isOnlyVersionWithSeparator) {
 ## Additional Notes
 
 - The project uses `#!/usr/bin/env bun` shebang correctly
-- Package scripts still use `node --test` which should be changed to `bun test`
+- Package scripts still use `node --test` which should be changed to `bun run test`
 - All references to npm in documentation should be updated to bun
 - Consider removing npm-specific features if they don't work with bun
 
@@ -317,8 +317,8 @@ if ((args.length === 1 && hasVersionFlag) || isOnlyVersionWithSeparator) {
 2. `src/lib/args-parser.js` - No changes needed (issue is in cli.js)
 3. `REQUIREMENTS.md` - Update to Bun-first approach
 4. `package.json` - Update test script to use bun
-5. `test/cli.test.js` - Add version detection tests
-6. New: `test/version.test.js` - Comprehensive version tests
+5. `test/cli.js` - Add version detection tests
+6. New: `test/version.js` - Comprehensive version tests
 
 ## Success Criteria
 
@@ -476,7 +476,7 @@ function getToolVersion(toolName, versionFlag, verbose = false) {
    - Shows `[verbose]` messages when debugging
    - Logs tool detection details
 
-#### test/version.test.js
+#### test/version.js
 
 Added 3 new tests for verbose mode:
 
@@ -488,11 +488,11 @@ Added 3 new tests for verbose mode:
 
 All 84 tests passing across 4 test files:
 
-- `test/version.test.js`: 14 tests
-- `test/cli.test.js`: Passing
-- `test/args-parser.test.js`: Passing
-- `test/isolation.test.js`: Passing
-- `test/substitution.test.js`: 22 tests
+- `test/version.js`: 14 tests
+- `test/cli.js`: Passing
+- `test/args-parser.js`: Passing
+- `test/isolation.js`: Passing
+- `test/substitution.js`: 22 tests
 
 ### Verified Behavior
 

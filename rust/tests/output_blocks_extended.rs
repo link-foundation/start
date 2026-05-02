@@ -1,6 +1,6 @@
 //! Extended tests for output_blocks module.
 //!
-//! Covers additional tests from js/test/output-blocks.test.js not already in output_blocks_test.rs.
+//! Covers additional tests from js/test/output-blocks.js not already in output_blocks.rs.
 
 use start_command::{
     create_command_line, create_empty_timeline_line, create_timeline_line,

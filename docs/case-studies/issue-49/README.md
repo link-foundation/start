@@ -66,10 +66,10 @@ docker: no matching manifest for windows/amd64 10.0.26100 in the manifest list e
 ```
 
 Tests failing at:
-- `js/test/isolation.test.js:475` - `false !== true`
-- `js/test/isolation.test.js:503` - `false !== true`
-- `js/test/isolation-cleanup.test.js:270` - `false !== true`
-- `js/test/isolation-cleanup.test.js:343` - `false !== true`
+- `js/test/isolation.js:475` - `false !== true`
+- `js/test/isolation.js:503` - `false !== true`
+- `js/test/isolation-cleanup.js:270` - `false !== true`
+- `js/test/isolation-cleanup.js:343` - `false !== true`
 
 **Analysis:**
 The tests attempt to run `alpine:latest` Docker images on Windows. Alpine is a Linux-only image that doesn't support Windows containers. When Docker is running in Windows containers mode (default on Windows GitHub runners), it cannot pull or run Linux images.
@@ -104,7 +104,7 @@ AssertionError: Exit code should be 0
 null !== 0
 ```
 
-Test failing at `js/test/cli.test.js:32` with "killed 1 dangling process" message before failure.
+Test failing at `js/test/cli.js:32` with "killed 1 dangling process" message before failure.
 
 **Analysis:**
 The CLI test on Windows takes over 5 seconds (the test timeout limit) for the first invocation:
@@ -234,9 +234,9 @@ Added `canRunLinuxDockerImages()` function to `js/src/lib/isolation.js` to prope
 
 **Files Modified:**
 - `js/src/lib/isolation.js` - Added new exported function `canRunLinuxDockerImages()`
-- `js/test/isolation.test.js` - Replaced `isDockerRunning()` with `canRunLinuxDockerImages()`
-- `js/test/isolation-cleanup.test.js` - Replaced `isDockerRunning()` with `canRunLinuxDockerImages()`
-- `js/test/docker-autoremove.test.js` - Replaced `isDockerRunning()` with `canRunLinuxDockerImages()`
+- `js/test/isolation.js` - Replaced `isDockerRunning()` with `canRunLinuxDockerImages()`
+- `js/test/isolation-cleanup.js` - Replaced `isDockerRunning()` with `canRunLinuxDockerImages()`
+- `js/test/docker-autoremove.js` - Replaced `isDockerRunning()` with `canRunLinuxDockerImages()`
 
 **New Function:**
 ```javascript
@@ -277,7 +277,7 @@ function canRunLinuxDockerImages() {
 
 Increased timeout for CLI operations on Windows and added better error handling for process termination.
 
-**File Modified:** `js/test/cli.test.js`
+**File Modified:** `js/test/cli.js`
 
 **Changes:**
 ```javascript
@@ -309,10 +309,10 @@ assert.notStrictEqual(
 | `scripts/create-manual-changeset.mjs` | Working directory not used | ✅ Added `--working-dir` option |
 | `scripts/instant-version-bump.mjs` | Working directory not used | ✅ Added `--working-dir` option |
 | `js/src/lib/isolation.js` | Missing Linux container check | ✅ Added `canRunLinuxDockerImages()` |
-| `js/test/isolation.test.js` | Docker Linux check missing | ✅ Using `canRunLinuxDockerImages()` |
-| `js/test/isolation-cleanup.test.js` | Docker Linux check missing | ✅ Using `canRunLinuxDockerImages()` |
-| `js/test/docker-autoremove.test.js` | Docker Linux check missing | ✅ Using `canRunLinuxDockerImages()` |
-| `js/test/cli.test.js` | Timeout too short | ✅ Increased timeout for Windows |
+| `js/test/isolation.js` | Docker Linux check missing | ✅ Using `canRunLinuxDockerImages()` |
+| `js/test/isolation-cleanup.js` | Docker Linux check missing | ✅ Using `canRunLinuxDockerImages()` |
+| `js/test/docker-autoremove.js` | Docker Linux check missing | ✅ Using `canRunLinuxDockerImages()` |
+| `js/test/cli.js` | Timeout too short | ✅ Increased timeout for Windows |
 
 ## References
 

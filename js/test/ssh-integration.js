@@ -9,7 +9,7 @@
  * To run locally:
  * 1. Ensure SSH server is running
  * 2. Set up passwordless SSH to localhost (ssh-keygen, ssh-copy-id localhost)
- * 3. Run: bun test test/ssh-integration.test.js
+ * 3. Run: bun run test test/ssh-integration.js
  */
 
 const { describe, it, before } = require('node:test');
