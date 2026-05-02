@@ -440,7 +440,10 @@ jobs:
           node scripts/create-github-release.mjs \
             --release-version "${{ steps.current_version.outputs.version }}" \
             --repository "${{ github.repository }}" \
-            --prefix "rust-"
+            --prefix "rust-" \
+            --changelog-file "rust/CHANGELOG.md" \
+            --badge-type "crates" \
+            --package-name "start-command"
 
   # === MANUAL RELEASE ===
   # Same always()/!cancelled() guard as `auto-release` — without it the
@@ -474,16 +477,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Collect changelog fragments
-        run: |
-          FRAGMENTS=$(find rust/changelog.d -name "*.md" ! -name "README.md" 2>/dev/null | wc -l)
-          if [ "$FRAGMENTS" -gt 0 ]; then
-            echo "Found $FRAGMENTS changelog fragment(s), collecting..."
-            node scripts/collect-changelog.mjs
-          else
-            echo "No changelog fragments found, skipping collection"
-          fi
-
       - name: Version and commit
         id: version
         run: |
@@ -506,4 +499,7 @@ jobs:
           node scripts/create-github-release.mjs \
             --release-version "${{ steps.version.outputs.new_version }}" \
             --repository "${{ github.repository }}" \
-            --prefix "rust-"
+            --prefix "rust-" \
+            --changelog-file "rust/CHANGELOG.md" \
+            --badge-type "crates" \
+            --package-name "start-command"

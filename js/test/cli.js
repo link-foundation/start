@@ -15,6 +15,7 @@ const CLI_PATH = path.join(__dirname, '../src/bin/cli.js');
 
 // Timeout for CLI operations - longer on Windows due to cold-start latency
 const CLI_TIMEOUT = process.platform === 'win32' ? 30000 : 10000;
+const CLI_TEST_TIMEOUT = CLI_TIMEOUT + 5000;
 
 // Helper to run CLI with timeout
 function runCLI(args = [], options = {}) {
@@ -30,57 +31,61 @@ function runCLI(args = [], options = {}) {
 }
 
 describe('CLI version flag', () => {
-  it('should display version with --version', () => {
-    const result = runCLI(['--version']);
+  it(
+    'should display version with --version',
+    { timeout: CLI_TEST_TIMEOUT },
+    () => {
+      const result = runCLI(['--version']);
 
-    // Check if process was killed (e.g., due to timeout)
-    assert.notStrictEqual(
-      result.status,
-      null,
-      `Process should complete (was killed with signal: ${result.signal})`
-    );
-    assert.strictEqual(result.status, 0, 'Exit code should be 0');
+      // Check if process was killed (e.g., due to timeout)
+      assert.notStrictEqual(
+        result.status,
+        null,
+        `Process should complete (was killed with signal: ${result.signal})`
+      );
+      assert.strictEqual(result.status, 0, 'Exit code should be 0');
 
-    // Check for key elements in version output
-    assert.ok(
-      result.stdout.includes('start-command version:'),
-      'Should display start-command version'
-    );
-    assert.ok(result.stdout.includes('OS:'), 'Should display OS');
-    assert.ok(
-      result.stdout.includes('OS Version:'),
-      'Should display OS Version'
-    );
-    // Check for either Bun or Node.js version depending on runtime
-    const hasBunVersion = result.stdout.includes('Bun Version:');
-    const hasNodeVersion = result.stdout.includes('Node.js Version:');
-    assert.ok(
-      hasBunVersion || hasNodeVersion,
-      'Should display Bun Version or Node.js Version'
-    );
-    assert.ok(
-      result.stdout.includes('Architecture:'),
-      'Should display Architecture'
-    );
-    assert.ok(
-      result.stdout.includes('Isolation tools:'),
-      'Should display Isolation tools section'
-    );
-    assert.ok(
-      result.stdout.includes('screen:'),
-      'Should check for screen installation'
-    );
-    assert.ok(
-      result.stdout.includes('tmux:'),
-      'Should check for tmux installation'
-    );
-    assert.ok(
-      result.stdout.includes('docker:'),
-      'Should check for docker installation'
-    );
-  });
+      // Check for key elements in version output
+      assert.ok(
+        result.stdout.includes('start-command version:'),
+        'Should display start-command version'
+      );
+      assert.ok(result.stdout.includes('OS:'), 'Should display OS');
+      assert.ok(
+        result.stdout.includes('OS Version:'),
+        'Should display OS Version'
+      );
+      // Check for either Bun or Node.js version depending on runtime
+      const hasBunVersion = result.stdout.includes('Bun Version:');
+      const hasNodeVersion = result.stdout.includes('Node.js Version:');
+      assert.ok(
+        hasBunVersion || hasNodeVersion,
+        'Should display Bun Version or Node.js Version'
+      );
+      assert.ok(
+        result.stdout.includes('Architecture:'),
+        'Should display Architecture'
+      );
+      assert.ok(
+        result.stdout.includes('Isolation tools:'),
+        'Should display Isolation tools section'
+      );
+      assert.ok(
+        result.stdout.includes('screen:'),
+        'Should check for screen installation'
+      );
+      assert.ok(
+        result.stdout.includes('tmux:'),
+        'Should check for tmux installation'
+      );
+      assert.ok(
+        result.stdout.includes('docker:'),
+        'Should check for docker installation'
+      );
+    }
+  );
 
-  it('should display version with -v', () => {
+  it('should display version with -v', { timeout: CLI_TEST_TIMEOUT }, () => {
     const result = runCLI(['-v']);
 
     assert.strictEqual(result.status, 0, 'Exit code should be 0');
@@ -90,17 +95,21 @@ describe('CLI version flag', () => {
     );
   });
 
-  it('should show correct package version', () => {
-    const result = runCLI(['--version']);
-    const packageJson = JSON.parse(
-      fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8')
-    );
+  it(
+    'should show correct package version',
+    { timeout: CLI_TEST_TIMEOUT },
+    () => {
+      const result = runCLI(['--version']);
+      const packageJson = JSON.parse(
+        fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8')
+      );
 
-    assert.ok(
-      result.stdout.includes(`start-command version: ${packageJson.version}`),
-      `Should display version ${packageJson.version}`
-    );
-  });
+      assert.ok(
+        result.stdout.includes(`start-command version: ${packageJson.version}`),
+        `Should display version ${packageJson.version}`
+      );
+    }
+  );
 });
 
 describe('CLI basic behavior', () => {
