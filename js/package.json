@@ -11,7 +11,7 @@
     "$": "./src/bin/cli.js"
   },
   "scripts": {
-    "test": "bun test test/",
+    "test": "bun ../scripts/run-js-tests.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

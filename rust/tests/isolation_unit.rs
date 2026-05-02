@@ -1,7 +1,7 @@
 //! Unit tests for the isolation module (non-integration tests).
 //!
-//! Mirrors the unit test portions of js/test/isolation.test.js.
-//! Integration tests (requiring actual screen/tmux/docker/ssh) are in isolation_test.rs.
+//! Mirrors the unit test portions of js/test/isolation.js.
+//! Integration tests (requiring actual screen/tmux/docker/ssh) are in isolation.rs.
 
 use start_command::isolation::wrap_command_with_user;
 use start_command::{

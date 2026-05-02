@@ -101,8 +101,8 @@ export default [
     // Test files and experiments have different requirements
     files: [
       'test/**/*.js',
+      'test/**/*.mjs',
       'tests/**/*.js',
-      '**/*.test.js',
       'experiments/**/*.js',
     ],
     languageOptions: {

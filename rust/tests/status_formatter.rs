@@ -114,6 +114,8 @@ fn test_query_status_success() {
 
     let output = result.output.unwrap();
     assert!(output.contains("test-uuid-1234"));
+    let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+    assert_eq!(parsed["processIds"]["wrapperPid"], 12345);
 }
 
 #[test]
@@ -144,6 +146,7 @@ fn test_format_record_list_as_links_notation() {
     let executing = ExecutionRecord::with_options(ExecutionRecordOptions {
         command: "sleep 60".to_string(),
         uuid: Some("test-executing-uuid".to_string()),
+        pid: Some(54321),
         status: Some(ExecutionStatus::Executing),
         start_time: Some("2026-04-24T10:00:00Z".to_string()),
         ..Default::default()
@@ -177,6 +180,7 @@ fn test_list_executions_json_includes_all_records() {
     let executing = ExecutionRecord::with_options(ExecutionRecordOptions {
         command: "sleep 60".to_string(),
         uuid: Some("test-executing-uuid".to_string()),
+        pid: Some(54321),
         status: Some(ExecutionStatus::Executing),
         start_time: Some("2026-04-24T10:00:00Z".to_string()),
         ..Default::default()
@@ -202,6 +206,7 @@ fn test_list_executions_json_includes_all_records() {
         .find(|record| record["uuid"] == "test-executing-uuid")
         .unwrap();
     assert_eq!(executing_json["status"], "executing");
+    assert_eq!(executing_json["processIds"]["wrapperPid"], 54321);
     assert!(executing_json.get("currentTime").is_some());
 }
 

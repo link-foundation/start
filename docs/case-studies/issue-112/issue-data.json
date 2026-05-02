@@ -1,0 +1,18 @@
+{
+  "number": 112,
+  "title": "We need to have --stop and --terminate options for commands started with `isolationMode detached`",
+  "state": "OPEN",
+  "url": "https://github.com/link-foundation/start/issues/112",
+  "createdAt": "2026-05-02T05:53:00Z",
+  "updatedAt": "2026-05-02T05:53:00Z",
+  "author": {
+    "login": "konard",
+    "name": "Konstantin Diachenko",
+    "is_bot": false
+  },
+  "labels": [
+    "documentation",
+    "enhancement"
+  ],
+  "body": "The issue requests `--stop <id>` to send CTRL+C to commands started with `isolationMode detached`, `--terminate <id>` to terminate such commands immediately, and `--status` output to provide process IDs for the command and isolation container/session such as screen, Docker, tmux, and similar backends. It also requests issue data collection under `docs/case-studies/issue-112`, online research, requirements extraction, possible solution plans, and a single pull request implementing the requirements."
+}

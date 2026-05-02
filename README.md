@@ -148,10 +148,24 @@ $ --list
 
 # Machine-readable list output
 $ --list --output-format json
+
+# Ask a detached isolated execution to stop gracefully
+$ --stop 29d6c026-b168-44a6-8a3f-c3919c7e5327
+
+# Terminate a detached isolated execution immediately
+$ --terminate 29d6c026-b168-44a6-8a3f-c3919c7e5327
 ```
 
 `--status` and `--list` default to Links Notation. Both also support
-`--output-format json` and `--output-format text`.
+`--output-format json` and `--output-format text`. Status and list output
+include best-effort `processIds` for tracked wrapper processes and detached
+screen, tmux, and Docker isolation containers when those native tools can
+report them.
+
+`--stop` and `--terminate` accept either the execution UUID or the isolation
+session/container name. `--stop` sends the graceful interrupt for the backend
+(CTRL+C for screen/tmux, `SIGINT` for Docker). `--terminate` uses the backend's
+immediate termination command.
 
 ### Exit Code Display
 

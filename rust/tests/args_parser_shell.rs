@@ -1,6 +1,6 @@
 //! Unit tests for shell option in the argument parser.
 //!
-//! Mirrors js/test/args-parser-shell.test.js
+//! Mirrors js/test/args-parser-shell.js
 
 use start_command::{parse_args, VALID_SHELLS};
 

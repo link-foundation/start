@@ -468,7 +468,7 @@ ok 8 - Isolation Runner Error Handling
         not ok 2 - should run command in attached mode and capture output (issue \#15)
           ---
           duration_ms: 155.821358
-          location: '/tmp/gh-issue-solver-1766411320790/test/isolation.test.js:216:5'
+          location: '/tmp/gh-issue-solver-1766411320790/test/isolation.js:216:5'
           failureType: 'testCodeFailure'
           error: 'Output should contain the expected message'
           code: 'ERR_ASSERTION'
@@ -477,7 +477,7 @@ ok 8 - Isolation Runner Error Handling
           actual: false
           operator: '=='
           stack: |-
-            TestContext.<anonymous> (/tmp/gh-issue-solver-1766411320790/test/isolation.test.js:234:16)
+            TestContext.<anonymous> (/tmp/gh-issue-solver-1766411320790/test/isolation.js:234:16)
             async Test.run (node:internal/test_runner/test:797:9)
             async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
           ...
@@ -495,7 +495,7 @@ ok 8 - Isolation Runner Error Handling
       ---
       duration_ms: 357.305492
       type: 'suite'
-      location: '/tmp/gh-issue-solver-1766411320790/test/isolation.test.js:189:3'
+      location: '/tmp/gh-issue-solver-1766411320790/test/isolation.js:189:3'
       failureType: 'subtestsFailed'
       error: '1 subtest failed'
       code: 'ERR_TEST_FAILURE'
@@ -536,7 +536,7 @@ not ok 9 - Isolation Runner with Available Backends
   ---
   duration_ms: 399.000423
   type: 'suite'
-  location: '/tmp/gh-issue-solver-1766411320790/test/isolation.test.js:178:1'
+  location: '/tmp/gh-issue-solver-1766411320790/test/isolation.js:178:1'
   failureType: 'subtestsFailed'
   error: '1 subtest failed'
   code: 'ERR_TEST_FAILURE'
@@ -613,8 +613,8 @@ not ok 9 - Isolation Runner with Available Backends
 # Pattern Matching: 15/15 tests passed
 # Total Tests: 22/22 passed
 # ✓ All tests passed!
-# Subtest: /tmp/gh-issue-solver-1766411320790/test/substitution.test.js
-ok 3 - /tmp/gh-issue-solver-1766411320790/test/substitution.test.js
+# Subtest: /tmp/gh-issue-solver-1766411320790/test/substitution.js
+ok 3 - /tmp/gh-issue-solver-1766411320790/test/substitution.js
   ---
   duration_ms: 36.184134
   ...

@@ -80,7 +80,7 @@ mod is_interactive_shell_command_tests {
     }
 }
 
-mod build_cmd_args_regression_84_tests {
+mod build_cmd_args_regression_84_cases {
     use super::*;
 
     /// Helper that mirrors the attached-mode command-args construction logic in run_in_docker.

@@ -32,7 +32,7 @@ and [docs/PIPES.md](../docs/PIPES.md) for the full user-facing guide.
 ```bash
 cd js
 bun install
-bun test
+bun run test
 bun run lint
 ```
 

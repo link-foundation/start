@@ -13,6 +13,7 @@ const {
   escapeForLinksNotation,
   formatAsNestedLinksNotation,
 } = require('./output-blocks');
+const { collectProcessIds } = require('./execution-control');
 
 /**
  * Check if a detached isolation session is still running
@@ -166,6 +167,47 @@ function attachCurrentTime(record) {
 }
 
 /**
+ * Wrap a record so its serialized form includes best-effort process IDs.
+ * The original record is not mutated.
+ * @param {Object} record - Execution record
+ * @returns {Object} Record-like object with processIds in toObject()
+ */
+function attachProcessIds(record) {
+  const processIds = collectProcessIds(record);
+  if (!processIds) {
+    return record;
+  }
+
+  const wrapped = Object.create(Object.getPrototypeOf(record));
+  Object.assign(wrapped, record);
+  wrapped.processIds = processIds;
+
+  const sourceToObject =
+    typeof record.toObject === 'function'
+      ? () => record.toObject()
+      : () => ({ ...record });
+
+  wrapped.toObject = function () {
+    const base = sourceToObject();
+    const ordered = {};
+    let inserted = false;
+    for (const [key, value] of Object.entries(base)) {
+      ordered[key] = value;
+      if (key === 'pid') {
+        ordered.processIds = processIds;
+        inserted = true;
+      }
+    }
+    if (!inserted) {
+      ordered.processIds = processIds;
+    }
+    return ordered;
+  };
+
+  return wrapped;
+}
+
+/**
  * Format execution record as Links Notation (indented style)
  * Uses nested Links notation for object values (like options) instead of JSON
  *
@@ -288,7 +330,7 @@ function indentBlock(block, spaces) {
 }
 
 function prepareRecordForList(record) {
-  return attachCurrentTime(enrichDetachedStatus(record));
+  return attachCurrentTime(attachProcessIds(enrichDetachedStatus(record)));
 }
 
 /**
@@ -374,8 +416,9 @@ function queryStatus(store, identifier, outputFormat) {
   try {
     // Enrich detached execution status with live session check
     const enrichedRecord = enrichDetachedStatus(record);
+    const withProcessIds = attachProcessIds(enrichedRecord);
     // Attach currentTime so callers can see how long an executing command has been running
-    const withCurrentTime = attachCurrentTime(enrichedRecord);
+    const withCurrentTime = attachCurrentTime(withProcessIds);
     return {
       success: true,
       output: formatRecord(withCurrentTime, outputFormat || 'links-notation'),
@@ -421,4 +464,5 @@ module.exports = {
   isDetachedSessionAlive,
   enrichDetachedStatus,
   attachCurrentTime,
+  attachProcessIds,
 };

@@ -32,6 +32,7 @@ const {
 const { handleFailure } = require('../lib/failure-handler');
 const { ExecutionStore, ExecutionRecord } = require('../lib/execution-store');
 const { queryStatus, listExecutions } = require('../lib/status-formatter');
+const { ControlAction, controlExecution } = require('../lib/execution-control');
 const { printVersion } = require('../lib/version');
 const { createStartBlock, createFinishBlock } = require('../lib/output-blocks');
 const { runWithBunSpawn, runWithNodeSpawn } = require('../lib/spawn-helpers');
@@ -200,6 +201,21 @@ if (wrapperOptions.list) {
   process.exit(0);
 }
 
+// Handle --stop flag
+if (wrapperOptions.stop !== null && wrapperOptions.stop !== undefined) {
+  handleControlQuery(wrapperOptions.stop, ControlAction.STOP);
+  process.exit(0);
+}
+
+// Handle --terminate flag
+if (
+  wrapperOptions.terminate !== null &&
+  wrapperOptions.terminate !== undefined
+) {
+  handleControlQuery(wrapperOptions.terminate, ControlAction.TERMINATE);
+  process.exit(0);
+}
+
 // Handle --cleanup flag
 if (wrapperOptions.cleanup) {
   handleCleanup(wrapperOptions.cleanupDryRun);
@@ -276,6 +292,16 @@ function handleStatusQuery(uuid, outputFormat) {
 
 function handleListQuery(outputFormat) {
   const result = listExecutions(getExecutionStore(), outputFormat);
+  if (result.success) {
+    console.log(result.output);
+  } else {
+    console.error(`Error: ${result.error}`);
+    process.exit(1);
+  }
+}
+
+function handleControlQuery(identifier, action) {
+  const result = controlExecution(getExecutionStore(), identifier, action);
   if (result.success) {
     console.log(result.output);
   } else {
@@ -445,6 +471,7 @@ async function runWithIsolation(
       uuid: sessionId, // Use the provided session ID
       command: cmd,
       logPath: logFilePath,
+      pid: process.pid,
       shell,
       workingDirectory: process.cwd(),
       options: {
@@ -556,6 +583,9 @@ async function runWithIsolation(
 
   // Update execution record: detached keeps "executing" (resolved at query time)
   if (executionRecord && store) {
+    if (result.containerId) {
+      executionRecord.options.containerId = result.containerId;
+    }
     if (mode !== 'detached') {
       executionRecord.complete(exitCode);
     }

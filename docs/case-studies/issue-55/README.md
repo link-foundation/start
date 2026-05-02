@@ -117,7 +117,7 @@ Create tests that verify `echo "hi"` works in:
 2. **Update `cli.js`**: Ensure consistent empty lines
 3. **Update `isolation.js`**: Align output handling
 4. **Mirror changes in Rust**: Update `output_blocks.rs` and `main.rs`
-5. **Add tests**: Create `echo-hi-integration.test.js`
+5. **Add tests**: Create `echo-hi-integration.js`
 6. **Update CI**: Ensure tests run on all isolation types available
 
 ## Files to Modify
@@ -126,7 +126,7 @@ Create tests that verify `echo "hi"` works in:
 - `js/src/lib/output-blocks.js` - Fix truncation, improve formatting
 - `js/src/bin/cli.js` - Ensure consistent output pattern
 - `js/src/lib/isolation.js` - Align output handling
-- `js/test/echo-integration.test.js` (new) - Integration tests
+- `js/test/echo-integration.js` (new) - Integration tests
 
 ### Rust
 - `rust/src/lib/output_blocks.rs` - Mirror JS changes

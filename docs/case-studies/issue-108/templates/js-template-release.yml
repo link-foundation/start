@@ -276,7 +276,7 @@ jobs:
 
       - name: Run tests (Bun)
         if: matrix.runtime == 'bun'
-        run: bun test
+        run: bun run test
 
       - name: Setup Deno
         if: matrix.runtime == 'deno'

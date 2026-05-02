@@ -1,6 +1,6 @@
 //! Additional tests for ExecutionStore and related types.
 //!
-//! Covers additional test cases from js/test/execution-store.test.js
+//! Covers additional test cases from js/test/execution-store.js
 //! that are not already covered in src/lib/execution_store.rs inline tests.
 
 use start_command::{
@@ -66,7 +66,7 @@ mod execution_record_tests {
     }
 }
 
-mod execution_store_tests {
+mod execution_store_cases {
     use super::*;
 
     #[test]

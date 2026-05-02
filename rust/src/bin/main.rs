@@ -18,6 +18,7 @@ use start_command::{
     },
     clear_current_execution, create_finish_block, create_log_footer, create_log_header,
     create_log_path_for_execution, create_start_block,
+    execution_control::{control_execution, ControlAction},
     execution_store::{
         CleanupOptions, ExecutionRecord, ExecutionRecordOptions, ExecutionStore,
         ExecutionStoreOptions,
@@ -144,6 +145,18 @@ fn main() {
     // Handle --list flag
     if wrapper_options.list {
         handle_list_query(&config, wrapper_options.output_format.as_deref());
+        process::exit(0);
+    }
+
+    // Handle --stop flag
+    if let Some(ref identifier) = wrapper_options.stop {
+        handle_control_query(&config, identifier, ControlAction::Stop);
+        process::exit(0);
+    }
+
+    // Handle --terminate flag
+    if let Some(ref identifier) = wrapper_options.terminate {
+        handle_control_query(&config, identifier, ControlAction::Terminate);
         process::exit(0);
     }
 
@@ -316,6 +329,23 @@ fn handle_status_query(config: &Config, uuid: &str, output_format: Option<&str>)
 fn handle_list_query(config: &Config, output_format: Option<&str>) {
     let store = config.create_execution_store();
     let result = list_executions(store.as_ref(), output_format);
+
+    if result.success {
+        if let Some(output) = result.output {
+            println!("{}", output);
+        }
+    } else {
+        if let Some(error) = result.error {
+            eprintln!("Error: {}", error);
+        }
+        process::exit(1);
+    }
+}
+
+/// Handle detached execution control query
+fn handle_control_query(config: &Config, identifier: &str, action: ControlAction) {
+    let store = config.create_execution_store();
+    let result = control_execution(store.as_ref(), identifier, action);
 
     if result.success {
         if let Some(output) = result.output {
@@ -616,6 +646,12 @@ fn run_with_isolation(
 
     // Update execution record: detached keeps "executing" (resolved at query time)
     if let Some(ref store) = execution_store {
+        if let Some(container_id) = result.container_id.clone() {
+            execution_record.options.insert(
+                "containerId".to_string(),
+                serde_json::Value::String(container_id),
+            );
+        }
         if mode != "detached" {
             execution_record.complete(exit_code);
         }

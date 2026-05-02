@@ -545,9 +545,13 @@ function runInDocker(command, options = {}) {
 
   try {
     if (options.detached) {
-      const dockerArgs = ['run', '-d', '--name', containerName];
+      const dockerArgs = ['run', '-d'];
+      if (options.keepAlive) {
+        dockerArgs.push('-i', '-t');
+      }
+      dockerArgs.push('--name', containerName);
       if (options.autoRemoveDockerContainer) {
-        dockerArgs.splice(2, 0, '--rm');
+        dockerArgs.push('--rm');
       }
 
       if (options.user) {
@@ -576,9 +580,23 @@ function runInDocker(command, options = {}) {
         );
       }
 
-      const containerId = execSync(`docker ${dockerArgs.join(' ')}`, {
+      const dockerResult = spawnSync('docker', dockerArgs, {
         encoding: 'utf8',
-      }).trim();
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      if (dockerResult.error) {
+        throw dockerResult.error;
+      }
+      if (dockerResult.status !== 0) {
+        const dockerError =
+          dockerResult.stderr.trim() ||
+          dockerResult.stdout.trim() ||
+          `docker exited with code ${dockerResult.status}`;
+        throw new Error(dockerError);
+      }
+
+      const containerId = dockerResult.stdout.trim();
 
       if (options.logPath) {
         const loggerScript = [

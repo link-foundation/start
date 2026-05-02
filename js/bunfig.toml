@@ -1,3 +1,3 @@
 # Bun configuration
-# Note: Bun doesn't support excluding test files directly in config
-# Use CLI flags or file naming patterns instead
+# Tests use repository naming without conventional suffixes, so package scripts pass
+# the test files explicitly instead of relying on Bun's default discovery.

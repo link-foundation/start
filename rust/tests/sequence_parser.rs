@@ -1,7 +1,7 @@
 //! Tests for sequence_parser module.
 //!
 //! Tests for isolation stacking feature (issue #77).
-//! Mirrors js/test/sequence-parser.test.js
+//! Mirrors js/test/sequence-parser.js
 
 use start_command::sequence_parser::{
     distribute_option, format_isolation_chain, format_sequence, get_value_at_level, is_sequence,

@@ -1,6 +1,6 @@
 //! Comprehensive unit tests for the argument parser.
 //!
-//! Mirrors js/test/args-parser.test.js - covers gaps not already in args_parser_tests.rs (inline).
+//! Mirrors js/test/args-parser.js - covers gaps not already in args_parser_cases.rs (inline).
 
 use start_command::{parse_args, validate_options, WrapperOptions, VALID_BACKENDS};
 
@@ -448,7 +448,7 @@ mod keep_user_tests {
     }
 }
 
-mod user_isolation_tests {
+mod user_isolation_cases {
     use super::*;
 
     #[test]
@@ -525,6 +525,71 @@ mod status_tests {
     fn should_default_status_to_none() {
         let result = parse_args(&args(&["ls"])).unwrap();
         assert!(result.wrapper_options.status.is_none());
+    }
+
+    #[test]
+    fn should_parse_stop_with_identifier() {
+        let result = parse_args(&args(&["--stop", "my-session"])).unwrap();
+        assert_eq!(result.wrapper_options.stop, Some("my-session".to_string()));
+        assert_eq!(result.command, "");
+    }
+
+    #[test]
+    fn should_parse_stop_equals_format() {
+        let result = parse_args(&args(&["--stop=my-session"])).unwrap();
+        assert_eq!(result.wrapper_options.stop, Some("my-session".to_string()));
+    }
+
+    #[test]
+    fn should_parse_terminate_with_identifier() {
+        let result = parse_args(&args(&["--terminate", "my-session"])).unwrap();
+        assert_eq!(
+            result.wrapper_options.terminate,
+            Some("my-session".to_string())
+        );
+        assert_eq!(result.command, "");
+    }
+
+    #[test]
+    fn should_parse_terminate_equals_format() {
+        let result = parse_args(&args(&["--terminate=my-session"])).unwrap();
+        assert_eq!(
+            result.wrapper_options.terminate,
+            Some("my-session".to_string())
+        );
+    }
+
+    #[test]
+    fn should_error_for_stop_without_identifier() {
+        let result = parse_args(&args(&["--stop"]));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn should_error_for_stop_with_empty_equals_identifier() {
+        let result = parse_args(&args(&["--stop="]));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn should_error_for_terminate_without_identifier() {
+        let result = parse_args(&args(&["--terminate"]));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn should_error_for_terminate_with_empty_equals_identifier() {
+        let result = parse_args(&args(&["--terminate="]));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn should_error_when_combining_query_and_control_modes() {
+        let result = parse_args(&args(&["--status", "uuid-here", "--stop", "my-session"]));
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("Cannot combine --status, --list, --stop, --terminate, or --cleanup"));
     }
 
     #[test]
@@ -612,7 +677,7 @@ mod valid_output_formats_tests {
     }
 }
 
-mod cleanup_tests {
+mod cleanup_cases {
     use super::*;
 
     #[test]

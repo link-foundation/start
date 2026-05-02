@@ -54,8 +54,8 @@
 
 ## Verification
 
-- JS focused regression: `bun test test/isolation-log-utils.test.js test/screen-integration.test.js`
-- JS full tests: `bun test test/`
+- JS focused regression: `bun run test test/isolation-log-utils.js test/screen-integration.js`
+- JS full tests: `bun run test`
 - JS checks: `bun run check`
 - Rust full tests: `cargo test`
 - Rust formatting: `cargo fmt --check`

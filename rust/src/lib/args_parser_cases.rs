@@ -273,6 +273,76 @@ fn test_status_equals_syntax() {
 }
 
 #[test]
+fn test_stop_option() {
+    let args: Vec<String> = vec!["--stop", "my-session"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let result = parse_args(&args).unwrap();
+    assert_eq!(result.wrapper_options.stop, Some("my-session".to_string()));
+    assert!(result.command.is_empty());
+}
+
+#[test]
+fn test_stop_equals_syntax() {
+    let args: Vec<String> = vec!["--stop=my-session"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let result = parse_args(&args).unwrap();
+    assert_eq!(result.wrapper_options.stop, Some("my-session".to_string()));
+}
+
+#[test]
+fn test_terminate_option() {
+    let args: Vec<String> = vec!["--terminate", "my-session"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let result = parse_args(&args).unwrap();
+    assert_eq!(
+        result.wrapper_options.terminate,
+        Some("my-session".to_string())
+    );
+    assert!(result.command.is_empty());
+}
+
+#[test]
+fn test_terminate_equals_syntax() {
+    let args: Vec<String> = vec!["--terminate=my-session"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let result = parse_args(&args).unwrap();
+    assert_eq!(
+        result.wrapper_options.terminate,
+        Some("my-session".to_string())
+    );
+}
+
+#[test]
+fn test_stop_requires_identifier() {
+    let args: Vec<String> = vec!["--stop"].into_iter().map(String::from).collect();
+    assert!(parse_args(&args).is_err());
+}
+
+#[test]
+fn test_terminate_requires_identifier() {
+    let args: Vec<String> = vec!["--terminate"].into_iter().map(String::from).collect();
+    assert!(parse_args(&args).is_err());
+}
+
+#[test]
+fn test_query_and_control_modes_are_mutually_exclusive() {
+    let args: Vec<String> = vec!["--status", "uuid", "--stop", "my-session"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let error = parse_args(&args).unwrap_err();
+    assert!(error.contains("Cannot combine --status, --list, --stop, --terminate, or --cleanup"));
+}
+
+#[test]
 fn test_output_format_equals_syntax() {
     let args: Vec<String> = vec!["--status=my-uuid", "--output-format=json"]
         .into_iter()

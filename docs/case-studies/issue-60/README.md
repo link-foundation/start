@@ -170,10 +170,10 @@ cleanupStale(options = {}) {
 3. `js/src/lib/execution-store.js`:
    - Added `cleanupStale()` method to detect and clean stale records
 
-4. `js/test/execution-store.test.js`:
+4. `js/test/execution-store.js`:
    - Added tests for `cleanupStale()` functionality
 
-5. `js/test/args-parser.test.js`:
+5. `js/test/args-parser.js`:
    - Added tests for `--cleanup` and `--cleanup-dry-run` options
 
 ## Testing

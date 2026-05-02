@@ -2,7 +2,7 @@
 /**
  * Integration tests for screen isolation
  * Tests actual screen session behavior including output capture, exit codes, and edge cases.
- * Extracted from isolation.test.js to keep file sizes under the 1000-line limit.
+ * Extracted from isolation.js to keep file sizes under the 1000-line limit.
  */
 
 const { describe, it } = require('node:test');

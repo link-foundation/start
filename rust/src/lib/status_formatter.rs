@@ -5,6 +5,7 @@
 //! - JSON: Standard JSON output
 //! - Text: Human-readable text format
 
+use crate::execution_control::collect_process_ids;
 use crate::execution_store::{ExecutionRecord, ExecutionStatus, ExecutionStore};
 use crate::output_blocks::{escape_for_links_notation, format_value_for_links_notation};
 use serde_json::Value;
@@ -137,6 +138,37 @@ pub fn format_record_as_links_notation_with_current_time(
     record: &ExecutionRecord,
     current_time: Option<&str>,
 ) -> String {
+    format_record_as_links_notation_with_enrichments(record, current_time, None)
+}
+
+fn append_links_value(lines: &mut Vec<String>, key: &str, value: &Value, indent: usize) {
+    let prefix = " ".repeat(indent);
+    match value {
+        Value::Object(map) => {
+            if map.is_empty() {
+                return;
+            }
+            lines.push(format!("{}{}", prefix, key));
+            for (child_key, child_value) in map {
+                if !child_value.is_null() {
+                    append_links_value(lines, child_key, child_value, indent + 2);
+                }
+            }
+        }
+        _ => lines.push(format!(
+            "{}{} {}",
+            prefix,
+            key,
+            format_value_for_links_notation(value)
+        )),
+    }
+}
+
+fn format_record_as_links_notation_with_enrichments(
+    record: &ExecutionRecord,
+    current_time: Option<&str>,
+    process_ids: Option<&Value>,
+) -> String {
     let json = record.to_json();
     let mut lines = vec![record.uuid.clone()];
 
@@ -171,6 +203,14 @@ pub fn format_record_as_links_notation_with_current_time(
                 }
             }
 
+            // Insert processIds right after pid so status output groups process
+            // identity with the wrapper PID already present in older output.
+            if key == "pid" {
+                if let Some(process_ids) = process_ids {
+                    append_links_value(&mut lines, "processIds", process_ids, 2);
+                }
+            }
+
             // Insert currentTime right after startTime for readability
             if key == "startTime" {
                 if let Some(ct) = current_time {
@@ -194,6 +234,35 @@ pub fn format_record_as_text_with_current_time(
     record: &ExecutionRecord,
     current_time: Option<&str>,
 ) -> String {
+    format_record_as_text_with_enrichments(record, current_time, None)
+}
+
+fn append_text_process_ids(lines: &mut Vec<String>, process_ids: &Value) {
+    let Value::Object(map) = process_ids else {
+        return;
+    };
+    if map.is_empty() {
+        return;
+    }
+
+    lines.push("Process IDs:".to_string());
+    for (key, value) in map {
+        let value_str = match value {
+            Value::String(s) => s.clone(),
+            Value::Bool(b) => b.to_string(),
+            Value::Number(n) => n.to_string(),
+            Value::Null => "null".to_string(),
+            other => serde_json::to_string(other).unwrap_or_default(),
+        };
+        lines.push(format!("  {}: {}", key, value_str));
+    }
+}
+
+fn format_record_as_text_with_enrichments(
+    record: &ExecutionRecord,
+    current_time: Option<&str>,
+    process_ids: Option<&Value>,
+) -> String {
     let exit_code_str = record
         .exit_code
         .map(|c| c.to_string())
@@ -212,11 +281,16 @@ pub fn format_record_as_text_with_current_time(
         format!("Command:           {}", record.command),
         format!("Exit Code:         {}", exit_code_str),
         format!("PID:               {}", pid_str),
+    ];
+    if let Some(process_ids) = process_ids {
+        append_text_process_ids(&mut lines, process_ids);
+    }
+    lines.extend([
         format!("Working Directory: {}", record.working_directory),
         format!("Shell:             {}", record.shell),
         format!("Platform:          {}", record.platform),
         format!("Start Time:        {}", record.start_time),
-    ];
+    ]);
     if let Some(ct) = current_time {
         lines.push(format!("Current Time:      {}", ct));
     }
@@ -241,11 +315,19 @@ pub fn format_record_as_text_with_current_time(
     lines.join("\n")
 }
 
-/// Build the JSON value for a record, optionally including `currentTime`.
-fn record_json_with_current_time(record: &ExecutionRecord, current_time: Option<&str>) -> Value {
+fn record_json_with_enrichments(
+    record: &ExecutionRecord,
+    current_time: Option<&str>,
+    process_ids: Option<&Value>,
+) -> Value {
     let mut json = record.to_json();
-    if let (Some(ct), Value::Object(map)) = (current_time, &mut json) {
-        map.insert("currentTime".to_string(), Value::String(ct.to_string()));
+    if let Value::Object(map) = &mut json {
+        if let Some(process_ids) = process_ids {
+            map.insert("processIds".to_string(), process_ids.clone());
+        }
+        if let Some(ct) = current_time {
+            map.insert("currentTime".to_string(), Value::String(ct.to_string()));
+        }
     }
     json
 }
@@ -263,18 +345,31 @@ pub fn format_record_with_current_time(
     format: &str,
     current_time: Option<&str>,
 ) -> Result<String, String> {
+    format_record_with_enrichments(record, format, current_time, None)
+}
+
+fn format_record_with_enrichments(
+    record: &ExecutionRecord,
+    format: &str,
+    current_time: Option<&str>,
+    process_ids: Option<&Value>,
+) -> Result<String, String> {
     match format {
-        "links-notation" => Ok(format_record_as_links_notation_with_current_time(
+        "links-notation" => Ok(format_record_as_links_notation_with_enrichments(
             record,
             current_time,
+            process_ids,
         )),
-        "json" => {
-            serde_json::to_string_pretty(&record_json_with_current_time(record, current_time))
-                .map_err(|e| format!("Failed to serialize to JSON: {}", e))
-        }
-        "text" => Ok(format_record_as_text_with_current_time(
+        "json" => serde_json::to_string_pretty(&record_json_with_enrichments(
             record,
             current_time,
+            process_ids,
+        ))
+        .map_err(|e| format!("Failed to serialize to JSON: {}", e)),
+        "text" => Ok(format_record_as_text_with_enrichments(
+            record,
+            current_time,
+            process_ids,
         )),
         _ => Err(format!("Unknown output format: {}", format)),
     }
@@ -296,12 +391,14 @@ fn indent_block(block: &str, spaces: usize) -> String {
 /// Format execution records as a Links Notation list.
 pub fn format_record_list_as_links_notation(records: &[ExecutionRecord]) -> String {
     let current_times: Vec<Option<String>> = records.iter().map(attach_current_time).collect();
-    format_record_list_as_links_notation_with_current_times(records, &current_times)
+    let process_ids = vec![None; records.len()];
+    format_record_list_as_links_notation_with_current_times(records, &current_times, &process_ids)
 }
 
 fn format_record_list_as_links_notation_with_current_times(
     records: &[ExecutionRecord],
     current_times: &[Option<String>],
+    process_ids: &[Option<Value>],
 ) -> String {
     let mut lines = vec![
         "executions".to_string(),
@@ -314,9 +411,16 @@ fn format_record_list_as_links_notation_with_current_times(
     }
 
     lines.push("  records".to_string());
-    for (record, current_time) in records.iter().zip(current_times.iter()) {
-        let block =
-            format_record_as_links_notation_with_current_time(record, current_time.as_deref());
+    for ((record, current_time), process_ids) in records
+        .iter()
+        .zip(current_times.iter())
+        .zip(process_ids.iter())
+    {
+        let block = format_record_as_links_notation_with_enrichments(
+            record,
+            current_time.as_deref(),
+            process_ids.as_ref(),
+        );
         lines.push(indent_block(&block, 4));
     }
 
@@ -326,12 +430,14 @@ fn format_record_list_as_links_notation_with_current_times(
 /// Format execution records as human-readable text.
 pub fn format_record_list_as_text(records: &[ExecutionRecord]) -> String {
     let current_times: Vec<Option<String>> = records.iter().map(attach_current_time).collect();
-    format_record_list_as_text_with_current_times(records, &current_times)
+    let process_ids = vec![None; records.len()];
+    format_record_list_as_text_with_current_times(records, &current_times, &process_ids)
 }
 
 fn format_record_list_as_text_with_current_times(
     records: &[ExecutionRecord],
     current_times: &[Option<String>],
+    process_ids: &[Option<Value>],
 ) -> String {
     let mut lines = vec![
         "Executions".to_string(),
@@ -339,11 +445,16 @@ fn format_record_list_as_text_with_current_times(
         format!("Count: {}", records.len()),
     ];
 
-    for (record, current_time) in records.iter().zip(current_times.iter()) {
+    for ((record, current_time), process_ids) in records
+        .iter()
+        .zip(current_times.iter())
+        .zip(process_ids.iter())
+    {
         lines.push(String::new());
-        lines.push(format_record_as_text_with_current_time(
+        lines.push(format_record_as_text_with_enrichments(
             record,
             current_time.as_deref(),
+            process_ids.as_ref(),
         ));
     }
 
@@ -353,12 +464,14 @@ fn format_record_list_as_text_with_current_times(
 fn record_list_json_with_current_times(
     records: &[ExecutionRecord],
     current_times: &[Option<String>],
+    process_ids: &[Option<Value>],
 ) -> Value {
     let executions: Vec<Value> = records
         .iter()
         .zip(current_times.iter())
-        .map(|(record, current_time)| {
-            record_json_with_current_time(record, current_time.as_deref())
+        .zip(process_ids.iter())
+        .map(|((record, current_time), process_ids)| {
+            record_json_with_enrichments(record, current_time.as_deref(), process_ids.as_ref())
         })
         .collect();
 
@@ -371,27 +484,32 @@ fn record_list_json_with_current_times(
 /// Format execution records based on format type.
 pub fn format_record_list(records: &[ExecutionRecord], format: &str) -> Result<String, String> {
     let current_times: Vec<Option<String>> = records.iter().map(attach_current_time).collect();
-    format_record_list_with_current_times(records, format, &current_times)
+    let process_ids = vec![None; records.len()];
+    format_record_list_with_current_times(records, format, &current_times, &process_ids)
 }
 
 fn format_record_list_with_current_times(
     records: &[ExecutionRecord],
     format: &str,
     current_times: &[Option<String>],
+    process_ids: &[Option<Value>],
 ) -> Result<String, String> {
     match format {
         "links-notation" => Ok(format_record_list_as_links_notation_with_current_times(
             records,
             current_times,
+            process_ids,
         )),
         "json" => serde_json::to_string_pretty(&record_list_json_with_current_times(
             records,
             current_times,
+            process_ids,
         ))
         .map_err(|e| format!("Failed to serialize to JSON: {}", e)),
         "text" => Ok(format_record_list_as_text_with_current_times(
             records,
             current_times,
+            process_ids,
         )),
         _ => Err(format!("Unknown output format: {}", format)),
     }
@@ -424,9 +542,10 @@ pub fn list_executions(
         store.get_all().iter().map(enrich_detached_status).collect();
     sort_records_by_start_time_desc(&mut records);
     let current_times: Vec<Option<String>> = records.iter().map(attach_current_time).collect();
+    let process_ids: Vec<Option<Value>> = records.iter().map(collect_process_ids).collect();
     let format = output_format.unwrap_or("links-notation");
 
-    match format_record_list_with_current_times(&records, format, &current_times) {
+    match format_record_list_with_current_times(&records, format, &current_times, &process_ids) {
         Ok(output) => StatusQueryResult {
             success: true,
             output: Some(output),
@@ -475,9 +594,15 @@ pub fn query_status(
     let enriched = enrich_detached_status(&record);
     // Attach currentTime so callers can see how long an executing command has been running
     let current_time = attach_current_time(&enriched);
+    let process_ids = collect_process_ids(&enriched);
 
     let format = output_format.unwrap_or("links-notation");
-    match format_record_with_current_time(&enriched, format, current_time.as_deref()) {
+    match format_record_with_enrichments(
+        &enriched,
+        format,
+        current_time.as_deref(),
+        process_ids.as_ref(),
+    ) {
         Ok(output) => StatusQueryResult {
             success: true,
             output: Some(output),

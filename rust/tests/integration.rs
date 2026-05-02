@@ -8,7 +8,7 @@ fn to_string_vec(strs: &[&str]) -> Vec<String> {
     strs.iter().map(|s| s.to_string()).collect()
 }
 
-mod args_parser_integration_tests {
+mod args_parser_integration_cases {
     use super::*;
 
     #[test]

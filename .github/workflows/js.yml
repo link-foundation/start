@@ -238,7 +238,7 @@ jobs:
 
       - name: Run tests
         working-directory: js
-        run: bun test
+        run: bun run test
 
       # Test both execution modes (default and command-stream)
       - name: Test default execution mode
@@ -330,7 +330,7 @@ jobs:
       - name: Run SSH integration tests (Linux)
         if: runner.os == 'Linux'
         working-directory: js
-        run: bun test test/ssh-integration.test.js
+        run: bun run test test/ssh-integration.js
 
   # === CODE COVERAGE ===
   # Fail if JavaScript test coverage drops below 80%
@@ -354,7 +354,7 @@ jobs:
       - name: Run tests with coverage
         working-directory: js
         run: |
-          bun test --coverage --coverage-reporter=text 2>&1 | tee coverage.txt || true
+          bun run test --coverage --coverage-reporter=text 2>&1 | tee coverage.txt || true
           # Extract coverage percentage from Bun output
           COVERAGE=$(grep -oP '\d+\.\d+(?=%)' coverage.txt | tail -1 || echo "0")
           echo "Coverage: ${COVERAGE}%"

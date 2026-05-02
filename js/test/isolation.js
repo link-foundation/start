@@ -7,6 +7,7 @@
 
 const { describe, it } = require('node:test');
 const assert = require('assert');
+const path = require('path');
 const {
   isCommandAvailable,
   hasTTY,
@@ -525,7 +526,7 @@ describe('Isolation Runner with Available Backends', () => {
   } = require('../src/lib/isolation');
   const { execSync } = require('child_process');
 
-  // Screen integration tests moved to screen-integration.test.js
+  // Screen integration tests moved to screen-integration.js
   // to keep file under the 1000-line limit.
 
   describe('runInTmux (if available)', () => {
@@ -668,8 +669,9 @@ describe('detectShellInEnvironment', () => {
       { image: 'alpine:latest' },
       'auto'
     );
+    const shellName = path.basename(result);
     assert.ok(
-      ['bash', 'zsh', 'sh'].includes(result),
+      ['bash', 'zsh', 'sh'].includes(shellName),
       `Expected a valid shell (bash/zsh/sh), got: ${result}`
     );
     console.log(`  Detected shell in alpine:latest: ${result}`);

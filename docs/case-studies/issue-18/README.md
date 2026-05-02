@@ -118,7 +118,7 @@ Based on the issue description, the solution needed to:
    - Error handling for missing tools
    - Return first line of version output
 
-4. **Test Coverage** (`test/cli.test.js`):
+4. **Test Coverage** (`test/cli.js`):
    - Test `--version` flag
    - Test `-v` shorthand
    - Verify correct package version
@@ -198,7 +198,7 @@ console.log('  --version, -v             Show version information');
 
 ### Test Implementation
 
-Created `test/cli.test.js` with comprehensive test coverage:
+Created `test/cli.js` with comprehensive test coverage:
 
 - Version flag tests (both `--version` and `-v`)
 - Package version verification
@@ -309,7 +309,7 @@ The implementation is now complete and ready for production use, providing users
 - **Pull Request**: [#21 - Implementation of --version flag](https://github.com/link-foundation/start/pull/21)
 - **Related Files**:
   - `src/bin/cli.js` - Main implementation
-  - `test/cli.test.js` - Test coverage
+  - `test/cli.js` - Test coverage
   - `package.json` - Version source
 
 ## Appendix

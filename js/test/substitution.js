@@ -225,11 +225,10 @@ function runTests() {
       console.log(`    Expected: "${test.expected}"`);
       console.log(`    Got:      "${actual}"`);
     });
-    process.exit(1);
+    throw new Error(`${failed} substitution tests failed`);
   }
 
   console.log('\n✓ All tests passed!\n');
-  process.exit(0);
 }
 
 // Run tests
