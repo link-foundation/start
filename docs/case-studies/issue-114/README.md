@@ -22,24 +22,32 @@ The requested release shape is explicit:
 - [ci-logs/](ci-logs/) - downloaded GitHub Actions logs as text.
 - [templates/](templates/) - upstream template workflow snapshots and file list.
 - `issue-data.json`, `issue-comments.json`, `related-prs.json`,
-  `ci-run-25246804640.json`, `ci-run-25246804647.json` - raw GitHub API data.
+  `ci-run-25246804640.json`, `ci-run-25246804647.json`,
+  `ci-run-25250182498.json` - raw GitHub API data.
 
 ## Reproduction
 
 ```bash
 # Failed Rust release run from the issue
 gh run view 25246804647 --repo link-foundation/start --log \
-  > ci-logs/rust-cicd-25246804647.log
+  > ci-logs/rust-cicd-25246804647.txt
 
 # Related JavaScript run from the same main-branch SHA
 gh run view 25246804640 --repo link-foundation/start --log \
-  > ci-logs/javascript-cicd-25246804640.log
+  > ci-logs/javascript-cicd-25246804640.txt
+
+# Follow-up JavaScript PR run from the prepared branch
+gh run view 25250182498 --repo link-foundation/start --log \
+  > ci-logs/javascript-cicd-25250182498.txt
 
 # Show the Rust release failure
-nl -ba ci-logs/rust-cicd-25246804647.log | sed -n '7224,7251p'
+nl -ba ci-logs/rust-cicd-25246804647.txt | sed -n '7224,7251p'
 
 # Show the JavaScript Windows timeout failures
-nl -ba ci-logs/javascript-cicd-25246804640.log | sed -n '4924,4965p'
+nl -ba ci-logs/javascript-cicd-25246804640.txt | sed -n '4924,4965p'
+
+# Show the follow-up PR changeset validation failure
+nl -ba ci-logs/javascript-cicd-25250182498.txt | sed -n '950,954p'
 ```
 
 ## High-level findings
@@ -51,6 +59,7 @@ nl -ba ci-logs/javascript-cicd-25246804640.log | sed -n '4924,4965p'
 | Release notes       | `create-github-release.mjs` read root `CHANGELOG.md` and only matched `## <version>`.                           | Add `--changelog-file` and a shared extractor that supports Changesets and Keep a Changelog headings.                                     |
 | Badges              | JS formatter interpolated prefixed tags into npm badge versions; Rust release bodies had no package badge path. | Normalize prefixed tags before badge generation and add optional npm/crates exact-version badges.                                         |
 | JS CI               | Windows tests exceeded Node's default 5000 ms per-test timeout while helper timeouts were longer.               | Add explicit per-test timeout headroom to the affected CLI and Docker tests.                                                              |
+| JS changeset check  | The PR validator counted a pre-existing base-branch changeset as part of this PR.                               | In CI, validate only changesets changed between the PR base and head SHAs; keep whole-folder validation for local fallback.                |
 
 ## See also
 

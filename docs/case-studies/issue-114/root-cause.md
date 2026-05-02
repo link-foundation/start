@@ -78,6 +78,25 @@ test harness timeout mismatches:
 The helper-level timeouts were already longer than the default test timeout, so
 the fix is to make the test-level timeout explicit.
 
+## RC6 - JavaScript changeset validation counted base-branch files
+
+After the first fix was pushed to PR #115, the JavaScript CI run
+`25250182498` failed in `Check for Changesets`.
+
+The workflow correctly detected that this PR added
+`js/.changeset/issue-114-cicd-release-fixes.md`, but
+`scripts/validate-changeset.mjs` scanned every markdown file in
+`js/.changeset`. At that point `origin/main` already contained
+`issue-112-detached-controls.md`, so the PR check saw two files and failed:
+
+```text
+Found 2 changeset file(s)
+Multiple changesets found (2). Each PR should have exactly ONE changeset.
+```
+
+The validator should enforce "exactly one changeset introduced or modified by
+this PR" in CI, not "exactly one unreleased changeset exists in the repository."
+
 ## Template comparison
 
 The JavaScript template includes tests and helpers for badge version

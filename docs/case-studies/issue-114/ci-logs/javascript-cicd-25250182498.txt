@@ -1,0 +1,1172 @@
+Detect Changes	Set up job	﻿2026-05-02T10:46:08.1384940Z Current runner version: '2.334.0'
+Detect Changes	Set up job	2026-05-02T10:46:08.1410023Z ##[group]Runner Image Provisioner
+Detect Changes	Set up job	2026-05-02T10:46:08.1410903Z Hosted Compute Agent
+Detect Changes	Set up job	2026-05-02T10:46:08.1411564Z Version: 20260213.493
+Detect Changes	Set up job	2026-05-02T10:46:08.1412166Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+Detect Changes	Set up job	2026-05-02T10:46:08.1412888Z Build Date: 2026-02-13T00:28:41Z
+Detect Changes	Set up job	2026-05-02T10:46:08.1413550Z Worker ID: {8ab067e4-bdff-45d4-aa2b-eef5c37e52fe}
+Detect Changes	Set up job	2026-05-02T10:46:08.1414339Z Azure Region: westcentralus
+Detect Changes	Set up job	2026-05-02T10:46:08.1414897Z ##[endgroup]
+Detect Changes	Set up job	2026-05-02T10:46:08.1416169Z ##[group]Operating System
+Detect Changes	Set up job	2026-05-02T10:46:08.1416755Z Ubuntu
+Detect Changes	Set up job	2026-05-02T10:46:08.1417246Z 24.04.4
+Detect Changes	Set up job	2026-05-02T10:46:08.1418088Z LTS
+Detect Changes	Set up job	2026-05-02T10:46:08.1418546Z ##[endgroup]
+Detect Changes	Set up job	2026-05-02T10:46:08.1419068Z ##[group]Runner Image
+Detect Changes	Set up job	2026-05-02T10:46:08.1419611Z Image: ubuntu-24.04
+Detect Changes	Set up job	2026-05-02T10:46:08.1420210Z Version: 20260413.86.1
+Detect Changes	Set up job	2026-05-02T10:46:08.1421192Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+Detect Changes	Set up job	2026-05-02T10:46:08.1422924Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+Detect Changes	Set up job	2026-05-02T10:46:08.1423844Z ##[endgroup]
+Detect Changes	Set up job	2026-05-02T10:46:08.1426637Z ##[group]GITHUB_TOKEN Permissions
+Detect Changes	Set up job	2026-05-02T10:46:08.1428888Z Actions: write
+Detect Changes	Set up job	2026-05-02T10:46:08.1429497Z ArtifactMetadata: write
+Detect Changes	Set up job	2026-05-02T10:46:08.1430147Z Attestations: write
+Detect Changes	Set up job	2026-05-02T10:46:08.1430688Z Checks: write
+Detect Changes	Set up job	2026-05-02T10:46:08.1431156Z Contents: write
+Detect Changes	Set up job	2026-05-02T10:46:08.1431731Z Deployments: write
+Detect Changes	Set up job	2026-05-02T10:46:08.1432220Z Discussions: write
+Detect Changes	Set up job	2026-05-02T10:46:08.1432776Z Issues: write
+Detect Changes	Set up job	2026-05-02T10:46:08.1433330Z Metadata: read
+Detect Changes	Set up job	2026-05-02T10:46:08.1433803Z Models: read
+Detect Changes	Set up job	2026-05-02T10:46:08.1434313Z Packages: write
+Detect Changes	Set up job	2026-05-02T10:46:08.1434822Z Pages: write
+Detect Changes	Set up job	2026-05-02T10:46:08.1435427Z PullRequests: write
+Detect Changes	Set up job	2026-05-02T10:46:08.1435935Z RepositoryProjects: write
+Detect Changes	Set up job	2026-05-02T10:46:08.1436591Z SecurityEvents: write
+Detect Changes	Set up job	2026-05-02T10:46:08.1437158Z Statuses: write
+Detect Changes	Set up job	2026-05-02T10:46:08.1437923Z VulnerabilityAlerts: read
+Detect Changes	Set up job	2026-05-02T10:46:08.1438559Z ##[endgroup]
+Detect Changes	Set up job	2026-05-02T10:46:08.1440708Z Secret source: Actions
+Detect Changes	Set up job	2026-05-02T10:46:08.1441444Z Prepare workflow directory
+Detect Changes	Set up job	2026-05-02T10:46:08.1812892Z Prepare all required actions
+Detect Changes	Set up job	2026-05-02T10:46:08.1851029Z Getting action download info
+Detect Changes	Set up job	2026-05-02T10:46:08.5404844Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+Detect Changes	Set up job	2026-05-02T10:46:08.7215694Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+Detect Changes	Set up job	2026-05-02T10:46:09.0022591Z Complete job name: Detect Changes
+Detect Changes	Run actions/checkout@v4	﻿2026-05-02T10:46:09.0713816Z ##[group]Run actions/checkout@v4
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0714603Z with:
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0714975Z   fetch-depth: 0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0715390Z   repository: link-foundation/start
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0716073Z   token: ***
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0716451Z   ssh-strict: true
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0716839Z   ssh-user: git
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0717234Z   persist-credentials: true
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0717883Z   clean: true
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0718295Z   sparse-checkout-cone-mode: true
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0718770Z   fetch-tags: false
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0719161Z   show-progress: true
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0719548Z   lfs: false
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0719919Z   submodules: false
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0720317Z   set-safe-directory: true
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0720937Z ##[endgroup]
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1871761Z Syncing repository: link-foundation/start
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1879535Z ##[group]Getting Git version info
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1880547Z Working directory is '/home/runner/work/start/start'
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1881922Z [command]/usr/bin/git version
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1892133Z git version 2.53.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1916910Z ##[endgroup]
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1931660Z Temporarily overriding HOME='/home/runner/work/_temp/0ec91d5f-ccd7-40ea-bcce-d2312d1bc133' before making global git config changes
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1933850Z Adding repository directory to the temporary git global config as a safe directory
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1936959Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/start/start
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1972088Z Deleting the contents of '/home/runner/work/start/start'
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1976211Z ##[group]Initializing the repository
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1980757Z [command]/usr/bin/git init /home/runner/work/start/start
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2040736Z hint: Using 'master' as the name for the initial branch. This default branch name
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2042512Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2044171Z hint: to use in all of your new repositories, which will suppress this warning,
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2045485Z hint: call:
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2046208Z hint:
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2047063Z hint: 	git config --global init.defaultBranch <name>
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2048321Z hint:
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2049305Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2050885Z hint: 'development'. The just-created branch can be renamed via this command:
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2052178Z hint:
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2052880Z hint: 	git branch -m <name>
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2053676Z hint:
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2054734Z hint: Disable this message with "git config set advice.defaultBranchName false"
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2056428Z Initialized empty Git repository in /home/runner/work/start/start/.git/
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2059827Z [command]/usr/bin/git remote add origin https://github.com/link-foundation/start
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2084902Z ##[endgroup]
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2087068Z ##[group]Disabling automatic garbage collection
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2089339Z [command]/usr/bin/git config --local gc.auto 0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2120771Z ##[endgroup]
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2121886Z ##[group]Setting up auth
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2128168Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2160804Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2702806Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2732840Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2964330Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.2994981Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.3227385Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.3262373Z ##[endgroup]
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.3263079Z ##[group]Fetching the repository
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:09.3271315Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/* +3d80fc156da38073746cd1ea6695351419893ba8:refs/remotes/pull/115/merge
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2290112Z From https://github.com/link-foundation/start
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2292754Z  * [new branch]      issue-1-06306849                         -> origin/issue-1-06306849
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2294466Z  * [new branch]      issue-101-f6ea3a87b1de                   -> origin/issue-101-f6ea3a87b1de
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2296228Z  * [new branch]      issue-103-d2eee141f4bc                   -> origin/issue-103-d2eee141f4bc
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2298201Z  * [new branch]      issue-105-0edd650b7149                   -> origin/issue-105-0edd650b7149
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2299911Z  * [new branch]      issue-108-c821d8a93f01                   -> origin/issue-108-c821d8a93f01
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2301605Z  * [new branch]      issue-11-1524425f0588                    -> origin/issue-11-1524425f0588
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2303298Z  * [new branch]      issue-110-c1b9267a2743                   -> origin/issue-110-c1b9267a2743
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2305360Z  * [new branch]      issue-112-46af7527c0d9                   -> origin/issue-112-46af7527c0d9
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2307049Z  * [new branch]      issue-114-8181f01863b9                   -> origin/issue-114-8181f01863b9
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2308922Z  * [new branch]      issue-13-52ae2ce06ee2                    -> origin/issue-13-52ae2ce06ee2
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2310612Z  * [new branch]      issue-15-ccfe6d130337                    -> origin/issue-15-ccfe6d130337
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2311965Z  * [new branch]      issue-15-d3d0f1c82afa                    -> origin/issue-15-d3d0f1c82afa
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2313049Z  * [new branch]      issue-18-acfe3ddbe902                    -> origin/issue-18-acfe3ddbe902
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2314159Z  * [new branch]      issue-19-83cfc521f662                    -> origin/issue-19-83cfc521f662
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2315316Z  * [new branch]      issue-22-08e44246441d                    -> origin/issue-22-08e44246441d
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2316387Z  * [new branch]      issue-22-2d1c04999e6d                    -> origin/issue-22-2d1c04999e6d
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2317409Z  * [new branch]      issue-25-6419574a6cfe                    -> origin/issue-25-6419574a6cfe
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2318832Z  * [new branch]      issue-25-8fe656da1123                    -> origin/issue-25-8fe656da1123
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2319895Z  * [new branch]      issue-28-9a07df20ebbb                    -> origin/issue-28-9a07df20ebbb
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2320928Z  * [new branch]      issue-3-908abf67e50f                     -> origin/issue-3-908abf67e50f
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2321959Z  * [new branch]      issue-30-3c74b37eedc9                    -> origin/issue-30-3c74b37eedc9
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2322994Z  * [new branch]      issue-31-e419d5f83f9d                    -> origin/issue-31-e419d5f83f9d
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2324029Z  * [new branch]      issue-34-fcfbf90ca3a5                    -> origin/issue-34-fcfbf90ca3a5
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2325058Z  * [new branch]      issue-36-4d2e05cadca2                    -> origin/issue-36-4d2e05cadca2
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2326087Z  * [new branch]      issue-38-8d65d5c6dcf1                    -> origin/issue-38-8d65d5c6dcf1
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2327097Z  * [new branch]      issue-40-500ee5a3c836                    -> origin/issue-40-500ee5a3c836
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2328221Z  * [new branch]      issue-42-231914cdf85a                    -> origin/issue-42-231914cdf85a
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2329246Z  * [new branch]      issue-44-05c1999867e1                    -> origin/issue-44-05c1999867e1
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2330603Z  * [new branch]      issue-46-db1336ec1bd4                    -> origin/issue-46-db1336ec1bd4
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2331739Z  * [new branch]      issue-49-49badfb087ae                    -> origin/issue-49-49badfb087ae
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2332752Z  * [new branch]      issue-5-e920ed9704b1                     -> origin/issue-5-e920ed9704b1
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2333761Z  * [new branch]      issue-51-ce9116974281                    -> origin/issue-51-ce9116974281
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2334778Z  * [new branch]      issue-53-3037eb51507e                    -> origin/issue-53-3037eb51507e
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2335770Z  * [new branch]      issue-55-62ca352b2854                    -> origin/issue-55-62ca352b2854
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2336761Z  * [new branch]      issue-57-319974e37702                    -> origin/issue-57-319974e37702
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2337999Z  * [new branch]      issue-57-9389c40a25d3                    -> origin/issue-57-9389c40a25d3
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2338996Z  * [new branch]      issue-60-23ad1508ca00                    -> origin/issue-60-23ad1508ca00
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2340008Z  * [new branch]      issue-62-0bf0e6dba402                    -> origin/issue-62-0bf0e6dba402
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2341008Z  * [new branch]      issue-64-531bd4a9716c                    -> origin/issue-64-531bd4a9716c
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2342011Z  * [new branch]      issue-66-b4bebb964b80                    -> origin/issue-66-b4bebb964b80
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2343218Z  * [new branch]      issue-67-c74bf55321d9                    -> origin/issue-67-c74bf55321d9
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2344217Z  * [new branch]      issue-7-6b049fda1d30                     -> origin/issue-7-6b049fda1d30
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2345218Z  * [new branch]      issue-70-210190e0ad55                    -> origin/issue-70-210190e0ad55
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2346219Z  * [new branch]      issue-70-490c526a882f                    -> origin/issue-70-490c526a882f
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2347217Z  * [new branch]      issue-73-163864f76573                    -> origin/issue-73-163864f76573
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2348336Z  * [new branch]      issue-73-47a3e673b0a8                    -> origin/issue-73-47a3e673b0a8
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2349331Z  * [new branch]      issue-73-c42828279fb5                    -> origin/issue-73-c42828279fb5
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2350329Z  * [new branch]      issue-77-acc01682cb56                    -> origin/issue-77-acc01682cb56
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2351335Z  * [new branch]      issue-79-1581a427bf82                    -> origin/issue-79-1581a427bf82
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2352330Z  * [new branch]      issue-79-48234c0f95fa                    -> origin/issue-79-48234c0f95fa
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2353333Z  * [new branch]      issue-79-5fc029ea058c                    -> origin/issue-79-5fc029ea058c
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2354320Z  * [new branch]      issue-79-740a4286522a                    -> origin/issue-79-740a4286522a
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2355342Z  * [new branch]      issue-84-2301d58a902f                    -> origin/issue-84-2301d58a902f
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2356344Z  * [new branch]      issue-84-8c8db1f16f9d                    -> origin/issue-84-8c8db1f16f9d
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2357350Z  * [new branch]      issue-84-ca99d5699c03                    -> origin/issue-84-ca99d5699c03
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2358581Z  * [new branch]      issue-84-e79fd3fe5cef                    -> origin/issue-84-e79fd3fe5cef
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2359591Z  * [new branch]      issue-89-58b19f5dac12                    -> origin/issue-89-58b19f5dac12
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2360606Z  * [new branch]      issue-9-9cb379f155fb                     -> origin/issue-9-9cb379f155fb
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2361605Z  * [new branch]      issue-91-5ff8719c4182                    -> origin/issue-91-5ff8719c4182
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2362599Z  * [new branch]      issue-91-8e243739c7af                    -> origin/issue-91-8e243739c7af
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2363620Z  * [new branch]      issue-93-2ef57910c60b                    -> origin/issue-93-2ef57910c60b
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2364612Z  * [new branch]      issue-96-829d21ddabc4                    -> origin/issue-96-829d21ddabc4
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2365822Z  * [new branch]      issue-96-efde41b8c023                    -> origin/issue-96-efde41b8c023
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2366824Z  * [new branch]      issue-99-bc78b28ed258                    -> origin/issue-99-bc78b28ed258
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2367843Z  * [new branch]      main                                     -> origin/main
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2368644Z  * [new tag]         js-v0.25.5                               -> js-v0.25.5
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2369387Z  * [new tag]         js-v0.26.0                               -> js-v0.26.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2370159Z  * [new tag]         v0.10.0                                  -> v0.10.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2370894Z  * [new tag]         v0.11.0                                  -> v0.11.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2371596Z  * [new tag]         v0.13.0                                  -> v0.13.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2372299Z  * [new tag]         v0.15.0                                  -> v0.15.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2372993Z  * [new tag]         v0.16.0                                  -> v0.16.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2373689Z  * [new tag]         v0.17.0                                  -> v0.17.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2374386Z  * [new tag]         v0.17.1                                  -> v0.17.1
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2375067Z  * [new tag]         v0.17.2                                  -> v0.17.2
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2375893Z  * [new tag]         v0.17.3                                  -> v0.17.3
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2376585Z  * [new tag]         v0.17.4                                  -> v0.17.4
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2377273Z  * [new tag]         v0.18.0                                  -> v0.18.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2378057Z  * [new tag]         v0.19.0                                  -> v0.19.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2378760Z  * [new tag]         v0.19.1                                  -> v0.19.1
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2379454Z  * [new tag]         v0.20.0                                  -> v0.20.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2380142Z  * [new tag]         v0.20.1                                  -> v0.20.1
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2380831Z  * [new tag]         v0.20.2                                  -> v0.20.2
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2381509Z  * [new tag]         v0.20.3                                  -> v0.20.3
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2382200Z  * [new tag]         v0.20.4                                  -> v0.20.4
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2382890Z  * [new tag]         v0.21.0                                  -> v0.21.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2383583Z  * [new tag]         v0.22.0                                  -> v0.22.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2384271Z  * [new tag]         v0.23.0                                  -> v0.23.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2384958Z  * [new tag]         v0.24.0                                  -> v0.24.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2385649Z  * [new tag]         v0.24.1                                  -> v0.24.1
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2386338Z  * [new tag]         v0.24.2                                  -> v0.24.2
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2387035Z  * [new tag]         v0.24.3                                  -> v0.24.3
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2387831Z  * [new tag]         v0.24.4                                  -> v0.24.4
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2388516Z  * [new tag]         v0.24.5                                  -> v0.24.5
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2389209Z  * [new tag]         v0.24.6                                  -> v0.24.6
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2389896Z  * [new tag]         v0.24.7                                  -> v0.24.7
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2390584Z  * [new tag]         v0.24.8                                  -> v0.24.8
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2391272Z  * [new tag]         v0.24.9                                  -> v0.24.9
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2391966Z  * [new tag]         v0.25.0                                  -> v0.25.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2392655Z  * [new tag]         v0.25.1                                  -> v0.25.1
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2393337Z  * [new tag]         v0.25.2                                  -> v0.25.2
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2394168Z  * [new tag]         v0.25.3                                  -> v0.25.3
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2394861Z  * [new tag]         v0.25.4                                  -> v0.25.4
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2395555Z  * [new tag]         v0.3.1                                   -> v0.3.1
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2396245Z  * [new tag]         v0.4.0                                   -> v0.4.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2396948Z  * [new tag]         v0.4.1                                   -> v0.4.1
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2397852Z  * [new tag]         v0.5.0                                   -> v0.5.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2398557Z  * [new tag]         v0.5.1                                   -> v0.5.1
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2399256Z  * [new tag]         v0.5.2                                   -> v0.5.2
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2399939Z  * [new tag]         v0.5.3                                   -> v0.5.3
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2400625Z  * [new tag]         v0.6.0                                   -> v0.6.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2401314Z  * [new tag]         v0.7.0                                   -> v0.7.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2402019Z  * [new tag]         v0.7.1                                   -> v0.7.1
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2402719Z  * [new tag]         v0.7.2                                   -> v0.7.2
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2403410Z  * [new tag]         v0.7.4                                   -> v0.7.4
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2404251Z  * [new tag]         v0.7.5                                   -> v0.7.5
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2404947Z  * [new tag]         v0.7.6                                   -> v0.7.6
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2405657Z  * [new tag]         v0.9.0                                   -> v0.9.0
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2406442Z  * [new ref]         3d80fc156da38073746cd1ea6695351419893ba8 -> pull/115/merge
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2442868Z ##[endgroup]
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2443766Z ##[group]Determining the checkout info
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2444675Z ##[endgroup]
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2449817Z [command]/usr/bin/git sparse-checkout disable
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2486492Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2512931Z ##[group]Checking out the ref
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2516232Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/115/merge
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2803446Z Note: switching to 'refs/remotes/pull/115/merge'.
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2804191Z
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2804647Z You are in 'detached HEAD' state. You can look around, make experimental
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2805617Z changes and commit them, and you can discard any commits you make in this
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2806550Z state without impacting any branches by switching back to a branch.
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2807103Z
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2807765Z If you want to create a new branch to retain commits you create, you may
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2808720Z do so (now or later) by using -c with the switch command. Example:
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2809215Z
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2809455Z   git switch -c <new-branch-name>
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2809801Z
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2810018Z Or undo this operation with:
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2810336Z
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2810531Z   git switch -
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2810768Z
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2811197Z Turn off this advice by setting config variable advice.detachedHead to false
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2811762Z
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2812728Z HEAD is now at 3d80fc1 Merge 1df494042de25f19c7fa25e5be4bd28fa93c0d72 into 19784b188d6ad6eff654623f2ba698906dde0d13
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2815066Z ##[endgroup]
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2850571Z [command]/usr/bin/git log -1 --format=%H
+Detect Changes	Run actions/checkout@v4	2026-05-02T10:46:10.2873727Z 3d80fc156da38073746cd1ea6695351419893ba8
+Detect Changes	Setup Node.js	﻿2026-05-02T10:46:10.3119973Z ##[group]Run actions/setup-node@v4
+Detect Changes	Setup Node.js	2026-05-02T10:46:10.3120549Z with:
+Detect Changes	Setup Node.js	2026-05-02T10:46:10.3120935Z   node-version: 20.x
+Detect Changes	Setup Node.js	2026-05-02T10:46:10.3121375Z   always-auth: false
+Detect Changes	Setup Node.js	2026-05-02T10:46:10.3121806Z   check-latest: false
+Detect Changes	Setup Node.js	2026-05-02T10:46:10.3122395Z   token: ***
+Detect Changes	Setup Node.js	2026-05-02T10:46:10.3122795Z ##[endgroup]
+Detect Changes	Setup Node.js	2026-05-02T10:46:10.5269757Z Found in cache @ /opt/hostedtoolcache/node/20.20.2/x64
+Detect Changes	Setup Node.js	2026-05-02T10:46:10.5276075Z ##[group]Environment details
+Detect Changes	Setup Node.js	2026-05-02T10:46:13.5330174Z node: v20.20.2
+Detect Changes	Setup Node.js	2026-05-02T10:46:13.5330742Z npm: 10.8.2
+Detect Changes	Setup Node.js	2026-05-02T10:46:13.5331091Z yarn: 1.22.22
+Detect Changes	Setup Node.js	2026-05-02T10:46:13.5332486Z ##[endgroup]
+Detect Changes	Detect changes	﻿2026-05-02T10:46:13.5478670Z ##[group]Run node scripts/detect-code-changes.mjs
+Detect Changes	Detect changes	2026-05-02T10:46:13.5479203Z [36;1mnode scripts/detect-code-changes.mjs[0m
+Detect Changes	Detect changes	2026-05-02T10:46:13.5511719Z shell: /usr/bin/bash -e {0}
+Detect Changes	Detect changes	2026-05-02T10:46:13.5512035Z env:
+Detect Changes	Detect changes	2026-05-02T10:46:13.5512272Z   GITHUB_EVENT_NAME: pull_request
+Detect Changes	Detect changes	2026-05-02T10:46:13.5512631Z   GITHUB_BASE_SHA: 19784b188d6ad6eff654623f2ba698906dde0d13
+Detect Changes	Detect changes	2026-05-02T10:46:13.5513026Z   GITHUB_HEAD_SHA: 1df494042de25f19c7fa25e5be4bd28fa93c0d72
+Detect Changes	Detect changes	2026-05-02T10:46:13.5513354Z ##[endgroup]
+Detect Changes	Detect changes	2026-05-02T10:46:13.5882770Z Detecting file changes for CI/CD...
+Detect Changes	Detect changes	2026-05-02T10:46:13.5883198Z
+Detect Changes	Detect changes	2026-05-02T10:46:13.5883723Z Comparing PR: 19784b188d6ad6eff654623f2ba698906dde0d13...1df494042de25f19c7fa25e5be4bd28fa93c0d72
+Detect Changes	Detect changes	2026-05-02T10:46:13.5958460Z Changed files:
+Detect Changes	Detect changes	2026-05-02T10:46:13.5958962Z   .github/workflows/js.yml
+Detect Changes	Detect changes	2026-05-02T10:46:13.5959438Z   .github/workflows/rust.yml
+Detect Changes	Detect changes	2026-05-02T10:46:13.5959884Z   .gitkeep
+Detect Changes	Detect changes	2026-05-02T10:46:13.5960349Z   docs/case-studies/issue-114/README.md
+Detect Changes	Detect changes	2026-05-02T10:46:13.5961145Z   docs/case-studies/issue-114/ci-logs/javascript-cicd-25246804640.txt
+Detect Changes	Detect changes	2026-05-02T10:46:13.5963873Z   docs/case-studies/issue-114/ci-logs/rust-cicd-25246804647.txt
+Detect Changes	Detect changes	2026-05-02T10:46:13.5965099Z   docs/case-studies/issue-114/ci-run-25246804640.json
+Detect Changes	Detect changes	2026-05-02T10:46:13.5965761Z   docs/case-studies/issue-114/ci-run-25246804647.json
+Detect Changes	Detect changes	2026-05-02T10:46:13.5966369Z   docs/case-studies/issue-114/issue-comments.json
+Detect Changes	Detect changes	2026-05-02T10:46:13.5966967Z   docs/case-studies/issue-114/issue-data.json
+Detect Changes	Detect changes	2026-05-02T10:46:13.5967710Z   docs/case-studies/issue-114/online-research.md
+Detect Changes	Detect changes	2026-05-02T10:46:13.5968308Z   docs/case-studies/issue-114/related-prs.json
+Detect Changes	Detect changes	2026-05-02T10:46:13.5968863Z   docs/case-studies/issue-114/requirements.md
+Detect Changes	Detect changes	2026-05-02T10:46:13.5969492Z   docs/case-studies/issue-114/root-cause.md
+Detect Changes	Detect changes	2026-05-02T10:46:13.5970050Z   docs/case-studies/issue-114/solutions.md
+Detect Changes	Detect changes	2026-05-02T10:46:13.5970756Z   docs/case-studies/issue-114/templates/js-template-release.yml
+Detect Changes	Detect changes	2026-05-02T10:46:13.5971553Z   docs/case-studies/issue-114/templates/reviewed-template-files.txt
+Detect Changes	Detect changes	2026-05-02T10:46:13.5972358Z   docs/case-studies/issue-114/templates/rust-template-release.yml
+Detect Changes	Detect changes	2026-05-02T10:46:13.5973033Z   docs/case-studies/issue-114/timeline.md
+Detect Changes	Detect changes	2026-05-02T10:46:13.5973615Z   experiments/issue-114-rust-version-smoke.sh
+Detect Changes	Detect changes	2026-05-02T10:46:13.5974220Z   js/.changeset/issue-114-cicd-release-fixes.md
+Detect Changes	Detect changes	2026-05-02T10:46:13.5974719Z   js/test/cli.js
+Detect Changes	Detect changes	2026-05-02T10:46:13.5975140Z   js/test/docker-autoremove.js
+Detect Changes	Detect changes	2026-05-02T10:46:13.5975615Z   js/test/release-name.mjs
+Detect Changes	Detect changes	2026-05-02T10:46:13.5976039Z   rust/changelog.d/114.md
+Detect Changes	Detect changes	2026-05-02T10:46:13.5976439Z   rust/changelog.d/README.md
+Detect Changes	Detect changes	2026-05-02T10:46:13.5976911Z   scripts/create-github-release.mjs
+Detect Changes	Detect changes	2026-05-02T10:46:13.5977421Z   scripts/format-release-notes.mjs
+Detect Changes	Detect changes	2026-05-02T10:46:13.5978029Z   scripts/release-name.mjs
+Detect Changes	Detect changes	2026-05-02T10:46:13.5978489Z   scripts/version-and-commit.mjs
+Detect Changes	Detect changes	2026-05-02T10:46:13.5978773Z
+Detect Changes	Detect changes	2026-05-02T10:46:13.5978944Z rs-changed=false
+Detect Changes	Detect changes	2026-05-02T10:46:13.5979334Z toml-changed=false
+Detect Changes	Detect changes	2026-05-02T10:46:13.5979698Z js-changed=true
+Detect Changes	Detect changes	2026-05-02T10:46:13.5980046Z mjs-changed=true
+Detect Changes	Detect changes	2026-05-02T10:46:13.5980428Z package-changed=false
+Detect Changes	Detect changes	2026-05-02T10:46:13.5980833Z docs-changed=true
+Detect Changes	Detect changes	2026-05-02T10:46:13.5981204Z workflow-changed=true
+Detect Changes	Detect changes	2026-05-02T10:46:13.5981437Z
+Detect Changes	Detect changes	2026-05-02T10:46:13.5981693Z Files considered as code changes:
+Detect Changes	Detect changes	2026-05-02T10:46:13.5982173Z   .github/workflows/js.yml
+Detect Changes	Detect changes	2026-05-02T10:46:13.5982589Z   .github/workflows/rust.yml
+Detect Changes	Detect changes	2026-05-02T10:46:13.5982977Z   .gitkeep
+Detect Changes	Detect changes	2026-05-02T10:46:13.5983303Z   js/test/cli.js
+Detect Changes	Detect changes	2026-05-02T10:46:13.5983696Z   js/test/docker-autoremove.js
+Detect Changes	Detect changes	2026-05-02T10:46:13.5984129Z   js/test/release-name.mjs
+Detect Changes	Detect changes	2026-05-02T10:46:13.5984596Z   scripts/create-github-release.mjs
+Detect Changes	Detect changes	2026-05-02T10:46:13.5985101Z   scripts/format-release-notes.mjs
+Detect Changes	Detect changes	2026-05-02T10:46:13.5985549Z   scripts/release-name.mjs
+Detect Changes	Detect changes	2026-05-02T10:46:13.5985995Z   scripts/version-and-commit.mjs
+Detect Changes	Detect changes	2026-05-02T10:46:13.5986288Z
+Detect Changes	Detect changes	2026-05-02T10:46:13.5986493Z any-rust-code-changed=false
+Detect Changes	Detect changes	2026-05-02T10:46:13.5986934Z any-js-code-changed=true
+Detect Changes	Detect changes	2026-05-02T10:46:13.5987361Z any-code-changed=true
+Detect Changes	Detect changes	2026-05-02T10:46:13.5988006Z
+Detect Changes	Detect changes	2026-05-02T10:46:13.5988211Z Change detection completed.
+Detect Changes	Post Setup Node.js	﻿2026-05-02T10:46:13.6132390Z Post job cleanup.
+Detect Changes	Post Run actions/checkout@v4	﻿2026-05-02T10:46:13.7820510Z Post job cleanup.
+Detect Changes	Post Run actions/checkout@v4	2026-05-02T10:46:13.8787057Z [command]/usr/bin/git version
+Detect Changes	Post Run actions/checkout@v4	2026-05-02T10:46:13.8833749Z git version 2.53.0
+Detect Changes	Post Run actions/checkout@v4	2026-05-02T10:46:13.8875011Z Temporarily overriding HOME='/home/runner/work/_temp/ffc08a18-986a-4335-965b-7b3f3c0ba96d' before making global git config changes
+Detect Changes	Post Run actions/checkout@v4	2026-05-02T10:46:13.8876573Z Adding repository directory to the temporary git global config as a safe directory
+Detect Changes	Post Run actions/checkout@v4	2026-05-02T10:46:13.8881488Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/start/start
+Detect Changes	Post Run actions/checkout@v4	2026-05-02T10:46:13.8915846Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Detect Changes	Post Run actions/checkout@v4	2026-05-02T10:46:13.8948557Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Detect Changes	Post Run actions/checkout@v4	2026-05-02T10:46:13.9180623Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Detect Changes	Post Run actions/checkout@v4	2026-05-02T10:46:13.9202239Z http.https://github.com/.extraheader
+Detect Changes	Post Run actions/checkout@v4	2026-05-02T10:46:13.9214099Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+Detect Changes	Post Run actions/checkout@v4	2026-05-02T10:46:13.9243551Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Detect Changes	Post Run actions/checkout@v4	2026-05-02T10:46:13.9475262Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Detect Changes	Post Run actions/checkout@v4	2026-05-02T10:46:13.9506517Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Detect Changes	Complete job	﻿2026-05-02T10:46:13.9847442Z Evaluate and set job outputs
+Detect Changes	Complete job	2026-05-02T10:46:13.9856194Z Set output 'js-changed'
+Detect Changes	Complete job	2026-05-02T10:46:13.9858276Z Set output 'mjs-changed'
+Detect Changes	Complete job	2026-05-02T10:46:13.9859086Z Set output 'package-changed'
+Detect Changes	Complete job	2026-05-02T10:46:13.9859466Z Set output 'docs-changed'
+Detect Changes	Complete job	2026-05-02T10:46:13.9859846Z Set output 'workflow-changed'
+Detect Changes	Complete job	2026-05-02T10:46:13.9860208Z Set output 'any-js-code-changed'
+Detect Changes	Complete job	2026-05-02T10:46:13.9860918Z Cleaning up orphan processes
+Detect Changes	Complete job	2026-05-02T10:46:14.0153153Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-node@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Check for Manual Version Changes	Set up job	﻿2026-05-02T10:46:08.2102127Z Current runner version: '2.334.0'
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2122496Z ##[group]Runner Image Provisioner
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2123192Z Hosted Compute Agent
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2123830Z Version: 20260213.493
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2124277Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2124883Z Build Date: 2026-02-13T00:28:41Z
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2125411Z Worker ID: {b37291a9-ebc8-4bee-9073-45fb58e90467}
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2125939Z Azure Region: westus
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2126419Z ##[endgroup]
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2127411Z ##[group]Operating System
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2127882Z Ubuntu
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2128268Z 24.04.4
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2128658Z LTS
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2129028Z ##[endgroup]
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2129473Z ##[group]Runner Image
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2129919Z Image: ubuntu-24.04
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2130300Z Version: 20260413.86.1
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2131104Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2132346Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2133073Z ##[endgroup]
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2135382Z ##[group]GITHUB_TOKEN Permissions
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2137016Z Actions: write
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2137448Z ArtifactMetadata: write
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2137929Z Attestations: write
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2138297Z Checks: write
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2138753Z Contents: write
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2139127Z Deployments: write
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2139528Z Discussions: write
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2139948Z Issues: write
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2140373Z Metadata: read
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2140730Z Models: read
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2141156Z Packages: write
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2141557Z Pages: write
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2141973Z PullRequests: write
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2142440Z RepositoryProjects: write
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2142883Z SecurityEvents: write
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2143309Z Statuses: write
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2143896Z VulnerabilityAlerts: read
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2144395Z ##[endgroup]
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2146015Z Secret source: Actions
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2146586Z Prepare workflow directory
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2405461Z Prepare all required actions
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.2435869Z Getting action download info
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.6424469Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+Check for Manual Version Changes	Set up job	2026-05-02T10:46:08.8649535Z Complete job name: Check for Manual Version Changes
+Check for Manual Version Changes	Run actions/checkout@v4	﻿2026-05-02T10:46:08.9206234Z ##[group]Run actions/checkout@v4
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9206860Z with:
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9207148Z   fetch-depth: 0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9207471Z   repository: link-foundation/start
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9208003Z   token: ***
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9208304Z   ssh-strict: true
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9208615Z   ssh-user: git
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9208929Z   persist-credentials: true
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9209276Z   clean: true
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9209773Z   sparse-checkout-cone-mode: true
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9210239Z   fetch-tags: false
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9210754Z   show-progress: true
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9211097Z   lfs: false
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9211381Z   submodules: false
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9211694Z   set-safe-directory: true
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:08.9212181Z ##[endgroup]
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0092781Z Syncing repository: link-foundation/start
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0094548Z ##[group]Getting Git version info
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0095146Z Working directory is '/home/runner/work/start/start'
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0095906Z [command]/usr/bin/git version
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0136490Z git version 2.53.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0155487Z ##[endgroup]
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0167095Z Temporarily overriding HOME='/home/runner/work/_temp/d2306cb6-b443-4693-a2a0-42e1a85699d5' before making global git config changes
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0168241Z Adding repository directory to the temporary git global config as a safe directory
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0171184Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/start/start
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0197648Z Deleting the contents of '/home/runner/work/start/start'
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0200444Z ##[group]Initializing the repository
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0203667Z [command]/usr/bin/git init /home/runner/work/start/start
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0286596Z hint: Using 'master' as the name for the initial branch. This default branch name
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0287986Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0289248Z hint: to use in all of your new repositories, which will suppress this warning,
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0290256Z hint: call:
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0290778Z hint:
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0291355Z hint: 	git config --global init.defaultBranch <name>
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0292063Z hint:
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0292707Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0293960Z hint: 'development'. The just-created branch can be renamed via this command:
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0294788Z hint:
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0295231Z hint: 	git branch -m <name>
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0295761Z hint:
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0296461Z hint: Disable this message with "git config set advice.defaultBranchName false"
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0297551Z Initialized empty Git repository in /home/runner/work/start/start/.git/
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0299405Z [command]/usr/bin/git remote add origin https://github.com/link-foundation/start
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0326661Z ##[endgroup]
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0327509Z ##[group]Disabling automatic garbage collection
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0329942Z [command]/usr/bin/git config --local gc.auto 0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0353063Z ##[endgroup]
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0353952Z ##[group]Setting up auth
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0358339Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0381722Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0637587Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0662689Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0850765Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.0875240Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1062294Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1091082Z ##[endgroup]
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1091951Z ##[group]Fetching the repository
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.1099202Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/* +3d80fc156da38073746cd1ea6695351419893ba8:refs/remotes/pull/115/merge
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9303336Z From https://github.com/link-foundation/start
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9304899Z  * [new branch]      issue-1-06306849                         -> origin/issue-1-06306849
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9306330Z  * [new branch]      issue-101-f6ea3a87b1de                   -> origin/issue-101-f6ea3a87b1de
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9307815Z  * [new branch]      issue-103-d2eee141f4bc                   -> origin/issue-103-d2eee141f4bc
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9309385Z  * [new branch]      issue-105-0edd650b7149                   -> origin/issue-105-0edd650b7149
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9310838Z  * [new branch]      issue-108-c821d8a93f01                   -> origin/issue-108-c821d8a93f01
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9312443Z  * [new branch]      issue-11-1524425f0588                    -> origin/issue-11-1524425f0588
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9314023Z  * [new branch]      issue-110-c1b9267a2743                   -> origin/issue-110-c1b9267a2743
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9315247Z  * [new branch]      issue-112-46af7527c0d9                   -> origin/issue-112-46af7527c0d9
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9316343Z  * [new branch]      issue-114-8181f01863b9                   -> origin/issue-114-8181f01863b9
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9317162Z  * [new branch]      issue-13-52ae2ce06ee2                    -> origin/issue-13-52ae2ce06ee2
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9317989Z  * [new branch]      issue-15-ccfe6d130337                    -> origin/issue-15-ccfe6d130337
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9318810Z  * [new branch]      issue-15-d3d0f1c82afa                    -> origin/issue-15-d3d0f1c82afa
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9319600Z  * [new branch]      issue-18-acfe3ddbe902                    -> origin/issue-18-acfe3ddbe902
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9320504Z  * [new branch]      issue-19-83cfc521f662                    -> origin/issue-19-83cfc521f662
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9321327Z  * [new branch]      issue-22-08e44246441d                    -> origin/issue-22-08e44246441d
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9322106Z  * [new branch]      issue-22-2d1c04999e6d                    -> origin/issue-22-2d1c04999e6d
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9322892Z  * [new branch]      issue-25-6419574a6cfe                    -> origin/issue-25-6419574a6cfe
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9323927Z  * [new branch]      issue-25-8fe656da1123                    -> origin/issue-25-8fe656da1123
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9324748Z  * [new branch]      issue-28-9a07df20ebbb                    -> origin/issue-28-9a07df20ebbb
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9325541Z  * [new branch]      issue-3-908abf67e50f                     -> origin/issue-3-908abf67e50f
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9326342Z  * [new branch]      issue-30-3c74b37eedc9                    -> origin/issue-30-3c74b37eedc9
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9327140Z  * [new branch]      issue-31-e419d5f83f9d                    -> origin/issue-31-e419d5f83f9d
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9327941Z  * [new branch]      issue-34-fcfbf90ca3a5                    -> origin/issue-34-fcfbf90ca3a5
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9328741Z  * [new branch]      issue-36-4d2e05cadca2                    -> origin/issue-36-4d2e05cadca2
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9329540Z  * [new branch]      issue-38-8d65d5c6dcf1                    -> origin/issue-38-8d65d5c6dcf1
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9330329Z  * [new branch]      issue-40-500ee5a3c836                    -> origin/issue-40-500ee5a3c836
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9331126Z  * [new branch]      issue-42-231914cdf85a                    -> origin/issue-42-231914cdf85a
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9331941Z  * [new branch]      issue-44-05c1999867e1                    -> origin/issue-44-05c1999867e1
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9332998Z  * [new branch]      issue-46-db1336ec1bd4                    -> origin/issue-46-db1336ec1bd4
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9334032Z  * [new branch]      issue-49-49badfb087ae                    -> origin/issue-49-49badfb087ae
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9334810Z  * [new branch]      issue-5-e920ed9704b1                     -> origin/issue-5-e920ed9704b1
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9335594Z  * [new branch]      issue-51-ce9116974281                    -> origin/issue-51-ce9116974281
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9336366Z  * [new branch]      issue-53-3037eb51507e                    -> origin/issue-53-3037eb51507e
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9337151Z  * [new branch]      issue-55-62ca352b2854                    -> origin/issue-55-62ca352b2854
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9337922Z  * [new branch]      issue-57-319974e37702                    -> origin/issue-57-319974e37702
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9338685Z  * [new branch]      issue-57-9389c40a25d3                    -> origin/issue-57-9389c40a25d3
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9339461Z  * [new branch]      issue-60-23ad1508ca00                    -> origin/issue-60-23ad1508ca00
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9340235Z  * [new branch]      issue-62-0bf0e6dba402                    -> origin/issue-62-0bf0e6dba402
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9341032Z  * [new branch]      issue-64-531bd4a9716c                    -> origin/issue-64-531bd4a9716c
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9341824Z  * [new branch]      issue-66-b4bebb964b80                    -> origin/issue-66-b4bebb964b80
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9342593Z  * [new branch]      issue-67-c74bf55321d9                    -> origin/issue-67-c74bf55321d9
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9343643Z  * [new branch]      issue-7-6b049fda1d30                     -> origin/issue-7-6b049fda1d30
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9344470Z  * [new branch]      issue-70-210190e0ad55                    -> origin/issue-70-210190e0ad55
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9345252Z  * [new branch]      issue-70-490c526a882f                    -> origin/issue-70-490c526a882f
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9346025Z  * [new branch]      issue-73-163864f76573                    -> origin/issue-73-163864f76573
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9346802Z  * [new branch]      issue-73-47a3e673b0a8                    -> origin/issue-73-47a3e673b0a8
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9347576Z  * [new branch]      issue-73-c42828279fb5                    -> origin/issue-73-c42828279fb5
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9348344Z  * [new branch]      issue-77-acc01682cb56                    -> origin/issue-77-acc01682cb56
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9349118Z  * [new branch]      issue-79-1581a427bf82                    -> origin/issue-79-1581a427bf82
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9349900Z  * [new branch]      issue-79-48234c0f95fa                    -> origin/issue-79-48234c0f95fa
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9350662Z  * [new branch]      issue-79-5fc029ea058c                    -> origin/issue-79-5fc029ea058c
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9351433Z  * [new branch]      issue-79-740a4286522a                    -> origin/issue-79-740a4286522a
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9352220Z  * [new branch]      issue-84-2301d58a902f                    -> origin/issue-84-2301d58a902f
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9353002Z  * [new branch]      issue-84-8c8db1f16f9d                    -> origin/issue-84-8c8db1f16f9d
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9353960Z  * [new branch]      issue-84-ca99d5699c03                    -> origin/issue-84-ca99d5699c03
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9354746Z  * [new branch]      issue-84-e79fd3fe5cef                    -> origin/issue-84-e79fd3fe5cef
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9355559Z  * [new branch]      issue-89-58b19f5dac12                    -> origin/issue-89-58b19f5dac12
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9356383Z  * [new branch]      issue-9-9cb379f155fb                     -> origin/issue-9-9cb379f155fb
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9357153Z  * [new branch]      issue-91-5ff8719c4182                    -> origin/issue-91-5ff8719c4182
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9357918Z  * [new branch]      issue-91-8e243739c7af                    -> origin/issue-91-8e243739c7af
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9358687Z  * [new branch]      issue-93-2ef57910c60b                    -> origin/issue-93-2ef57910c60b
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9359462Z  * [new branch]      issue-96-829d21ddabc4                    -> origin/issue-96-829d21ddabc4
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9360364Z  * [new branch]      issue-96-efde41b8c023                    -> origin/issue-96-efde41b8c023
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9361135Z  * [new branch]      issue-99-bc78b28ed258                    -> origin/issue-99-bc78b28ed258
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9361862Z  * [new branch]      main                                     -> origin/main
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9362472Z  * [new tag]         js-v0.25.5                               -> js-v0.25.5
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9363066Z  * [new tag]         js-v0.26.0                               -> js-v0.26.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9363856Z  * [new tag]         v0.10.0                                  -> v0.10.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9364423Z  * [new tag]         v0.11.0                                  -> v0.11.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9364978Z  * [new tag]         v0.13.0                                  -> v0.13.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9365518Z  * [new tag]         v0.15.0                                  -> v0.15.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9366074Z  * [new tag]         v0.16.0                                  -> v0.16.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9366612Z  * [new tag]         v0.17.0                                  -> v0.17.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9367157Z  * [new tag]         v0.17.1                                  -> v0.17.1
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9367735Z  * [new tag]         v0.17.2                                  -> v0.17.2
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9368275Z  * [new tag]         v0.17.3                                  -> v0.17.3
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9368945Z  * [new tag]         v0.17.4                                  -> v0.17.4
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9369502Z  * [new tag]         v0.18.0                                  -> v0.18.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9370043Z  * [new tag]         v0.19.0                                  -> v0.19.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9370572Z  * [new tag]         v0.19.1                                  -> v0.19.1
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9371108Z  * [new tag]         v0.20.0                                  -> v0.20.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9371650Z  * [new tag]         v0.20.1                                  -> v0.20.1
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9372175Z  * [new tag]         v0.20.2                                  -> v0.20.2
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9372716Z  * [new tag]         v0.20.3                                  -> v0.20.3
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9373240Z  * [new tag]         v0.20.4                                  -> v0.20.4
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9373887Z  * [new tag]         v0.21.0                                  -> v0.21.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9374457Z  * [new tag]         v0.22.0                                  -> v0.22.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9375034Z  * [new tag]         v0.23.0                                  -> v0.23.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9375585Z  * [new tag]         v0.24.0                                  -> v0.24.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9376116Z  * [new tag]         v0.24.1                                  -> v0.24.1
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9376652Z  * [new tag]         v0.24.2                                  -> v0.24.2
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9377190Z  * [new tag]         v0.24.3                                  -> v0.24.3
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9377728Z  * [new tag]         v0.24.4                                  -> v0.24.4
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9378257Z  * [new tag]         v0.24.5                                  -> v0.24.5
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9378789Z  * [new tag]         v0.24.6                                  -> v0.24.6
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9379326Z  * [new tag]         v0.24.7                                  -> v0.24.7
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9379863Z  * [new tag]         v0.24.8                                  -> v0.24.8
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9380459Z  * [new tag]         v0.24.9                                  -> v0.24.9
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9380994Z  * [new tag]         v0.25.0                                  -> v0.25.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9381537Z  * [new tag]         v0.25.1                                  -> v0.25.1
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9382075Z  * [new tag]         v0.25.2                                  -> v0.25.2
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9382723Z  * [new tag]         v0.25.3                                  -> v0.25.3
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9383293Z  * [new tag]         v0.25.4                                  -> v0.25.4
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9383932Z  * [new tag]         v0.3.1                                   -> v0.3.1
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9384487Z  * [new tag]         v0.4.0                                   -> v0.4.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9385028Z  * [new tag]         v0.4.1                                   -> v0.4.1
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9385568Z  * [new tag]         v0.5.0                                   -> v0.5.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9386110Z  * [new tag]         v0.5.1                                   -> v0.5.1
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9386636Z  * [new tag]         v0.5.2                                   -> v0.5.2
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9387169Z  * [new tag]         v0.5.3                                   -> v0.5.3
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9387692Z  * [new tag]         v0.6.0                                   -> v0.6.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9388226Z  * [new tag]         v0.7.0                                   -> v0.7.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9388759Z  * [new tag]         v0.7.1                                   -> v0.7.1
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9389282Z  * [new tag]         v0.7.2                                   -> v0.7.2
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9389818Z  * [new tag]         v0.7.4                                   -> v0.7.4
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9390360Z  * [new tag]         v0.7.5                                   -> v0.7.5
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9391016Z  * [new tag]         v0.7.6                                   -> v0.7.6
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9391549Z  * [new tag]         v0.9.0                                   -> v0.9.0
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9392161Z  * [new ref]         3d80fc156da38073746cd1ea6695351419893ba8 -> pull/115/merge
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9422077Z ##[endgroup]
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9423106Z ##[group]Determining the checkout info
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9424418Z ##[endgroup]
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9428509Z [command]/usr/bin/git sparse-checkout disable
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9459378Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9480336Z ##[group]Checking out the ref
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9483958Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/115/merge
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9707669Z Note: switching to 'refs/remotes/pull/115/merge'.
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9708346Z
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9708823Z You are in 'detached HEAD' state. You can look around, make experimental
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9710028Z changes and commit them, and you can discard any commits you make in this
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9710902Z state without impacting any branches by switching back to a branch.
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9711599Z
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9712048Z If you want to create a new branch to retain commits you create, you may
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9713122Z do so (now or later) by using -c with the switch command. Example:
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9713958Z
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9714226Z   git switch -c <new-branch-name>
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9714692Z
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9714935Z Or undo this operation with:
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9715297Z
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9715514Z   git switch -
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9715804Z
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9716284Z Turn off this advice by setting config variable advice.detachedHead to false
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9717037Z
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9717874Z HEAD is now at 3d80fc1 Merge 1df494042de25f19c7fa25e5be4bd28fa93c0d72 into 19784b188d6ad6eff654623f2ba698906dde0d13
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9720510Z ##[endgroup]
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9747740Z [command]/usr/bin/git log -1 --format=%H
+Check for Manual Version Changes	Run actions/checkout@v4	2026-05-02T10:46:09.9766163Z 3d80fc156da38073746cd1ea6695351419893ba8
+Check for Manual Version Changes	Check for version changes in package.json	﻿2026-05-02T10:46:09.9942543Z ##[group]Run # Skip check for automated release PRs
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9943181Z [36;1m# Skip check for automated release PRs[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9944259Z [36;1mif [[ "issue-114-8181f01863b9" == "changeset-release/"* ]] || [[ "issue-114-8181f01863b9" == "changeset-js-"* ]]; then[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9945109Z [36;1m  echo "Skipping version check for automated release PR"[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9945613Z [36;1m  exit 0[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9945931Z [36;1mfi[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9946223Z [36;1m[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9946540Z [36;1m# Get the diff for package.json[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9947231Z [36;1mVERSION_DIFF=$(git diff origin/main...HEAD -- js/package.json | grep -E '^\+.*"version"' || true)[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9947922Z [36;1m[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9948232Z [36;1mif [ -n "$VERSION_DIFF" ]; then[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9948802Z [36;1m  echo "::error::Manual version change detected in js/package.json"[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9949362Z [36;1m  echo ""[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9949912Z [36;1m  echo "Version changes in package.json are prohibited in pull requests."[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9950723Z [36;1m  echo "Versions are managed automatically by the CI/CD pipeline using changesets."[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9951348Z [36;1m  echo ""[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9951684Z [36;1m  echo "To request a release:"[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9952189Z [36;1m  echo "  1. Add a changeset file describing your changes"[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9952878Z [36;1m  echo "  2. The release workflow will automatically bump the version when merged"[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9953687Z [36;1m  echo ""[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9954033Z [36;1m  echo "Detected change:"[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9954442Z [36;1m  echo "$VERSION_DIFF"[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9954819Z [36;1m  exit 1[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9955128Z [36;1mfi[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9955448Z [36;1m[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9956025Z [36;1mecho "No manual version changes detected - check passed"[0m
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9977795Z shell: /usr/bin/bash -e {0}
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:09.9978248Z ##[endgroup]
+Check for Manual Version Changes	Check for version changes in package.json	2026-05-02T10:46:10.0053865Z No manual version changes detected - check passed
+Check for Manual Version Changes	Post Run actions/checkout@v4	﻿2026-05-02T10:46:10.0207940Z Post job cleanup.
+Check for Manual Version Changes	Post Run actions/checkout@v4	2026-05-02T10:46:10.0981553Z [command]/usr/bin/git version
+Check for Manual Version Changes	Post Run actions/checkout@v4	2026-05-02T10:46:10.1009916Z git version 2.53.0
+Check for Manual Version Changes	Post Run actions/checkout@v4	2026-05-02T10:46:10.1047726Z Temporarily overriding HOME='/home/runner/work/_temp/0316e24c-120a-43ca-b4a3-8bc8009aea2a' before making global git config changes
+Check for Manual Version Changes	Post Run actions/checkout@v4	2026-05-02T10:46:10.1048898Z Adding repository directory to the temporary git global config as a safe directory
+Check for Manual Version Changes	Post Run actions/checkout@v4	2026-05-02T10:46:10.1051572Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/start/start
+Check for Manual Version Changes	Post Run actions/checkout@v4	2026-05-02T10:46:10.1081519Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Check for Manual Version Changes	Post Run actions/checkout@v4	2026-05-02T10:46:10.1108283Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Check for Manual Version Changes	Post Run actions/checkout@v4	2026-05-02T10:46:10.1292673Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Check for Manual Version Changes	Post Run actions/checkout@v4	2026-05-02T10:46:10.1309693Z http.https://github.com/.extraheader
+Check for Manual Version Changes	Post Run actions/checkout@v4	2026-05-02T10:46:10.1320397Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+Check for Manual Version Changes	Post Run actions/checkout@v4	2026-05-02T10:46:10.1347869Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Check for Manual Version Changes	Post Run actions/checkout@v4	2026-05-02T10:46:10.1530792Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Check for Manual Version Changes	Post Run actions/checkout@v4	2026-05-02T10:46:10.1556703Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Check for Manual Version Changes	Complete job	﻿2026-05-02T10:46:10.1831601Z Cleaning up orphan processes
+Check for Manual Version Changes	Complete job	2026-05-02T10:46:10.2079924Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Check for Changesets	Set up job	﻿2026-05-02T10:46:18.6475033Z Current runner version: '2.334.0'
+Check for Changesets	Set up job	2026-05-02T10:46:18.6501087Z ##[group]Runner Image Provisioner
+Check for Changesets	Set up job	2026-05-02T10:46:18.6501883Z Hosted Compute Agent
+Check for Changesets	Set up job	2026-05-02T10:46:18.6502484Z Version: 20260213.493
+Check for Changesets	Set up job	2026-05-02T10:46:18.6503084Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+Check for Changesets	Set up job	2026-05-02T10:46:18.6503737Z Build Date: 2026-02-13T00:28:41Z
+Check for Changesets	Set up job	2026-05-02T10:46:18.6504422Z Worker ID: {67f06ba3-3805-42cc-9a15-f76880b2301d}
+Check for Changesets	Set up job	2026-05-02T10:46:18.6505057Z Azure Region: eastus
+Check for Changesets	Set up job	2026-05-02T10:46:18.6505647Z ##[endgroup]
+Check for Changesets	Set up job	2026-05-02T10:46:18.6507103Z ##[group]Operating System
+Check for Changesets	Set up job	2026-05-02T10:46:18.6507732Z Ubuntu
+Check for Changesets	Set up job	2026-05-02T10:46:18.6508195Z 24.04.4
+Check for Changesets	Set up job	2026-05-02T10:46:18.6508684Z LTS
+Check for Changesets	Set up job	2026-05-02T10:46:18.6509155Z ##[endgroup]
+Check for Changesets	Set up job	2026-05-02T10:46:18.6509644Z ##[group]Runner Image
+Check for Changesets	Set up job	2026-05-02T10:46:18.6510228Z Image: ubuntu-24.04
+Check for Changesets	Set up job	2026-05-02T10:46:18.6510939Z Version: 20260413.86.1
+Check for Changesets	Set up job	2026-05-02T10:46:18.6511928Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+Check for Changesets	Set up job	2026-05-02T10:46:18.6513563Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+Check for Changesets	Set up job	2026-05-02T10:46:18.6514468Z ##[endgroup]
+Check for Changesets	Set up job	2026-05-02T10:46:18.6517198Z ##[group]GITHUB_TOKEN Permissions
+Check for Changesets	Set up job	2026-05-02T10:46:18.6519132Z Actions: write
+Check for Changesets	Set up job	2026-05-02T10:46:18.6519773Z ArtifactMetadata: write
+Check for Changesets	Set up job	2026-05-02T10:46:18.6520328Z Attestations: write
+Check for Changesets	Set up job	2026-05-02T10:46:18.6521145Z Checks: write
+Check for Changesets	Set up job	2026-05-02T10:46:18.6521766Z Contents: write
+Check for Changesets	Set up job	2026-05-02T10:46:18.6522234Z Deployments: write
+Check for Changesets	Set up job	2026-05-02T10:46:18.6522747Z Discussions: write
+Check for Changesets	Set up job	2026-05-02T10:46:18.6523279Z Issues: write
+Check for Changesets	Set up job	2026-05-02T10:46:18.6523777Z Metadata: read
+Check for Changesets	Set up job	2026-05-02T10:46:18.6524277Z Models: read
+Check for Changesets	Set up job	2026-05-02T10:46:18.6524787Z Packages: write
+Check for Changesets	Set up job	2026-05-02T10:46:18.6525279Z Pages: write
+Check for Changesets	Set up job	2026-05-02T10:46:18.6525808Z PullRequests: write
+Check for Changesets	Set up job	2026-05-02T10:46:18.6526443Z RepositoryProjects: write
+Check for Changesets	Set up job	2026-05-02T10:46:18.6526969Z SecurityEvents: write
+Check for Changesets	Set up job	2026-05-02T10:46:18.6527473Z Statuses: write
+Check for Changesets	Set up job	2026-05-02T10:46:18.6528076Z VulnerabilityAlerts: read
+Check for Changesets	Set up job	2026-05-02T10:46:18.6528611Z ##[endgroup]
+Check for Changesets	Set up job	2026-05-02T10:46:18.6531070Z Secret source: Actions
+Check for Changesets	Set up job	2026-05-02T10:46:18.6531809Z Prepare workflow directory
+Check for Changesets	Set up job	2026-05-02T10:46:18.6859675Z Prepare all required actions
+Check for Changesets	Set up job	2026-05-02T10:46:18.6898113Z Getting action download info
+Check for Changesets	Set up job	2026-05-02T10:46:18.9469180Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+Check for Changesets	Set up job	2026-05-02T10:46:19.0822737Z Download action repository 'oven-sh/setup-bun@v2' (SHA:0c5077e51419868618aeaa5fe8019c62421857d6)
+Check for Changesets	Set up job	2026-05-02T10:46:19.2920176Z Complete job name: Check for Changesets
+Check for Changesets	Run actions/checkout@v4	﻿2026-05-02T10:46:19.3628937Z ##[group]Run actions/checkout@v4
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3629897Z with:
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3630707Z   fetch-depth: 0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3631142Z   repository: link-foundation/start
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3631848Z   token: ***
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3632221Z   ssh-strict: true
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3632596Z   ssh-user: git
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3632983Z   persist-credentials: true
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3633408Z   clean: true
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3633822Z   sparse-checkout-cone-mode: true
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3634289Z   fetch-tags: false
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3634694Z   show-progress: true
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3635092Z   lfs: false
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3635461Z   submodules: false
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3635851Z   set-safe-directory: true
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.3636564Z ##[endgroup]
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.4800761Z Syncing repository: link-foundation/start
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.4802740Z ##[group]Getting Git version info
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.4803427Z Working directory is '/home/runner/work/start/start'
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.4804377Z [command]/usr/bin/git version
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.4848440Z git version 2.53.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.4875362Z ##[endgroup]
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.4891131Z Temporarily overriding HOME='/home/runner/work/_temp/8746c50c-4635-4afd-a5be-a0178dd830d6' before making global git config changes
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.4893532Z Adding repository directory to the temporary git global config as a safe directory
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.4897643Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/start/start
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.4930824Z Deleting the contents of '/home/runner/work/start/start'
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.4935115Z ##[group]Initializing the repository
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.4939835Z [command]/usr/bin/git init /home/runner/work/start/start
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5046088Z hint: Using 'master' as the name for the initial branch. This default branch name
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5047859Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5049491Z hint: to use in all of your new repositories, which will suppress this warning,
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5051053Z hint: call:
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5051707Z hint:
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5052543Z hint: 	git config --global init.defaultBranch <name>
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5053580Z hint:
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5054582Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5056104Z hint: 'development'. The just-created branch can be renamed via this command:
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5057333Z hint:
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5058015Z hint: 	git branch -m <name>
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5058807Z hint:
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5059861Z hint: Disable this message with "git config set advice.defaultBranchName false"
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5061790Z Initialized empty Git repository in /home/runner/work/start/start/.git/
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5064437Z [command]/usr/bin/git remote add origin https://github.com/link-foundation/start
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5093861Z ##[endgroup]
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5095116Z ##[group]Disabling automatic garbage collection
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5098885Z [command]/usr/bin/git config --local gc.auto 0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5127854Z ##[endgroup]
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5129131Z ##[group]Setting up auth
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5135871Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5166500Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5462485Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5503294Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5721062Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5752026Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.5971451Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.6005702Z ##[endgroup]
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.6006633Z ##[group]Fetching the repository
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.6014692Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/* +3d80fc156da38073746cd1ea6695351419893ba8:refs/remotes/pull/115/merge
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9329026Z From https://github.com/link-foundation/start
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9330982Z  * [new branch]      issue-1-06306849                         -> origin/issue-1-06306849
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9332782Z  * [new branch]      issue-101-f6ea3a87b1de                   -> origin/issue-101-f6ea3a87b1de
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9334625Z  * [new branch]      issue-103-d2eee141f4bc                   -> origin/issue-103-d2eee141f4bc
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9336510Z  * [new branch]      issue-105-0edd650b7149                   -> origin/issue-105-0edd650b7149
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9338311Z  * [new branch]      issue-108-c821d8a93f01                   -> origin/issue-108-c821d8a93f01
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9340096Z  * [new branch]      issue-11-1524425f0588                    -> origin/issue-11-1524425f0588
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9342175Z  * [new branch]      issue-110-c1b9267a2743                   -> origin/issue-110-c1b9267a2743
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9344135Z  * [new branch]      issue-112-46af7527c0d9                   -> origin/issue-112-46af7527c0d9
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9345133Z  * [new branch]      issue-114-8181f01863b9                   -> origin/issue-114-8181f01863b9
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9346098Z  * [new branch]      issue-13-52ae2ce06ee2                    -> origin/issue-13-52ae2ce06ee2
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9347040Z  * [new branch]      issue-15-ccfe6d130337                    -> origin/issue-15-ccfe6d130337
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9347979Z  * [new branch]      issue-15-d3d0f1c82afa                    -> origin/issue-15-d3d0f1c82afa
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9348926Z  * [new branch]      issue-18-acfe3ddbe902                    -> origin/issue-18-acfe3ddbe902
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9349860Z  * [new branch]      issue-19-83cfc521f662                    -> origin/issue-19-83cfc521f662
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9351184Z  * [new branch]      issue-22-08e44246441d                    -> origin/issue-22-08e44246441d
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9352168Z  * [new branch]      issue-22-2d1c04999e6d                    -> origin/issue-22-2d1c04999e6d
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9353118Z  * [new branch]      issue-25-6419574a6cfe                    -> origin/issue-25-6419574a6cfe
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9354052Z  * [new branch]      issue-25-8fe656da1123                    -> origin/issue-25-8fe656da1123
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9354991Z  * [new branch]      issue-28-9a07df20ebbb                    -> origin/issue-28-9a07df20ebbb
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9355947Z  * [new branch]      issue-3-908abf67e50f                     -> origin/issue-3-908abf67e50f
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9356893Z  * [new branch]      issue-30-3c74b37eedc9                    -> origin/issue-30-3c74b37eedc9
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9357826Z  * [new branch]      issue-31-e419d5f83f9d                    -> origin/issue-31-e419d5f83f9d
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9358755Z  * [new branch]      issue-34-fcfbf90ca3a5                    -> origin/issue-34-fcfbf90ca3a5
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9359814Z  * [new branch]      issue-36-4d2e05cadca2                    -> origin/issue-36-4d2e05cadca2
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9361035Z  * [new branch]      issue-38-8d65d5c6dcf1                    -> origin/issue-38-8d65d5c6dcf1
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9361984Z  * [new branch]      issue-40-500ee5a3c836                    -> origin/issue-40-500ee5a3c836
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9362909Z  * [new branch]      issue-42-231914cdf85a                    -> origin/issue-42-231914cdf85a
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9363828Z  * [new branch]      issue-44-05c1999867e1                    -> origin/issue-44-05c1999867e1
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9365002Z  * [new branch]      issue-46-db1336ec1bd4                    -> origin/issue-46-db1336ec1bd4
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9365928Z  * [new branch]      issue-49-49badfb087ae                    -> origin/issue-49-49badfb087ae
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9366856Z  * [new branch]      issue-5-e920ed9704b1                     -> origin/issue-5-e920ed9704b1
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9367783Z  * [new branch]      issue-51-ce9116974281                    -> origin/issue-51-ce9116974281
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9368705Z  * [new branch]      issue-53-3037eb51507e                    -> origin/issue-53-3037eb51507e
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9369626Z  * [new branch]      issue-55-62ca352b2854                    -> origin/issue-55-62ca352b2854
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9370691Z  * [new branch]      issue-57-319974e37702                    -> origin/issue-57-319974e37702
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9371609Z  * [new branch]      issue-57-9389c40a25d3                    -> origin/issue-57-9389c40a25d3
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9372529Z  * [new branch]      issue-60-23ad1508ca00                    -> origin/issue-60-23ad1508ca00
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9373459Z  * [new branch]      issue-62-0bf0e6dba402                    -> origin/issue-62-0bf0e6dba402
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9374378Z  * [new branch]      issue-64-531bd4a9716c                    -> origin/issue-64-531bd4a9716c
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9375299Z  * [new branch]      issue-66-b4bebb964b80                    -> origin/issue-66-b4bebb964b80
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9376363Z  * [new branch]      issue-67-c74bf55321d9                    -> origin/issue-67-c74bf55321d9
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9377284Z  * [new branch]      issue-7-6b049fda1d30                     -> origin/issue-7-6b049fda1d30
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9378222Z  * [new branch]      issue-70-210190e0ad55                    -> origin/issue-70-210190e0ad55
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9379137Z  * [new branch]      issue-70-490c526a882f                    -> origin/issue-70-490c526a882f
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9380048Z  * [new branch]      issue-73-163864f76573                    -> origin/issue-73-163864f76573
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9381274Z  * [new branch]      issue-73-47a3e673b0a8                    -> origin/issue-73-47a3e673b0a8
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9382202Z  * [new branch]      issue-73-c42828279fb5                    -> origin/issue-73-c42828279fb5
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9383129Z  * [new branch]      issue-77-acc01682cb56                    -> origin/issue-77-acc01682cb56
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9384052Z  * [new branch]      issue-79-1581a427bf82                    -> origin/issue-79-1581a427bf82
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9384972Z  * [new branch]      issue-79-48234c0f95fa                    -> origin/issue-79-48234c0f95fa
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9385883Z  * [new branch]      issue-79-5fc029ea058c                    -> origin/issue-79-5fc029ea058c
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9386800Z  * [new branch]      issue-79-740a4286522a                    -> origin/issue-79-740a4286522a
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9387713Z  * [new branch]      issue-84-2301d58a902f                    -> origin/issue-84-2301d58a902f
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9388631Z  * [new branch]      issue-84-8c8db1f16f9d                    -> origin/issue-84-8c8db1f16f9d
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9389559Z  * [new branch]      issue-84-ca99d5699c03                    -> origin/issue-84-ca99d5699c03
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9390607Z  * [new branch]      issue-84-e79fd3fe5cef                    -> origin/issue-84-e79fd3fe5cef
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9391580Z  * [new branch]      issue-89-58b19f5dac12                    -> origin/issue-89-58b19f5dac12
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9392541Z  * [new branch]      issue-9-9cb379f155fb                     -> origin/issue-9-9cb379f155fb
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9393469Z  * [new branch]      issue-91-5ff8719c4182                    -> origin/issue-91-5ff8719c4182
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9394387Z  * [new branch]      issue-91-8e243739c7af                    -> origin/issue-91-8e243739c7af
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9395302Z  * [new branch]      issue-93-2ef57910c60b                    -> origin/issue-93-2ef57910c60b
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9396217Z  * [new branch]      issue-96-829d21ddabc4                    -> origin/issue-96-829d21ddabc4
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9397294Z  * [new branch]      issue-96-efde41b8c023                    -> origin/issue-96-efde41b8c023
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9398234Z  * [new branch]      issue-99-bc78b28ed258                    -> origin/issue-99-bc78b28ed258
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9399067Z  * [new branch]      main                                     -> origin/main
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9399776Z  * [new tag]         js-v0.25.5                               -> js-v0.25.5
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9400715Z  * [new tag]         js-v0.26.0                               -> js-v0.26.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9401424Z  * [new tag]         v0.10.0                                  -> v0.10.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9402072Z  * [new tag]         v0.11.0                                  -> v0.11.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9402718Z  * [new tag]         v0.13.0                                  -> v0.13.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9403356Z  * [new tag]         v0.15.0                                  -> v0.15.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9404068Z  * [new tag]         v0.16.0                                  -> v0.16.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9404744Z  * [new tag]         v0.17.0                                  -> v0.17.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9405432Z  * [new tag]         v0.17.1                                  -> v0.17.1
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9406120Z  * [new tag]         v0.17.2                                  -> v0.17.2
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9406953Z  * [new tag]         v0.17.3                                  -> v0.17.3
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9407692Z  * [new tag]         v0.17.4                                  -> v0.17.4
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9408381Z  * [new tag]         v0.18.0                                  -> v0.18.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9409073Z  * [new tag]         v0.19.0                                  -> v0.19.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9409763Z  * [new tag]         v0.19.1                                  -> v0.19.1
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9410587Z  * [new tag]         v0.20.0                                  -> v0.20.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9411299Z  * [new tag]         v0.20.1                                  -> v0.20.1
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9411982Z  * [new tag]         v0.20.2                                  -> v0.20.2
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9412675Z  * [new tag]         v0.20.3                                  -> v0.20.3
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9413360Z  * [new tag]         v0.20.4                                  -> v0.20.4
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9414058Z  * [new tag]         v0.21.0                                  -> v0.21.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9414743Z  * [new tag]         v0.22.0                                  -> v0.22.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9415428Z  * [new tag]         v0.23.0                                  -> v0.23.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9416116Z  * [new tag]         v0.24.0                                  -> v0.24.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9416798Z  * [new tag]         v0.24.1                                  -> v0.24.1
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9417485Z  * [new tag]         v0.24.2                                  -> v0.24.2
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9418167Z  * [new tag]         v0.24.3                                  -> v0.24.3
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9418858Z  * [new tag]         v0.24.4                                  -> v0.24.4
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9419537Z  * [new tag]         v0.24.5                                  -> v0.24.5
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9420234Z  * [new tag]         v0.24.6                                  -> v0.24.6
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9421185Z  * [new tag]         v0.24.7                                  -> v0.24.7
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9421841Z  * [new tag]         v0.24.8                                  -> v0.24.8
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9422478Z  * [new tag]         v0.24.9                                  -> v0.24.9
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9423111Z  * [new tag]         v0.25.0                                  -> v0.25.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9423747Z  * [new tag]         v0.25.1                                  -> v0.25.1
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9424387Z  * [new tag]         v0.25.2                                  -> v0.25.2
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9425192Z  * [new tag]         v0.25.3                                  -> v0.25.3
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9425840Z  * [new tag]         v0.25.4                                  -> v0.25.4
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9426476Z  * [new tag]         v0.3.1                                   -> v0.3.1
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9427116Z  * [new tag]         v0.4.0                                   -> v0.4.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9427758Z  * [new tag]         v0.4.1                                   -> v0.4.1
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9428389Z  * [new tag]         v0.5.0                                   -> v0.5.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9429022Z  * [new tag]         v0.5.1                                   -> v0.5.1
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9429658Z  * [new tag]         v0.5.2                                   -> v0.5.2
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9430303Z  * [new tag]         v0.5.3                                   -> v0.5.3
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9431082Z  * [new tag]         v0.6.0                                   -> v0.6.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9431733Z  * [new tag]         v0.7.0                                   -> v0.7.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9432372Z  * [new tag]         v0.7.1                                   -> v0.7.1
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9433000Z  * [new tag]         v0.7.2                                   -> v0.7.2
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9433636Z  * [new tag]         v0.7.4                                   -> v0.7.4
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9434404Z  * [new tag]         v0.7.5                                   -> v0.7.5
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9435044Z  * [new tag]         v0.7.6                                   -> v0.7.6
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9435677Z  * [new tag]         v0.9.0                                   -> v0.9.0
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9436394Z  * [new ref]         3d80fc156da38073746cd1ea6695351419893ba8 -> pull/115/merge
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9478024Z ##[endgroup]
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9479285Z ##[group]Determining the checkout info
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9480951Z ##[endgroup]
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9485706Z [command]/usr/bin/git sparse-checkout disable
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9524152Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9550258Z ##[group]Checking out the ref
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9555035Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/115/merge
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9838002Z Note: switching to 'refs/remotes/pull/115/merge'.
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9838971Z
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9839750Z You are in 'detached HEAD' state. You can look around, make experimental
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9841863Z changes and commit them, and you can discard any commits you make in this
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9843454Z state without impacting any branches by switching back to a branch.
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9844162Z
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9844615Z If you want to create a new branch to retain commits you create, you may
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9845698Z do so (now or later) by using -c with the switch command. Example:
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9846507Z
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9846924Z   git switch -c <new-branch-name>
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9847635Z
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9848013Z Or undo this operation with:
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9848526Z
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9848755Z   git switch -
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9848998Z
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9849388Z Turn off this advice by setting config variable advice.detachedHead to false
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9849933Z
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9850796Z HEAD is now at 3d80fc1 Merge 1df494042de25f19c7fa25e5be4bd28fa93c0d72 into 19784b188d6ad6eff654623f2ba698906dde0d13
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9852564Z ##[endgroup]
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9881165Z [command]/usr/bin/git log -1 --format=%H
+Check for Changesets	Run actions/checkout@v4	2026-05-02T10:46:19.9902338Z 3d80fc156da38073746cd1ea6695351419893ba8
+Check for Changesets	Setup Bun	﻿2026-05-02T10:46:20.0134508Z ##[group]Run oven-sh/setup-bun@v2
+Check for Changesets	Setup Bun	2026-05-02T10:46:20.0135084Z with:
+Check for Changesets	Setup Bun	2026-05-02T10:46:20.0135435Z   bun-version: latest
+Check for Changesets	Setup Bun	2026-05-02T10:46:20.0135833Z   no-cache: false
+Check for Changesets	Setup Bun	2026-05-02T10:46:20.0136348Z   token: ***
+Check for Changesets	Setup Bun	2026-05-02T10:46:20.0136704Z ##[endgroup]
+Check for Changesets	Setup Bun	2026-05-02T10:46:20.3928847Z Downloading a new version of Bun: https://github.com/oven-sh/bun/releases/download/bun-v1.3.13/bun-linux-x64.zip
+Check for Changesets	Setup Bun	2026-05-02T10:46:20.6195834Z [command]/usr/bin/unzip -o -q /home/runner/work/_temp/a399d926-f89a-4dda-bf30-0856268704db.zip
+Check for Changesets	Setup Bun	2026-05-02T10:46:21.3560180Z [command]/home/runner/.bun/bin/bun --revision
+Check for Changesets	Setup Bun	2026-05-02T10:46:21.3605348Z 1.3.13+bf2e2cecf
+Check for Changesets	Install dependencies	﻿2026-05-02T10:46:21.3765407Z ##[group]Run bun install
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.3765813Z [36;1mbun install[0m
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.3793113Z shell: /usr/bin/bash -e {0}
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.3793453Z ##[endgroup]
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.3882555Z bun install v1.3.13 (bf2e2cec)
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.6558499Z
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.6563426Z $ cd .. && husky .husky || true
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.7527123Z
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.7527475Z + @changesets/cli@2.29.8
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.7527818Z + eslint@9.39.2
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.7528087Z + eslint-config-prettier@10.1.8
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.7528431Z + eslint-plugin-prettier@5.5.4
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.7528726Z + husky@9.1.7
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.7528983Z + lint-staged@16.2.7
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.7529210Z + prettier@3.7.4
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.7529442Z + command-stream@0.8.3
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.7529696Z + lino-objects-codec@0.1.1
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.7529891Z
+Check for Changesets	Install dependencies	2026-05-02T10:46:21.7530015Z 213 packages installed [365.00ms]
+Check for Changesets	Check for changesets	﻿2026-05-02T10:46:21.7645467Z ##[group]Run # Skip changeset check for automated version PRs
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.7646041Z [36;1m# Skip changeset check for automated version PRs[0m
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.7646735Z [36;1mif [[ "issue-114-8181f01863b9" == "changeset-release/"* ]]; then[0m
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.7647230Z [36;1m  echo "Skipping changeset check for automated release PR"[0m
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.7647585Z [36;1m  exit 0[0m
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.7647798Z [36;1mfi[0m
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.7648037Z [36;1m[0m
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.7648267Z [36;1m# Run changeset validation script[0m
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.7648585Z [36;1mnode scripts/validate-changeset.mjs[0m
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.7670327Z shell: /usr/bin/bash -e {0}
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.7670924Z env:
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.7671136Z   GITHUB_BASE_REF: main
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.7671446Z   GITHUB_BASE_SHA: 19784b188d6ad6eff654623f2ba698906dde0d13
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.7671848Z   GITHUB_HEAD_SHA: 1df494042de25f19c7fa25e5be4bd28fa93c0d72
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.7672175Z ##[endgroup]
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.8015470Z Found 2 changeset file(s)
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.8042783Z ##[error]Multiple changesets found (2). Each PR should have exactly ONE changeset.
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.8052751Z ##[error]Found changeset files:
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.8053818Z   issue-112-detached-controls.md
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.8054140Z   issue-114-cicd-release-fixes.md
+Check for Changesets	Check for changesets	2026-05-02T10:46:21.8058440Z ##[error]Process completed with exit code 1.
+Check for Changesets	Post Run actions/checkout@v4	﻿2026-05-02T10:46:21.8175835Z Post job cleanup.
+Check for Changesets	Post Run actions/checkout@v4	2026-05-02T10:46:21.9168415Z [command]/usr/bin/git version
+Check for Changesets	Post Run actions/checkout@v4	2026-05-02T10:46:21.9261553Z git version 2.53.0
+Check for Changesets	Post Run actions/checkout@v4	2026-05-02T10:46:21.9313333Z Temporarily overriding HOME='/home/runner/work/_temp/444f53b1-2af5-48af-83a3-81e5b47473b6' before making global git config changes
+Check for Changesets	Post Run actions/checkout@v4	2026-05-02T10:46:21.9315399Z Adding repository directory to the temporary git global config as a safe directory
+Check for Changesets	Post Run actions/checkout@v4	2026-05-02T10:46:21.9316959Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/start/start
+Check for Changesets	Post Run actions/checkout@v4	2026-05-02T10:46:21.9448028Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Check for Changesets	Post Run actions/checkout@v4	2026-05-02T10:46:21.9492549Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Check for Changesets	Post Run actions/checkout@v4	2026-05-02T10:46:21.9772938Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Check for Changesets	Post Run actions/checkout@v4	2026-05-02T10:46:21.9797071Z http.https://github.com/.extraheader
+Check for Changesets	Post Run actions/checkout@v4	2026-05-02T10:46:21.9823231Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+Check for Changesets	Post Run actions/checkout@v4	2026-05-02T10:46:21.9907778Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Check for Changesets	Post Run actions/checkout@v4	2026-05-02T10:46:22.0153377Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Check for Changesets	Post Run actions/checkout@v4	2026-05-02T10:46:22.0184574Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Check for Changesets	Complete job	﻿2026-05-02T10:46:22.0519692Z Cleaning up orphan processes
+Check for Changesets	Complete job	2026-05-02T10:46:22.0797055Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Lint and Format Check	Set up job	﻿2026-05-02T10:46:20.8408214Z Current runner version: '2.334.0'
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8445200Z ##[group]Runner Image Provisioner
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8446490Z Hosted Compute Agent
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8447461Z Version: 20260213.493
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8448486Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8450156Z Build Date: 2026-02-13T00:28:41Z
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8451350Z Worker ID: {80de1510-85b4-4c91-9ed0-5eefa70ad4aa}
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8452507Z Azure Region: westus
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8453555Z ##[endgroup]
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8455801Z ##[group]Operating System
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8456830Z Ubuntu
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8457771Z 24.04.4
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8458807Z LTS
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8459599Z ##[endgroup]
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8460643Z ##[group]Runner Image
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8461674Z Image: ubuntu-24.04
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8462630Z Version: 20260413.86.1
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8464602Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8467541Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8469730Z ##[endgroup]
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8474804Z ##[group]GITHUB_TOKEN Permissions
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8477856Z Actions: write
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8479133Z ArtifactMetadata: write
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8480101Z Attestations: write
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8481043Z Checks: write
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8481915Z Contents: write
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8482783Z Deployments: write
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8483729Z Discussions: write
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8484629Z Issues: write
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8485533Z Metadata: read
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8486311Z Models: read
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8487363Z Packages: write
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8488266Z Pages: write
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8489801Z PullRequests: write
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8490935Z RepositoryProjects: write
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8491865Z SecurityEvents: write
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8492745Z Statuses: write
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8493771Z VulnerabilityAlerts: read
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8494824Z ##[endgroup]
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8497961Z Secret source: Actions
+Lint and Format Check	Set up job	2026-05-02T10:46:20.8499597Z Prepare workflow directory
+Lint and Format Check	Set up job	2026-05-02T10:46:20.9033312Z Prepare all required actions
+Lint and Format Check	Set up job	2026-05-02T10:46:20.9078248Z Getting action download info
+Lint and Format Check	Set up job	2026-05-02T10:46:21.3344755Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+Lint and Format Check	Set up job	2026-05-02T10:46:21.4858988Z Download action repository 'oven-sh/setup-bun@v2' (SHA:0c5077e51419868618aeaa5fe8019c62421857d6)
+Lint and Format Check	Set up job	2026-05-02T10:46:21.9514767Z Complete job name: Lint and Format Check
+Lint and Format Check	Run actions/checkout@v4	﻿2026-05-02T10:46:22.0344954Z ##[group]Run actions/checkout@v4
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0346014Z with:
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0346488Z   repository: link-foundation/start
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0347302Z   token: ***
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0347705Z   ssh-strict: true
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0348123Z   ssh-user: git
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0348879Z   persist-credentials: true
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0349579Z   clean: true
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0350017Z   sparse-checkout-cone-mode: true
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0350573Z   fetch-depth: 1
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0350989Z   fetch-tags: false
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0351413Z   show-progress: true
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0351857Z   lfs: false
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0352282Z   submodules: false
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0352742Z   set-safe-directory: true
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.0353568Z ##[endgroup]
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1533522Z Syncing repository: link-foundation/start
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1535637Z ##[group]Getting Git version info
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1536387Z Working directory is '/home/runner/work/start/start'
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1537368Z [command]/usr/bin/git version
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1585104Z git version 2.53.0
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1612945Z ##[endgroup]
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1630098Z Temporarily overriding HOME='/home/runner/work/_temp/3c42be19-b0fd-41c9-b88e-20a10400363a' before making global git config changes
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1632761Z Adding repository directory to the temporary git global config as a safe directory
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1636290Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/start/start
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1673579Z Deleting the contents of '/home/runner/work/start/start'
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1678134Z ##[group]Initializing the repository
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1682614Z [command]/usr/bin/git init /home/runner/work/start/start
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1777273Z hint: Using 'master' as the name for the initial branch. This default branch name
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1779132Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1780189Z hint: to use in all of your new repositories, which will suppress this warning,
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1781192Z hint: call:
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1781922Z hint:
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1782827Z hint: 	git config --global init.defaultBranch <name>
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1783550Z hint:
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1784147Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1785247Z hint: 'development'. The just-created branch can be renamed via this command:
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1786401Z hint:
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1786825Z hint: 	git branch -m <name>
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1787297Z hint:
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1787935Z hint: Disable this message with "git config set advice.defaultBranchName false"
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1789352Z Initialized empty Git repository in /home/runner/work/start/start/.git/
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1793874Z [command]/usr/bin/git remote add origin https://github.com/link-foundation/start
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1829111Z ##[endgroup]
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1829964Z ##[group]Disabling automatic garbage collection
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1833668Z [command]/usr/bin/git config --local gc.auto 0
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1869279Z ##[endgroup]
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1870062Z ##[group]Setting up auth
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1877499Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.1910795Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.2212584Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.2243117Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.2473337Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.2507438Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.2746289Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.2784625Z ##[endgroup]
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.2785614Z ##[group]Fetching the repository
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.2794839Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +3d80fc156da38073746cd1ea6695351419893ba8:refs/remotes/pull/115/merge
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.8948203Z From https://github.com/link-foundation/start
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.8951463Z  * [new ref]         3d80fc156da38073746cd1ea6695351419893ba8 -> pull/115/merge
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.8984830Z ##[endgroup]
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.8987200Z ##[group]Determining the checkout info
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.8989856Z ##[endgroup]
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9001079Z [command]/usr/bin/git sparse-checkout disable
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9038835Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9073182Z ##[group]Checking out the ref
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9077634Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/115/merge
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9361760Z Note: switching to 'refs/remotes/pull/115/merge'.
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9363062Z
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9363870Z You are in 'detached HEAD' state. You can look around, make experimental
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9366176Z changes and commit them, and you can discard any commits you make in this
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9367939Z state without impacting any branches by switching back to a branch.
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9369541Z
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9370262Z If you want to create a new branch to retain commits you create, you may
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9372192Z do so (now or later) by using -c with the switch command. Example:
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9373701Z
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9374204Z   git switch -c <new-branch-name>
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9375105Z
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9375579Z Or undo this operation with:
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9376567Z
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9377208Z   git switch -
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9378013Z
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9379750Z Turn off this advice by setting config variable advice.detachedHead to false
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9381435Z
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9383256Z HEAD is now at 3d80fc1 Merge 1df494042de25f19c7fa25e5be4bd28fa93c0d72 into 19784b188d6ad6eff654623f2ba698906dde0d13
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9387918Z ##[endgroup]
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9413905Z [command]/usr/bin/git log -1 --format=%H
+Lint and Format Check	Run actions/checkout@v4	2026-05-02T10:46:22.9438928Z 3d80fc156da38073746cd1ea6695351419893ba8
+Lint and Format Check	Setup Bun	﻿2026-05-02T10:46:22.9778139Z ##[group]Run oven-sh/setup-bun@v2
+Lint and Format Check	Setup Bun	2026-05-02T10:46:22.9779551Z with:
+Lint and Format Check	Setup Bun	2026-05-02T10:46:22.9780369Z   bun-version: latest
+Lint and Format Check	Setup Bun	2026-05-02T10:46:22.9781305Z   no-cache: false
+Lint and Format Check	Setup Bun	2026-05-02T10:46:22.9782480Z   token: ***
+Lint and Format Check	Setup Bun	2026-05-02T10:46:22.9783306Z ##[endgroup]
+Lint and Format Check	Setup Bun	2026-05-02T10:46:23.4967813Z Downloading a new version of Bun: https://github.com/oven-sh/bun/releases/download/bun-v1.3.13/bun-linux-x64.zip
+Lint and Format Check	Setup Bun	2026-05-02T10:46:23.8324517Z [command]/usr/bin/unzip -o -q /home/runner/work/_temp/17b2974f-f6d6-4785-8928-313226adc4a0.zip
+Lint and Format Check	Setup Bun	2026-05-02T10:46:24.5706307Z [command]/home/runner/.bun/bin/bun --revision
+Lint and Format Check	Setup Bun	2026-05-02T10:46:24.5748804Z 1.3.13+bf2e2cecf
+Lint and Format Check	Install dependencies	﻿2026-05-02T10:46:24.5900995Z ##[group]Run bun install
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.5901371Z [36;1mbun install[0m
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.5929596Z shell: /usr/bin/bash -e {0}
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.5929899Z ##[endgroup]
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.6095489Z bun install v1.3.13 (bf2e2cec)
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.8452677Z
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.8457329Z $ cd .. && husky .husky || true
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.9420242Z
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.9421083Z + @changesets/cli@2.29.8
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.9421583Z + eslint@9.39.2
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.9421932Z + eslint-config-prettier@10.1.8
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.9422205Z + eslint-plugin-prettier@5.5.4
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.9422479Z + husky@9.1.7
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.9422667Z + lint-staged@16.2.7
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.9422894Z + prettier@3.7.4
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.9423093Z + command-stream@0.8.3
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.9423491Z + lino-objects-codec@0.1.1
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.9423644Z
+Lint and Format Check	Install dependencies	2026-05-02T10:46:24.9423742Z 213 packages installed [333.00ms]
+Lint and Format Check	Run ESLint	﻿2026-05-02T10:46:24.9502970Z ##[group]Run bun run lint
+Lint and Format Check	Run ESLint	2026-05-02T10:46:24.9503287Z [36;1mbun run lint[0m
+Lint and Format Check	Run ESLint	2026-05-02T10:46:24.9525206Z shell: /usr/bin/bash -e {0}
+Lint and Format Check	Run ESLint	2026-05-02T10:46:24.9525478Z ##[endgroup]
+Lint and Format Check	Run ESLint	2026-05-02T10:46:24.9588333Z $ eslint .
+Lint and Format Check	Check formatting	﻿2026-05-02T10:46:27.6360520Z ##[group]Run bun run format:check
+Lint and Format Check	Check formatting	2026-05-02T10:46:27.6360894Z [36;1mbun run format:check[0m
+Lint and Format Check	Check formatting	2026-05-02T10:46:27.6382074Z shell: /usr/bin/bash -e {0}
+Lint and Format Check	Check formatting	2026-05-02T10:46:27.6382338Z ##[endgroup]
+Lint and Format Check	Check formatting	2026-05-02T10:46:27.6445261Z $ prettier --check .
+Lint and Format Check	Check formatting	2026-05-02T10:46:27.7289884Z Checking formatting...
+Lint and Format Check	Check formatting	2026-05-02T10:46:29.2714373Z All matched files use Prettier code style!
+Lint and Format Check	Check file size limit	﻿2026-05-02T10:46:29.2987242Z ##[group]Run node scripts/check-file-size.mjs
+Lint and Format Check	Check file size limit	2026-05-02T10:46:29.2987641Z [36;1mnode scripts/check-file-size.mjs[0m
+Lint and Format Check	Check file size limit	2026-05-02T10:46:29.3009316Z shell: /usr/bin/bash -e {0}
+Lint and Format Check	Check file size limit	2026-05-02T10:46:29.3009571Z ##[endgroup]
+Lint and Format Check	Check file size limit	2026-05-02T10:46:29.3364632Z
+Lint and Format Check	Check file size limit	2026-05-02T10:46:29.3365298Z Checking JavaScript and Rust files for maximum 1000 lines...
+Lint and Format Check	Check file size limit	2026-05-02T10:46:29.3365799Z
+Lint and Format Check	Check file size limit	2026-05-02T10:46:29.3806419Z ✓ All files are within the line limit
+Lint and Format Check	Check file size limit	2026-05-02T10:46:29.3806863Z
+Lint and Format Check	Post Setup Bun	﻿2026-05-02T10:46:29.3906217Z Post job cleanup.
+Lint and Format Check	Post Run actions/checkout@v4	﻿2026-05-02T10:46:29.5760452Z Post job cleanup.
+Lint and Format Check	Post Run actions/checkout@v4	2026-05-02T10:46:29.6772291Z [command]/usr/bin/git version
+Lint and Format Check	Post Run actions/checkout@v4	2026-05-02T10:46:29.6817788Z git version 2.53.0
+Lint and Format Check	Post Run actions/checkout@v4	2026-05-02T10:46:29.6864084Z Temporarily overriding HOME='/home/runner/work/_temp/03df056a-72e4-4b5c-a33e-94de631c6628' before making global git config changes
+Lint and Format Check	Post Run actions/checkout@v4	2026-05-02T10:46:29.6865546Z Adding repository directory to the temporary git global config as a safe directory
+Lint and Format Check	Post Run actions/checkout@v4	2026-05-02T10:46:29.6871074Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/start/start
+Lint and Format Check	Post Run actions/checkout@v4	2026-05-02T10:46:29.6907226Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Lint and Format Check	Post Run actions/checkout@v4	2026-05-02T10:46:29.6940633Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Lint and Format Check	Post Run actions/checkout@v4	2026-05-02T10:46:29.7174755Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Lint and Format Check	Post Run actions/checkout@v4	2026-05-02T10:46:29.7196389Z http.https://github.com/.extraheader
+Lint and Format Check	Post Run actions/checkout@v4	2026-05-02T10:46:29.7210523Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+Lint and Format Check	Post Run actions/checkout@v4	2026-05-02T10:46:29.7241786Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Lint and Format Check	Post Run actions/checkout@v4	2026-05-02T10:46:29.7472281Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Lint and Format Check	Post Run actions/checkout@v4	2026-05-02T10:46:29.7506669Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Lint and Format Check	Complete job	﻿2026-05-02T10:46:29.7879801Z Cleaning up orphan processes
+Lint and Format Check	Complete job	2026-05-02T10:46:29.8166847Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

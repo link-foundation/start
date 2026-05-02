@@ -46,10 +46,25 @@ formatter step.
 | B. Increase global test timeout for all files.                                 | Rejected. The failure is limited to two slow skip/startup paths.                    |
 | C. Remove the Docker availability checks on Windows.                           | Rejected. The checks provide useful coverage and should skip cleanly.               |
 
+## RC6 - PR changeset validation
+
+| Option                                                                                     | Verdict                                                                                                               |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| A. Validate only changesets added, modified, or renamed between the PR base and head SHAs. | Chosen. It enforces one changeset per PR without failing on unreleased changesets that already exist on `main`.       |
+| B. Delete the existing base-branch changeset from this PR.                                 | Rejected. That file belongs to earlier work and is already present on `origin/main`.                                  |
+| C. Allow multiple changesets globally.                                                     | Rejected. That would weaken the PR rule and make it easier to merge unrelated release notes in a single contribution. |
+
+The selected fix uses `git diff --name-only --diff-filter=AMR
+GITHUB_BASE_SHA...GITHUB_HEAD_SHA -- js/.changeset` in CI. If those
+environment variables are absent, the script keeps the original local behavior
+of scanning the changeset folder.
+
 ## Verification plan
 
 1. Unit test release tag/title helpers, exact badge generation, and changelog extraction.
 2. Run the formerly failing JavaScript test files locally.
 3. Run JS lint and formatting checks.
 4. Run Rust formatting, clippy, and tests.
-5. Review the PR diff to ensure release automation changes are scoped to the issue.
+5. Smoke test changeset validation with an existing base-branch changeset and
+   one PR changeset.
+6. Review the PR diff to ensure release automation changes are scoped to the issue.

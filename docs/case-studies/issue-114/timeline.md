@@ -43,3 +43,21 @@ the prepared branch before this fix.
 
 The existing PR was draft-only with placeholder content. It is updated by this
 work with a concrete title, description, tests, and case-study links.
+
+## 2026-05-02 10:46 UTC - PR changeset validation failure
+
+After commit `1df494042de25f19c7fa25e5be4bd28fa93c0d72` was pushed to
+`issue-114-8181f01863b9`, JavaScript CI/CD run `25250182498` failed in
+`Check for Changesets`.
+
+Evidence from `ci-logs/javascript-cicd-25250182498.txt`:
+
+- Line 298: `detect-code-changes.mjs` saw this PR's new
+  `js/.changeset/issue-114-cicd-release-fixes.md`.
+- Lines 950-954: `validate-changeset.mjs` counted both
+  `issue-112-detached-controls.md` from `origin/main` and the new issue #114
+  changeset, then failed with "Multiple changesets found (2)".
+
+The validator was updated to use the PR base/head diff when GitHub Actions
+provides `GITHUB_BASE_SHA` and `GITHUB_HEAD_SHA`, while preserving whole-folder
+validation for local runs without those environment variables.
