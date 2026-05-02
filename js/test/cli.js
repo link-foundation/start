@@ -6,7 +6,7 @@
 
 const { describe, it } = require('node:test');
 const assert = require('assert');
-const { spawnSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
@@ -17,10 +17,10 @@ const CLI_PATH = path.join(__dirname, '../src/bin/cli.js');
 const CLI_TIMEOUT = process.platform === 'win32' ? 30000 : 10000;
 
 // Helper to run CLI with timeout
-function runCLI(args = []) {
+function runCLI(args = [], options = {}) {
   return spawnSync('bun', [CLI_PATH, ...args], {
     encoding: 'utf8',
-    timeout: CLI_TIMEOUT,
+    timeout: options.timeout ?? CLI_TIMEOUT,
     env: {
       ...process.env,
       START_DISABLE_AUTO_ISSUE: '1',
@@ -176,43 +176,76 @@ describe('CLI isolation output (issue #67)', () => {
     );
   });
 
-  it('should display docker container name when using docker isolation', async () => {
-    const { canRunLinuxDockerImages } = require('../src/lib/isolation');
+  it(
+    'should display docker container name when using docker isolation',
+    { timeout: 70000 },
+    () => {
+      const { canRunLinuxDockerImages } = require('../src/lib/isolation');
 
-    if (!canRunLinuxDockerImages()) {
-      console.log(
-        '  Skipping: docker not available or cannot run Linux images'
+      if (!canRunLinuxDockerImages()) {
+        console.log(
+          '  Skipping: docker not available or cannot run Linux images'
+        );
+        return;
+      }
+
+      const containerName = `docker-cli-${Date.now()}`;
+      let result;
+      try {
+        result = runCLI(
+          [
+            '-i',
+            'docker',
+            '-d',
+            '--session',
+            containerName,
+            '--image',
+            'alpine:latest',
+            '--',
+            'echo',
+            'hello',
+          ],
+          { timeout: 60000 }
+        );
+      } finally {
+        try {
+          execSync(`docker rm -f ${containerName}`, {
+            stdio: 'ignore',
+          });
+        } catch {
+          // Container may have already exited.
+        }
+      }
+
+      assert.notStrictEqual(
+        result.status,
+        null,
+        `CLI should complete before timeout. signal=${result.signal}, stderr=${result.stderr}`
       );
-      return;
+      assert.strictEqual(
+        result.status,
+        0,
+        `CLI should exit 0. stdout=${result.stdout}, stderr=${result.stderr}`
+      );
+
+      // The output should contain the docker container name
+      assert.ok(
+        result.stdout.includes('│ session'),
+        'Should display session UUID'
+      );
+      assert.ok(
+        result.stdout.includes('│ isolation docker'),
+        'Should display docker isolation'
+      );
+      assert.ok(
+        result.stdout.includes('│ image     alpine:latest'),
+        'Should display docker image'
+      );
+      // Check that the actual container name is displayed (issue #67 fix)
+      assert.ok(
+        result.stdout.includes('│ container docker-'),
+        'Should display actual container name for reconnection (issue #67)'
+      );
     }
-
-    const result = runCLI([
-      '-i',
-      'docker',
-      '--image',
-      'alpine:latest',
-      '--',
-      'echo',
-      'hello',
-    ]);
-
-    // The output should contain the docker container name
-    assert.ok(
-      result.stdout.includes('│ session'),
-      'Should display session UUID'
-    );
-    assert.ok(
-      result.stdout.includes('│ isolation docker'),
-      'Should display docker isolation'
-    );
-    assert.ok(
-      result.stdout.includes('│ image     alpine:latest'),
-      'Should display docker image'
-    );
-    // Check that the actual container name is displayed (issue #67 fix)
-    assert.ok(
-      result.stdout.includes('│ container docker-'),
-      'Should display actual container name for reconnection (issue #67)'
-    );
-  });
+  );
 });

@@ -545,9 +545,13 @@ function runInDocker(command, options = {}) {
 
   try {
     if (options.detached) {
-      const dockerArgs = ['run', '-d', '--name', containerName];
+      const dockerArgs = ['run', '-d'];
+      if (options.keepAlive) {
+        dockerArgs.push('-i', '-t');
+      }
+      dockerArgs.push('--name', containerName);
       if (options.autoRemoveDockerContainer) {
-        dockerArgs.splice(2, 0, '--rm');
+        dockerArgs.push('--rm');
       }
 
       if (options.user) {

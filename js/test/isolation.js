@@ -7,6 +7,7 @@
 
 const { describe, it } = require('node:test');
 const assert = require('assert');
+const path = require('path');
 const {
   isCommandAvailable,
   hasTTY,
@@ -668,8 +669,9 @@ describe('detectShellInEnvironment', () => {
       { image: 'alpine:latest' },
       'auto'
     );
+    const shellName = path.basename(result);
     assert.ok(
-      ['bash', 'zsh', 'sh'].includes(result),
+      ['bash', 'zsh', 'sh'].includes(shellName),
       `Expected a valid shell (bash/zsh/sh), got: ${result}`
     );
     console.log(`  Detected shell in alpine:latest: ${result}`);
