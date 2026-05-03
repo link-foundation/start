@@ -22,6 +22,8 @@
 
 import { execSync } from "node:child_process";
 
+import { debug, dumpEnv } from "./debug-print.mjs";
+
 const args = process.argv.slice(2);
 const requiredChecks = [];
 for (let index = 0; index < args.length; index += 1) {
@@ -37,6 +39,15 @@ if (requiredChecks.length === 0) {
   console.error("Available checks: gh-token, npm-oidc, crates-io");
   process.exit(1);
 }
+
+debug("preflight-credentials checks:", requiredChecks);
+dumpEnv([
+  "GH_TOKEN",
+  "GITHUB_TOKEN",
+  "ACTIONS_ID_TOKEN_REQUEST_URL",
+  "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
+  "PREFLIGHT_PACKAGE_NAME",
+]);
 
 const failures = [];
 

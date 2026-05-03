@@ -105,11 +105,22 @@ and check-file-line-limits jobs.
 
 ## S8 — Debug / verbose mode (R8)
 
-A new helper `scripts/debug-print.mjs` exposes
-`debug(label, value)` and `debugSummary(env)` and is no-op unless
-`DEBUG=1`. Callers (`publish-to-npm.mjs`, `create-github-release.mjs`,
-`merge-changesets.mjs`) print the resolved arguments and a token
-presence summary on first call.
+A new helper `scripts/debug-print.mjs` exposes `debug(...)`,
+`isDebugEnabled()`, and `dumpEnv(keys)` and is a no-op unless one
+of `START_DEBUG=1`, `RUNNER_DEBUG=1`, or `ACTIONS_STEP_DEBUG=true`
+is set (the latter two are GitHub's own re-run-with-debug-logging
+toggles, so the next operator does not have to learn a new flag).
+Each line is prefixed with `::debug::` so it lands in GitHub's
+collapsible debug stream.
+
+The new pipeline scripts shipped in this PR
+(`check-release-needed.mjs`, `preflight-credentials.mjs`,
+`verify-release-badge.mjs`, `backfill-release-notes.mjs`) import
+the helper. The pre-existing `bun`-based scripts
+(`publish-to-npm.mjs`, `create-github-release.mjs`,
+`merge-changesets.mjs`) use dynamic `use-m` imports for everything
+and were left untouched in this PR — adding static imports would
+mix loader styles. Tracked as a follow-up.
 
 ## S9 — Tighten READMEs (R1, R2)
 

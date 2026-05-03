@@ -26,6 +26,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 
+import { debug, dumpEnv } from "./debug-print.mjs";
 import {
   extractChangelogEntry,
   normalizeReleaseVersionForBadge,
@@ -54,6 +55,9 @@ const badgeType = args["badge-type"];
 const packageName = args["package-name"];
 const releaseVersion =
   args["release-version"] || normalizeReleaseVersionForBadge(tag || "");
+
+debug("backfill-release-notes args:", { repository, tag, changelogFile, badgeType, packageName, releaseVersion, dryRun: args.dryRun });
+dumpEnv(["GH_TOKEN", "GITHUB_TOKEN"]);
 
 if (!repository || !tag || !changelogFile || !badgeType || !packageName) {
   console.error(

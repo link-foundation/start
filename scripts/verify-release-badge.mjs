@@ -21,6 +21,7 @@
 
 import { execSync } from "node:child_process";
 
+import { debug, dumpEnv } from "./debug-print.mjs";
 import { packageVersionBadge } from "./release-name.mjs";
 
 function parseArgs(argv) {
@@ -49,6 +50,9 @@ if (!repository || !tag || !badgeType || !packageName || !releaseVersion) {
   );
   process.exit(1);
 }
+
+debug("verify-release-badge args:", { repository, tag, badgeType, packageName, releaseVersion });
+dumpEnv(["GH_TOKEN", "GITHUB_TOKEN"]);
 
 const expectedBadge = packageVersionBadge({
   packageType: badgeType,

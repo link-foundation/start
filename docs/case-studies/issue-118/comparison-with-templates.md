@@ -18,8 +18,8 @@ Templates inspected (cloned to `/tmp/ai-pipeline-templates/`):
 | `simulate-fresh-merge.sh` (validates the *actual* merge result) | absent | ported into `scripts/` |
 | `check-mjs-syntax.sh` (~7 s syntax pre-check) | absent | ported |
 | `check-release-needed.mjs` (self-healing — checks npm, not git tags) | absent | ported and adapted for `--js-root js` |
-| `secretlint` step | absent | added to lint job |
-| `jscpd` (code duplication) | absent | added to lint job |
+| `secretlint` step | absent | not in this PR (tracked as follow-up — needs `.secretlintrc.json`) |
+| `jscpd` (code duplication) | absent | not in this PR (tracked as follow-up — needs threshold tuning) |
 | Multi-runtime test matrix (Node + Bun + Deno) | Bun-only | not in this PR (large change; tracked as follow-up) |
 | `if: !cancelled()` on release / test jobs | mix of `always()` | normalised |
 | Concurrency: `cancel-in-progress` only on `main` | unconditional cancel | matched |
@@ -33,7 +33,7 @@ Templates inspected (cloned to `/tmp/ai-pipeline-templates/`):
 | `actions/setup-node@v6` | `@v4` | upgraded |
 | `dtolnay/rust-toolchain@stable` pinned | matches | ok |
 | `timeout-minutes` per job | none | added |
-| Auto-detect crate name from `Cargo.toml` in release script | hard-coded `start-command` | replaced with a lookup helper |
+| Auto-detect crate name from `Cargo.toml` in release script | hard-coded `start-command` | not in this PR (the crate name is stable; tracked as follow-up) |
 | `cargo-tarpaulin` cached install | reinstalled every run | added a step to use `actions/cache` for `~/.cargo/bin/cargo-tarpaulin` |
 
 ## Cross-cutting gaps

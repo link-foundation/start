@@ -31,6 +31,8 @@
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
+import { debug, dumpEnv } from "./debug-print.mjs";
+
 function parseArgs(argv) {
   const out = { workingDir: ".", registry: "" };
   for (let index = 0; index < argv.length; index += 1) {
@@ -118,6 +120,9 @@ async function checkCrates(name, version) {
 
 const { workingDir, registry } = parseArgs(process.argv.slice(2));
 const resolvedDir = resolve(workingDir);
+
+debug("check-release-needed args:", { workingDir: resolvedDir, registry });
+dumpEnv(["GITHUB_OUTPUT", "HAS_FRAGMENTS"]);
 
 if (!registry) {
   console.error("Error: --registry <npm|crates.io> is required");
