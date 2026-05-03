@@ -409,7 +409,7 @@ jobs:
 
       - name: Merge multiple changesets
         if: steps.check_changesets.outputs.has_changesets == 'true' && steps.check_changesets.outputs.changeset_count > 1
-        run: node scripts/merge-changesets.mjs
+        run: node scripts/merge-changesets.mjs --working-dir js
 
       - name: Version packages and commit to main
         if: steps.check_changesets.outputs.has_changesets == 'true'
@@ -425,7 +425,7 @@ jobs:
         if: steps.publish.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --prefix "js-" --changelog-file "js/CHANGELOG.md"
+        run: node scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --prefix "js-" --changelog-file "js/CHANGELOG.md" --badge-type "npm" --package-name "start-command"
 
       - name: Format GitHub release notes
         if: steps.publish.outputs.published == 'true'
@@ -478,7 +478,7 @@ jobs:
         if: steps.publish.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --prefix "js-" --changelog-file "js/CHANGELOG.md"
+        run: node scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --prefix "js-" --changelog-file "js/CHANGELOG.md" --badge-type "npm" --package-name "start-command"
 
       - name: Format GitHub release notes
         if: steps.publish.outputs.published == 'true'

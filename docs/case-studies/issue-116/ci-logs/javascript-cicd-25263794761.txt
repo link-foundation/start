@@ -1,0 +1,342 @@
+Release	UNKNOWN STEP	﻿2026-05-02T22:48:34.8139270Z Current runner version: '2.334.0'
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8164412Z ##[group]Runner Image Provisioner
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8165227Z Hosted Compute Agent
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8165796Z Version: 20260213.493
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8166465Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8167169Z Build Date: 2026-02-13T00:28:41Z
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8167886Z Worker ID: {11950677-6124-4f7f-b12d-180b41890aef}
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8168591Z Azure Region: westus3
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8169322Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8171207Z ##[group]Operating System
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8171824Z Ubuntu
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8172298Z 24.04.4
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8172699Z LTS
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8173231Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8173692Z ##[group]Runner Image
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8174259Z Image: ubuntu-24.04
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8174830Z Version: 20260413.86.1
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8175965Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8177402Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8178281Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8179711Z ##[group]GITHUB_TOKEN Permissions
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8181793Z Contents: write
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8182335Z Metadata: read
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8182943Z PullRequests: write
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8183429Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8185830Z Secret source: Actions
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8186562Z Prepare workflow directory
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8565705Z Prepare all required actions
+Release	UNKNOWN STEP	2026-05-02T22:48:34.8611658Z Getting action download info
+Release	UNKNOWN STEP	2026-05-02T22:48:35.3230710Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+Release	UNKNOWN STEP	2026-05-02T22:48:35.4269593Z Download action repository 'oven-sh/setup-bun@v2' (SHA:0c5077e51419868618aeaa5fe8019c62421857d6)
+Release	UNKNOWN STEP	2026-05-02T22:48:36.0752908Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+Release	UNKNOWN STEP	2026-05-02T22:48:36.2622569Z Complete job name: Release
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3394602Z ##[group]Run actions/checkout@v4
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3395470Z with:
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3395880Z   fetch-depth: 0
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3396332Z   repository: link-foundation/start
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3397032Z   token: ***
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3397437Z   ssh-strict: true
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3397847Z   ssh-user: git
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3398273Z   persist-credentials: true
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3398754Z   clean: true
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3399397Z   sparse-checkout-cone-mode: true
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3399907Z   fetch-tags: false
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3400328Z   show-progress: true
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3400757Z   lfs: false
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3401157Z   submodules: false
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3401583Z   set-safe-directory: true
+Release	UNKNOWN STEP	2026-05-02T22:48:36.3402320Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4501204Z Syncing repository: link-foundation/start
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4503021Z ##[group]Getting Git version info
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4503738Z Working directory is '/home/runner/work/start/start'
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4504820Z [command]/usr/bin/git version
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4545366Z git version 2.53.0
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4573284Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4587422Z Temporarily overriding HOME='/home/runner/work/_temp/e355f807-3a7e-4585-85d4-901c2e840028' before making global git config changes
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4590170Z Adding repository directory to the temporary git global config as a safe directory
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4599741Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/start/start
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4630740Z Deleting the contents of '/home/runner/work/start/start'
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4634407Z ##[group]Initializing the repository
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4638193Z [command]/usr/bin/git init /home/runner/work/start/start
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4718039Z hint: Using 'master' as the name for the initial branch. This default branch name
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4720239Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4721723Z hint: to use in all of your new repositories, which will suppress this warning,
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4722554Z hint: call:
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4722947Z hint:
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4723492Z hint: 	git config --global init.defaultBranch <name>
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4724160Z hint:
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4725120Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4726514Z hint: 'development'. The just-created branch can be renamed via this command:
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4727250Z hint:
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4727655Z hint: 	git branch -m <name>
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4728109Z hint:
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4728718Z hint: Disable this message with "git config set advice.defaultBranchName false"
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4729991Z Initialized empty Git repository in /home/runner/work/start/start/.git/
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4732120Z [command]/usr/bin/git remote add origin https://github.com/link-foundation/start
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4760855Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4762115Z ##[group]Disabling automatic garbage collection
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4764520Z [command]/usr/bin/git config --local gc.auto 0
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4791493Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4792636Z ##[group]Setting up auth
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4798274Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Release	UNKNOWN STEP	2026-05-02T22:48:36.4827264Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Release	UNKNOWN STEP	2026-05-02T22:48:36.5118040Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Release	UNKNOWN STEP	2026-05-02T22:48:36.5148046Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Release	UNKNOWN STEP	2026-05-02T22:48:36.5360185Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Release	UNKNOWN STEP	2026-05-02T22:48:36.5398752Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Release	UNKNOWN STEP	2026-05-02T22:48:36.5611984Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Release	UNKNOWN STEP	2026-05-02T22:48:36.5645535Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:36.5646755Z ##[group]Fetching the repository
+Release	UNKNOWN STEP	2026-05-02T22:48:36.5654126Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6209414Z From https://github.com/link-foundation/start
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6213000Z  * [new branch]      issue-1-06306849       -> origin/issue-1-06306849
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6215690Z  * [new branch]      issue-101-f6ea3a87b1de -> origin/issue-101-f6ea3a87b1de
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6218365Z  * [new branch]      issue-103-d2eee141f4bc -> origin/issue-103-d2eee141f4bc
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6221540Z  * [new branch]      issue-105-0edd650b7149 -> origin/issue-105-0edd650b7149
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6224052Z  * [new branch]      issue-108-c821d8a93f01 -> origin/issue-108-c821d8a93f01
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6226013Z  * [new branch]      issue-11-1524425f0588  -> origin/issue-11-1524425f0588
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6227450Z  * [new branch]      issue-110-c1b9267a2743 -> origin/issue-110-c1b9267a2743
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6228912Z  * [new branch]      issue-112-46af7527c0d9 -> origin/issue-112-46af7527c0d9
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6230874Z  * [new branch]      issue-114-8181f01863b9 -> origin/issue-114-8181f01863b9
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6232401Z  * [new branch]      issue-13-52ae2ce06ee2  -> origin/issue-13-52ae2ce06ee2
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6233879Z  * [new branch]      issue-15-ccfe6d130337  -> origin/issue-15-ccfe6d130337
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6235365Z  * [new branch]      issue-15-d3d0f1c82afa  -> origin/issue-15-d3d0f1c82afa
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6237187Z  * [new branch]      issue-18-acfe3ddbe902  -> origin/issue-18-acfe3ddbe902
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6238857Z  * [new branch]      issue-19-83cfc521f662  -> origin/issue-19-83cfc521f662
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6241862Z  * [new branch]      issue-22-08e44246441d  -> origin/issue-22-08e44246441d
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6244486Z  * [new branch]      issue-22-2d1c04999e6d  -> origin/issue-22-2d1c04999e6d
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6246356Z  * [new branch]      issue-25-6419574a6cfe  -> origin/issue-25-6419574a6cfe
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6248066Z  * [new branch]      issue-25-8fe656da1123  -> origin/issue-25-8fe656da1123
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6250191Z  * [new branch]      issue-28-9a07df20ebbb  -> origin/issue-28-9a07df20ebbb
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6252005Z  * [new branch]      issue-3-908abf67e50f   -> origin/issue-3-908abf67e50f
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6253901Z  * [new branch]      issue-30-3c74b37eedc9  -> origin/issue-30-3c74b37eedc9
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6255802Z  * [new branch]      issue-31-e419d5f83f9d  -> origin/issue-31-e419d5f83f9d
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6257698Z  * [new branch]      issue-34-fcfbf90ca3a5  -> origin/issue-34-fcfbf90ca3a5
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6260122Z  * [new branch]      issue-36-4d2e05cadca2  -> origin/issue-36-4d2e05cadca2
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6262047Z  * [new branch]      issue-38-8d65d5c6dcf1  -> origin/issue-38-8d65d5c6dcf1
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6264059Z  * [new branch]      issue-40-500ee5a3c836  -> origin/issue-40-500ee5a3c836
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6266192Z  * [new branch]      issue-42-231914cdf85a  -> origin/issue-42-231914cdf85a
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6268290Z  * [new branch]      issue-44-05c1999867e1  -> origin/issue-44-05c1999867e1
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6270660Z  * [new branch]      issue-46-db1336ec1bd4  -> origin/issue-46-db1336ec1bd4
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6272914Z  * [new branch]      issue-49-49badfb087ae  -> origin/issue-49-49badfb087ae
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6275040Z  * [new branch]      issue-5-e920ed9704b1   -> origin/issue-5-e920ed9704b1
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6277150Z  * [new branch]      issue-51-ce9116974281  -> origin/issue-51-ce9116974281
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6279533Z  * [new branch]      issue-53-3037eb51507e  -> origin/issue-53-3037eb51507e
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6281890Z  * [new branch]      issue-55-62ca352b2854  -> origin/issue-55-62ca352b2854
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6283991Z  * [new branch]      issue-57-319974e37702  -> origin/issue-57-319974e37702
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6286071Z  * [new branch]      issue-57-9389c40a25d3  -> origin/issue-57-9389c40a25d3
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6288153Z  * [new branch]      issue-60-23ad1508ca00  -> origin/issue-60-23ad1508ca00
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6290611Z  * [new branch]      issue-62-0bf0e6dba402  -> origin/issue-62-0bf0e6dba402
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6292717Z  * [new branch]      issue-64-531bd4a9716c  -> origin/issue-64-531bd4a9716c
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6294789Z  * [new branch]      issue-66-b4bebb964b80  -> origin/issue-66-b4bebb964b80
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6296850Z  * [new branch]      issue-67-c74bf55321d9  -> origin/issue-67-c74bf55321d9
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6299231Z  * [new branch]      issue-7-6b049fda1d30   -> origin/issue-7-6b049fda1d30
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6301365Z  * [new branch]      issue-70-210190e0ad55  -> origin/issue-70-210190e0ad55
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6303482Z  * [new branch]      issue-70-490c526a882f  -> origin/issue-70-490c526a882f
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6305553Z  * [new branch]      issue-73-163864f76573  -> origin/issue-73-163864f76573
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6307620Z  * [new branch]      issue-73-47a3e673b0a8  -> origin/issue-73-47a3e673b0a8
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6309835Z  * [new branch]      issue-73-c42828279fb5  -> origin/issue-73-c42828279fb5
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6311913Z  * [new branch]      issue-77-acc01682cb56  -> origin/issue-77-acc01682cb56
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6314000Z  * [new branch]      issue-79-1581a427bf82  -> origin/issue-79-1581a427bf82
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6316105Z  * [new branch]      issue-79-48234c0f95fa  -> origin/issue-79-48234c0f95fa
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6318199Z  * [new branch]      issue-79-5fc029ea058c  -> origin/issue-79-5fc029ea058c
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6320559Z  * [new branch]      issue-79-740a4286522a  -> origin/issue-79-740a4286522a
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6322590Z  * [new branch]      issue-84-2301d58a902f  -> origin/issue-84-2301d58a902f
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6324804Z  * [new branch]      issue-84-8c8db1f16f9d  -> origin/issue-84-8c8db1f16f9d
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6326894Z  * [new branch]      issue-84-ca99d5699c03  -> origin/issue-84-ca99d5699c03
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6329361Z  * [new branch]      issue-84-e79fd3fe5cef  -> origin/issue-84-e79fd3fe5cef
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6331440Z  * [new branch]      issue-89-58b19f5dac12  -> origin/issue-89-58b19f5dac12
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6333412Z  * [new branch]      issue-9-9cb379f155fb   -> origin/issue-9-9cb379f155fb
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6335350Z  * [new branch]      issue-91-5ff8719c4182  -> origin/issue-91-5ff8719c4182
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6337278Z  * [new branch]      issue-91-8e243739c7af  -> origin/issue-91-8e243739c7af
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6339573Z  * [new branch]      issue-93-2ef57910c60b  -> origin/issue-93-2ef57910c60b
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6341575Z  * [new branch]      issue-96-829d21ddabc4  -> origin/issue-96-829d21ddabc4
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6344897Z  * [new branch]      issue-96-efde41b8c023  -> origin/issue-96-efde41b8c023
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6347225Z  * [new branch]      issue-99-bc78b28ed258  -> origin/issue-99-bc78b28ed258
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6349266Z  * [new branch]      main                   -> origin/main
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6351056Z  * [new tag]         js-v0.25.5             -> js-v0.25.5
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6352896Z  * [new tag]         js-v0.26.0             -> js-v0.26.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6355083Z  * [new tag]         v0.10.0                -> v0.10.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6357334Z  * [new tag]         v0.11.0                -> v0.11.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6359704Z  * [new tag]         v0.13.0                -> v0.13.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6361949Z  * [new tag]         v0.15.0                -> v0.15.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6364122Z  * [new tag]         v0.16.0                -> v0.16.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6366267Z  * [new tag]         v0.17.0                -> v0.17.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6368530Z  * [new tag]         v0.17.1                -> v0.17.1
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6371399Z  * [new tag]         v0.17.2                -> v0.17.2
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6373605Z  * [new tag]         v0.17.3                -> v0.17.3
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6375715Z  * [new tag]         v0.17.4                -> v0.17.4
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6377975Z  * [new tag]         v0.18.0                -> v0.18.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6379719Z  * [new tag]         v0.19.0                -> v0.19.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6381162Z  * [new tag]         v0.19.1                -> v0.19.1
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6382570Z  * [new tag]         v0.20.0                -> v0.20.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6384469Z  * [new tag]         v0.20.1                -> v0.20.1
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6386634Z  * [new tag]         v0.20.2                -> v0.20.2
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6388096Z  * [new tag]         v0.20.3                -> v0.20.3
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6389809Z  * [new tag]         v0.20.4                -> v0.20.4
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6391231Z  * [new tag]         v0.21.0                -> v0.21.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6392664Z  * [new tag]         v0.22.0                -> v0.22.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6394060Z  * [new tag]         v0.23.0                -> v0.23.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6395458Z  * [new tag]         v0.24.0                -> v0.24.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6396851Z  * [new tag]         v0.24.1                -> v0.24.1
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6398242Z  * [new tag]         v0.24.2                -> v0.24.2
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6399873Z  * [new tag]         v0.24.3                -> v0.24.3
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6401276Z  * [new tag]         v0.24.4                -> v0.24.4
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6402649Z  * [new tag]         v0.24.5                -> v0.24.5
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6404538Z  * [new tag]         v0.24.6                -> v0.24.6
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6406614Z  * [new tag]         v0.24.7                -> v0.24.7
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6408898Z  * [new tag]         v0.24.8                -> v0.24.8
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6411458Z  * [new tag]         v0.24.9                -> v0.24.9
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6413981Z  * [new tag]         v0.25.0                -> v0.25.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6416286Z  * [new tag]         v0.25.1                -> v0.25.1
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6418470Z  * [new tag]         v0.25.2                -> v0.25.2
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6420921Z  * [new tag]         v0.25.3                -> v0.25.3
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6422792Z  * [new tag]         v0.25.4                -> v0.25.4
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6424136Z  * [new tag]         v0.3.1                 -> v0.3.1
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6425447Z  * [new tag]         v0.4.0                 -> v0.4.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6426947Z  * [new tag]         v0.4.1                 -> v0.4.1
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6429353Z  * [new tag]         v0.5.0                 -> v0.5.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6430974Z  * [new tag]         v0.5.1                 -> v0.5.1
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6432350Z  * [new tag]         v0.5.2                 -> v0.5.2
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6433689Z  * [new tag]         v0.5.3                 -> v0.5.3
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6435027Z  * [new tag]         v0.6.0                 -> v0.6.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6437080Z  * [new tag]         v0.7.0                 -> v0.7.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6439655Z  * [new tag]         v0.7.1                 -> v0.7.1
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6441897Z  * [new tag]         v0.7.2                 -> v0.7.2
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6444119Z  * [new tag]         v0.7.4                 -> v0.7.4
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6446288Z  * [new tag]         v0.7.5                 -> v0.7.5
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6448457Z  * [new tag]         v0.7.6                 -> v0.7.6
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6450936Z  * [new tag]         v0.9.0                 -> v0.9.0
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6455665Z [command]/usr/bin/git branch --list --remote origin/main
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6457111Z   origin/main
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6459629Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6461298Z fb98f016e91e5ef42486eec6b942f6e33df970f3
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6465089Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6466469Z ##[group]Determining the checkout info
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6468346Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6469580Z [command]/usr/bin/git sparse-checkout disable
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6487894Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6515462Z ##[group]Checking out the ref
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6520398Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6814169Z Switched to a new branch 'main'
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6816161Z branch 'main' set up to track 'origin/main'.
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6825663Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6862203Z [command]/usr/bin/git log -1 --format=%H
+Release	UNKNOWN STEP	2026-05-02T22:48:37.6885477Z fb98f016e91e5ef42486eec6b942f6e33df970f3
+Release	UNKNOWN STEP	2026-05-02T22:48:37.7258181Z ##[group]Run oven-sh/setup-bun@v2
+Release	UNKNOWN STEP	2026-05-02T22:48:37.7259677Z with:
+Release	UNKNOWN STEP	2026-05-02T22:48:37.7260423Z   bun-version: latest
+Release	UNKNOWN STEP	2026-05-02T22:48:37.7261273Z   no-cache: false
+Release	UNKNOWN STEP	2026-05-02T22:48:37.7262325Z   token: ***
+Release	UNKNOWN STEP	2026-05-02T22:48:37.7263051Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:38.3003211Z Downloading a new version of Bun: https://github.com/oven-sh/bun/releases/download/bun-v1.3.13/bun-linux-x64.zip
+Release	UNKNOWN STEP	2026-05-02T22:48:38.8598846Z [command]/usr/bin/unzip -o -q /home/runner/work/_temp/f438b609-2a53-428d-bc7d-c699a67f942a.zip
+Release	UNKNOWN STEP	2026-05-02T22:48:39.5846769Z [command]/home/runner/.bun/bin/bun --revision
+Release	UNKNOWN STEP	2026-05-02T22:48:39.5886532Z 1.3.13+bf2e2cecf
+Release	UNKNOWN STEP	2026-05-02T22:48:39.6047720Z ##[group]Run actions/setup-node@v4
+Release	UNKNOWN STEP	2026-05-02T22:48:39.6047993Z with:
+Release	UNKNOWN STEP	2026-05-02T22:48:39.6048170Z   node-version: 20.x
+Release	UNKNOWN STEP	2026-05-02T22:48:39.6048408Z   registry-url: https://registry.npmjs.org
+Release	UNKNOWN STEP	2026-05-02T22:48:39.6048685Z   always-auth: false
+Release	UNKNOWN STEP	2026-05-02T22:48:39.6048889Z   check-latest: false
+Release	UNKNOWN STEP	2026-05-02T22:48:39.6049545Z   token: ***
+Release	UNKNOWN STEP	2026-05-02T22:48:39.6049730Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:39.7824930Z Found in cache @ /opt/hostedtoolcache/node/20.20.2/x64
+Release	UNKNOWN STEP	2026-05-02T22:48:39.7832263Z ##[group]Environment details
+Release	UNKNOWN STEP	2026-05-02T22:48:40.0782678Z node: v20.20.2
+Release	UNKNOWN STEP	2026-05-02T22:48:40.0783073Z npm: 10.8.2
+Release	UNKNOWN STEP	2026-05-02T22:48:40.0783343Z yarn: 1.22.22
+Release	UNKNOWN STEP	2026-05-02T22:48:40.0786376Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:40.0915856Z ##[group]Run bun install
+Release	UNKNOWN STEP	2026-05-02T22:48:40.0916152Z [36;1mbun install[0m
+Release	UNKNOWN STEP	2026-05-02T22:48:40.0946572Z shell: /usr/bin/bash -e {0}
+Release	UNKNOWN STEP	2026-05-02T22:48:40.0946832Z env:
+Release	UNKNOWN STEP	2026-05-02T22:48:40.0947067Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+Release	UNKNOWN STEP	2026-05-02T22:48:40.0947389Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+Release	UNKNOWN STEP	2026-05-02T22:48:40.0947639Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:40.1046173Z bun install v1.3.13 (bf2e2cec)
+Release	UNKNOWN STEP	2026-05-02T22:48:40.3921340Z 
+Release	UNKNOWN STEP	2026-05-02T22:48:40.3926401Z $ cd .. && husky .husky || true
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4354217Z 
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4355145Z + @changesets/cli@2.29.8
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4355713Z + eslint@9.39.2
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4356228Z + eslint-config-prettier@10.1.8
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4356782Z + eslint-plugin-prettier@5.5.4
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4357256Z + husky@9.1.7
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4357660Z + lint-staged@16.2.7
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4358031Z + prettier@3.7.4
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4358423Z + command-stream@0.8.3
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4359223Z + lino-objects-codec@0.1.1
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4359535Z 
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4359807Z 213 packages installed [332.00ms]
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4422633Z ##[group]Run node scripts/setup-npm.mjs
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4422976Z [36;1mnode scripts/setup-npm.mjs[0m
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4444528Z shell: /usr/bin/bash -e {0}
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4444752Z env:
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4444987Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4445316Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+Release	UNKNOWN STEP	2026-05-02T22:48:40.4445568Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:42.4052607Z 10.8.2
+Release	UNKNOWN STEP	2026-05-02T22:48:42.4100954Z Current npm version: 10.8.2
+Release	UNKNOWN STEP	2026-05-02T22:48:45.8203842Z 
+Release	UNKNOWN STEP	2026-05-02T22:48:45.8204935Z removed 65 packages, and changed 112 packages in 3s
+Release	UNKNOWN STEP	2026-05-02T22:48:45.8205858Z 
+Release	UNKNOWN STEP	2026-05-02T22:48:45.8206144Z 15 packages are looking for funding
+Release	UNKNOWN STEP	2026-05-02T22:48:45.8206655Z   run `npm fund` for details
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9371127Z 11.13.0
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9410498Z Updated npm version: 11.13.0
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9497797Z ##[group]Run CHANGESET_COUNT=$(find js/.changeset -name "*.md" ! -name "README.md" | wc -l)
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9498423Z [36;1mCHANGESET_COUNT=$(find js/.changeset -name "*.md" ! -name "README.md" | wc -l)[0m
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9498869Z [36;1mecho "Found $CHANGESET_COUNT changeset file(s)"[0m
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9499795Z [36;1mecho "has_changesets=$([[ $CHANGESET_COUNT -gt 0 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT[0m
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9500323Z [36;1mecho "changeset_count=$CHANGESET_COUNT" >> $GITHUB_OUTPUT[0m
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9521243Z shell: /usr/bin/bash -e {0}
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9521456Z env:
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9521677Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9521990Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9522238Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9585777Z Found 2 changeset file(s)
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9645469Z ##[group]Run node scripts/merge-changesets.mjs
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9645812Z [36;1mnode scripts/merge-changesets.mjs[0m
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9664868Z shell: /usr/bin/bash -e {0}
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9665074Z env:
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9665299Z   NPM_CONFIG_USERCONFIG: /home/runner/work/_temp/.npmrc
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9665607Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9665854Z ##[endgroup]
+Release	UNKNOWN STEP	2026-05-02T22:48:45.9979082Z Checking for multiple changesets to merge...
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0005665Z node:fs:1521
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0006173Z   const result = binding.readdir(
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0006720Z                          ^
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0007016Z 
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0007571Z Error: ENOENT: no such file or directory, scandir '.changeset'
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0008142Z     at readdirSync (node:fs:1521:26)
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0008704Z     at main (file:///home/runner/work/start/start/scripts/merge-changesets.mjs:189:26)
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0009797Z     at file:///home/runner/work/start/start/scripts/merge-changesets.mjs:263:1
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0010665Z     at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0011255Z     at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0012311Z     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0013327Z   errno: -2,
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0013693Z   code: 'ENOENT',
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0014074Z   syscall: 'scandir',
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0014475Z   path: '.changeset'
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0014853Z }
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0015027Z 
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0015179Z Node.js v20.20.2
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0043256Z ##[error]Process completed with exit code 1.
+Release	UNKNOWN STEP	2026-05-02T22:48:46.0170548Z Post job cleanup.
+Release	UNKNOWN STEP	2026-05-02T22:48:46.1122675Z [command]/usr/bin/git version
+Release	UNKNOWN STEP	2026-05-02T22:48:46.1157878Z git version 2.53.0
+Release	UNKNOWN STEP	2026-05-02T22:48:46.1201850Z Temporarily overriding HOME='/home/runner/work/_temp/f4ce445c-b6e2-4e88-9673-4aa86a9f1c0d' before making global git config changes
+Release	UNKNOWN STEP	2026-05-02T22:48:46.1203146Z Adding repository directory to the temporary git global config as a safe directory
+Release	UNKNOWN STEP	2026-05-02T22:48:46.1215233Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/start/start
+Release	UNKNOWN STEP	2026-05-02T22:48:46.1248550Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Release	UNKNOWN STEP	2026-05-02T22:48:46.1279684Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Release	UNKNOWN STEP	2026-05-02T22:48:46.1501422Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Release	UNKNOWN STEP	2026-05-02T22:48:46.1521600Z http.https://github.com/.extraheader
+Release	UNKNOWN STEP	2026-05-02T22:48:46.1533789Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+Release	UNKNOWN STEP	2026-05-02T22:48:46.1563364Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Release	UNKNOWN STEP	2026-05-02T22:48:46.1774351Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Release	UNKNOWN STEP	2026-05-02T22:48:46.1805403Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Release	UNKNOWN STEP	2026-05-02T22:48:46.2131041Z Cleaning up orphan processes
+Release	UNKNOWN STEP	2026-05-02T22:48:46.2389959Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-node@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
