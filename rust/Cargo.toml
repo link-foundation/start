@@ -26,7 +26,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4"] }
 base64 = "0.22"
-lino-objects-codec = { path = "../lib/lino-objects-codec" }
+lino-objects-codec = "0.2.0"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

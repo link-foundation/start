@@ -11,7 +11,7 @@ called `start` and behaves like the `$` command from the JavaScript package.
 ## Installation
 
 ```bash
-# From crates.io (once published):
+# From crates.io:
 cargo install start-command
 
 # From source:
@@ -43,10 +43,9 @@ cargo clippy --all-targets --all-features
 
 ## Releases
 
-Rust releases are tagged `rust-v<version>` and published to GitHub Releases
-(crates.io publishing is planned as a follow-up). The release title carries
-the `[Rust]` prefix, e.g. `[Rust] 0.14.0`, so JS and Rust releases can be
-told apart at a glance.
+Rust releases are published to crates.io and tagged `rust-v<version>` in
+GitHub Releases. The release title carries the `[Rust]` prefix, e.g.
+`[Rust] 0.14.0`, so JS and Rust releases can be told apart at a glance.
 
 - **Release history**: https://github.com/link-foundation/start/releases?q=%5BRust%5D
 - **Changelog fragments**: [`changelog.d/`](changelog.d/) — each PR adds one

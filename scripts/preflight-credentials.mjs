@@ -12,6 +12,7 @@
  *   node scripts/preflight-credentials.mjs --require gh-token
  *   node scripts/preflight-credentials.mjs --require npm-oidc
  *   node scripts/preflight-credentials.mjs --require crates-io
+ *   node scripts/preflight-credentials.mjs --require crates-token
  *   node scripts/preflight-credentials.mjs --require gh-token --require npm-oidc
  *
  * Env (optional):
@@ -36,7 +37,7 @@ for (let index = 0; index < args.length; index += 1) {
 
 if (requiredChecks.length === 0) {
   console.error("Error: at least one --require <check> argument is required");
-  console.error("Available checks: gh-token, npm-oidc, crates-io");
+  console.error("Available checks: gh-token, npm-oidc, crates-io, crates-token");
   process.exit(1);
 }
 
@@ -47,6 +48,8 @@ dumpEnv([
   "GITHUB_REPOSITORY",
   "ACTIONS_ID_TOKEN_REQUEST_URL",
   "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
+  "CARGO_REGISTRY_TOKEN",
+  "CARGO_TOKEN",
   "PREFLIGHT_PACKAGE_NAME",
 ]);
 
@@ -163,10 +166,24 @@ async function checkCratesIo() {
   }
 }
 
+function checkCratesToken() {
+  const token = process.env.CARGO_REGISTRY_TOKEN || process.env.CARGO_TOKEN || "";
+  if (!token) {
+    fail(
+      "crates-token",
+      "Neither CARGO_REGISTRY_TOKEN nor CARGO_TOKEN is set. Add a crates.io API token to repository secrets.",
+    );
+    return;
+  }
+
+  logCheck("crates-token", "ok", `${token.length} characters configured`);
+}
+
 const checkers = {
   "gh-token": checkGhToken,
   "npm-oidc": checkNpmOidc,
   "crates-io": checkCratesIo,
+  "crates-token": checkCratesToken,
 };
 
 for (const name of requiredChecks) {

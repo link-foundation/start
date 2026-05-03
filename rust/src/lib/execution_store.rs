@@ -1,7 +1,9 @@
 //! Execution Store - Dual storage (.lino text + .links binary) for command execution records
 
+use crate::lino_value_json::{json_to_lino_value, lino_value_to_json};
+use crate::local_hostname;
 use chrono::Utc;
-use lino_objects_codec::{decode, encode};
+use lino_objects_codec::{decode, encode, LinoValue};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -208,7 +210,7 @@ impl LockManager {
                             .duration_since(std::time::UNIX_EPOCH)
                             .map(|d| d.as_millis())
                             .unwrap_or(0),
-                        "hostname": hostname::get()
+                        "hostname": local_hostname::get()
                             .map(|h| h.to_string_lossy().to_string())
                             .unwrap_or_default()
                     });
@@ -371,8 +373,11 @@ impl ExecutionStore {
 
                 match decode(&content) {
                     Ok(data) => {
-                        if let Value::Array(arr) = data {
-                            arr.iter().filter_map(ExecutionRecord::from_json).collect()
+                        if let LinoValue::Array(arr) = data {
+                            arr.iter()
+                                .map(lino_value_to_json)
+                                .filter_map(|value| ExecutionRecord::from_json(&value))
+                                .collect()
                         } else {
                             Vec::new()
                         }
@@ -392,8 +397,11 @@ impl ExecutionStore {
 
     /// Write execution records to lino file
     fn write_lino_records(&self, records: &[ExecutionRecord]) -> std::io::Result<()> {
-        let data: Vec<Value> = records.iter().map(|r| r.to_json()).collect();
-        let content = encode(&Value::Array(data));
+        let data: Vec<LinoValue> = records
+            .iter()
+            .map(|record| json_to_lino_value(&record.to_json()))
+            .collect();
+        let content = encode(&LinoValue::Array(data));
         fs::write(&self.lino_db_path, content)?;
         self.log(&format!("Wrote {} records to lino file", records.len()));
         Ok(())
@@ -824,31 +832,6 @@ pub struct ExecutionStats {
     pub clink_available: bool,
     pub lino_db_path: String,
     pub links_db_path: String,
-}
-
-// Stub for hostname crate functionality
-mod hostname {
-    use std::ffi::OsString;
-
-    pub fn get() -> Result<OsString, std::io::Error> {
-        #[cfg(unix)]
-        {
-            let mut buf = [0u8; 256];
-            let result = unsafe { libc::gethostname(buf.as_mut_ptr() as *mut i8, buf.len()) };
-            if result == 0 {
-                let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
-                Ok(OsString::from(
-                    String::from_utf8_lossy(&buf[..len]).to_string(),
-                ))
-            } else {
-                Ok(OsString::from("unknown"))
-            }
-        }
-        #[cfg(not(unix))]
-        {
-            Ok(OsString::from("unknown"))
-        }
-    }
 }
 
 #[cfg(test)]

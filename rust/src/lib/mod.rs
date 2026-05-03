@@ -15,6 +15,9 @@ pub mod substitution;
 pub mod usage;
 pub mod user_manager;
 
+mod lino_value_json;
+mod local_hostname;
+
 // Re-export commonly used items
 pub use args_parser::{
     generate_session_name, generate_uuid, get_effective_mode, has_isolation, is_valid_uuid,

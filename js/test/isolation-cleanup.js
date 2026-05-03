@@ -241,29 +241,116 @@ describe('Isolation Resource Cleanup Verification', () => {
     // Use the canRunLinuxDockerImages function from isolation module
     // to properly detect if Linux containers can run (handles Windows containers mode)
     const { canRunLinuxDockerImages } = require('../src/lib/isolation');
+    const DOCKER_TEST_TIMEOUT = process.platform === 'win32' ? 30000 : 20000;
+    const DOCKER_STATE_WAIT_TIMEOUT =
+      process.platform === 'win32' ? 20000 : 10000;
 
-    it('should show docker container as exited after command completes (auto-exit by default)', async () => {
-      if (!canRunLinuxDockerImages()) {
-        console.log(
-          '  Skipping: docker not available, daemon not running, or Linux containers not supported'
+    it(
+      'should show docker container as exited after command completes (auto-exit by default)',
+      { timeout: DOCKER_TEST_TIMEOUT },
+      async () => {
+        if (!canRunLinuxDockerImages()) {
+          console.log(
+            '  Skipping: docker not available, daemon not running, or Linux containers not supported'
+          );
+          return;
+        }
+
+        const containerName = `test-cleanup-docker-${Date.now()}`;
+
+        // Run a quick command in detached mode
+        const result = await runInDocker('echo "test" && sleep 0.1', {
+          image: 'alpine:latest',
+          session: containerName,
+          detached: true,
+          keepAlive: false,
+        });
+
+        assert.strictEqual(result.success, true);
+
+        // Wait for the container to exit
+        const containerExited = await waitFor(() => {
+          try {
+            const status = execSync(
+              `docker inspect -f '{{.State.Status}}' ${containerName}`,
+              {
+                encoding: 'utf8',
+                stdio: ['pipe', 'pipe', 'pipe'],
+              }
+            ).trim();
+            return status === 'exited';
+          } catch {
+            return false;
+          }
+        }, DOCKER_STATE_WAIT_TIMEOUT);
+
+        assert.ok(
+          containerExited,
+          'Docker container should be in exited state after command completes (auto-exit by default)'
         );
-        return;
+
+        // Verify with docker ps -a that container is exited (not running)
+        try {
+          const allContainers = execSync('docker ps -a', {
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe'],
+          });
+          assert.ok(
+            allContainers.includes(containerName),
+            'Container should appear in docker ps -a'
+          );
+
+          const runningContainers = execSync('docker ps', {
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe'],
+          });
+          assert.ok(
+            !runningContainers.includes(containerName),
+            'Container should NOT appear in docker ps (not running)'
+          );
+          console.log(
+            '  ✓ Docker container auto-exited and stopped (resources released, filesystem preserved)'
+          );
+        } catch (err) {
+          assert.fail(`Failed to verify container status: ${err.message}`);
+        }
+
+        // Clean up
+        try {
+          execSync(`docker rm -f ${containerName}`, { stdio: 'ignore' });
+        } catch {
+          // Ignore cleanup errors
+        }
       }
+    );
 
-      const containerName = `test-cleanup-docker-${Date.now()}`;
+    it(
+      'should keep docker container running when keepAlive is true',
+      { timeout: DOCKER_TEST_TIMEOUT },
+      async () => {
+        if (!canRunLinuxDockerImages()) {
+          console.log(
+            '  Skipping: docker not available, daemon not running, or Linux containers not supported'
+          );
+          return;
+        }
 
-      // Run a quick command in detached mode
-      const result = await runInDocker('echo "test" && sleep 0.1', {
-        image: 'alpine:latest',
-        session: containerName,
-        detached: true,
-        keepAlive: false,
-      });
+        const containerName = `test-keepalive-docker-${Date.now()}`;
 
-      assert.strictEqual(result.success, true);
+        // Run command with keepAlive enabled
+        const result = await runInDocker('echo "test"', {
+          image: 'alpine:latest',
+          session: containerName,
+          detached: true,
+          keepAlive: true,
+        });
 
-      // Wait for the container to exit
-      const containerExited = await waitFor(() => {
+        assert.strictEqual(result.success, true);
+
+        // Wait a bit for the command to complete
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        // Container should still be running
         try {
           const status = execSync(
             `docker inspect -f '{{.State.Status}}' ${containerName}`,
@@ -272,101 +359,25 @@ describe('Isolation Resource Cleanup Verification', () => {
               stdio: ['pipe', 'pipe', 'pipe'],
             }
           ).trim();
-          return status === 'exited';
-        } catch {
-          return false;
+          assert.strictEqual(
+            status,
+            'running',
+            'Container should still be running with keepAlive=true'
+          );
+          console.log(
+            '  ✓ Docker container kept running as expected with --keep-alive'
+          );
+        } catch (err) {
+          assert.fail(`Failed to verify container is running: ${err.message}`);
         }
-      }, 10000);
 
-      assert.ok(
-        containerExited,
-        'Docker container should be in exited state after command completes (auto-exit by default)'
-      );
-
-      // Verify with docker ps -a that container is exited (not running)
-      try {
-        const allContainers = execSync('docker ps -a', {
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe'],
-        });
-        assert.ok(
-          allContainers.includes(containerName),
-          'Container should appear in docker ps -a'
-        );
-
-        const runningContainers = execSync('docker ps', {
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe'],
-        });
-        assert.ok(
-          !runningContainers.includes(containerName),
-          'Container should NOT appear in docker ps (not running)'
-        );
-        console.log(
-          '  ✓ Docker container auto-exited and stopped (resources released, filesystem preserved)'
-        );
-      } catch (err) {
-        assert.fail(`Failed to verify container status: ${err.message}`);
+        // Clean up
+        try {
+          execSync(`docker rm -f ${containerName}`, { stdio: 'ignore' });
+        } catch {
+          // Ignore cleanup errors
+        }
       }
-
-      // Clean up
-      try {
-        execSync(`docker rm -f ${containerName}`, { stdio: 'ignore' });
-      } catch {
-        // Ignore cleanup errors
-      }
-    });
-
-    it('should keep docker container running when keepAlive is true', async () => {
-      if (!canRunLinuxDockerImages()) {
-        console.log(
-          '  Skipping: docker not available, daemon not running, or Linux containers not supported'
-        );
-        return;
-      }
-
-      const containerName = `test-keepalive-docker-${Date.now()}`;
-
-      // Run command with keepAlive enabled
-      const result = await runInDocker('echo "test"', {
-        image: 'alpine:latest',
-        session: containerName,
-        detached: true,
-        keepAlive: true,
-      });
-
-      assert.strictEqual(result.success, true);
-
-      // Wait a bit for the command to complete
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Container should still be running
-      try {
-        const status = execSync(
-          `docker inspect -f '{{.State.Status}}' ${containerName}`,
-          {
-            encoding: 'utf8',
-            stdio: ['pipe', 'pipe', 'pipe'],
-          }
-        ).trim();
-        assert.strictEqual(
-          status,
-          'running',
-          'Container should still be running with keepAlive=true'
-        );
-        console.log(
-          '  ✓ Docker container kept running as expected with --keep-alive'
-        );
-      } catch (err) {
-        assert.fail(`Failed to verify container is running: ${err.message}`);
-      }
-
-      // Clean up
-      try {
-        execSync(`docker rm -f ${containerName}`, { stdio: 'ignore' });
-      } catch {
-        // Ignore cleanup errors
-      }
-    });
+    );
   });
 });
