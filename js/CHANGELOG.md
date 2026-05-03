@@ -1,5 +1,11 @@
 # start-command
 
+## 0.27.1
+
+### Patch Changes
+
+- fe362a6: Fix CI release automation by making Docker cleanup tests tolerate Windows Docker startup latency and by hardening GitHub release creation.
+
 ## 0.27.0
 
 ### Minor Changes
