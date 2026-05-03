@@ -399,7 +399,7 @@ jobs:
 
       - name: Check package
         working-directory: rust
-        run: cargo package --list
+        run: cargo package --allow-dirty
 
   # === AUTO RELEASE ===
   # Automatic release on push to main using changelog fragments.
@@ -479,8 +479,23 @@ jobs:
         working-directory: rust
         run: cargo build --release
 
-      - name: Create GitHub Release
+      - name: Preflight crates.io publish token
         if: steps.check.outputs.should_release == 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN || secrets.CARGO_TOKEN }}
+          CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
+        run: node scripts/preflight-credentials.mjs --require crates-token
+
+      - name: Publish start-command to crates.io
+        id: publish_start_command
+        if: steps.check.outputs.should_release == 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN || secrets.CARGO_TOKEN }}
+          CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
+        run: node scripts/publish-to-crates.mjs --working-dir rust
+
+      - name: Create GitHub Release
+        if: steps.publish_start_command.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -493,7 +508,7 @@ jobs:
             --package-name "start-command"
 
       - name: Verify release contains the crates badge (false-positive guard)
-        if: steps.check.outputs.should_release == 'true'
+        if: steps.publish_start_command.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -560,8 +575,23 @@ jobs:
         working-directory: rust
         run: cargo build --release
 
-      - name: Create GitHub Release
+      - name: Preflight crates.io publish token
         if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN || secrets.CARGO_TOKEN }}
+          CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
+        run: node scripts/preflight-credentials.mjs --require crates-token
+
+      - name: Publish start-command to crates.io
+        id: publish_start_command
+        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN || secrets.CARGO_TOKEN }}
+          CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
+        run: node scripts/publish-to-crates.mjs --working-dir rust
+
+      - name: Create GitHub Release
+        if: steps.publish_start_command.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -574,7 +604,7 @@ jobs:
             --package-name "start-command"
 
       - name: Verify release contains the crates badge (false-positive guard)
-        if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
+        if: steps.publish_start_command.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

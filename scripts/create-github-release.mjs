@@ -13,14 +13,10 @@
  *                    language; other prefixes pass through as
  *                    "${prefix}${version}". An empty prefix preserves the
  *                    original behaviour ("v${version}" tag, "${version}" title).
- *
- * Uses link-foundation libraries:
- * - use-m: Dynamic package loading without package.json dependencies
- * - command-stream: Modern shell command execution with streaming support
- * - lino-arguments: Unified configuration from CLI args, env vars, and .lenv files
  */
 
-import { existsSync, readFileSync } from "fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import {
   extractChangelogEntry,
   packageVersionBadge,
@@ -28,68 +24,100 @@ import {
   releaseTag,
 } from "./release-name.mjs";
 
-// Load use-m dynamically
-const { use } = eval(
-  await (await fetch("https://unpkg.com/use-m/use.js")).text(),
-);
+function toCamelCase(name) {
+  return name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+}
 
-// Import link-foundation libraries
-const { $ } = await use("command-stream");
-const { makeConfig } = await use("lino-arguments");
+function parseArgs(argv) {
+  const args = {};
 
-// Parse CLI arguments using lino-arguments
-// Note: Using --release-version instead of --version to avoid conflict with yargs' built-in --version flag
-const config = makeConfig({
-  yargs: ({ yargs, getenv }) =>
-    yargs
-      .option("release-version", {
-        type: "string",
-        default: getenv("VERSION", ""),
-        describe: "Version number (e.g., 1.0.0)",
-      })
-      .option("repository", {
-        type: "string",
-        default: getenv("REPOSITORY", ""),
-        describe: "GitHub repository (e.g., owner/repo)",
-      })
-      .option("prefix", {
-        type: "string",
-        default: getenv("PREFIX", ""),
-        describe:
-          'Optional language/package prefix for the tag and title (e.g., "js-" or "rust-")',
-      })
-      .option("changelog-file", {
-        type: "string",
-        default: getenv("CHANGELOG_FILE", "CHANGELOG.md"),
-        describe: "Changelog file containing the release notes entry",
-      })
-      .option("badge-type", {
-        type: "string",
-        default: getenv("BADGE_TYPE", ""),
-        describe: "Optional exact-version package badge type: npm or crates",
-        choices: ["", "npm", "crates"],
-      })
-      .option("package-name", {
-        type: "string",
-        default: getenv("PACKAGE_NAME", ""),
-        describe: "Package name used in the optional package badge",
-      }),
-});
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (!arg.startsWith("--")) continue;
 
-const {
-  releaseVersion: version,
-  repository,
-  prefix,
-  changelogFile,
-  badgeType,
-  packageName,
-} = config;
+    const [rawName, inlineValue] = arg.slice(2).split(/=(.*)/s, 2);
+    const name = toCamelCase(rawName);
 
-if (!version || !repository) {
+    if (inlineValue !== undefined) {
+      args[name] = inlineValue;
+    } else if (argv[index + 1] && !argv[index + 1].startsWith("--")) {
+      args[name] = argv[index + 1];
+      index += 1;
+    } else {
+      args[name] = true;
+    }
+  }
+
+  return args;
+}
+
+function usageAndExit() {
   console.error("Error: Missing required arguments");
   console.error(
     "Usage: node scripts/create-github-release.mjs --release-version <version> --repository <repository> [--prefix <prefix>] [--changelog-file <path>] [--badge-type <npm|crates> --package-name <name>]",
   );
+  process.exit(1);
+}
+
+function isAlreadyExistsError(output) {
+  const normalizedOutput = output.toLowerCase();
+  return (
+    normalizedOutput.includes("already_exists") ||
+    normalizedOutput.includes("already exists") ||
+    (normalizedOutput.includes("validation failed") &&
+      normalizedOutput.includes("tag_name"))
+  );
+}
+
+function createRelease(repository, payload) {
+  const result = spawnSync(
+    "gh",
+    ["api", `repos/${repository}/releases`, "-X", "POST", "--input", "-"],
+    {
+      encoding: "utf8",
+      input: payload,
+    },
+  );
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  const stdout = result.stdout || "";
+  const stderr = result.stderr || "";
+
+  if (result.status === 0) {
+    return { created: true, stdout, stderr };
+  }
+
+  const combinedOutput = `${stdout}\n${stderr}`.trim();
+  if (isAlreadyExistsError(combinedOutput)) {
+    return { alreadyExists: true, created: false, stdout, stderr };
+  }
+
+  const status = result.status ?? 1;
+  if (combinedOutput) {
+    console.error(combinedOutput);
+  }
+  console.error(`GitHub release creation failed with exit code ${status}`);
+  process.exit(status);
+}
+
+const cliArgs = parseArgs(process.argv.slice(2));
+const version = cliArgs.releaseVersion || process.env.VERSION || "";
+const repository = cliArgs.repository || process.env.REPOSITORY || "";
+const prefix = cliArgs.prefix || process.env.PREFIX || "";
+const changelogFile =
+  cliArgs.changelogFile || process.env.CHANGELOG_FILE || "CHANGELOG.md";
+const badgeType = cliArgs.badgeType || process.env.BADGE_TYPE || "";
+const packageName = cliArgs.packageName || process.env.PACKAGE_NAME || "";
+
+if (!version || !repository) {
+  usageAndExit();
+}
+
+if (badgeType && !["npm", "crates"].includes(badgeType)) {
+  console.error("Error: --badge-type must be npm or crates");
   process.exit(1);
 }
 
@@ -128,20 +156,20 @@ try {
     releaseNotes = `${releaseNotes}\n\n---\n\n${badge}`;
   }
 
-  // Create release using GitHub API with JSON input
-  // This avoids shell escaping issues that occur when passing text via command-line arguments
-  // (Previously caused apostrophes like "didn't" to appear as "didn'''" in releases)
+  // Create release using GitHub API with JSON input. Passing the body through
+  // stdin avoids shell escaping issues in changelog text.
   const payload = JSON.stringify({
     tag_name: tag,
     name,
     body: releaseNotes,
   });
 
-  await $`gh api repos/${repository}/releases -X POST --input -`.run({
-    stdin: payload,
-  });
-
-  console.log(`\u2705 Created GitHub release: ${tag} (${name})`);
+  const releaseResult = createRelease(repository, payload);
+  if (releaseResult.alreadyExists) {
+    console.log(`GitHub release already exists: ${tag} (${name})`);
+  } else {
+    console.log(`Created GitHub release: ${tag} (${name})`);
+  }
 } catch (error) {
   console.error("Error creating release:", error.message);
   process.exit(1);
