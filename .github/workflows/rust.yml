@@ -40,6 +40,10 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -Dwarnings
+  # Force JavaScript-based actions to use Node 24 (already on the runner).
+  # Silences the "Node.js 20 actions are deprecated" annotation that fired
+  # on every job in run 25282945820. Adopted from `link-assistant/hive-mind`.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # === SYNTAX PRE-CHECK ===

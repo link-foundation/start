@@ -20,7 +20,7 @@
  * Why this script exists: see docs/case-studies/issue-118/root-cause.md (RC-4).
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 import { debug, dumpEnv } from "./debug-print.mjs";
 
@@ -44,6 +44,7 @@ debug("preflight-credentials checks:", requiredChecks);
 dumpEnv([
   "GH_TOKEN",
   "GITHUB_TOKEN",
+  "GITHUB_REPOSITORY",
   "ACTIONS_ID_TOKEN_REQUEST_URL",
   "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
   "PREFLIGHT_PACKAGE_NAME",
@@ -72,16 +73,31 @@ function checkGhToken() {
     return;
   }
 
+  // Use an endpoint that works for *both* the auto-issued GITHUB_TOKEN
+  // (an installation token, no user identity) and personal access tokens.
+  // `repos/{owner}/{repo}` requires only `metadata: read` and is satisfied
+  // by every workflow token. Calling `/user` fails with HTTP 403 for
+  // installation tokens — see docs/case-studies/issue-120/root-cause.md.
+  const repository = process.env.GITHUB_REPOSITORY;
+  const probeArgs = repository
+    ? ["api", `repos/${repository}`, "--jq", ".full_name"]
+    : ["auth", "status"];
+
   try {
-    execSync("gh api user --jq .login", {
+    execFileSync("gh", probeArgs, {
       stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, GH_TOKEN: token, GITHUB_TOKEN: token },
     });
-    logCheck("gh-token", "ok", "authenticated");
+    logCheck(
+      "gh-token",
+      "ok",
+      repository ? `authenticated for ${repository}` : "authenticated (gh auth status)",
+    );
   } catch (error) {
+    const command = `gh ${probeArgs.join(" ")}`;
     fail(
       "gh-token",
-      `\`gh api user\` rejected the token (HTTP error or expired). Underlying: ${error.message.split("\n")[0]}`,
+      `\`${command}\` rejected the token (HTTP error or expired). Underlying: ${error.message.split("\n")[0]}`,
     );
   }
 }
@@ -134,7 +150,14 @@ async function checkCratesIo() {
       fail("crates-io", `crates.io returned HTTP ${response.status}.`);
       return;
     }
-    logCheck("crates-io", "ok", `${probeUrl} → HTTP ${response.status}`);
+    // 404 is expected for a not-yet-published package; it still proves the
+    // registry is reachable. Annotate the message so a reader doesn't think
+    // an unrelated 404 (e.g. wrong package name) was silently accepted.
+    const detail =
+      response.status === 404 && packageName
+        ? `${probeUrl} → HTTP 404 (package not yet published — fine for first release)`
+        : `${probeUrl} → HTTP ${response.status}`;
+    logCheck("crates-io", "ok", detail);
   } catch (error) {
     fail("crates-io", `crates.io is unreachable: ${error.message}`);
   }
