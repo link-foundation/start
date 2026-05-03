@@ -77,11 +77,29 @@ git worktree add --detach "$WORKTREE_DIR" "$BASE_REF" >/dev/null
 
 (
   cd "$WORKTREE_DIR"
-  if ! git merge --no-commit --no-ff "$HEAD_SHA"; then
-    echo "::error::Merge of $HEAD_SHA into $BASE_REF produced conflicts." >&2
-    git status --short || true
+
+  # `git merge` writes a merge commit on success, so it requires a
+  # committer identity even with --no-commit (the abort path still
+  # records a MERGE_MSG). On CI the runner has no global identity
+  # set, so configure a local one scoped to this worktree.
+  if ! git config user.email >/dev/null 2>&1; then
+    git config user.email "simulate-fresh-merge@local"
+    git config user.name  "simulate-fresh-merge"
+  fi
+
+  merge_log="$(mktemp)"
+  if ! git merge --no-commit --no-ff "$HEAD_SHA" >"$merge_log" 2>&1; then
+    cat "$merge_log" >&2
+    if git ls-files --unmerged | grep -q .; then
+      echo "::error::Merge of $HEAD_SHA into $BASE_REF produced conflicts." >&2
+      git status --short || true
+    else
+      echo "::error::git merge failed (see log above) — not a conflict." >&2
+    fi
+    rm -f "$merge_log"
     exit 1
   fi
+  rm -f "$merge_log"
 
   echo ""
   echo "Merged tree built. Running check…"
