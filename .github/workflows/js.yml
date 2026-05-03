@@ -43,6 +43,13 @@ concurrency:
   # because they may already be publishing to npm.
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
+# Force JavaScript-based actions to use the Node 24 runtime that the runner
+# already ships with. Silences the "Node.js 20 actions are deprecated"
+# annotation that GitHub started emitting in October 2025 and ahead of the
+# 2026-06-02 hard cutover. Adopted from `link-assistant/hive-mind`.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # === SYNTAX PRE-CHECK ===
   # ~7 s sanity check that catches broken merge resolutions before the
