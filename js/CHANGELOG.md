@@ -1,5 +1,15 @@
 # start-command
 
+## 0.27.0
+
+### Minor Changes
+
+- Add `--stop` and `--terminate` controls for detached isolated executions and include best-effort process IDs in status output.
+
+  Fix CI release note generation so language-prefixed GitHub Releases read the package changelog and include exact-version badges.
+
+  Fix release pipeline so multi-changeset merges and JS GitHub Releases work end-to-end. The `merge-changesets.mjs` helper now reads the package name from `package.json` and accepts a `--working-dir` flag, fixing the `ENOENT: no such file or directory, scandir '.changeset'` failure on the JS release workflow when more than one changeset is pending. JS GitHub Releases now also include the exact-version npm badge alongside the existing Rust crates badge.
+
 ## 0.26.0
 
 ### Minor Changes
