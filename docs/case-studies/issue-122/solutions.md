@@ -26,6 +26,8 @@ Change:
 - fail the script on unexpected non-zero exit,
 - treat `already_exists` / tag validation failure as an idempotent skip with a
   clear `GitHub release already exists` message,
+- allow tests to inject an explicit fake `gh` command plus prefix arguments so
+  the regression tests are portable on Windows,
 - add regression tests with a fake `gh` executable.
 
 Why this fix:
@@ -47,7 +49,10 @@ Change:
 - run `cargo publish --allow-dirty --manifest-path rust/Cargo.toml`,
 - set GitHub Actions outputs through `$GITHUB_OUTPUT`,
 - gate Rust GitHub Release creation and verification on
-  `steps.publish_start_command.outputs.published == 'true'`.
+  `steps.publish_start_command.outputs.published == 'true'`,
+- allow tests to inject an explicit fake `cargo` command plus prefix arguments
+  so publish behavior can be verified without platform-specific command
+  wrapper assumptions.
 
 Why this fix:
 
@@ -64,6 +69,8 @@ Change:
 - replace `cargo package --list` in Rust CI with `cargo package --allow-dirty`,
 - change `start-command` to depend on published `lino-objects-codec = "0.2.0"`,
 - adapt `.lino` read/write code to `LinoValue`.
+- add focused Rust tests for scalar, float, array/object, reverse, and
+  non-finite conversion behavior.
 
 Why this fix:
 
@@ -116,8 +123,10 @@ Focused local verification:
 - `cd rust && cargo fmt --all -- --check`
 - `cd rust && cargo check --all-targets`
 - `cd rust && cargo clippy --all-targets --all-features`
+- `cd rust && cargo test lino_value_json --all-features`
 - `cd rust && cargo test --all-features --verbose`
 - `cd rust && cargo package --allow-dirty`
+- `node scripts/check-test-parity.mjs`
 - `node scripts/check-file-size.mjs`
 
 Full CI verification:

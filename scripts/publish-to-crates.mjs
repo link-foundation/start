@@ -11,9 +11,9 @@
  *   node scripts/publish-to-crates.mjs --working-dir rust
  */
 
-import { spawnSync } from 'node:child_process';
-import { appendFileSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { spawnSync } from "node:child_process";
+import { appendFileSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 function toCamelCase(name) {
   return name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
@@ -24,14 +24,14 @@ function parseArgs(argv) {
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (!arg.startsWith('--')) continue;
+    if (!arg.startsWith("--")) continue;
 
     const [rawName, inlineValue] = arg.slice(2).split(/=(.*)/s, 2);
     const name = toCamelCase(rawName);
 
     if (inlineValue !== undefined) {
       args[name] = inlineValue;
-    } else if (argv[index + 1] && !argv[index + 1].startsWith('--')) {
+    } else if (argv[index + 1] && !argv[index + 1].startsWith("--")) {
       args[name] = argv[index + 1];
       index += 1;
     } else {
@@ -51,7 +51,7 @@ function setOutput(key, value) {
 }
 
 function readPackageMetadata(cargoTomlPath) {
-  const cargoToml = readFileSync(cargoTomlPath, 'utf8');
+  const cargoToml = readFileSync(cargoTomlPath, "utf8");
   const metadata = {};
   let inPackageSection = false;
 
@@ -79,7 +79,7 @@ function readPackageMetadata(cargoTomlPath) {
 
   if (!name || !version) {
     throw new Error(
-      `Could not read package name and version from ${cargoTomlPath}`
+      `Could not read package name and version from ${cargoTomlPath}`,
     );
   }
 
@@ -88,15 +88,15 @@ function readPackageMetadata(cargoTomlPath) {
 
 async function isVersionPublished(packageName, packageVersion) {
   const baseUrl = (
-    process.env.CRATES_IO_BASE_URL || 'https://crates.io/api/v1'
-  ).replace(/\/$/, '');
+    process.env.CRATES_IO_BASE_URL || "https://crates.io/api/v1"
+  ).replace(/\/$/, "");
   const url = `${baseUrl}/crates/${encodeURIComponent(packageName)}/${encodeURIComponent(packageVersion)}`;
 
   console.log(`Checking crates.io for ${packageName}@${packageVersion}`);
   const response = await fetch(url, {
     headers: {
-      Accept: 'application/json',
-      'User-Agent': 'link-foundation/start publish-to-crates',
+      Accept: "application/json",
+      "User-Agent": "link-foundation/start publish-to-crates",
     },
   });
 
@@ -108,28 +108,28 @@ async function isVersionPublished(packageName, packageVersion) {
     return false;
   }
 
-  const body = await response.text().catch(() => '');
+  const body = await response.text().catch(() => "");
   throw new Error(
-    `Unexpected crates.io response ${response.status} for ${url}: ${body}`
+    `Unexpected crates.io response ${response.status} for ${url}: ${body}`,
   );
 }
 
 function isAlreadyPublishedOutput(output) {
   const normalizedOutput = output.toLowerCase();
   return (
-    normalizedOutput.includes('already uploaded') ||
-    normalizedOutput.includes('already exists') ||
-    normalizedOutput.includes('crate version is already uploaded')
+    normalizedOutput.includes("already uploaded") ||
+    normalizedOutput.includes("already exists") ||
+    normalizedOutput.includes("crate version is already uploaded")
   );
 }
 
 function isRetryablePublishOutput(output) {
   const normalizedOutput = output.toLowerCase();
   return (
-    normalizedOutput.includes('no matching package named') ||
-    normalizedOutput.includes('failed to select a version') ||
-    normalizedOutput.includes('download of config.json failed') ||
-    normalizedOutput.includes('failed to get successful http response')
+    normalizedOutput.includes("no matching package named") ||
+    normalizedOutput.includes("failed to select a version") ||
+    normalizedOutput.includes("download of config.json failed") ||
+    normalizedOutput.includes("failed to get successful http response")
   );
 }
 
@@ -137,20 +137,45 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function parseCommandArgsEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (
+      Array.isArray(parsed) &&
+      parsed.every((arg) => typeof arg === "string")
+    ) {
+      return parsed;
+    }
+  } catch {
+    // Fall through to the validation error below.
+  }
+
+  console.error(`Error: ${name} must be a JSON array of strings`);
+  process.exit(1);
+}
+
 function publishPackage(cargoTomlPath, token) {
+  const cargoCommand = process.env.START_CARGO_COMMAND || "cargo";
+  const cargoArgsPrefix = parseCommandArgsEnv("START_CARGO_COMMAND_ARGS");
   const result = spawnSync(
-    'cargo',
+    cargoCommand,
     [
-      'publish',
-      '--allow-dirty',
-      '--manifest-path',
+      ...cargoArgsPrefix,
+      "publish",
+      "--allow-dirty",
+      "--manifest-path",
       cargoTomlPath,
-      '--token',
+      "--token",
       token,
     ],
     {
-      encoding: 'utf8',
-    }
+      encoding: "utf8",
+    },
   );
 
   if (result.error) {
@@ -169,72 +194,72 @@ function publishPackage(cargoTomlPath, token) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const workingDir = args.workingDir || process.env.WORKING_DIR || 'rust';
-  const cargoTomlPath = resolve(process.cwd(), workingDir, 'Cargo.toml');
+  const workingDir = args.workingDir || process.env.WORKING_DIR || "rust";
+  const cargoTomlPath = resolve(process.cwd(), workingDir, "Cargo.toml");
   const cargoPackage = readPackageMetadata(cargoTomlPath);
   const token = process.env.CARGO_REGISTRY_TOKEN || process.env.CARGO_TOKEN;
 
   console.log(
-    `Preparing to publish ${cargoPackage.name}@${cargoPackage.version} from ${cargoTomlPath}`
+    `Preparing to publish ${cargoPackage.name}@${cargoPackage.version} from ${cargoTomlPath}`,
   );
 
   if (await isVersionPublished(cargoPackage.name, cargoPackage.version)) {
     console.log(
-      `${cargoPackage.name}@${cargoPackage.version} is already published to crates.io`
+      `${cargoPackage.name}@${cargoPackage.version} is already published to crates.io`,
     );
-    setOutput('published', 'true');
-    setOutput('published_version', cargoPackage.version);
-    setOutput('already_published', 'true');
-    setOutput('publish_result', 'already_published');
+    setOutput("published", "true");
+    setOutput("published_version", cargoPackage.version);
+    setOutput("already_published", "true");
+    setOutput("publish_result", "already_published");
     return;
   }
 
   if (!token) {
     console.error(
-      'Missing crates.io token. Set CARGO_REGISTRY_TOKEN or CARGO_TOKEN in repository secrets.'
+      "Missing crates.io token. Set CARGO_REGISTRY_TOKEN or CARGO_TOKEN in repository secrets.",
     );
     process.exit(1);
   }
 
   const maxRetries = Number.parseInt(
-    process.env.CRATES_PUBLISH_MAX_RETRIES || '3',
-    10
+    process.env.CRATES_PUBLISH_MAX_RETRIES || "3",
+    10,
   );
   const retryDelayMs = Number.parseInt(
-    process.env.CRATES_PUBLISH_RETRY_DELAY_MS || '30000',
-    10
+    process.env.CRATES_PUBLISH_RETRY_DELAY_MS || "30000",
+    10,
   );
 
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     console.log(`cargo publish attempt ${attempt} of ${maxRetries}`);
     const result = publishPackage(cargoTomlPath, token);
-    const combinedOutput = `${result.stdout || ''}\n${result.stderr || ''}`;
+    const combinedOutput = `${result.stdout || ""}\n${result.stderr || ""}`;
 
     if (result.status === 0) {
-      setOutput('published', 'true');
-      setOutput('published_version', cargoPackage.version);
-      setOutput('already_published', 'false');
-      setOutput('publish_result', 'published');
+      setOutput("published", "true");
+      setOutput("published_version", cargoPackage.version);
+      setOutput("already_published", "false");
+      setOutput("publish_result", "published");
       console.log(
-        `Published ${cargoPackage.name}@${cargoPackage.version} to crates.io`
+        `Published ${cargoPackage.name}@${cargoPackage.version} to crates.io`,
       );
       return;
     }
 
     if (isAlreadyPublishedOutput(combinedOutput)) {
-      setOutput('published', 'true');
-      setOutput('published_version', cargoPackage.version);
-      setOutput('already_published', 'true');
-      setOutput('publish_result', 'already_published');
+      setOutput("published", "true");
+      setOutput("published_version", cargoPackage.version);
+      setOutput("already_published", "true");
+      setOutput("publish_result", "already_published");
       console.log(
-        `${cargoPackage.name}@${cargoPackage.version} is already published to crates.io`
+        `${cargoPackage.name}@${cargoPackage.version} is already published to crates.io`,
       );
       return;
     }
 
     if (attempt < maxRetries && isRetryablePublishOutput(combinedOutput)) {
       console.log(
-        `cargo publish failed with a retryable registry/index error; retrying in ${retryDelayMs / 1000}s`
+        `cargo publish failed with a retryable registry/index error; retrying in ${retryDelayMs / 1000}s`,
       );
       await sleep(retryDelayMs);
       continue;
@@ -247,6 +272,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('Error:', error.message);
+  console.error("Error:", error.message);
   process.exit(1);
 });

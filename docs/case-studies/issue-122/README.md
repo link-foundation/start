@@ -7,21 +7,21 @@
 
 ## Documents in this folder
 
-| File | Purpose |
-| --- | --- |
-| `requirements.md` | Explicit and implied requirements from issue #122. |
-| `timeline.md` | Sequence of events reconstructed from GitHub issue, PR, and CI data. |
-| `root-cause.md` | Root causes for each broken CI/CD behavior, with log references. |
-| `solutions.md` | Implemented fixes, verification plan, and alternatives considered. |
-| `template-comparison.md` | Audit against JS, Rust, Python, and C# pipeline templates. |
-| `online-research.md` | External documentation used to validate the solution. |
-| `ci-logs/` | Raw `gh run view --log` output for the two cited workflow runs. |
-| `templates/` | Snapshot of relevant workflow and release helper files from templates. |
-| `issue-data.json` | Snapshot of issue #122 metadata and body. |
-| `issue-comments.json` | Snapshot of issue comments; empty at investigation time. |
-| `recent-runs.json` | Snapshot of recent workflow runs around the incident. |
-| `ci-run-*.json` | Metadata snapshots for the two cited workflow runs. |
-| `pr-123.json` | Snapshot of the initial prepared pull request. |
+| File                     | Purpose                                                                                            |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
+| `requirements.md`        | Explicit and implied requirements from issue #122.                                                 |
+| `timeline.md`            | Sequence of events reconstructed from GitHub issue, PR, and CI data.                               |
+| `root-cause.md`          | Root causes for each broken CI/CD behavior, with log references.                                   |
+| `solutions.md`           | Implemented fixes, verification plan, and alternatives considered.                                 |
+| `template-comparison.md` | Audit against JS, Rust, Python, and C# pipeline templates.                                         |
+| `online-research.md`     | External documentation used to validate the solution.                                              |
+| `ci-logs/`               | Raw `gh run view --log` output for the two cited workflow runs and follow-up PR verification runs. |
+| `templates/`             | Snapshot of relevant workflow and release helper files from templates.                             |
+| `issue-data.json`        | Snapshot of issue #122 metadata and body.                                                          |
+| `issue-comments.json`    | Snapshot of issue comments; empty at investigation time.                                           |
+| `recent-runs.json`       | Snapshot of recent workflow runs around the incident.                                              |
+| `ci-run-*.json`          | Metadata snapshots for the two cited workflow runs.                                                |
+| `pr-123.json`            | Snapshot of the initial prepared pull request.                                                     |
 
 ## Summary
 
@@ -48,3 +48,9 @@ The same false-positive GitHub release helper pattern was found in the JS
 pipeline template and was reported upstream:
 
 - https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/49
+
+Fresh PR CI logs were also preserved after the first implementation push. Those
+runs exposed Windows-only fake command shim issues in the new JS tests and a
+Rust/JS test parity deficit from adding JS tests. The follow-up fix made the
+test command shims injectable on every platform and added five focused Rust
+tests for JSON/LinoValue conversion.

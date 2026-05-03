@@ -1,14 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import {
-  chmodSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter, dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const testDir = dirname(fileURLToPath(import.meta.url));
@@ -50,19 +44,7 @@ process.stdin.on('end', () => {
 `
   );
 
-  if (process.platform === 'win32') {
-    writeFileSync(
-      join(tempDir, 'gh.cmd'),
-      '@echo off\r\nnode "%~dp0fake-gh.cjs"\r\n'
-    );
-  } else {
-    const fakeGh = join(tempDir, 'gh');
-    writeFileSync(
-      fakeGh,
-      '#!/usr/bin/env sh\nnode "$(dirname "$0")/fake-gh.cjs"\n'
-    );
-    chmodSync(fakeGh, 0o755);
-  }
+  return fakeGhJs;
 }
 
 function runScript(mode) {
@@ -73,7 +55,7 @@ function runScript(mode) {
     changelogPath,
     '# Changelog\n\n## [1.2.3] - 2026-05-03\n\n- Release automation fix.\n'
   );
-  createFakeGhBin(tempDir);
+  const fakeGhJs = createFakeGhBin(tempDir);
 
   const result = spawnSync(
     'node',
@@ -98,7 +80,8 @@ function runScript(mode) {
         ...process.env,
         FAKE_GH_MODE: mode,
         FAKE_GH_PAYLOAD_PATH: payloadPath,
-        PATH: `${tempDir}${delimiter}${process.env.PATH}`,
+        START_GH_COMMAND: process.execPath,
+        START_GH_COMMAND_ARGS: JSON.stringify([fakeGhJs]),
       },
     }
   );

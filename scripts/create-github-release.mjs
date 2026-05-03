@@ -69,10 +69,42 @@ function isAlreadyExistsError(output) {
   );
 }
 
+function parseCommandArgsEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (
+      Array.isArray(parsed) &&
+      parsed.every((arg) => typeof arg === "string")
+    ) {
+      return parsed;
+    }
+  } catch {
+    // Fall through to the validation error below.
+  }
+
+  console.error(`Error: ${name} must be a JSON array of strings`);
+  process.exit(1);
+}
+
 function createRelease(repository, payload) {
+  const ghCommand = process.env.START_GH_COMMAND || "gh";
+  const ghArgsPrefix = parseCommandArgsEnv("START_GH_COMMAND_ARGS");
   const result = spawnSync(
-    "gh",
-    ["api", `repos/${repository}/releases`, "-X", "POST", "--input", "-"],
+    ghCommand,
+    [
+      ...ghArgsPrefix,
+      "api",
+      `repos/${repository}/releases`,
+      "-X",
+      "POST",
+      "--input",
+      "-",
+    ],
     {
       encoding: "utf8",
       input: payload,

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { spawn } from 'node:child_process';
 import {
-  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -10,7 +9,7 @@ import {
 } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
-import { delimiter, dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const testDir = dirname(fileURLToPath(import.meta.url));
@@ -39,19 +38,7 @@ process.exit(Number(process.env.FAKE_CARGO_EXIT || 0));
 `
   );
 
-  if (process.platform === 'win32') {
-    writeFileSync(
-      join(tempDir, 'cargo.cmd'),
-      '@echo off\r\nnode "%~dp0fake-cargo.cjs" %*\r\n'
-    );
-  } else {
-    const fakeCargo = join(tempDir, 'cargo');
-    writeFileSync(
-      fakeCargo,
-      '#!/usr/bin/env sh\nnode "$(dirname "$0")/fake-cargo.cjs" "$@"\n'
-    );
-    chmodSync(fakeCargo, 0o755);
-  }
+  return fakeCargoJs;
 }
 
 async function withCratesServer(status, callback) {
@@ -83,23 +70,26 @@ function runScript({
 }) {
   const outputPath = join(tempDir, 'github-output.txt');
   const cargoArgsPath = join(tempDir, 'cargo-args.json');
+  const fakeCargoJs = fakeCargo ? createFakeCargoBin(tempDir) : '';
 
-  if (fakeCargo) {
-    createFakeCargoBin(tempDir);
+  const env = {
+    ...process.env,
+    CARGO_REGISTRY_TOKEN: cargoToken,
+    CRATES_IO_BASE_URL: cratesIoBaseUrl,
+    CRATES_PUBLISH_RETRY_DELAY_MS: '1',
+    FAKE_CARGO_ARGS_PATH: cargoArgsPath,
+    GITHUB_OUTPUT: outputPath,
+  };
+
+  if (fakeCargoJs) {
+    env.START_CARGO_COMMAND = process.execPath;
+    env.START_CARGO_COMMAND_ARGS = JSON.stringify([fakeCargoJs]);
   }
 
   return new Promise((resolveRun, rejectRun) => {
     const child = spawn('node', [scriptPath, '--working-dir', packageDir], {
       cwd: repoRoot,
-      env: {
-        ...process.env,
-        CARGO_REGISTRY_TOKEN: cargoToken,
-        CRATES_IO_BASE_URL: cratesIoBaseUrl,
-        CRATES_PUBLISH_RETRY_DELAY_MS: '1',
-        FAKE_CARGO_ARGS_PATH: cargoArgsPath,
-        GITHUB_OUTPUT: outputPath,
-        PATH: `${tempDir}${delimiter}${process.env.PATH}`,
-      },
+      env,
     });
 
     let stdout = '';

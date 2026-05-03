@@ -111,3 +111,37 @@ The implemented plan:
 7. Upgrade Rust package verification from `cargo package --list` to full
    package verification.
 8. Add regression tests and release fragments.
+
+## 2026-05-03 18:47
+
+The first PR implementation push started fresh PR workflows for commit
+`fe362a6d9b6ebabb6298e6b85776dd4c22bfd552`:
+
+- JavaScript CI/CD run `25287618578`
+- Rust CI/CD run `25287618580`
+
+The full logs are stored as:
+
+- `ci-logs/javascript-cicd-25287618578.log`
+- `ci-logs/rust-cicd-25287618580.log`
+
+The JavaScript run failed on Windows because the new tests used fake `.cmd`
+wrappers for `gh` and `cargo`; Node/Bun did not execute those wrappers through
+`spawnSync`/`spawn` like the real `gh.exe` and `cargo.exe` binaries. The logs
+show missing fake payload output at lines 4835 and 4850, and a fake cargo path
+failure surfaced as status `101` at lines 5340-5346.
+
+The Rust run failed test count parity:
+
+```text
+JavaScript test cases (it() calls): 639
+Rust test cases (#[test] macros): 571
+Rust needs at least 576 tests to reach 90% of JS count (639).
+```
+
+Source: `ci-logs/rust-cicd-25287618580.log` lines 2139-2147.
+
+The follow-up fix added explicit `START_GH_COMMAND` /
+`START_GH_COMMAND_ARGS` and `START_CARGO_COMMAND` /
+`START_CARGO_COMMAND_ARGS` test hooks, then added five Rust unit tests for the
+new JSON/LinoValue conversion layer.
