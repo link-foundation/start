@@ -17,7 +17,7 @@ The `$` command wraps any shell command with automatic logging and failure repor
 
 ```bash
 $ echo "Hello World"
-$ npm test
+$ bun test
 $ git status
 $ --list
 ```
@@ -25,6 +25,9 @@ $ --list
 Use `--status <id>` to inspect one stored execution, or `--list` to see all
 stored executions. Query output defaults to Links Notation and can be changed
 with `--output-format json` or `--output-format text`.
+
+For examples checked against the real JavaScript and Rust command output, see
+[EXAMPLES.md](EXAMPLES.md).
 
 ## Using Pipes
 
@@ -100,7 +103,7 @@ $ "echo \$HOME | wc -c"     # \$ keeps it literal
 
 ```bash
 $ ls -la
-$ npm test
+$ bun test
 $ git status
 $ echo "hello world"
 ```

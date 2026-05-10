@@ -5,6 +5,11 @@ on:
     branches:
       - main
     paths:
+      - 'README.md'
+      - 'REQUIREMENTS.md'
+      - 'ARCHITECTURE.md'
+      - 'docs/**'
+      - 'examples/**'
       - 'rust/**'
       - 'lib/**'
       - 'scripts/**'
@@ -12,6 +17,11 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
+      - 'README.md'
+      - 'REQUIREMENTS.md'
+      - 'ARCHITECTURE.md'
+      - 'docs/**'
+      - 'examples/**'
       - 'rust/**'
       - 'lib/**'
       - 'scripts/**'
@@ -243,6 +253,12 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Setup Node.js (Linux doc examples)
+        if: runner.os == 'Linux'
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
@@ -266,6 +282,10 @@ jobs:
       - name: Build release
         working-directory: rust
         run: cargo build --release
+
+      - name: Check documented examples (Rust)
+        if: runner.os == 'Linux'
+        run: node scripts/check-doc-examples.mjs --implementation rust
 
       # Test execution tracking (Unix)
       - name: Test execution tracking (Unix)
@@ -312,7 +332,7 @@ jobs:
         run: node scripts/check-test-parity.mjs
 
   # === CODE COVERAGE ===
-  # Fail if Rust test coverage drops below 80%
+  # Fail if Rust test coverage drops below the configured threshold
   coverage:
     name: Code Coverage (Rust, Linux only)
     runs-on: ubuntu-latest

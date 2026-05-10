@@ -11,21 +11,25 @@ JavaScript/Bun implementation of the [`start-command`](../README.md) CLI (`$`).
 
 ```bash
 bun install -g start-command
-# or, via npm:
+
+# Also available from npm registries:
 npm install -g start-command
 ```
 
 ## Usage
 
 ```bash
+$ echo "Hello World"
 $ ls -la
-$ npm test
+$ bun test
 $ git status
 $ --list
 ```
 
 See the project-wide [README](../README.md), [docs/USAGE.md](../docs/USAGE.md),
-and [docs/PIPES.md](../docs/PIPES.md) for the full user-facing guide.
+[docs/PIPES.md](../docs/PIPES.md), and
+[docs/EXAMPLES.md](../docs/EXAMPLES.md) for the full user-facing guide and
+checked examples.
 
 ## Development
 

@@ -22,14 +22,17 @@ cargo install --path .
 ## Usage
 
 ```bash
+start echo "Hello World"
 start ls -la
-start npm test
+start cargo test
 start git status
 start --list
 ```
 
 See the project-wide [README](../README.md), [docs/USAGE.md](../docs/USAGE.md),
-and [docs/PIPES.md](../docs/PIPES.md) for the full user-facing guide.
+[docs/PIPES.md](../docs/PIPES.md), and
+[docs/EXAMPLES.md](../docs/EXAMPLES.md) for the full user-facing guide and
+checked examples.
 
 ## Development
 
