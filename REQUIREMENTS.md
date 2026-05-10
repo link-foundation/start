@@ -141,7 +141,8 @@ Support two patterns for passing wrapper options:
 - `--attached, -a`: Run in attached/foreground mode (default)
 - `--detached, -d`: Run in detached/background mode
 - `--session, -s <name>`: Custom session name
-- `--image <image>`: Docker image (required for docker backend)
+- `--image <image>`: Docker image (optional for docker backend; defaults to an OS-matched image)
+- `--endpoint <endpoint>`: SSH endpoint (required for ssh backend, e.g. `user@host`)
 - `--isolated-user, -u [username]`: Create new isolated user with same group permissions as current user
 - `--keep-user`: Keep isolated user after command completes (don't delete)
 - `--keep-alive, -k`: Keep isolation environment alive after command exits (disabled by default)
@@ -151,7 +152,8 @@ Support two patterns for passing wrapper options:
 
 - `screen`: GNU Screen terminal multiplexer
 - `tmux`: tmux terminal multiplexer
-- `docker`: Docker containers (requires --image option)
+- `docker`: Docker containers (uses an OS-matched default image unless `--image` is provided)
+- `ssh`: Remote execution over SSH (requires `--endpoint`)
 
 #### 6.4 Mode Behavior
 
@@ -245,6 +247,7 @@ Note: `--auto-remove-docker-container` is only valid with `--isolated docker` an
 The output uses a "timeline" format that is width-independent, lossless, and works uniformly in TTY, tmux, SSH, CI, and log files.
 
 Format conventions:
+
 - `│` prefix → tool metadata (timeline marker)
 - `$` prefix → executed command (can be virtual command for setup steps or user command)
 - No prefix → program output (stdout/stderr)
@@ -371,16 +374,20 @@ The `$` command is implemented in both JavaScript and Rust. Both implementations
 
 The following are enforced by CI/CD:
 
-1. **Minimum test coverage**: Both JavaScript and Rust implementations must maintain at least **80%** test coverage
+1. **Minimum test coverage**: JavaScript must maintain at least **45%** coverage and Rust must maintain at least **50%** coverage
    - JavaScript: measured with Bun's built-in `--coverage` flag
-   - Rust: measured with `cargo-tarpaulin`
-   - CI/CD fails if coverage drops below 80% in either implementation
+   - Rust: measured with `cargo-tarpaulin` with `src/bin/main.rs` excluded
+   - CI/CD fails if coverage drops below the configured thresholds
 
 2. **Test count parity**: The Rust test count must be within 10% of the JavaScript test count
    - CI/CD fails if Rust has ≥10% fewer test cases than JavaScript
    - Checked by `scripts/check-test-parity.mjs`
-   - JavaScript test cases: count `it()` calls in `js/test/*.test.js`
+   - JavaScript test cases: count `test()` and `it()` calls in `js/test/**/*.js`
    - Rust test cases: count `#[test]` macros in `rust/tests/**/*.rs` and `rust/src/**/*.rs`
+
+3. **Documented examples**: Examples listed in `docs/examples/tested-examples.json` must stay present in the docs and parser-compatible; direct-command examples must match normalized CLI output
+   - Checked by `scripts/check-doc-examples.mjs`
+   - Dynamic values such as UUIDs, timestamps, durations, and log paths are normalized before comparison
 
 ### Adding New Features
 

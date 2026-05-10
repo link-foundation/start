@@ -5,12 +5,22 @@ on:
     branches:
       - main
     paths:
+      - 'README.md'
+      - 'REQUIREMENTS.md'
+      - 'ARCHITECTURE.md'
+      - 'docs/**'
+      - 'examples/**'
       - 'js/**'
       - 'scripts/**'
       - '.github/workflows/js.yml'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
+      - 'README.md'
+      - 'REQUIREMENTS.md'
+      - 'ARCHITECTURE.md'
+      - 'docs/**'
+      - 'examples/**'
       - 'js/**'
       - 'scripts/**'
       - '.github/workflows/js.yml'
@@ -281,6 +291,10 @@ jobs:
         working-directory: js
         run: bun run test
 
+      - name: Check documented examples (JavaScript)
+        if: runner.os == 'Linux'
+        run: bun scripts/check-doc-examples.mjs --implementation js
+
       # Test both execution modes (default and command-stream)
       - name: Test default execution mode
         working-directory: js
@@ -374,7 +388,7 @@ jobs:
         run: bun run test test/ssh-integration.js
 
   # === CODE COVERAGE ===
-  # Fail if JavaScript test coverage drops below 80%
+  # Fail if JavaScript test coverage drops below the configured threshold
   coverage:
     name: Code Coverage (JavaScript)
     runs-on: ubuntu-latest

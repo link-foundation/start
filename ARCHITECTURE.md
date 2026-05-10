@@ -180,8 +180,9 @@ By default, all isolation environments automatically exit after command completi
 │                                                                  │
 │  Attached Mode:                                                  │
 │  ┌─────────────────────────────────────────────────────────┐    │
-│  │ • docker run -it --rm --name <name> <image> sh -c cmd   │    │
-│  │ • Interactive, container auto-removed on exit           │    │
+│  │ • docker run -it --name <name> <image> sh -c cmd        │    │
+│  │ • Interactive, container filesystem preserved by default│    │
+│  │ • --rm is added only with --auto-remove-docker-container│    │
 │  └─────────────────────────────────────────────────────────┘    │
 │                                                                  │
 │  Detached Mode:                                                  │
@@ -290,7 +291,7 @@ Both implementations must:
 
 1. **Support the same CLI flags and behavior** — any new option added to one must be added to the other
 2. **Have equivalent test coverage** — CI/CD fails if Rust has ≥10% fewer test cases than JavaScript
-3. **Maintain 80% test coverage** — CI/CD fails if coverage drops below 80% in either implementation
+3. **Maintain configured coverage thresholds** — CI/CD fails if JavaScript drops below 45% or Rust drops below 50%
 4. **Share the same substitution patterns** — `substitutions.lino` is shared between both implementations
 
 ### Parity Check Script

@@ -9,7 +9,7 @@ Options:
   --session, -s <name>  Session name for isolation
   --session-id <uuid>   Session UUID for tracking (auto-generated if not provided)
   --session-name <uuid> Alias for --session-id
-  --image <image>       Docker image (required for docker isolation)
+  --image <image>       Docker image (optional, defaults to OS-matched image)
   --endpoint <endpoint> SSH endpoint (required for ssh isolation, e.g., user@host)
   --isolated-user, -u [name]  Create isolated user with same permissions
   --keep-user           Keep isolated user after command completes
@@ -30,7 +30,8 @@ Examples:
   $ bun test
   $ --isolated tmux -- bun start
   $ -i screen -d bun start
-  $ --isolated docker --image oven/bun:latest -- bun install
+  $ --isolated docker -- echo "hi"       # uses OS-matched default image
+  $ --isolated docker --image ghcr.io/link-foundation/box-js:latest -- bun --version
   $ --isolated ssh --endpoint user@remote.server -- ls -la
   $ --isolated-user -- npm test            # Create isolated user
   $ -u myuser -- npm start                 # Custom username
@@ -59,7 +60,7 @@ Examples:
     '  - Auto-reports failures for NPM packages (when gh is available)'
   );
   console.log('  - Natural language command aliases (via substitutions.lino)');
-  console.log('  - Process isolation via screen, tmux, or docker');
+  console.log('  - Process isolation via screen, tmux, docker, or ssh');
   console.log('');
   console.log('Alias examples:');
   console.log('  $ install lodash npm package           -> npm install lodash');

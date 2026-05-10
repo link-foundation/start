@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "examples": [
+    {
+      "id": "direct-echo",
+      "title": "Direct command logging",
+      "references": [
+        {
+          "file": "README.md",
+          "text": "$ echo \"Hello World\""
+        },
+        {
+          "file": "docs/EXAMPLES.md",
+          "text": "$ echo \"Hello World\""
+        },
+        {
+          "file": "docs/EXAMPLES.md",
+          "text": "start echo \"Hello World\""
+        },
+        {
+          "file": "js/README.md",
+          "text": "$ echo \"Hello World\""
+        },
+        {
+          "file": "rust/README.md",
+          "text": "start echo \"Hello World\""
+        }
+      ],
+      "commands": {
+        "js": {
+          "argv": ["echo", "Hello World"]
+        },
+        "rust": {
+          "argv": ["echo", "Hello World"]
+        }
+      },
+      "expectedNormalizedStdout": "│ session   <uuid>\n│ start     <timestamp>\n│\n$ echo Hello World\n\nHello World\n\n✓\n│ finish    <timestamp>\n│ duration  <duration>\n│ exit      0\n│\n│ log       <log-path>\n│ session   <uuid>\n"
+    },
+    {
+      "id": "docker-box-js",
+      "title": "Docker isolation with box-js",
+      "references": [
+        {
+          "file": "README.md",
+          "text": "$ --isolated docker --image ghcr.io/link-foundation/box-js:latest -- bun --version"
+        },
+        {
+          "file": "docs/EXAMPLES.md",
+          "text": "$ --isolated docker --image ghcr.io/link-foundation/box-js:latest -- bun --version"
+        },
+        {
+          "file": "examples/docker-isolation-box.sh",
+          "text": "--image ghcr.io/link-foundation/box-js:latest"
+        }
+      ],
+      "parseOnly": {
+        "argv": [
+          "--isolated",
+          "docker",
+          "--image",
+          "ghcr.io/link-foundation/box-js:latest",
+          "--",
+          "bun",
+          "--version"
+        ],
+        "expected": {
+          "isolated": "docker",
+          "image": "ghcr.io/link-foundation/box-js:latest",
+          "command": "bun --version"
+        },
+        "reason": "Executing this example requires Docker and may pull a large image, so CI verifies the documented command is present and parser-compatible."
+      }
+    },
+    {
+      "id": "docker-default-image",
+      "title": "Docker isolation default image",
+      "references": [
+        {
+          "file": "README.md",
+          "text": "$ --isolated docker -- echo \"hello from docker\""
+        },
+        {
+          "file": "docs/EXAMPLES.md",
+          "text": "$ --isolated docker -- echo \"hello from docker\""
+        }
+      ],
+      "parseOnly": {
+        "argv": ["--isolated", "docker", "--", "echo", "hello from docker"],
+        "expected": {
+          "isolated": "docker",
+          "command": "echo hello from docker"
+        },
+        "requiresImage": true,
+        "reason": "The default image depends on the host OS; parser validation checks that an image is assigned."
+      }
+    },
+    {
+      "id": "status-json",
+      "title": "Execution list as JSON",
+      "references": [
+        {
+          "file": "README.md",
+          "text": "$ --list --output-format json"
+        },
+        {
+          "file": "docs/EXAMPLES.md",
+          "text": "$ --list --output-format json"
+        }
+      ],
+      "parseOnly": {
+        "argv": ["--list", "--output-format", "json"],
+        "expected": {
+          "list": true,
+          "outputFormat": "json",
+          "command": ""
+        },
+        "reason": "List output depends on the user's local execution store."
+      }
+    }
+  ]
+}

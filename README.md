@@ -33,9 +33,10 @@ cargo install start-command
 The `$` command acts as a wrapper for any shell command:
 
 ```bash
+$ echo "Hello World"
 $ ls -la
 $ cat file.txt
-$ npm test
+$ bun test
 $ git status
 ```
 
@@ -60,7 +61,10 @@ git diff | $ reviewer
 echo "analyze this" | $ agent --verbose
 ```
 
-See [docs/PIPES.md](docs/PIPES.md) for detailed guidance on piping, and [docs/USAGE.md](docs/USAGE.md) for general usage.
+See [docs/PIPES.md](docs/PIPES.md) for detailed guidance on piping,
+[docs/USAGE.md](docs/USAGE.md) for general usage, and
+[docs/EXAMPLES.md](docs/EXAMPLES.md) for examples checked against the
+JavaScript and Rust CLIs.
 
 ### Natural Language Commands (Aliases)
 
@@ -120,7 +124,7 @@ All command output is automatically saved to your system's temporary directory. 
 │ session   abc-123-def-456-ghi
 │ start     2024-01-15 10:30:45
 │
-$ npm test
+$ bun test
 
 ... command output ...
 
@@ -216,7 +220,13 @@ $ --isolated tmux -- bun start
 $ --isolated screen --detached -- bun start
 
 # Run in docker container
-$ --isolated docker --image oven/bun:latest -- bun install
+$ --isolated docker -- echo "hello from docker"
+
+# Run a Bun command in the link-foundation/box JavaScript image
+$ --isolated docker --image ghcr.io/link-foundation/box-js:latest -- bun --version
+
+# Run a multi-runtime AI coding experiment in the full box image
+$ --isolated docker --image ghcr.io/link-foundation/box:latest -- bash -lc 'node --version && python --version && rustc --version'
 
 # Run on remote server via SSH
 $ --isolated ssh --endpoint user@remote.server -- npm test
@@ -265,12 +275,12 @@ This is useful for:
 
 #### Supported Isolation Environments
 
-| Environment | Description                                    | Installation                                               |
-| ----------- | ---------------------------------------------- | ---------------------------------------------------------- |
-| `screen`    | GNU Screen terminal multiplexer                | `apt install screen` / `brew install screen`               |
-| `tmux`      | Modern terminal multiplexer                    | `apt install tmux` / `brew install tmux`                   |
-| `docker`    | Container isolation (requires --image)         | [Docker Installation](https://docs.docker.com/get-docker/) |
-| `ssh`       | Remote execution via SSH (requires --endpoint) | `apt install openssh-client` / `brew install openssh`      |
+| Environment | Description                                              | Installation                                               |
+| ----------- | -------------------------------------------------------- | ---------------------------------------------------------- |
+| `screen`    | GNU Screen terminal multiplexer                          | `apt install screen` / `brew install screen`               |
+| `tmux`      | Modern terminal multiplexer                              | `apt install tmux` / `brew install tmux`                   |
+| `docker`    | Container isolation (uses a default image, or `--image`) | [Docker Installation](https://docs.docker.com/get-docker/) |
+| `ssh`       | Remote execution via SSH (requires --endpoint)           | `apt install openssh-client` / `brew install openssh`      |
 
 #### Isolation Options
 
@@ -280,7 +290,7 @@ This is useful for:
 | `--attached, -a`                 | Run in attached/foreground mode (default)                 |
 | `--detached, -d`                 | Run in detached/background mode                           |
 | `--session, -s`                  | Custom session/container name                             |
-| `--image`                        | Docker image (required for docker isolation)              |
+| `--image`                        | Docker image (optional; defaults to OS-matched image)     |
 | `--endpoint`                     | SSH endpoint (required for ssh, e.g., user@host)          |
 | `--isolated-user, -u [name]`     | Create isolated user with same permissions (screen/tmux)  |
 | `--keep-user`                    | Keep isolated user after command completes (don't delete) |
