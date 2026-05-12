@@ -367,6 +367,34 @@ pub fn get_control_command(
     Ok(command)
 }
 
+fn append_links_array(lines: &mut Vec<String>, values: &[Value], indent: usize) {
+    let prefix = " ".repeat(indent);
+    if values.is_empty() {
+        lines.push(format!("{}()", prefix));
+        return;
+    }
+
+    lines.push(format!("{}(", prefix));
+    for value in values {
+        match value {
+            Value::Array(nested) => append_links_array(lines, nested, indent + 2),
+            Value::Object(map) => {
+                for (child_key, child_value) in map {
+                    if !child_value.is_null() {
+                        append_links_value(lines, child_key, child_value, indent + 2);
+                    }
+                }
+            }
+            _ => lines.push(format!(
+                "{}{}",
+                " ".repeat(indent + 2),
+                format_value_for_links_notation(value)
+            )),
+        }
+    }
+    lines.push(format!("{})", prefix));
+}
+
 fn append_links_value(lines: &mut Vec<String>, key: &str, value: &Value, indent: usize) {
     let prefix = " ".repeat(indent);
     match value {
@@ -374,9 +402,13 @@ fn append_links_value(lines: &mut Vec<String>, key: &str, value: &Value, indent:
             lines.push(format!("{}{}", prefix, key));
             for (child_key, child_value) in map {
                 if !child_value.is_null() {
-                    append_links_value(lines, child_key, child_value, indent + 2);
+                    append_links_value(lines, child_key, child_value, indent + 4);
                 }
             }
+        }
+        Value::Array(values) => {
+            lines.push(format!("{}{}", prefix, key));
+            append_links_array(lines, values, indent + 2);
         }
         _ => {
             lines.push(format!(

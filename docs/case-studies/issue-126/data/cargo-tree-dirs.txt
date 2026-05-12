@@ -1,0 +1,2 @@
+dirs v6.0.0
+start-command v0.14.2 (/tmp/gh-issue-solver-1778597696241/rust)

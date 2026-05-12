@@ -328,6 +328,39 @@ describe('--status query functionality', () => {
       );
     });
 
+    it('should indent nested process ID arrays in links-notation', () => {
+      const executingRecord = new ExecutionRecord({
+        command: 'sleep 100',
+        pid: 667105,
+        logPath: '/tmp/executing.log',
+        options: {
+          isolated: 'screen',
+          isolationMode: 'detached',
+          sessionName: 'issue-126-screen',
+        },
+      });
+      store.save(executingRecord);
+
+      const result = runCli(['--status', executingRecord.uuid], {
+        PATH: `${path.join(__dirname, 'fixtures', 'issue-126-bin')}${path.delimiter}${process.env.PATH}`,
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain(
+        [
+          '  processIds',
+          '      wrapperPid 667105',
+          '      screenPid 667120',
+          '      commandPids',
+          '        (',
+          '          667121',
+          '          667122',
+          '        )',
+        ].join('\n')
+      );
+      expect(result.stdout).not.toContain('\n(\n');
+    });
+
     it('should include Current Time in text format for executing commands', () => {
       const executingRecord = new ExecutionRecord({
         command: 'sleep 100',

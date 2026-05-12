@@ -1,0 +1,9 @@
+{
+  "lint-staged": {
+    "current": "17.0.4",
+    "wanted": "17.0.4",
+    "latest": "16.4.0",
+    "dependent": "js",
+    "location": "/tmp/gh-issue-solver-1778597696241/js/node_modules/lint-staged"
+  }
+}

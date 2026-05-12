@@ -45,13 +45,13 @@
   },
   "homepage": "https://github.com/link-foundation/start#readme",
   "devDependencies": {
-    "@changesets/cli": "^2.29.7",
-    "eslint": "^9.38.0",
+    "@changesets/cli": "^2.31.0",
+    "eslint": "^10.3.0",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-prettier": "^5.5.5",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.6",
-    "prettier": "^3.6.2"
+    "lint-staged": "^17.0.4",
+    "prettier": "^3.8.3"
   },
   "lint-staged": {
     "*.{js,mjs,cjs}": [
@@ -65,7 +65,10 @@
     ]
   },
   "dependencies": {
-    "command-stream": "^0.8.3",
-    "lino-objects-codec": "^0.1.1"
+    "command-stream": "^0.9.4",
+    "lino-objects-codec": "^0.4.0"
+  },
+  "overrides": {
+    "flatted": "^3.4.2"
   }
 }
