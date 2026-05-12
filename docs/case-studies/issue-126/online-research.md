@@ -32,6 +32,7 @@ Commands used locally:
 - `npm view command-stream version`: `0.9.4`
 - `npm view lino-objects-codec version`: `0.4.0`
 - `npm view @changesets/cli version`: `2.31.0`
+- `npm view @eslint/js version`: `10.0.1`
 - `npm view eslint version`: `10.3.0`
 - `npm view eslint-plugin-prettier version`: `5.5.5`
 - `npm view prettier version`: `3.8.3`

@@ -120,7 +120,7 @@ function dockerPullImage(image) {
   console.log();
 
   let output = '';
-  let success = false;
+  let success;
 
   try {
     // Run docker pull with inherited stdio for real-time output

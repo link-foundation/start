@@ -329,6 +329,13 @@ describe('--status query functionality', () => {
     });
 
     it('should indent nested process ID arrays in links-notation', () => {
+      if (process.platform === 'win32') {
+        console.log(
+          '  Skipping: POSIX screen/pgrep process tree fixture is not available on Windows'
+        );
+        return;
+      }
+
       const executingRecord = new ExecutionRecord({
         command: 'sleep 100',
         pid: 667105,
