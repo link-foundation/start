@@ -402,6 +402,31 @@ describe('output-blocks module', () => {
     it('should handle null', () => {
       expect(formatAsNestedLinksNotation(null)).toBe('null');
     });
+
+    it('should indent nested arrays under their parent key', () => {
+      const obj = {
+        processIds: {
+          wrapperPid: 667105,
+          screenPid: 667120,
+          commandPids: [667121, 667122],
+        },
+      };
+
+      const result = formatAsNestedLinksNotation(obj);
+
+      expect(result).toContain(
+        [
+          '  processIds',
+          '    wrapperPid 667105',
+          '    screenPid 667120',
+          '    commandPids',
+          '      (',
+          '        667121',
+          '        667122',
+          '      )',
+        ].join('\n')
+      );
+    });
   });
 
   describe('Virtual Command API', () => {

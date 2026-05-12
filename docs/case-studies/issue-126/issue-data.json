@@ -1,0 +1,24 @@
+{
+  "author": {
+    "id": "MDQ6VXNlcjE0MzE5MDQ=",
+    "is_bot": false,
+    "login": "konard",
+    "name": "Konstantin Diachenko"
+  },
+  "body": "This is how it is now:\n\n```\n453574fe-8eaa-4155-89c2-74fb8de0ebe6\n  uuid 453574fe-8eaa-4155-89c2-74fb8de0ebe6\n  pid 667105\n  processIds\n      wrapperPid 667105\n      screenPid 667120\n      commandPids\n(\n        667121\n        667122\n        1269342\n        1269343\n        1269346\n        1269348\n        1269366\n        1269434\n        1378772\n        1270592\n        1270593\n      )\n  status executing\n  command \"solve https://github.com/ProverCoderAI/docker-git/pull/265 --think max --tool codex --attach-logs --verbose --no-tool-check --disable-report-issue --language en\"\n  logPath /tmp/start-command/logs/isolation/screen/453574fe-8eaa-4155-89c2-74fb8de0ebe6.log\n  startTime \"2026-05-12T09:42:55.502Z\"\n  currentTime \"2026-05-12T13:50:04.388Z\"\n  workingDirectory /home/box\n  shell /bin/sh\n  platform linux\n  options\n    isolated screen\n    isolationMode detached\n    sessionName fee6bcda-b3b9-4a29-bca6-378f74d0cbf5\n    user false\n    keepAlive false\n    useCommandStream false\nbox@2bedc6604984:~$ \n```\n\nAnd this how it should be:\n\n```\n453574fe-8eaa-4155-89c2-74fb8de0ebe6\n  uuid 453574fe-8eaa-4155-89c2-74fb8de0ebe6\n  pid 667105\n  processIds\n      wrapperPid 667105\n      screenPid 667120\n      commandPids\n        (\n          667121\n          667122\n          1269342\n          1269343\n          1269346\n          1269348\n          1269366\n          1269434\n          1378772\n          1270592\n          1270593\n        )\n  status executing\n  command \"solve https://github.com/ProverCoderAI/docker-git/pull/265 --think max --tool codex --attach-logs --verbose --no-tool-check --disable-report-issue --language en\"\n  logPath /tmp/start-command/logs/isolation/screen/453574fe-8eaa-4155-89c2-74fb8de0ebe6.log\n  startTime \"2026-05-12T09:42:55.502Z\"\n  currentTime \"2026-05-12T13:50:04.388Z\"\n  workingDirectory /home/box\n  shell /bin/sh\n  platform linux\n  options\n    isolated screen\n    isolationMode detached\n    sessionName fee6bcda-b3b9-4a29-bca6-378f74d0cbf5\n    user false\n    keepAlive false\n    useCommandStream false\nbox@2bedc6604984:~$ \n```\n\nMake sure also we use all the latests versions of all our dependencies, and the root cause of error is in dependencies, report issue. And we can have temporary workaround in our project. Also if we have implemented some links notation related logic that surely should be in our dependencies - also report an issue, so our start command can have less code related to Links Notation itself, and we can focus on our CLI logic instead, and reduce amount of code in this repository, and at the same time, make sure Links Notation dependencies are robust enough to support all our cases, so it will be useful in other repositories also.\n\nWe need to download all logs and data related about the issue to this repository, make sure we compile that data to `./docs/case-studies/issue-{id}` folder, and use it to do deep case study analysis (also make sure to search online for additional facts and data), in which we will reconstruct timeline/sequence of events, list of each and all requirements from the issue, find root causes of the each problem, and propose possible solutions and solution plans for each requirement (we should also check known existing components/libraries, that solve similar problem or can help in solutions).\n\nIf there is not enough data to find actual root cause, add debug output and verbose mode if not present, that will allow us to find root cause on next iteration.\n\nIf issue related to any other repository/project, where we can report issues on GitHub, please do so. Each issue must contain reproducible examples, workarounds and suggestions for fix the issue in code.\n\nPlease plan and execute everything in a single pull request, you have unlimited time and context, as context auto-compacts and you can continue indefinitely, until it is each and every requirement fully addressed, and everything is totally done.",
+  "comments": [],
+  "createdAt": "2026-05-12T13:51:28Z",
+  "labels": [
+    {
+      "id": "LA_kwDOP85RQM8AAAACMMqWww",
+      "name": "bug",
+      "description": "Something isn't working",
+      "color": "d73a4a"
+    }
+  ],
+  "number": 126,
+  "state": "OPEN",
+  "title": "Format is broken",
+  "updatedAt": "2026-05-12T13:56:30Z",
+  "url": "https://github.com/link-foundation/start/issues/126"
+}

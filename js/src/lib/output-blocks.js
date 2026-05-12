@@ -425,12 +425,13 @@ function formatAsNestedLinksNotation(obj, indent = 2, depth = 0) {
     if (obj.length === 0) {
       return '()';
     }
-    const indentStr = ' '.repeat(indent * (depth + 1));
+    const blockIndent = ' '.repeat(indent * depth);
+    const itemIndent = ' '.repeat(indent * (depth + 1));
     const items = obj.map((item) => {
       const formatted = formatAsNestedLinksNotation(item, indent, depth + 1);
-      return `${indentStr}${formatted}`;
+      return `${itemIndent}${formatted}`;
     });
-    return `(\n${items.join('\n')}\n${' '.repeat(indent * depth)})`;
+    return `${blockIndent}(\n${items.join('\n')}\n${blockIndent})`;
   }
 
   // Format objects
@@ -444,7 +445,8 @@ function formatAsNestedLinksNotation(obj, indent = 2, depth = 0) {
     .filter(([, value]) => value !== null && value !== undefined)
     .map(([key, value]) => {
       if (typeof value === 'object') {
-        const nested = formatAsNestedLinksNotation(value, indent, depth + 1);
+        const nestedDepth = Array.isArray(value) ? depth + 2 : depth + 1;
+        const nested = formatAsNestedLinksNotation(value, indent, nestedDepth);
         return `${indentStr}${key}\n${nested}`;
       }
       const formattedValue = escapeForLinksNotation(value);

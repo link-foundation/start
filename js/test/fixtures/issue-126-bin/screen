@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+cat <<'EOF'
+There is a screen on:
+	667120.issue-126-screen	(Detached)
+1 Socket in /run/screen/S-box.
+EOF

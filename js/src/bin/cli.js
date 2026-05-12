@@ -890,7 +890,7 @@ async function runDirectWithCommandStream(
   // Using raw() to avoid auto-escaping that might interfere with complex shell commands
   const $cmd = $({ mirror: true, capture: true });
 
-  let exitCode = 0;
+  let exitCode;
   try {
     writeLogFile(logFilePath, logContent);
     // Use raw() to pass the command without auto-escaping
@@ -905,34 +905,25 @@ async function runDirectWithCommandStream(
 
     // Collect output for log
     if (result.stdout) {
-      logContent += result.stdout;
       appendLogFile(logFilePath, result.stdout);
     }
     if (result.stderr) {
-      logContent += result.stderr;
       appendLogFile(logFilePath, result.stderr);
     }
   } catch (err) {
     exitCode = err.code || 1;
     const errorMessage = `Error executing command: ${err.message}`;
-    logContent += `\n${errorMessage}\n`;
     appendLogFile(logFilePath, `\n${errorMessage}\n`);
     console.error(`\n${errorMessage}`);
   }
 
   const endTime = getTimestamp();
 
-  // Log footer
-  logContent += `\n${'='.repeat(50)}\n`;
-  logContent += `Finished: ${endTime}\n`;
-  logContent += `Exit Code: ${exitCode}\n`;
+  const logFooter = `\n${'='.repeat(50)}\nFinished: ${endTime}\nExit Code: ${exitCode}\n`;
 
   // Write log file
   try {
-    appendLogFile(
-      logFilePath,
-      `\n${'='.repeat(50)}\nFinished: ${endTime}\nExit Code: ${exitCode}\n`
-    );
+    appendLogFile(logFilePath, logFooter);
   } catch (err) {
     console.error(`\nWarning: Could not save log file: ${err.message}`);
   }

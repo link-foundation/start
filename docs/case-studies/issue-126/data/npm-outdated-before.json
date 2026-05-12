@@ -1,0 +1,12 @@
+{
+  "command-stream": {
+    "wanted": "0.8.3",
+    "latest": "0.9.4",
+    "dependent": "js"
+  },
+  "lino-objects-codec": {
+    "wanted": "0.1.1",
+    "latest": "0.4.0",
+    "dependent": "js"
+  }
+}

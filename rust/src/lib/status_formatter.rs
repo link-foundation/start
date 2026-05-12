@@ -141,6 +141,34 @@ pub fn format_record_as_links_notation_with_current_time(
     format_record_as_links_notation_with_enrichments(record, current_time, None)
 }
 
+fn append_links_array(lines: &mut Vec<String>, values: &[Value], indent: usize) {
+    let prefix = " ".repeat(indent);
+    if values.is_empty() {
+        lines.push(format!("{}()", prefix));
+        return;
+    }
+
+    lines.push(format!("{}(", prefix));
+    for value in values {
+        match value {
+            Value::Array(nested) => append_links_array(lines, nested, indent + 2),
+            Value::Object(map) => {
+                for (child_key, child_value) in map {
+                    if !child_value.is_null() {
+                        append_links_value(lines, child_key, child_value, indent + 2);
+                    }
+                }
+            }
+            _ => lines.push(format!(
+                "{}{}",
+                " ".repeat(indent + 2),
+                format_value_for_links_notation(value)
+            )),
+        }
+    }
+    lines.push(format!("{})", prefix));
+}
+
 fn append_links_value(lines: &mut Vec<String>, key: &str, value: &Value, indent: usize) {
     let prefix = " ".repeat(indent);
     match value {
@@ -151,9 +179,13 @@ fn append_links_value(lines: &mut Vec<String>, key: &str, value: &Value, indent:
             lines.push(format!("{}{}", prefix, key));
             for (child_key, child_value) in map {
                 if !child_value.is_null() {
-                    append_links_value(lines, child_key, child_value, indent + 2);
+                    append_links_value(lines, child_key, child_value, indent + 4);
                 }
             }
+        }
+        Value::Array(values) => {
+            lines.push(format!("{}{}", prefix, key));
+            append_links_array(lines, values, indent + 2);
         }
         _ => lines.push(format!(
             "{}{} {}",
@@ -613,5 +645,56 @@ pub fn query_status(
             output: None,
             error: Some(e),
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::execution_store::ExecutionRecordOptions;
+    use serde_json::json;
+
+    fn executing_record() -> ExecutionRecord {
+        ExecutionRecord::with_options(ExecutionRecordOptions {
+            command: "sleep 60".to_string(),
+            uuid: Some("issue-126-rust".to_string()),
+            pid: Some(667105),
+            status: Some(ExecutionStatus::Executing),
+            log_path: Some("/tmp/issue-126.log".to_string()),
+            start_time: Some("2026-04-23T10:00:00Z".to_string()),
+            working_directory: Some("/home/user".to_string()),
+            shell: Some("/bin/bash".to_string()),
+            platform: Some("linux".to_string()),
+            ..Default::default()
+        })
+    }
+
+    #[test]
+    fn links_notation_indents_nested_process_id_arrays() {
+        let process_ids = json!({
+            "wrapperPid": 667105,
+            "screenPid": 667120,
+            "commandPids": [667121, 667122],
+        });
+        let output = format_record_with_enrichments(
+            &executing_record(),
+            "links-notation",
+            Some("2026-04-23T10:10:13.042Z"),
+            Some(&process_ids),
+        )
+        .expect("links-notation should format");
+
+        assert!(
+            output.contains(
+                "      commandPids\n        (\n          667121\n          667122\n        )"
+            ),
+            "processIds should be a nested indented block, output: {}",
+            output
+        );
+        assert!(
+            !output.contains("\n(\n"),
+            "opening parenthesis must not start at column 1: {}",
+            output
+        );
     }
 }
