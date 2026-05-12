@@ -1,5 +1,14 @@
 # start-command
 
+## 0.27.2
+
+### Patch Changes
+
+- Keep JavaScript CLI usage text in sync with Docker default-image behavior and
+  the checked documentation examples.
+
+  Fix Links Notation indentation for nested process ID arrays in status output and update JavaScript dependencies.
+
 ## 0.27.1
 
 ### Patch Changes
