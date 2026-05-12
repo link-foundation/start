@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.14.3] - 2026-05-12
+
+Fix Links Notation indentation for nested process ID arrays in status and control output, and update direct Rust dependencies.
+
 ## [0.14.2] - 2026-05-03
 
 Publish Rust crates to crates.io before creating the Rust GitHub Release.
