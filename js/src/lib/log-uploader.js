@@ -16,9 +16,52 @@ function isExecutable(filePath) {
   }
 }
 
+function isCommandFile(filePath) {
+  if (process.platform === 'win32') {
+    return fs.existsSync(filePath);
+  }
+
+  return isExecutable(filePath);
+}
+
+function getPathCommandNames(commandName) {
+  if (process.platform !== 'win32' || path.extname(commandName)) {
+    return [commandName];
+  }
+
+  const extensions = (process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD')
+    .split(';')
+    .filter(Boolean);
+
+  return [commandName, ...extensions.map((ext) => `${commandName}${ext}`)];
+}
+
+function resolveCommandFromPath(commandName) {
+  const pathValue = process.env.PATH || '';
+  for (const pathEntry of pathValue.split(path.delimiter)) {
+    if (!pathEntry) {
+      continue;
+    }
+
+    const directory = pathEntry.replace(/^"|"$/g, '');
+    for (const candidateName of getPathCommandNames(commandName)) {
+      const candidate = path.join(directory, candidateName);
+      if (isCommandFile(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  return null;
+}
+
 function resolveCommand(commandName) {
   const isWindows = process.platform === 'win32';
   const lookupCommand = isWindows ? 'where' : 'which';
+  const pathMatch = resolveCommandFromPath(commandName);
+  if (pathMatch) {
+    return pathMatch;
+  }
 
   try {
     const result = spawnSync(lookupCommand, [commandName], {

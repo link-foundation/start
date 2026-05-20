@@ -272,7 +272,7 @@ describe('--status query functionality', () => {
       store.save(testRecord);
 
       const result = runCli(['--upload-log', testRecord.uuid], {
-        PATH: `${fakeBin}${path.delimiter}/usr/bin${path.delimiter}/bin`,
+        PATH: fakeBin,
         HOME: fakeBin,
       });
 
