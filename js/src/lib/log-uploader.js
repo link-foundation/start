@@ -42,11 +42,22 @@ function resolveCommand(commandName) {
   return null;
 }
 
-function runInstall(command, args) {
+function shouldRunThroughShell(command) {
+  return process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
+}
+
+function runCommand(command, args, options = {}) {
+  return spawnSync(command, args, {
+    ...options,
+    shell: shouldRunThroughShell(command),
+  });
+}
+
+function runInstall(command, displayName, args) {
   console.log(
-    `gh-upload-log not found; installing with: ${command} ${args.join(' ')}`
+    `gh-upload-log not found; installing with: ${displayName} ${args.join(' ')}`
   );
-  const result = spawnSync(command, args, { stdio: 'inherit' });
+  const result = runCommand(command, args, { stdio: 'inherit' });
   return result.status === 0;
 }
 
@@ -62,10 +73,11 @@ function ensureGhUploadLogAvailable() {
   ];
 
   for (const [command, args] of installers) {
-    if (!resolveCommand(command)) {
+    const installer = resolveCommand(command);
+    if (!installer) {
       continue;
     }
-    if (runInstall(command, args)) {
+    if (runInstall(installer, command, args)) {
       const installed = resolveCommand('gh-upload-log');
       if (installed) {
         return { success: true, command: installed };
@@ -96,7 +108,7 @@ function uploadLogPath(logPath) {
     return availability;
   }
 
-  const result = spawnSync(availability.command, [logPath], {
+  const result = runCommand(availability.command, [logPath], {
     stdio: 'inherit',
   });
 
