@@ -21,6 +21,7 @@
  * --verbose                        Enable verbose/debug output (sets START_VERBOSE=1)
  * --status <uuid>                  Show status of a previous command execution by UUID
  * --list                           List all tracked command executions
+ * --upload-log <uuid-or-session>    Upload the stored log for a tracked execution
  * --output-format <format>         Output format for status/list (links-notation, json, text)
  * --stop <uuid-or-session-name>     Send CTRL+C/SIGINT to a detached execution
  * --terminate <uuid-or-session-name> Terminate a detached execution immediately
@@ -177,6 +178,7 @@ function parseArgs(args) {
     useCommandStream: false, // Use command-stream library for command execution
     status: null, // UUID to show status for
     list: false, // List all tracked execution records
+    uploadLog: null, // UUID/session name whose stored log should be uploaded
     outputFormat: null, // Output format for status/list (links-notation, json, text)
     stop: null, // UUID/session name to stop gracefully
     terminate: null, // UUID/session name to terminate immediately
@@ -447,6 +449,28 @@ function parseOption(args, index, options) {
       );
     }
     options.status = value;
+    return 1;
+  }
+
+  // --upload-log <uuid-or-session-name>
+  if (arg === '--upload-log') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.uploadLog = args[index + 1];
+      return 2;
+    } else {
+      throw new Error(`Option ${arg} requires a UUID or session name argument`);
+    }
+  }
+
+  // --upload-log=<value>
+  if (arg.startsWith('--upload-log=')) {
+    const value = arg.slice('--upload-log='.length);
+    if (!value) {
+      throw new Error(
+        `Option --upload-log requires a UUID or session name argument`
+      );
+    }
+    options.uploadLog = value;
     return 1;
   }
 
@@ -724,6 +748,7 @@ function validateOptions(options) {
   const queryModes = [
     hasValue(options.status),
     options.list,
+    hasValue(options.uploadLog),
     hasValue(options.stop),
     hasValue(options.terminate),
     options.cleanup,
@@ -731,7 +756,7 @@ function validateOptions(options) {
 
   if (queryModes > 1) {
     throw new Error(
-      'Cannot combine --status, --list, --stop, --terminate, or --cleanup in the same invocation'
+      'Cannot combine --status, --list, --upload-log, --stop, --terminate, or --cleanup in the same invocation'
     );
   }
 

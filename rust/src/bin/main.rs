@@ -30,6 +30,7 @@ use start_command::{
     set_current_execution, setup_signal_handlers,
     status_formatter::{list_executions, query_status},
     substitution::{process_command, ProcessOptions},
+    upload_execution_log,
     usage::print_usage,
     user_manager::{
         create_isolated_user, delete_user, get_current_user_groups, has_sudo_access,
@@ -136,31 +137,30 @@ fn main() {
     let wrapper_options = parsed.wrapper_options;
     let parsed_command = parsed.command.clone();
 
-    // Handle --status flag
     if let Some(ref uuid) = wrapper_options.status {
         handle_status_query(&config, uuid, wrapper_options.output_format.as_deref());
         process::exit(0);
     }
 
-    // Handle --list flag
     if wrapper_options.list {
         handle_list_query(&config, wrapper_options.output_format.as_deref());
         process::exit(0);
     }
 
-    // Handle --stop flag
+    if let Some(ref identifier) = wrapper_options.upload_log {
+        process::exit(handle_upload_log_query(&config, identifier));
+    }
+
     if let Some(ref identifier) = wrapper_options.stop {
         handle_control_query(&config, identifier, ControlAction::Stop);
         process::exit(0);
     }
 
-    // Handle --terminate flag
     if let Some(ref identifier) = wrapper_options.terminate {
         handle_control_query(&config, identifier, ControlAction::Terminate);
         process::exit(0);
     }
 
-    // Handle --cleanup flag
     if wrapper_options.cleanup {
         handle_cleanup(&config, wrapper_options.cleanup_dry_run);
         process::exit(0);
@@ -339,6 +339,18 @@ fn handle_list_query(config: &Config, output_format: Option<&str>) {
             eprintln!("Error: {}", error);
         }
         process::exit(1);
+    }
+}
+
+/// Handle upload-log query
+fn handle_upload_log_query(config: &Config, identifier: &str) -> i32 {
+    let store = config.create_execution_store();
+    match upload_execution_log(store.as_ref(), identifier) {
+        Ok(code) => code,
+        Err(error) => {
+            eprintln!("Error: {}", error);
+            1
+        }
     }
 }
 

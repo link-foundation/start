@@ -18,6 +18,7 @@
 //! --shell <shell>                  Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
 //! --status <uuid-or-session-name>  Show status of a tracked execution
 //! --list                           List all tracked command executions
+//! --upload-log <uuid-or-session>   Upload the stored log for a tracked execution
 //! --stop <uuid-or-session-name>    Send CTRL+C/SIGINT to a detached execution
 //! --terminate <uuid-or-session-name> Terminate a detached execution immediately
 
@@ -84,6 +85,8 @@ pub struct WrapperOptions {
     pub status: Option<String>,
     /// List all tracked execution records
     pub list: bool,
+    /// UUID/session name whose stored log should be uploaded
+    pub upload_log: Option<String>,
     /// Output format for status/list (links-notation, json, text)
     pub output_format: Option<String>,
     /// UUID/session name to stop gracefully
@@ -115,6 +118,7 @@ impl Default for WrapperOptions {
             use_command_stream: false,
             status: None,
             list: false,
+            upload_log: None,
             output_format: None,
             stop: None,
             terminate: None,
@@ -394,6 +398,28 @@ fn parse_option(
         return Ok(1);
     }
 
+    // --upload-log <uuid-or-session-name>
+    if arg == "--upload-log" {
+        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
+            options.upload_log = Some(args[index + 1].clone());
+            return Ok(2);
+        } else {
+            return Err(format!(
+                "Option {} requires a UUID or session name argument",
+                arg
+            ));
+        }
+    }
+
+    // --upload-log=<value>
+    if let Some(value) = arg.strip_prefix("--upload-log=") {
+        if value.is_empty() {
+            return Err("Option --upload-log requires a UUID or session name argument".to_string());
+        }
+        options.upload_log = Some(value.to_string());
+        return Ok(1);
+    }
+
     // --stop <uuid-or-session-name>
     if arg == "--stop" {
         if index + 1 < args.len() && !args[index + 1].starts_with('-') {
@@ -586,6 +612,7 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
     let query_modes = [
         options.status.is_some(),
         options.list,
+        options.upload_log.is_some(),
         options.stop.is_some(),
         options.terminate.is_some(),
         options.cleanup,
@@ -596,7 +623,7 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
 
     if query_modes > 1 {
         return Err(
-            "Cannot combine --status, --list, --stop, --terminate, or --cleanup in the same invocation"
+            "Cannot combine --status, --list, --upload-log, --stop, --terminate, or --cleanup in the same invocation"
                 .to_string(),
         );
     }

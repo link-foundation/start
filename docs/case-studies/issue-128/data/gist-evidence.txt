@@ -1,0 +1,27 @@
+18392-      • Known tokens: 0
+18393-      • Secretlint: 0 detections
+18394-      • Custom patterns: 0 detections
+18395-      • Hex tokens: 3
+18396-  🔧 Escaping code blocks in log content for safe embedding...
+18397-  ⚠️  Log comment too long (2019386 chars), GitHub limit is 65536 chars
+18398:  📎 Uploading log using gh-upload-log...
+18399-public
+18400-  🔍 Repository visibility: public, log upload will be public
+18401-github.com
+18402-  ✓ Logged in to github.com account konard (/home/box/.config/gh/hosts.yml)
+18403-  - Active account: true
+18404-  - Git operations protocol: https
+--
+18406-  - Token scopes: 'gist', 'read:org', 'repo', 'user', 'workflow'
+18407-  🔒 Sanitized 3 secrets using dual approach:
+18408-      • Known tokens: 0
+18409-      • Secretlint: 0 detections
+18410-      • Custom patterns: 0 detections
+18411-      • Hex tokens: 3
+18412:  📤 Running: gh-upload-log "/tmp/solution-draft-log-pr-1779295404334.txt" --public --description "Solution draft log for https://github.com/ideav/crm/pull/2747" --verbose
+18413-Options: {
+18414-  filePath: "/tmp/solution-draft-log-pr-1779295404334.txt",
+18415-  isPublic: true,
+18416-  auto: true,
+18417-  onlyGist: undefined,
+18418-  onlyRepository: undefined,

@@ -32,7 +32,7 @@ function cleanupTestDir() {
 
 // Helper to run CLI command
 function runCli(args, env = {}) {
-  const result = spawnSync('bun', [CLI_PATH, ...args], {
+  const result = spawnSync(process.execPath, [CLI_PATH, ...args], {
     encoding: 'utf8',
     env: {
       ...process.env,
@@ -46,6 +46,11 @@ function runCli(args, env = {}) {
     stderr: result.stderr || '',
     exitCode: result.status,
   };
+}
+
+function createExecutable(filePath, content) {
+  fs.writeFileSync(filePath, content, 'utf8');
+  fs.chmodSync(filePath, 0o755);
 }
 
 describe('--status query functionality', () => {
@@ -238,6 +243,91 @@ describe('--status query functionality', () => {
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('tracking is disabled');
+    });
+  });
+
+  describe('--upload-log functionality', () => {
+    it('should run gh-upload-log with the stored execution log path', () => {
+      const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'upload-log-bin-'));
+      const logPath = path.join(TEST_APP_FOLDER, 'command.log');
+      fs.writeFileSync(logPath, 'captured command output\n', 'utf8');
+      createExecutable(
+        path.join(fakeBin, 'gh-upload-log'),
+        '#!/bin/sh\necho "fake uploader received: $1"\n'
+      );
+
+      testRecord.logPath = logPath;
+      store.save(testRecord);
+
+      const result = runCli(['--upload-log', testRecord.uuid], {
+        PATH: `${fakeBin}${path.delimiter}/usr/bin${path.delimiter}/bin`,
+        HOME: fakeBin,
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain(`fake uploader received: ${logPath}`);
+      expect(result.stderr).toBe('');
+
+      fs.rmSync(fakeBin, { recursive: true, force: true });
+    });
+
+    it('should install gh-upload-log when it is missing before uploading', () => {
+      if (process.platform === 'win32') {
+        console.log('  Skipping: shell fixture uses POSIX scripts');
+        return;
+      }
+
+      const fakeBin = fs.mkdtempSync(
+        path.join(os.tmpdir(), 'upload-log-install-bin-')
+      );
+      const installMarker = path.join(fakeBin, 'install.log');
+      const logPath = path.join(TEST_APP_FOLDER, 'install-command.log');
+      fs.writeFileSync(logPath, 'captured command output\n', 'utf8');
+
+      createExecutable(
+        path.join(fakeBin, 'bun'),
+        [
+          '#!/bin/sh',
+          `echo "$@" > "${installMarker}"`,
+          `cat > "${path.join(fakeBin, 'gh-upload-log')}" <<'SCRIPT'`,
+          '#!/bin/sh',
+          'echo "installed uploader received: $1"',
+          'SCRIPT',
+          `chmod +x "${path.join(fakeBin, 'gh-upload-log')}"`,
+          'exit 0',
+          '',
+        ].join('\n')
+      );
+
+      testRecord.logPath = logPath;
+      store.save(testRecord);
+
+      const result = runCli(['--upload-log', testRecord.uuid], {
+        PATH: `${fakeBin}${path.delimiter}/usr/bin${path.delimiter}/bin`,
+        HOME: fakeBin,
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(fs.readFileSync(installMarker, 'utf8').trim()).toBe(
+        'install -g gh-upload-log'
+      );
+      expect(result.stdout).toContain('gh-upload-log not found');
+      expect(result.stdout).toContain(
+        `installed uploader received: ${logPath}`
+      );
+
+      fs.rmSync(fakeBin, { recursive: true, force: true });
+    });
+
+    it('should show an error when the stored log file is missing', () => {
+      testRecord.logPath = path.join(TEST_APP_FOLDER, 'missing.log');
+      store.save(testRecord);
+
+      const result = runCli(['--upload-log', testRecord.uuid]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Log file not found');
+      expect(result.stderr).toContain(testRecord.logPath);
     });
   });
 

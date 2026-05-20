@@ -153,6 +153,9 @@ $ --list
 # Machine-readable list output
 $ --list --output-format json
 
+# Upload the stored log for one execution
+$ --upload-log 29d6c026-b168-44a6-8a3f-c3919c7e5327
+
 # Ask a detached isolated execution to stop gracefully
 $ --stop 29d6c026-b168-44a6-8a3f-c3919c7e5327
 
@@ -165,6 +168,10 @@ $ --terminate 29d6c026-b168-44a6-8a3f-c3919c7e5327
 include best-effort `processIds` for tracked wrapper processes and detached
 screen, tmux, and Docker isolation containers when those native tools can
 report them.
+
+`--upload-log` accepts either an execution UUID or an isolation session name. It
+looks up the stored `logPath`, installs `gh-upload-log` with Bun or npm if the
+uploader is missing, and then streams the uploader output directly.
 
 `--stop` and `--terminate` accept either the execution UUID or the isolation
 session/container name. `--stop` sends the graceful interrupt for the backend
@@ -323,7 +330,8 @@ For Docker containers, by default the container filesystem is preserved (appears
 The tool works in any environment:
 
 - **No `gh` CLI?** - Logs are still saved locally, auto-reporting is skipped
-- **No `gh-upload-log`?** - Issue can still be created with local log reference
+- **No `gh-upload-log` during auto-reporting?** - Issue can still be created with local log reference
+- **No `gh-upload-log` during manual `--upload-log`?** - The uploader is installed on demand
 - **Repository not detected?** - Command runs normally with logging
 - **No permission to create issue?** - Skipped with a clear message
 - **Isolation environment not installed?** - Clear error message with installation instructions
