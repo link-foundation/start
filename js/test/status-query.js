@@ -53,6 +53,21 @@ function createExecutable(filePath, content) {
   fs.chmodSync(filePath, 0o755);
 }
 
+function createFakeUploader(fakeBin, outputPrefix) {
+  if (process.platform === 'win32') {
+    createExecutable(
+      path.join(fakeBin, 'gh-upload-log.cmd'),
+      `@echo off\r\necho ${outputPrefix}: %1\r\n`
+    );
+    return;
+  }
+
+  createExecutable(
+    path.join(fakeBin, 'gh-upload-log'),
+    `#!/bin/sh\necho "${outputPrefix}: $1"\n`
+  );
+}
+
 describe('--status query functionality', () => {
   let store;
   let testRecord;
@@ -251,10 +266,7 @@ describe('--status query functionality', () => {
       const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'upload-log-bin-'));
       const logPath = path.join(TEST_APP_FOLDER, 'command.log');
       fs.writeFileSync(logPath, 'captured command output\n', 'utf8');
-      createExecutable(
-        path.join(fakeBin, 'gh-upload-log'),
-        '#!/bin/sh\necho "fake uploader received: $1"\n'
-      );
+      createFakeUploader(fakeBin, 'fake uploader received');
 
       testRecord.logPath = logPath;
       store.save(testRecord);

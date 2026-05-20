@@ -579,6 +579,18 @@ mod status_tests {
     }
 
     #[test]
+    fn should_error_for_upload_log_without_identifier() {
+        let result = parse_args(&args(&["--upload-log"]));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn should_error_for_upload_log_with_empty_equals_identifier() {
+        let result = parse_args(&args(&["--upload-log="]));
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn should_error_for_stop_without_identifier() {
         let result = parse_args(&args(&["--stop"]));
         assert!(result.is_err());
