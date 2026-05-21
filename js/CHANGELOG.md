@@ -1,5 +1,11 @@
 # start-command
 
+## 0.28.0
+
+### Minor Changes
+
+- 38d1fe4: Add `--upload-log <id>` to upload a stored execution log with `gh-upload-log`, installing the uploader on demand when it is missing.
+
 ## 0.27.2
 
 ### Patch Changes
