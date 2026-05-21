@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.15.0] - 2026-05-21
+
+Add `--upload-log <id>` to upload a stored execution log with `gh-upload-log`, installing the uploader on demand when it is missing.
+
 ## [0.14.3] - 2026-05-12
 
 Fix Links Notation indentation for nested process ID arrays in status and control output, and update direct Rust dependencies.
