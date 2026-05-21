@@ -560,6 +560,37 @@ mod status_tests {
     }
 
     #[test]
+    fn should_parse_upload_log_with_identifier() {
+        let result = parse_args(&args(&["--upload-log", "uuid-here"])).unwrap();
+        assert_eq!(
+            result.wrapper_options.upload_log,
+            Some("uuid-here".to_string())
+        );
+        assert_eq!(result.command, "");
+    }
+
+    #[test]
+    fn should_parse_upload_log_equals_format() {
+        let result = parse_args(&args(&["--upload-log=uuid-here"])).unwrap();
+        assert_eq!(
+            result.wrapper_options.upload_log,
+            Some("uuid-here".to_string())
+        );
+    }
+
+    #[test]
+    fn should_error_for_upload_log_without_identifier() {
+        let result = parse_args(&args(&["--upload-log"]));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn should_error_for_upload_log_with_empty_equals_identifier() {
+        let result = parse_args(&args(&["--upload-log="]));
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn should_error_for_stop_without_identifier() {
         let result = parse_args(&args(&["--stop"]));
         assert!(result.is_err());
@@ -587,9 +618,9 @@ mod status_tests {
     fn should_error_when_combining_query_and_control_modes() {
         let result = parse_args(&args(&["--status", "uuid-here", "--stop", "my-session"]));
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("Cannot combine --status, --list, --stop, --terminate, or --cleanup"));
+        assert!(result.unwrap_err().contains(
+            "Cannot combine --status, --list, --upload-log, --stop, --terminate, or --cleanup"
+        ));
     }
 
     #[test]

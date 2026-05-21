@@ -7,6 +7,7 @@ pub mod execution_control;
 pub mod execution_store;
 pub mod failure_handler;
 pub mod isolation;
+pub mod log_uploader;
 pub mod output_blocks;
 pub mod sequence_parser;
 pub mod signal_handler;
@@ -43,6 +44,7 @@ pub use isolation::{
     is_shell_invocation_with_args, run_as_isolated_user, run_isolated, write_log_file,
     IsolationOptions, IsolationResult, LogHeaderParams,
 };
+pub use log_uploader::upload_execution_log;
 #[allow(deprecated)]
 pub use output_blocks::{
     // Timeline format API (formerly "status spine")

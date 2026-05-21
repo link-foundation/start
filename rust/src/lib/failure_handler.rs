@@ -245,14 +245,68 @@ pub fn is_gh_authenticated() -> bool {
 
 /// Check if gh-upload-log is available
 pub fn is_gh_upload_log_available() -> bool {
+    is_command_available("gh-upload-log")
+}
+
+fn is_command_available(command: &str) -> bool {
     let which_cmd = if cfg!(windows) { "where" } else { "which" };
     Command::new(which_cmd)
-        .arg("gh-upload-log")
+        .arg(command)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
         .map(|s| s.success())
         .unwrap_or(false)
+}
+
+/// Install gh-upload-log with an available JavaScript package manager.
+pub fn ensure_gh_upload_log_available() -> Result<(), String> {
+    if is_gh_upload_log_available() {
+        return Ok(());
+    }
+
+    let installers: [(&str, &[&str]); 2] = [
+        ("bun", &["install", "-g", "gh-upload-log"]),
+        ("npm", &["install", "-g", "gh-upload-log"]),
+    ];
+
+    for (command, args) in installers {
+        if !is_command_available(command) {
+            continue;
+        }
+
+        println!(
+            "gh-upload-log not found; installing with: {} {}",
+            command,
+            args.join(" ")
+        );
+        let installed = Command::new(command)
+            .args(args)
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false);
+
+        if installed && is_gh_upload_log_available() {
+            return Ok(());
+        }
+    }
+
+    Err(
+        "gh-upload-log is not installed and automatic installation did not make it available on PATH."
+            .to_string(),
+    )
+}
+
+/// Upload a log file with gh-upload-log and stream its output to the terminal.
+pub fn upload_log_interactive(log_path: &str) -> Result<i32, String> {
+    ensure_gh_upload_log_available()?;
+
+    let status = Command::new("gh-upload-log")
+        .arg(log_path)
+        .status()
+        .map_err(|e| format!("Failed to run gh-upload-log: {}", e))?;
+
+    Ok(status.code().unwrap_or(1))
 }
 
 /// Upload log file using gh-upload-log

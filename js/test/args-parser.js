@@ -832,6 +832,36 @@ describe('status option', () => {
   });
 });
 
+describe('upload-log option', () => {
+  it('should parse --upload-log with UUID or session name', () => {
+    const result = parseArgs(['--upload-log', 'my-session']);
+    assert.strictEqual(result.wrapperOptions.uploadLog, 'my-session');
+    assert.strictEqual(result.command, '');
+  });
+
+  it('should parse --upload-log=value format', () => {
+    const result = parseArgs(['--upload-log=my-session']);
+    assert.strictEqual(result.wrapperOptions.uploadLog, 'my-session');
+  });
+
+  it('should throw error for missing --upload-log argument', () => {
+    assert.throws(() => {
+      parseArgs(['--upload-log']);
+    }, /requires a UUID or session name argument/);
+  });
+
+  it('should throw error for empty --upload-log=value argument', () => {
+    assert.throws(() => {
+      parseArgs(['--upload-log=']);
+    }, /requires a UUID or session name argument/);
+  });
+
+  it('should default uploadLog to null', () => {
+    const result = parseArgs(['echo', 'hello']);
+    assert.strictEqual(result.wrapperOptions.uploadLog, null);
+  });
+});
+
 describe('list option', () => {
   it('should parse --list flag', () => {
     const result = parseArgs(['--list']);

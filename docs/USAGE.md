@@ -20,11 +20,16 @@ $ echo "Hello World"
 $ bun test
 $ git status
 $ --list
+$ --upload-log <id>
 ```
 
 Use `--status <id>` to inspect one stored execution, or `--list` to see all
 stored executions. Query output defaults to Links Notation and can be changed
 with `--output-format json` or `--output-format text`.
+
+Use `--upload-log <id>` to look up a stored execution by UUID or session name
+and run `gh-upload-log` for its saved log file. If `gh-upload-log` is missing,
+the command attempts to install it first with Bun or npm.
 
 For examples checked against the real JavaScript and Rust command output, see
 [EXAMPLES.md](EXAMPLES.md).

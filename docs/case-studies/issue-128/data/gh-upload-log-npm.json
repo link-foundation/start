@@ -1,0 +1,19 @@
+{
+  "name": "gh-upload-log",
+  "version": "0.8.0",
+  "description": "A tool to upload log files to GitHub as Gists or repositories",
+  "repository.url": "git+https://github.com/link-foundation/gh-upload-log.git",
+  "bin": {
+    "gh-upload-log": "src/cli.js"
+  },
+  "dist-tags": {
+    "latest": "0.8.0"
+  },
+  "dependencies": {
+    "command-stream": "^0.7.1",
+    "lino-arguments": "^0.3.0",
+    "log-lazy": "^1.0.4",
+    "use-m": "^8.13.7",
+    "yargs": "^17.7.2"
+  }
+}

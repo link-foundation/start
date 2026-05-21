@@ -33,6 +33,7 @@ const { handleFailure } = require('../lib/failure-handler');
 const { ExecutionStore, ExecutionRecord } = require('../lib/execution-store');
 const { queryStatus, listExecutions } = require('../lib/status-formatter');
 const { ControlAction, controlExecution } = require('../lib/execution-control');
+const { uploadExecutionLog } = require('../lib/log-uploader');
 const { printVersion } = require('../lib/version');
 const { createStartBlock, createFinishBlock } = require('../lib/output-blocks');
 const { runWithBunSpawn, runWithNodeSpawn } = require('../lib/spawn-helpers');
@@ -201,6 +202,12 @@ if (wrapperOptions.list) {
   process.exit(0);
 }
 
+// Handle --upload-log flag
+if (wrapperOptions.uploadLog) {
+  const exitCode = handleUploadLogQuery(wrapperOptions.uploadLog);
+  process.exit(exitCode);
+}
+
 // Handle --stop flag
 if (wrapperOptions.stop !== null && wrapperOptions.stop !== undefined) {
   handleControlQuery(wrapperOptions.stop, ControlAction.STOP);
@@ -298,6 +305,16 @@ function handleListQuery(outputFormat) {
     console.error(`Error: ${result.error}`);
     process.exit(1);
   }
+}
+
+function handleUploadLogQuery(identifier) {
+  const result = uploadExecutionLog(getExecutionStore(), identifier);
+  if (result.success) {
+    return result.exitCode || 0;
+  }
+
+  console.error(`Error: ${result.error}`);
+  return result.exitCode || 1;
 }
 
 function handleControlQuery(identifier, action) {

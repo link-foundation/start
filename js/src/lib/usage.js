@@ -1,6 +1,6 @@
 /** Print usage information */
 function printUsage() {
-  console.log(`Usage: $ [options] [--] <command> | $ --status <uuid> [--output-format <fmt>] | $ --list [--output-format <fmt>] | $ --stop <id> | $ --terminate <id>
+  console.log(`Usage: $ [options] [--] <command> | $ --status <uuid> [--output-format <fmt>] | $ --list [--output-format <fmt>] | $ --upload-log <id> | $ --stop <id> | $ --terminate <id>
 
 Options:
   --isolated, -i <env>  Run in isolated environment (screen, tmux, docker, ssh)
@@ -19,6 +19,7 @@ Options:
   --use-command-stream  Use command-stream library for execution (experimental)
   --status <id>         Show status of execution by UUID or session name (--output-format: links-notation|json|text)
   --list                List all tracked executions (--output-format: links-notation|json|text)
+  --upload-log <id>     Upload the stored log for an execution UUID or session name
   --stop <id>           Send CTRL+C/SIGINT to a detached isolated execution
   --terminate <id>      Terminate a detached isolated execution immediately
   --cleanup             Clean up stale "executing" records (crashed/killed processes)
@@ -39,6 +40,7 @@ Examples:
   $ --isolated-user --keep-user -- npm start
   $ --list                                 # List stored execution records
   $ --list --output-format json            # List stored records as JSON
+  $ --upload-log my-screen-session         # Upload stored execution log
   $ --stop my-screen-session               # Ask detached execution to stop gracefully
   $ --terminate my-screen-session          # Terminate detached execution immediately
   $ --use-command-stream echo "Hello"      # Use command-stream library`);
