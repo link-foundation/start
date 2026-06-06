@@ -24,6 +24,19 @@ mod basic_command_parsing {
     }
 
     #[test]
+    fn should_parse_isolation_alias_with_value() {
+        let result = parse_args(&args(&["--isolation", "docker", "--", "echo", "hi"])).unwrap();
+        assert_eq!(result.wrapper_options.isolated, Some("docker".to_string()));
+        assert_eq!(result.command, "echo hi");
+    }
+
+    #[test]
+    fn should_parse_isolation_equals_alias_format() {
+        let result = parse_args(&args(&["--isolation=screen", "--", "ls"])).unwrap();
+        assert_eq!(result.wrapper_options.isolated, Some("screen".to_string()));
+    }
+
+    #[test]
     fn should_normalize_backend_to_lowercase() {
         let result = parse_args(&args(&["--isolated", "SCREEN", "--", "ls"])).unwrap();
         assert_eq!(result.wrapper_options.isolated, Some("screen".to_string()));
@@ -275,6 +288,13 @@ mod basic_command_parsing {
     }
 
     #[test]
+    fn should_parse_isolation_alias_before_command_without_separator() {
+        let result = parse_args(&args(&["--isolation", "docker", "echo", "hi"])).unwrap();
+        assert_eq!(result.wrapper_options.isolated, Some("docker".to_string()));
+        assert_eq!(result.command, "echo hi");
+    }
+
+    #[test]
     fn should_handle_mixed_options_and_command() {
         let result = parse_args(&args(&[
             "--isolated",
@@ -287,6 +307,20 @@ mod basic_command_parsing {
         .unwrap();
         assert_eq!(result.command, "npm test");
         assert_eq!(result.wrapper_options.image, Some("node:20".to_string()));
+    }
+
+    #[test]
+    fn should_error_for_unknown_wrapper_option_before_separator() {
+        let result = parse_args(&args(&["--unknown-wrapper", "value", "--", "echo", "hi"]));
+        let err = result.unwrap_err();
+        assert!(err.contains("Unknown wrapper option: --unknown-wrapper"));
+    }
+
+    #[test]
+    fn should_error_for_unknown_wrapper_option_without_separator() {
+        let result = parse_args(&args(&["--unknown-wrapper", "value", "echo", "hi"]));
+        let err = result.unwrap_err();
+        assert!(err.contains("Unknown wrapper option: --unknown-wrapper"));
     }
 }
 
