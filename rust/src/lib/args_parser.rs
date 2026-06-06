@@ -5,7 +5,7 @@
 //! 2. $ [wrapper-options] command [command-options]
 //!
 //! Wrapper Options:
-//! --isolated, -i <backend>         Run in isolated environment (screen, tmux, docker, ssh)
+//! --isolated, --isolation, -i <backend> Run in isolated environment (screen, tmux, docker, ssh)
 //! --attached, -a                   Run in attached mode (foreground)
 //! --detached, -d                   Run in detached mode (background)
 //! --session, -s <name>             Session name for isolation
@@ -160,9 +160,7 @@ pub fn parse_args(args: &[String]) -> Result<ParsedArgs, String> {
             if arg.starts_with('-') {
                 match parse_option(args, i, &mut wrapper_options)? {
                     0 => {
-                        // Unknown option, treat rest as command
-                        command_args = args[i..].to_vec();
-                        break;
+                        return Err(format!("Unknown wrapper option: {}", arg));
                     }
                     consumed => {
                         i += consumed;
@@ -192,7 +190,9 @@ fn parse_wrapper_args(args: &[String], options: &mut WrapperOptions) -> Result<(
     while i < args.len() {
         match parse_option(args, i, options)? {
             0 => {
-                // Unknown wrapper option - just skip in debug mode
+                if args[i].starts_with('-') {
+                    return Err(format!("Unknown wrapper option: {}", args[i]));
+                }
                 if env::var("START_DEBUG").is_ok_and(|v| v == "1" || v == "true") {
                     eprintln!("Unknown wrapper option: {}", args[i]);
                 }
@@ -215,8 +215,8 @@ fn parse_option(
 ) -> Result<usize, String> {
     let arg = &args[index];
 
-    // --isolated or -i
-    if arg == "--isolated" || arg == "-i" {
+    // --isolated, --isolation, or -i
+    if arg == "--isolated" || arg == "--isolation" || arg == "-i" {
         if index + 1 < args.len() && !args[index + 1].starts_with('-') {
             options.isolated = Some(args[index + 1].to_lowercase());
             return Ok(2);
@@ -228,8 +228,8 @@ fn parse_option(
         }
     }
 
-    // --isolated=<value>
-    if arg.starts_with("--isolated=") {
+    // --isolated=<value> or --isolation=<value>
+    if arg.starts_with("--isolated=") || arg.starts_with("--isolation=") {
         options.isolated = Some(arg.split('=').nth(1).unwrap_or("").to_lowercase());
         return Ok(1);
     }

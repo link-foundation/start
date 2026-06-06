@@ -10,7 +10,7 @@ pub fn print_usage() {
        start --terminate <uuid-or-session-name>
 
 Options:
-  --isolated, -i <env>  Run in isolated environment (screen, tmux, docker, ssh)
+  --isolated, --isolation, -i <env>  Run in isolated environment (screen, tmux, docker, ssh)
   --attached, -a        Run in attached mode (foreground)
   --detached, -d        Run in detached mode (background)
   --session, -s <name>  Session name for isolation

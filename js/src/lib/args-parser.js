@@ -6,7 +6,7 @@
  * 2. $ [wrapper-options] command [command-options]
  *
  * Wrapper Options:
- * --isolated, -i <backend>         Run in isolated environment (screen, tmux, docker, ssh)
+ * --isolated, --isolation, -i <backend> Run in isolated environment (screen, tmux, docker, ssh)
  * --attached, -a                   Run in attached mode (foreground)
  * --detached, -d                   Run in detached mode (background)
  * --session, -s <name>             Session name for isolation
@@ -206,9 +206,7 @@ function parseArgs(args) {
       if (arg.startsWith('-')) {
         const consumed = parseOption(args, i, wrapperOptions);
         if (consumed === 0) {
-          // Unknown option, treat rest as command
-          commandArgs = args.slice(i);
-          break;
+          throw new Error(`Unknown wrapper option: ${arg}`);
         }
         i += consumed;
       } else {
@@ -239,6 +237,9 @@ function parseWrapperArgs(args, options) {
   while (i < args.length) {
     const consumed = parseOption(args, i, options);
     if (consumed === 0) {
+      if (args[i].startsWith('-')) {
+        throw new Error(`Unknown wrapper option: ${args[i]}`);
+      }
       if (DEBUG) {
         console.warn(`Unknown wrapper option: ${args[i]}`);
       }
@@ -259,8 +260,8 @@ function parseWrapperArgs(args, options) {
 function parseOption(args, index, options) {
   const arg = args[index];
 
-  // --isolated or -i
-  if (arg === '--isolated' || arg === '-i') {
+  // --isolated, --isolation, or -i
+  if (arg === '--isolated' || arg === '--isolation' || arg === '-i') {
     if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
       const value = args[index + 1];
       parseIsolatedValue(value, options);
@@ -272,8 +273,8 @@ function parseOption(args, index, options) {
     }
   }
 
-  // --isolated=<value>
-  if (arg.startsWith('--isolated=')) {
+  // --isolated=<value> or --isolation=<value>
+  if (arg.startsWith('--isolated=') || arg.startsWith('--isolation=')) {
     const value = arg.split('=')[1];
     parseIsolatedValue(value, options);
     return 1;

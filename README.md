@@ -293,7 +293,7 @@ This is useful for:
 
 | Option                           | Description                                               |
 | -------------------------------- | --------------------------------------------------------- |
-| `--isolated, -i`                 | Isolation environment (screen, tmux, docker, ssh)         |
+| `--isolated, --isolation, -i`    | Isolation environment (screen, tmux, docker, ssh)         |
 | `--attached, -a`                 | Run in attached/foreground mode (default)                 |
 | `--detached, -d`                 | Run in detached/background mode                           |
 | `--session, -s`                  | Custom session/container name                             |

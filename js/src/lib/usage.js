@@ -3,7 +3,7 @@ function printUsage() {
   console.log(`Usage: $ [options] [--] <command> | $ --status <uuid> [--output-format <fmt>] | $ --list [--output-format <fmt>] | $ --upload-log <id> | $ --stop <id> | $ --terminate <id>
 
 Options:
-  --isolated, -i <env>  Run in isolated environment (screen, tmux, docker, ssh)
+  --isolated, --isolation, -i <env>  Run in isolated environment (screen, tmux, docker, ssh)
   --attached, -a        Run in attached mode (foreground)
   --detached, -d        Run in detached mode (background)
   --session, -s <name>  Session name for isolation
