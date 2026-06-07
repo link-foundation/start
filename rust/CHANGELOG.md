@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.15.1] - 2026-06-07
+
+Add `--isolation` as an alias for `--isolated` and fail fast on unknown wrapper options.
+
 ## [0.15.0] - 2026-05-21
 
 Add `--upload-log <id>` to upload a stored execution log with `gh-upload-log`, installing the uploader on demand when it is missing.
