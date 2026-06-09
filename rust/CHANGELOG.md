@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.16.0] - 2026-06-09
+
+Add Docker isolation runtime controls: `--volume`/`-v`, `--mount`, `--env`/`-e`, and `--privileged`. These are threaded into the underlying `docker run` invocation and recorded in `--status`/`--list` metadata, allowing callers to mount tool credentials, pass environment variables, and run Docker-in-Docker images without wrapping `docker run` themselves.
+
 ## [0.15.1] - 2026-06-07
 
 Add `--isolation` as an alias for `--isolated` and fail fast on unknown wrapper options.
