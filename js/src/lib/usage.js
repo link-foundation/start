@@ -10,6 +10,10 @@ Options:
   --session-id <uuid>   Session UUID for tracking (auto-generated if not provided)
   --session-name <uuid> Alias for --session-id
   --image <image>       Docker image (optional, defaults to OS-matched image)
+  --volume, -v <spec>   Docker bind mount/volume host:container[:mode] (repeatable, docker only)
+  --mount <spec>        Docker --mount spec (repeatable, docker only)
+  --env, -e <KEY=VALUE> Environment variable for docker container (repeatable, docker only)
+  --privileged          Run docker container in privileged mode (docker only)
   --endpoint <endpoint> SSH endpoint (required for ssh isolation, e.g., user@host)
   --isolated-user, -u [name]  Create isolated user with same permissions
   --keep-user           Keep isolated user after command completes
@@ -33,6 +37,8 @@ Examples:
   $ -i screen -d bun start
   $ --isolated docker -- echo "hi"       # uses OS-matched default image
   $ --isolated docker --image ghcr.io/link-foundation/box-js:latest -- bun --version
+  $ -i docker -v ~/.config/gh:/root/.config/gh -e TOKEN=abc -- gh repo list
+  $ -i docker --image konard/hive-mind-dind:latest --privileged -- solve ...
   $ --isolated ssh --endpoint user@remote.server -- ls -la
   $ --isolated-user -- npm test            # Create isolated user
   $ -u myuser -- npm start                 # Custom username

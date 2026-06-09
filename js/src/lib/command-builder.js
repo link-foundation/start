@@ -54,6 +54,23 @@ function buildNextLevelCommand(options, command) {
     }
   }
 
+  // Docker runtime options are flat (not per-level); forward them only when a
+  // remaining level still uses docker so the nested $ invocation can apply them.
+  if (remainingStack.includes('docker')) {
+    for (const volume of options.volumes || []) {
+      parts.push(`--volume "${volume}"`);
+    }
+    for (const mount of options.mounts || []) {
+      parts.push(`--mount "${mount}"`);
+    }
+    for (const envVar of options.env || []) {
+      parts.push(`--env "${envVar}"`);
+    }
+    if (options.privileged) {
+      parts.push('--privileged');
+    }
+  }
+
   // Pass through global flags
   if (options.detached) {
     parts.push('--detached');

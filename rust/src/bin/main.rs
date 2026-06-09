@@ -516,6 +516,27 @@ fn run_with_isolation(
     if let Some(ref image) = effective_image {
         extra_lines.push(format!("[Isolation] Image: {}", image));
     }
+    if !wrapper_options.volumes.is_empty() {
+        extra_lines.push(format!(
+            "[Isolation] Volumes: {}",
+            wrapper_options.volumes.join(", ")
+        ));
+    }
+    if !wrapper_options.mounts.is_empty() {
+        extra_lines.push(format!(
+            "[Isolation] Mounts: {}",
+            wrapper_options.mounts.join(", ")
+        ));
+    }
+    if !wrapper_options.env.is_empty() {
+        extra_lines.push(format!(
+            "[Isolation] Env: {}",
+            wrapper_options.env.join(", ")
+        ));
+    }
+    if wrapper_options.privileged {
+        extra_lines.push("[Isolation] Privileged: true".to_string());
+    }
     if let Some(ref endpoint) = wrapper_options.endpoint {
         extra_lines.push(format!("[Isolation] Endpoint: {}", endpoint));
     }
@@ -572,6 +593,27 @@ fn run_with_isolation(
     if let Some(ref v) = effective_image {
         opts_map.insert("image".into(), str_val(v));
     }
+    if !wrapper_options.volumes.is_empty() {
+        opts_map.insert(
+            "volumes".into(),
+            serde_json::Value::Array(wrapper_options.volumes.iter().map(|s| str_val(s)).collect()),
+        );
+    }
+    if !wrapper_options.mounts.is_empty() {
+        opts_map.insert(
+            "mounts".into(),
+            serde_json::Value::Array(wrapper_options.mounts.iter().map(|s| str_val(s)).collect()),
+        );
+    }
+    if !wrapper_options.env.is_empty() {
+        opts_map.insert(
+            "env".into(),
+            serde_json::Value::Array(wrapper_options.env.iter().map(|s| str_val(s)).collect()),
+        );
+    }
+    if wrapper_options.privileged {
+        opts_map.insert("privileged".into(), serde_json::Value::Bool(true));
+    }
     if let Some(ref v) = wrapper_options.endpoint {
         opts_map.insert("endpoint".into(), str_val(v));
     }
@@ -622,6 +664,10 @@ fn run_with_isolation(
         let options = IsolationOptions {
             session: Some(session_name.clone()),
             image: effective_image.clone(),
+            volumes: wrapper_options.volumes.clone(),
+            mounts: wrapper_options.mounts.clone(),
+            env: wrapper_options.env.clone(),
+            privileged: wrapper_options.privileged,
             endpoint: wrapper_options.endpoint.clone(),
             detached: mode == "detached",
             user: created_user.clone(),

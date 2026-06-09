@@ -487,9 +487,34 @@ const {
 } = require('./docker-utils');
 
 /**
+ * Build the docker run runtime argument list contributed by configurable
+ * container options: privileged mode, environment variables, volumes/bind
+ * mounts, and --mount specs. Returned in a stable order so they can be spliced
+ * into the `docker run` argv before the image name.
+ * @param {object} options - Options (privileged, env, volumes, mounts)
+ * @returns {string[]} Docker CLI arguments
+ */
+function buildDockerRuntimeArgs(options = {}) {
+  const args = [];
+  if (options.privileged) {
+    args.push('--privileged');
+  }
+  for (const envVar of options.env || []) {
+    args.push('-e', envVar);
+  }
+  for (const volume of options.volumes || []) {
+    args.push('-v', volume);
+  }
+  for (const mount of options.mounts || []) {
+    args.push('--mount', mount);
+  }
+  return args;
+}
+
+/**
  * Run command in Docker container
  * @param {string} command - Command to execute
- * @param {object} options - Options (image, session/name, detached, user, keepAlive, autoRemoveDockerContainer)
+ * @param {object} options - Options (image, session/name, detached, user, keepAlive, autoRemoveDockerContainer, volumes, mounts, env, privileged)
  * @returns {Promise<{success: boolean, containerName: string, message: string}>}
  */
 function runInDocker(command, options = {}) {
@@ -557,6 +582,8 @@ function runInDocker(command, options = {}) {
       if (options.user) {
         dockerArgs.push('--user', options.user);
       }
+
+      dockerArgs.push(...buildDockerRuntimeArgs(options));
 
       const effectiveCommand = options.keepAlive
         ? `${command}; exec ${shellToUse}`
@@ -640,6 +667,7 @@ function runInDocker(command, options = {}) {
       if (options.user) {
         dockerArgs.push('--user', options.user);
       }
+      dockerArgs.push(...buildDockerRuntimeArgs(options));
       if (DEBUG) {
         console.log(`[DEBUG] shell: ${shellToUse}`);
       }
@@ -784,6 +812,7 @@ module.exports = {
   runInScreen,
   runInTmux,
   runInDocker,
+  buildDockerRuntimeArgs,
   runInSsh,
   runIsolated,
   runAsIsolatedUser,
