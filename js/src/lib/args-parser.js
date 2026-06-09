@@ -11,6 +11,10 @@
  * --detached, -d                   Run in detached mode (background)
  * --session, -s <name>             Session name for isolation
  * --image <image>                  Docker image (optional, defaults to OS-matched image)
+ * --volume, -v <host:container[:mode]> Docker bind mount/volume (repeatable, docker only)
+ * --mount <mount-spec>             Docker --mount spec (repeatable, docker only)
+ * --env, -e <KEY=VALUE>            Environment variable for docker container (repeatable, docker only)
+ * --privileged                     Run docker container in privileged mode (docker only)
  * --endpoint <endpoint>            SSH endpoint (required for ssh isolation, e.g., user@host)
  * --isolated-user, -u [username]   Create isolated user with same permissions (auto-generated name if not specified)
  * --keep-user                      Keep isolated user after command completes (don't delete)
@@ -167,6 +171,10 @@ function parseArgs(args) {
     sessionId: null, // Session ID (UUID) for tracking - auto-generated if not provided
     image: null, // Docker image (current level)
     imageStack: null, // Docker images for each level (with nulls for non-docker levels)
+    volumes: [], // Docker bind mounts/volumes (-v/--volume), applied to docker levels
+    mounts: [], // Docker --mount specs, applied to docker levels
+    env: [], // Docker environment variables (-e/--env, KEY=VALUE), applied to docker levels
+    privileged: false, // Run docker container in privileged mode
     endpoint: null, // SSH endpoint (current level, e.g., user@host)
     endpointStack: null, // SSH endpoints for each level (with nulls for non-ssh levels)
     user: false, // Create isolated user
@@ -323,6 +331,62 @@ function parseOption(args, index, options) {
   if (arg.startsWith('--image=')) {
     const value = arg.split('=')[1];
     parseImageValue(value, options);
+    return 1;
+  }
+
+  // --volume or -v (for docker) - repeatable bind mount / volume
+  if (arg === '--volume' || arg === '-v') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.volumes.push(args[index + 1]);
+      return 2;
+    } else {
+      throw new Error(
+        `Option ${arg} requires a volume argument (host:container[:mode])`
+      );
+    }
+  }
+
+  // --volume=<value> or -v=<value>
+  if (arg.startsWith('--volume=') || arg.startsWith('-v=')) {
+    options.volumes.push(arg.slice(arg.indexOf('=') + 1));
+    return 1;
+  }
+
+  // --mount (for docker) - repeatable mount spec
+  if (arg === '--mount') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.mounts.push(args[index + 1]);
+      return 2;
+    } else {
+      throw new Error(`Option ${arg} requires a mount spec argument`);
+    }
+  }
+
+  // --mount=<value>
+  if (arg.startsWith('--mount=')) {
+    options.mounts.push(arg.slice('--mount='.length));
+    return 1;
+  }
+
+  // --env or -e (for docker) - repeatable environment variable
+  if (arg === '--env' || arg === '-e') {
+    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
+      options.env.push(args[index + 1]);
+      return 2;
+    } else {
+      throw new Error(`Option ${arg} requires a KEY=VALUE argument`);
+    }
+  }
+
+  // --env=<value> or -e=<value>
+  if (arg.startsWith('--env=') || arg.startsWith('-e=')) {
+    options.env.push(arg.slice(arg.indexOf('=') + 1));
+    return 1;
+  }
+
+  // --privileged (for docker)
+  if (arg === '--privileged') {
+    options.privileged = true;
     return 1;
   }
 
@@ -557,6 +621,35 @@ function parseOption(args, index, options) {
 }
 
 /**
+ * Throw if docker runtime options (--volume, --mount, --env, --privileged)
+ * are present but the isolation configuration does not include docker.
+ * @param {object} options - Parsed options
+ * @throws {Error} If a docker-only option is set without docker isolation
+ */
+function validateDockerRuntimeOptionsRequireDocker(options) {
+  if (options.volumes && options.volumes.length > 0) {
+    throw new Error(
+      '--volume option is only valid when isolation stack includes docker'
+    );
+  }
+  if (options.mounts && options.mounts.length > 0) {
+    throw new Error(
+      '--mount option is only valid when isolation stack includes docker'
+    );
+  }
+  if (options.env && options.env.length > 0) {
+    throw new Error(
+      '--env option is only valid when isolation stack includes docker'
+    );
+  }
+  if (options.privileged) {
+    throw new Error(
+      '--privileged option is only valid when isolation stack includes docker'
+    );
+  }
+}
+
+/**
  * Validate parsed options
  * @param {object} options - Parsed options
  * @throws {Error} If options are invalid
@@ -678,6 +771,11 @@ function validateOptions(options) {
       );
     }
 
+    // Docker runtime options (--volume, --mount, --env, --privileged) require docker
+    if (!stack.includes('docker')) {
+      validateDockerRuntimeOptionsRequireDocker(options);
+    }
+
     // User isolation is not supported with Docker as first level
     if (options.user && currentBackend === 'docker') {
       throw new Error(
@@ -702,6 +800,7 @@ function validateOptions(options) {
         '--endpoint option is only valid when isolation stack includes ssh'
       );
     }
+    validateDockerRuntimeOptionsRequireDocker(options);
   }
 
   // Session name is only valid with isolation

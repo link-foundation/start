@@ -10,6 +10,10 @@
 //! --detached, -d                   Run in detached mode (background)
 //! --session, -s <name>             Session name for isolation
 //! --image <image>                  Docker image (optional, defaults to OS-matched image)
+//! --volume, -v <host:container[:mode]> Docker bind mount/volume (repeatable, docker only)
+//! --mount <mount-spec>             Docker --mount spec (repeatable, docker only)
+//! --env, -e <KEY=VALUE>            Environment variable for docker container (repeatable, docker only)
+//! --privileged                     Run docker container in privileged mode (docker only)
 //! --endpoint <endpoint>            SSH endpoint (required for ssh isolation, e.g., user@host)
 //! --isolated-user, -u [username]   Create isolated user with same permissions
 //! --keep-user                      Keep isolated user after command completes
@@ -65,6 +69,14 @@ pub struct WrapperOptions {
     pub session_id: Option<String>,
     /// Docker image
     pub image: Option<String>,
+    /// Docker bind mounts/volumes (-v/--volume), applied to docker isolation
+    pub volumes: Vec<String>,
+    /// Docker --mount specs, applied to docker isolation
+    pub mounts: Vec<String>,
+    /// Docker environment variables (-e/--env, KEY=VALUE), applied to docker isolation
+    pub env: Vec<String>,
+    /// Run docker container in privileged mode
+    pub privileged: bool,
     /// SSH endpoint (e.g., user@host)
     pub endpoint: Option<String>,
     /// Create isolated user
@@ -108,6 +120,10 @@ impl Default for WrapperOptions {
             session: None,
             session_id: None,
             image: None,
+            volumes: Vec::new(),
+            mounts: Vec::new(),
+            env: Vec::new(),
+            privileged: false,
             endpoint: None,
             user: false,
             user_name: None,
@@ -275,6 +291,67 @@ fn parse_option(
     // --image=<value>
     if arg.starts_with("--image=") {
         options.image = Some(arg.split('=').nth(1).unwrap_or("").to_string());
+        return Ok(1);
+    }
+
+    // --volume or -v (for docker) - repeatable bind mount / volume
+    if arg == "--volume" || arg == "-v" {
+        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
+            options.volumes.push(args[index + 1].clone());
+            return Ok(2);
+        } else {
+            return Err(format!(
+                "Option {} requires a volume argument (host:container[:mode])",
+                arg
+            ));
+        }
+    }
+
+    // --volume=<value> or -v=<value>
+    if arg.starts_with("--volume=") || arg.starts_with("-v=") {
+        options
+            .volumes
+            .push(arg[arg.find('=').unwrap() + 1..].to_string());
+        return Ok(1);
+    }
+
+    // --mount (for docker) - repeatable mount spec
+    if arg == "--mount" {
+        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
+            options.mounts.push(args[index + 1].clone());
+            return Ok(2);
+        } else {
+            return Err(format!("Option {} requires a mount spec argument", arg));
+        }
+    }
+
+    // --mount=<value>
+    if let Some(value) = arg.strip_prefix("--mount=") {
+        options.mounts.push(value.to_string());
+        return Ok(1);
+    }
+
+    // --env or -e (for docker) - repeatable environment variable
+    if arg == "--env" || arg == "-e" {
+        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
+            options.env.push(args[index + 1].clone());
+            return Ok(2);
+        } else {
+            return Err(format!("Option {} requires a KEY=VALUE argument", arg));
+        }
+    }
+
+    // --env=<value> or -e=<value>
+    if arg.starts_with("--env=") || arg.starts_with("-e=") {
+        options
+            .env
+            .push(arg[arg.find('=').unwrap() + 1..].to_string());
+        return Ok(1);
+    }
+
+    // --privileged (for docker)
+    if arg == "--privileged" {
+        options.privileged = true;
         return Ok(1);
     }
 
@@ -545,6 +622,21 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
     // Image is only valid with docker
     if options.image.is_some() && options.isolated.as_deref() != Some("docker") {
         return Err("--image option is only valid with --isolated docker".to_string());
+    }
+
+    // Docker runtime options (--volume, --mount, --env, --privileged) are only valid with docker
+    let is_docker = options.isolated.as_deref() == Some("docker");
+    if !options.volumes.is_empty() && !is_docker {
+        return Err("--volume option is only valid with --isolated docker".to_string());
+    }
+    if !options.mounts.is_empty() && !is_docker {
+        return Err("--mount option is only valid with --isolated docker".to_string());
+    }
+    if !options.env.is_empty() && !is_docker {
+        return Err("--env option is only valid with --isolated docker".to_string());
+    }
+    if options.privileged && !is_docker {
+        return Err("--privileged option is only valid with --isolated docker".to_string());
     }
 
     // Endpoint is only valid with ssh

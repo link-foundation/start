@@ -16,8 +16,9 @@ use start_command::{
     args_parser::{
         generate_session_name, generate_uuid, get_effective_mode, has_isolation, parse_args,
     },
-    clear_current_execution, create_finish_block, create_log_footer, create_log_header,
-    create_log_path_for_execution, create_start_block,
+    build_isolation_options_map, clear_current_execution, create_finish_block, create_log_footer,
+    create_log_header, create_log_path_for_execution, create_start_block,
+    docker_runtime_status_lines,
     execution_control::{control_execution, ControlAction},
     execution_store::{
         CleanupOptions, ExecutionRecord, ExecutionRecordOptions, ExecutionStore,
@@ -516,6 +517,12 @@ fn run_with_isolation(
     if let Some(ref image) = effective_image {
         extra_lines.push(format!("[Isolation] Image: {}", image));
     }
+    extra_lines.extend(docker_runtime_status_lines(
+        &wrapper_options.volumes,
+        &wrapper_options.mounts,
+        &wrapper_options.env,
+        wrapper_options.privileged,
+    ));
     if let Some(ref endpoint) = wrapper_options.endpoint {
         extra_lines.push(format!("[Isolation] Endpoint: {}", endpoint));
     }
@@ -561,26 +568,13 @@ fn run_with_isolation(
 
     // Create execution tracking record with isolation options
     let execution_store = config.create_execution_store();
-    let mut opts_map: std::collections::HashMap<String, serde_json::Value> =
-        std::collections::HashMap::new();
-    let str_val = |s: &str| serde_json::Value::String(s.to_string());
-    if let Some(env) = environment {
-        opts_map.insert("isolated".into(), str_val(env));
-    }
-    opts_map.insert("isolationMode".into(), str_val(mode));
-    opts_map.insert("sessionName".into(), str_val(&session_name));
-    if let Some(ref v) = effective_image {
-        opts_map.insert("image".into(), str_val(v));
-    }
-    if let Some(ref v) = wrapper_options.endpoint {
-        opts_map.insert("endpoint".into(), str_val(v));
-    }
-    if let Some(ref v) = created_user {
-        opts_map.insert("user".into(), str_val(v));
-    }
-    opts_map.insert(
-        "keepAlive".into(),
-        serde_json::Value::Bool(wrapper_options.keep_alive),
+    let opts_map = build_isolation_options_map(
+        environment,
+        mode,
+        &session_name,
+        effective_image.as_deref(),
+        wrapper_options,
+        created_user.as_deref(),
     );
     let mut execution_record = ExecutionRecord::with_options(ExecutionRecordOptions {
         uuid: Some(session_id.to_string()),
@@ -622,6 +616,10 @@ fn run_with_isolation(
         let options = IsolationOptions {
             session: Some(session_name.clone()),
             image: effective_image.clone(),
+            volumes: wrapper_options.volumes.clone(),
+            mounts: wrapper_options.mounts.clone(),
+            env: wrapper_options.env.clone(),
+            privileged: wrapper_options.privileged,
             endpoint: wrapper_options.endpoint.clone(),
             detached: mode == "detached",
             user: created_user.clone(),

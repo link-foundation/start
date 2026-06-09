@@ -235,6 +235,15 @@ $ --isolated docker --image ghcr.io/link-foundation/box-js:latest -- bun --versi
 # Run a multi-runtime AI coding experiment in the full box image
 $ --isolated docker --image ghcr.io/link-foundation/box:latest -- bash -lc 'node --version && python --version && rustc --version'
 
+# Mount tool credentials and pass environment variables into the container
+$ -i docker --image konard/hive-mind-dind:latest \
+    -v ~/.config/gh:/root/.config/gh \
+    -v ~/.claude:/root/.claude \
+    -e GH_TOKEN=$GH_TOKEN -- gh repo list
+
+# Run a Docker-in-Docker image in privileged mode
+$ -i docker --image konard/hive-mind-dind:latest --privileged -- solve <issue-url>
+
 # Run on remote server via SSH
 $ --isolated ssh --endpoint user@remote.server -- npm test
 
@@ -298,6 +307,10 @@ This is useful for:
 | `--detached, -d`                 | Run in detached/background mode                           |
 | `--session, -s`                  | Custom session/container name                             |
 | `--image`                        | Docker image (optional; defaults to OS-matched image)     |
+| `--volume, -v`                   | Docker bind mount/volume `host:container[:mode]` (repeatable, docker only) |
+| `--mount`                        | Docker `--mount` spec (repeatable, docker only)           |
+| `--env, -e`                      | Environment variable `KEY=VALUE` for the container (repeatable, docker only) |
+| `--privileged`                   | Run docker container in privileged mode (docker only)     |
 | `--endpoint`                     | SSH endpoint (required for ssh, e.g., user@host)          |
 | `--isolated-user, -u [name]`     | Create isolated user with same permissions (screen/tmux)  |
 | `--keep-user`                    | Keep isolated user after command completes (don't delete) |

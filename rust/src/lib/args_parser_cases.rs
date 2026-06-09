@@ -105,6 +105,272 @@ fn test_docker_with_image() {
 }
 
 #[test]
+fn test_docker_volumes_repeatable() {
+    let args: Vec<String> = vec![
+        "--isolated",
+        "docker",
+        "--volume",
+        "/host/a:/container/a",
+        "-v",
+        "/host/b:/container/b:ro",
+        "--",
+        "ls",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+    let result = parse_args(&args).unwrap();
+    assert_eq!(
+        result.wrapper_options.volumes,
+        vec![
+            "/host/a:/container/a".to_string(),
+            "/host/b:/container/b:ro".to_string()
+        ]
+    );
+}
+
+#[test]
+fn test_docker_volume_eq_form() {
+    let args: Vec<String> = vec![
+        "-i",
+        "docker",
+        "--volume=/host/a:/c/a",
+        "-v=/host/b:/c/b",
+        "--",
+        "ls",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+    let result = parse_args(&args).unwrap();
+    assert_eq!(
+        result.wrapper_options.volumes,
+        vec!["/host/a:/c/a".to_string(), "/host/b:/c/b".to_string()]
+    );
+}
+
+#[test]
+fn test_docker_mounts_repeatable() {
+    let args: Vec<String> = vec![
+        "-i",
+        "docker",
+        "--mount",
+        "type=bind,src=/h,dst=/c",
+        "--mount=type=volume,src=vol,dst=/data",
+        "--",
+        "ls",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+    let result = parse_args(&args).unwrap();
+    assert_eq!(
+        result.wrapper_options.mounts,
+        vec![
+            "type=bind,src=/h,dst=/c".to_string(),
+            "type=volume,src=vol,dst=/data".to_string()
+        ]
+    );
+}
+
+#[test]
+fn test_docker_env_repeatable() {
+    let args: Vec<String> = vec![
+        "-i",
+        "docker",
+        "--env",
+        "FOO=bar",
+        "-e",
+        "GH_TOKEN=secret",
+        "--env=BAZ=qux",
+        "--",
+        "env",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+    let result = parse_args(&args).unwrap();
+    assert_eq!(
+        result.wrapper_options.env,
+        vec![
+            "FOO=bar".to_string(),
+            "GH_TOKEN=secret".to_string(),
+            "BAZ=qux".to_string()
+        ]
+    );
+}
+
+#[test]
+fn test_docker_privileged() {
+    let args: Vec<String> = vec!["-i", "docker", "--privileged", "--", "ls"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let result = parse_args(&args).unwrap();
+    assert!(result.wrapper_options.privileged);
+}
+
+#[test]
+fn test_docker_runtime_options_default_empty() {
+    let args: Vec<String> = vec!["-i", "docker", "--", "ls"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let result = parse_args(&args).unwrap();
+    assert!(result.wrapper_options.volumes.is_empty());
+    assert!(result.wrapper_options.mounts.is_empty());
+    assert!(result.wrapper_options.env.is_empty());
+    assert!(!result.wrapper_options.privileged);
+}
+
+#[test]
+fn test_volume_requires_argument() {
+    let args: Vec<String> = vec!["-i", "docker", "--volume", "--", "ls"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let err = parse_args(&args).unwrap_err();
+    assert!(err.contains("requires a volume argument"));
+}
+
+#[test]
+fn test_volume_rejected_for_non_docker() {
+    let args: Vec<String> = vec!["-i", "tmux", "-v", "/a:/b", "--", "ls"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let err = parse_args(&args).unwrap_err();
+    assert!(err.contains("--volume option is only valid with --isolated docker"));
+}
+
+#[test]
+fn test_privileged_rejected_without_docker() {
+    let args: Vec<String> = vec!["--privileged", "--", "ls"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let err = parse_args(&args).unwrap_err();
+    assert!(err.contains("--privileged option is only valid with --isolated docker"));
+}
+
+#[test]
+fn test_docker_env_short_flag() {
+    let args: Vec<String> = vec!["-i", "docker", "-e", "TOKEN=abc", "--", "ls"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let result = parse_args(&args).unwrap();
+    assert_eq!(result.wrapper_options.env, vec!["TOKEN=abc".to_string()]);
+}
+
+#[test]
+fn test_docker_env_eq_form() {
+    let args: Vec<String> = vec!["-i", "docker", "--env=TOKEN=abc", "--", "ls"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let result = parse_args(&args).unwrap();
+    assert_eq!(result.wrapper_options.env, vec!["TOKEN=abc".to_string()]);
+}
+
+#[test]
+fn test_docker_mount_eq_form() {
+    let args: Vec<String> = vec![
+        "-i",
+        "docker",
+        "--mount=type=bind,src=/h,dst=/c",
+        "--",
+        "ls",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+    let result = parse_args(&args).unwrap();
+    assert_eq!(
+        result.wrapper_options.mounts,
+        vec!["type=bind,src=/h,dst=/c".to_string()]
+    );
+}
+
+#[test]
+fn test_docker_combined_runtime_options() {
+    let args: Vec<String> = vec![
+        "-i",
+        "docker",
+        "--image",
+        "konard/hive-mind-dind:latest",
+        "--privileged",
+        "-v",
+        "/h/a:/c/a",
+        "-e",
+        "TOKEN=abc",
+        "--",
+        "solve",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+    let result = parse_args(&args).unwrap();
+    assert_eq!(
+        result.wrapper_options.image,
+        Some("konard/hive-mind-dind:latest".to_string())
+    );
+    assert!(result.wrapper_options.privileged);
+    assert_eq!(
+        result.wrapper_options.volumes,
+        vec!["/h/a:/c/a".to_string()]
+    );
+    assert_eq!(result.wrapper_options.env, vec!["TOKEN=abc".to_string()]);
+}
+
+#[test]
+fn test_mount_requires_argument() {
+    let args: Vec<String> = vec!["-i", "docker", "--mount", "--", "ls"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let err = parse_args(&args).unwrap_err();
+    assert!(err.contains("requires a mount spec argument"));
+}
+
+#[test]
+fn test_env_requires_argument() {
+    let args: Vec<String> = vec!["-i", "docker", "--env", "--", "ls"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let err = parse_args(&args).unwrap_err();
+    assert!(err.contains("requires a KEY=VALUE argument"));
+}
+
+#[test]
+fn test_mount_rejected_for_non_docker() {
+    let args: Vec<String> = vec![
+        "-i",
+        "tmux",
+        "--mount",
+        "type=bind,src=/h,dst=/c",
+        "--",
+        "ls",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+    let err = parse_args(&args).unwrap_err();
+    assert!(err.contains("--mount option is only valid with --isolated docker"));
+}
+
+#[test]
+fn test_env_rejected_for_non_docker() {
+    let args: Vec<String> = vec!["-i", "screen", "-e", "A=1", "--", "ls"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let err = parse_args(&args).unwrap_err();
+    assert!(err.contains("--env option is only valid with --isolated docker"));
+}
+
+#[test]
 fn test_ssh_requires_endpoint() {
     let args: Vec<String> = vec!["--isolated", "ssh", "--", "npm", "test"]
         .into_iter()

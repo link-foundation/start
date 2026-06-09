@@ -22,6 +22,8 @@ const {
   appendLogFile,
   createLogPath,
   getDefaultDockerImage,
+  buildDockerRuntimeStatusLines,
+  buildDockerRuntimeMetadata,
 } = require('../lib/isolation');
 const {
   createIsolatedUser,
@@ -470,6 +472,7 @@ async function runWithIsolation(
   if (effectiveImage) {
     extraLines.push(`[Isolation] Image: ${effectiveImage}`);
   }
+  extraLines.push(...buildDockerRuntimeStatusLines(options));
   if (options.endpoint) {
     extraLines.push(`[Isolation] Endpoint: ${options.endpoint}`);
   }
@@ -496,6 +499,7 @@ async function runWithIsolation(
         isolationMode: mode,
         sessionName,
         image: effectiveImage,
+        ...buildDockerRuntimeMetadata(options),
         endpoint: options.endpoint,
         user: options.user,
         keepAlive: options.keepAlive,
@@ -570,6 +574,10 @@ async function runWithIsolation(
       user: createdUser,
       keepAlive: options.keepAlive,
       autoRemoveDockerContainer: options.autoRemoveDockerContainer,
+      volumes: options.volumes,
+      mounts: options.mounts,
+      env: options.env,
+      privileged: options.privileged,
       shell: options.shell,
       logPath: logFilePath,
     });

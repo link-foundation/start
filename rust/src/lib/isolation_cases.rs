@@ -212,3 +212,36 @@ fn test_run_in_screen_detached_writes_to_provided_log_path() {
         .args(["-S", &session_name, "-X", "quit"])
         .output();
 }
+
+#[test]
+fn test_build_docker_runtime_args_empty() {
+    let opts = IsolationOptions::default();
+    assert!(build_docker_runtime_args(&opts).is_empty());
+}
+
+#[test]
+fn test_build_docker_runtime_args_order() {
+    let opts = IsolationOptions {
+        privileged: true,
+        env: vec!["FOO=bar".to_string(), "GH_TOKEN=secret".to_string()],
+        volumes: vec!["/h/a:/c/a".to_string(), "/h/b:/c/b:ro".to_string()],
+        mounts: vec!["type=bind,src=/h,dst=/c".to_string()],
+        ..Default::default()
+    };
+    assert_eq!(
+        build_docker_runtime_args(&opts),
+        vec![
+            "--privileged",
+            "-e",
+            "FOO=bar",
+            "-e",
+            "GH_TOKEN=secret",
+            "-v",
+            "/h/a:/c/a",
+            "-v",
+            "/h/b:/c/b:ro",
+            "--mount",
+            "type=bind,src=/h,dst=/c",
+        ]
+    );
+}

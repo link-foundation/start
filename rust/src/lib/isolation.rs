@@ -36,6 +36,14 @@ pub struct IsolationOptions {
     pub session: Option<String>,
     /// Docker image
     pub image: Option<String>,
+    /// Docker bind mounts/volumes (-v/--volume)
+    pub volumes: Vec<String>,
+    /// Docker --mount specs
+    pub mounts: Vec<String>,
+    /// Docker environment variables (-e/--env, KEY=VALUE)
+    pub env: Vec<String>,
+    /// Run docker container in privileged mode
+    pub privileged: bool,
     /// SSH endpoint
     pub endpoint: Option<String>,
     /// Run in detached mode
@@ -57,6 +65,10 @@ impl Default for IsolationOptions {
         IsolationOptions {
             session: None,
             image: None,
+            volumes: Vec::new(),
+            mounts: Vec::new(),
+            env: Vec::new(),
+            privileged: false,
             endpoint: None,
             detached: false,
             user: None,
@@ -612,6 +624,29 @@ pub fn docker_pull_image(image: &str) -> (bool, String) {
     (success, output)
 }
 
+/// Build the extra `docker run` arguments contributed by runtime options
+/// (--privileged, --env/-e, --volume/-v, --mount). Returned references borrow
+/// from `options`, which outlives the `docker run` invocation.
+fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<&str> {
+    let mut args: Vec<&str> = Vec::new();
+    if options.privileged {
+        args.push("--privileged");
+    }
+    for env_var in &options.env {
+        args.push("-e");
+        args.push(env_var);
+    }
+    for volume in &options.volumes {
+        args.push("-v");
+        args.push(volume);
+    }
+    for mount in &options.mounts {
+        args.push("--mount");
+        args.push(mount);
+    }
+    args
+}
+
 /// Run command in Docker container
 pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResult {
     if !is_command_available("docker") {
@@ -680,6 +715,8 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
             args.push("--user");
             args.push(user);
         }
+
+        args.extend(build_docker_runtime_args(options));
 
         args.push(&image);
         args.push(&shell_to_use);
@@ -770,6 +807,8 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
             args.push("--user");
             args.push(user);
         }
+
+        args.extend(build_docker_runtime_args(options));
 
         if is_debug() {
             eprintln!("[DEBUG] shell: {}", shell_to_use);

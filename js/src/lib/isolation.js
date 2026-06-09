@@ -487,9 +487,74 @@ const {
 } = require('./docker-utils');
 
 /**
+ * Build the docker run runtime argument list contributed by configurable
+ * container options: privileged mode, environment variables, volumes/bind
+ * mounts, and --mount specs. Returned in a stable order so they can be spliced
+ * into the `docker run` argv before the image name.
+ * @param {object} options - Options (privileged, env, volumes, mounts)
+ * @returns {string[]} Docker CLI arguments
+ */
+function buildDockerRuntimeArgs(options = {}) {
+  const args = [];
+  if (options.privileged) {
+    args.push('--privileged');
+  }
+  for (const envVar of options.env || []) {
+    args.push('-e', envVar);
+  }
+  for (const volume of options.volumes || []) {
+    args.push('-v', volume);
+  }
+  for (const mount of options.mounts || []) {
+    args.push('--mount', mount);
+  }
+  return args;
+}
+
+/**
+ * Build the human-readable `[Isolation]` status lines for docker runtime
+ * options (volumes, mounts, env, privileged). Empty collections and a falsy
+ * privileged flag contribute no lines.
+ * @param {object} options - Options (volumes, mounts, env, privileged)
+ * @returns {string[]} Status lines for the start block / log header
+ */
+function buildDockerRuntimeStatusLines(options = {}) {
+  const lines = [];
+  if (options.volumes && options.volumes.length > 0) {
+    lines.push(`[Isolation] Volumes: ${options.volumes.join(', ')}`);
+  }
+  if (options.mounts && options.mounts.length > 0) {
+    lines.push(`[Isolation] Mounts: ${options.mounts.join(', ')}`);
+  }
+  if (options.env && options.env.length > 0) {
+    lines.push(`[Isolation] Env: ${options.env.join(', ')}`);
+  }
+  if (options.privileged) {
+    lines.push(`[Isolation] Privileged: true`);
+  }
+  return lines;
+}
+
+/**
+ * Build the execution-record metadata for docker runtime options, normalizing
+ * empty collections and a falsy privileged flag to `null`.
+ * @param {object} options - Options (volumes, mounts, env, privileged)
+ * @returns {{volumes: ?string[], mounts: ?string[], env: ?string[], privileged: ?boolean}}
+ */
+function buildDockerRuntimeMetadata(options = {}) {
+  return {
+    volumes:
+      options.volumes && options.volumes.length > 0 ? options.volumes : null,
+    mounts: options.mounts && options.mounts.length > 0 ? options.mounts : null,
+    env: options.env && options.env.length > 0 ? options.env : null,
+    privileged: options.privileged || null,
+  };
+}
+
+/**
  * Run command in Docker container
  * @param {string} command - Command to execute
- * @param {object} options - Options (image, session/name, detached, user, keepAlive, autoRemoveDockerContainer)
+ * @param {object} options - Options (image, session/name, detached, user, keepAlive, autoRemoveDockerContainer, volumes, mounts, env, privileged)
  * @returns {Promise<{success: boolean, containerName: string, message: string}>}
  */
 function runInDocker(command, options = {}) {
@@ -557,6 +622,8 @@ function runInDocker(command, options = {}) {
       if (options.user) {
         dockerArgs.push('--user', options.user);
       }
+
+      dockerArgs.push(...buildDockerRuntimeArgs(options));
 
       const effectiveCommand = options.keepAlive
         ? `${command}; exec ${shellToUse}`
@@ -640,6 +707,7 @@ function runInDocker(command, options = {}) {
       if (options.user) {
         dockerArgs.push('--user', options.user);
       }
+      dockerArgs.push(...buildDockerRuntimeArgs(options));
       if (DEBUG) {
         console.log(`[DEBUG] shell: ${shellToUse}`);
       }
@@ -784,6 +852,9 @@ module.exports = {
   runInScreen,
   runInTmux,
   runInDocker,
+  buildDockerRuntimeArgs,
+  buildDockerRuntimeStatusLines,
+  buildDockerRuntimeMetadata,
   runInSsh,
   runIsolated,
   runAsIsolatedUser,
