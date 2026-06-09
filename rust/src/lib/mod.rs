@@ -7,6 +7,7 @@ pub mod execution_control;
 pub mod execution_store;
 pub mod failure_handler;
 pub mod isolation;
+pub mod isolation_metadata;
 pub mod log_uploader;
 pub mod output_blocks;
 pub mod sequence_parser;
@@ -43,6 +44,9 @@ pub use isolation::{
     get_default_docker_image, get_timestamp, is_command_available, is_interactive_shell_command,
     is_shell_invocation_with_args, run_as_isolated_user, run_isolated, write_log_file,
     IsolationOptions, IsolationResult, LogHeaderParams,
+};
+pub use isolation_metadata::{
+    build_isolation_options_map, docker_runtime_metadata, docker_runtime_status_lines,
 };
 pub use log_uploader::upload_execution_log;
 #[allow(deprecated)]

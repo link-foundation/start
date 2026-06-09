@@ -512,6 +512,46 @@ function buildDockerRuntimeArgs(options = {}) {
 }
 
 /**
+ * Build the human-readable `[Isolation]` status lines for docker runtime
+ * options (volumes, mounts, env, privileged). Empty collections and a falsy
+ * privileged flag contribute no lines.
+ * @param {object} options - Options (volumes, mounts, env, privileged)
+ * @returns {string[]} Status lines for the start block / log header
+ */
+function buildDockerRuntimeStatusLines(options = {}) {
+  const lines = [];
+  if (options.volumes && options.volumes.length > 0) {
+    lines.push(`[Isolation] Volumes: ${options.volumes.join(', ')}`);
+  }
+  if (options.mounts && options.mounts.length > 0) {
+    lines.push(`[Isolation] Mounts: ${options.mounts.join(', ')}`);
+  }
+  if (options.env && options.env.length > 0) {
+    lines.push(`[Isolation] Env: ${options.env.join(', ')}`);
+  }
+  if (options.privileged) {
+    lines.push(`[Isolation] Privileged: true`);
+  }
+  return lines;
+}
+
+/**
+ * Build the execution-record metadata for docker runtime options, normalizing
+ * empty collections and a falsy privileged flag to `null`.
+ * @param {object} options - Options (volumes, mounts, env, privileged)
+ * @returns {{volumes: ?string[], mounts: ?string[], env: ?string[], privileged: ?boolean}}
+ */
+function buildDockerRuntimeMetadata(options = {}) {
+  return {
+    volumes:
+      options.volumes && options.volumes.length > 0 ? options.volumes : null,
+    mounts: options.mounts && options.mounts.length > 0 ? options.mounts : null,
+    env: options.env && options.env.length > 0 ? options.env : null,
+    privileged: options.privileged || null,
+  };
+}
+
+/**
  * Run command in Docker container
  * @param {string} command - Command to execute
  * @param {object} options - Options (image, session/name, detached, user, keepAlive, autoRemoveDockerContainer, volumes, mounts, env, privileged)
@@ -813,6 +853,8 @@ module.exports = {
   runInTmux,
   runInDocker,
   buildDockerRuntimeArgs,
+  buildDockerRuntimeStatusLines,
+  buildDockerRuntimeMetadata,
   runInSsh,
   runIsolated,
   runAsIsolatedUser,

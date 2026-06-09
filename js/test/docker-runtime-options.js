@@ -11,7 +11,11 @@
 const { describe, it } = require('node:test');
 const assert = require('assert');
 const { parseArgs } = require('../src/lib/args-parser');
-const { buildDockerRuntimeArgs } = require('../src/lib/isolation');
+const {
+  buildDockerRuntimeArgs,
+  buildDockerRuntimeStatusLines,
+  buildDockerRuntimeMetadata,
+} = require('../src/lib/isolation');
 
 describe('Docker runtime options parsing', () => {
   it('should parse repeatable --volume and -v', () => {
@@ -181,5 +185,61 @@ describe('buildDockerRuntimeArgs', () => {
       '--mount',
       'type=bind,src=/h,dst=/c',
     ]);
+  });
+});
+
+describe('buildDockerRuntimeStatusLines', () => {
+  it('should return no lines for empty options', () => {
+    assert.deepStrictEqual(buildDockerRuntimeStatusLines({}), []);
+  });
+
+  it('should format volumes, mounts, env, and privileged lines', () => {
+    const lines = buildDockerRuntimeStatusLines({
+      volumes: ['/h:/c:ro'],
+      mounts: ['type=bind,src=/h,dst=/c'],
+      env: ['FOO=bar'],
+      privileged: true,
+    });
+    assert.deepStrictEqual(lines, [
+      '[Isolation] Volumes: /h:/c:ro',
+      '[Isolation] Mounts: type=bind,src=/h,dst=/c',
+      '[Isolation] Env: FOO=bar',
+      '[Isolation] Privileged: true',
+    ]);
+  });
+
+  it('should join multiple volumes with a comma', () => {
+    assert.deepStrictEqual(
+      buildDockerRuntimeStatusLines({ volumes: ['/a:/a', '/b:/b'] }),
+      ['[Isolation] Volumes: /a:/a, /b:/b']
+    );
+  });
+});
+
+describe('buildDockerRuntimeMetadata', () => {
+  it('should null out empty collections and falsy privileged', () => {
+    assert.deepStrictEqual(buildDockerRuntimeMetadata({}), {
+      volumes: null,
+      mounts: null,
+      env: null,
+      privileged: null,
+    });
+  });
+
+  it('should pass through populated collections and privileged', () => {
+    assert.deepStrictEqual(
+      buildDockerRuntimeMetadata({
+        volumes: ['/h:/c'],
+        mounts: ['type=bind,src=/h,dst=/c'],
+        env: ['FOO=bar'],
+        privileged: true,
+      }),
+      {
+        volumes: ['/h:/c'],
+        mounts: ['type=bind,src=/h,dst=/c'],
+        env: ['FOO=bar'],
+        privileged: true,
+      }
+    );
   });
 });
