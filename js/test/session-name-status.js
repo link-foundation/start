@@ -306,6 +306,126 @@ describe('Issue #101: Detached status enrichment', () => {
         expect(enriched.endTime).not.toBeNull();
       }
     });
+
+    // Issue #134: a lingering screen session must NOT resurrect a completed
+    // (killed, exit 137) record back to 'executing' / null exit code.
+    describe('Issue #134: completed record with a lingering live session', () => {
+      const screenAvailable = (() => {
+        const probe = spawnSync('screen', ['-v'], { encoding: 'utf8' });
+        return probe.status === 0 || /Screen version/.test(probe.stdout || '');
+      })();
+
+      let sessionName;
+      let logPath;
+
+      beforeEach(() => {
+        if (!screenAvailable) {
+          return;
+        }
+        sessionName = `enrich-134-${process.pid}-${Date.now()}`;
+        logPath = path.join(TEST_APP_FOLDER, `${sessionName}.log`);
+        if (!fs.existsSync(TEST_APP_FOLDER)) {
+          fs.mkdirSync(TEST_APP_FOLDER, { recursive: true });
+        }
+        // Footer exactly as `start` writes it for a SIGKILLed command.
+        fs.writeFileSync(
+          logPath,
+          `Killed\n\n${'='.repeat(50)}\nFinished: 2026-06-14 19:10:49.822\nExit Code: 137\n`
+        );
+        // A shell that outlives the (already-finished) command.
+        spawnSync('screen', ['-dmS', sessionName, 'sh', '-c', 'sleep 30'], {
+          encoding: 'utf8',
+        });
+      });
+
+      afterEach(() => {
+        if (!screenAvailable) {
+          return;
+        }
+        spawnSync('screen', ['-S', sessionName, '-X', 'quit'], {
+          stdio: 'ignore',
+        });
+        if (logPath && fs.existsSync(logPath)) {
+          fs.unlinkSync(logPath);
+        }
+      });
+
+      it('keeps the recorded exit code when the session is still listed', () => {
+        if (!screenAvailable) {
+          return;
+        }
+        const record = new ExecutionRecord({
+          command: 'sleep 60',
+          logPath,
+          options: {
+            sessionName,
+            isolated: 'screen',
+            isolationMode: 'detached',
+          },
+        });
+        record.complete(137);
+
+        // Sanity: the session must actually be alive for this test to be meaningful.
+        expect(isDetachedSessionAlive(record)).toBe(true);
+
+        const enriched = enrichDetachedStatus(record);
+        expect(enriched.status).toBe('executed');
+        expect(enriched.exitCode).toBe(137);
+        expect(enriched.endTime).not.toBeNull();
+      });
+
+      it('honors the log footer exit code even without a recorded exit code', () => {
+        if (!screenAvailable) {
+          return;
+        }
+        const record = new ExecutionRecord({
+          command: 'sleep 60',
+          logPath,
+          options: {
+            sessionName,
+            isolated: 'screen',
+            isolationMode: 'detached',
+          },
+        });
+        // Record was never reconciled: status 'executed' but exitCode still null.
+        record.status = 'executed';
+        record.exitCode = null;
+        record.endTime = null;
+
+        expect(isDetachedSessionAlive(record)).toBe(true);
+
+        const enriched = enrichDetachedStatus(record);
+        // Footer says 137, so it must stay finished, not flip to executing.
+        expect(enriched.status).toBe('executed');
+      });
+
+      it('flips to executing only when there is no terminal record at all', () => {
+        if (!screenAvailable) {
+          return;
+        }
+        // Log with NO Exit Code footer and no recorded exit code.
+        fs.writeFileSync(logPath, 'still running, no footer yet\n');
+        const record = new ExecutionRecord({
+          command: 'sleep 60',
+          logPath,
+          options: {
+            sessionName,
+            isolated: 'screen',
+            isolationMode: 'detached',
+          },
+        });
+        record.status = 'executed';
+        record.exitCode = null;
+        record.endTime = null;
+
+        expect(isDetachedSessionAlive(record)).toBe(true);
+
+        const enriched = enrichDetachedStatus(record);
+        expect(enriched.status).toBe('executing');
+        expect(enriched.exitCode).toBeNull();
+        expect(enriched.endTime).toBeNull();
+      });
+    });
   });
 });
 
