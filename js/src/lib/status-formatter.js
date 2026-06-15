@@ -109,10 +109,22 @@ function enrichDetachedStatus(record) {
   Object.assign(enriched, record);
 
   if (alive && enriched.status === 'executed') {
-    // Session still running but record says executed - correct it
-    enriched.status = 'executing';
-    enriched.exitCode = null;
-    enriched.endTime = null;
+    // A live `screen -ls` (or `tmux`/`docker`) session does NOT mean the command
+    // is still running: a lingering shell can outlive a killed command (e.g. the
+    // OOM killer sends SIGKILL, exit 137, but the login shell stays up for a
+    // window after `start` already wrote the terminal footer). The footer/recorded
+    // exit code is authoritative. Only flip back to 'executing' when there is NO
+    // recorded terminal exit code AND no `Exit Code:` footer in the log.
+    const footerExit = readExitCodeFromLog(enriched.logPath);
+    const hasRecordedExit =
+      enriched.exitCode !== null && enriched.exitCode !== undefined;
+    if (!hasRecordedExit && footerExit === null) {
+      // Session still running and no terminal record - correct it
+      enriched.status = 'executing';
+      enriched.exitCode = null;
+      enriched.endTime = null;
+    }
+    // Otherwise keep the recorded/footer exit code - the command has finished.
   } else if (!alive && enriched.status === 'executing') {
     // Session ended but record says executing - correct it
     enriched.status = 'executed';

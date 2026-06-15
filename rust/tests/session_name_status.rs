@@ -262,6 +262,156 @@ fn test_enrich_detached_status_marks_dead_session_as_executed() {
     }
 }
 
+// ===== Issue #134: lingering live session must not resurrect a completed record =====
+
+/// Probe whether `screen` is usable in this environment.
+fn screen_available() -> bool {
+    std::process::Command::new("screen")
+        .arg("-v")
+        .output()
+        .map(|o| {
+            o.status.success() || String::from_utf8_lossy(&o.stdout).contains("Screen version")
+        })
+        .unwrap_or(false)
+}
+
+/// Start a detached screen session that outlives the (already-finished) command.
+/// Returns the session name. Caller must quit it.
+fn start_lingering_screen(session_name: &str) {
+    let _ = std::process::Command::new("screen")
+        .args(["-dmS", session_name, "sh", "-c", "sleep 30"])
+        .output();
+}
+
+/// Whether the lingering session is observable as alive in this environment.
+///
+/// Some instrumented environments (notably `cargo tarpaulin`, which traces
+/// every fork via ptrace) disrupt the `screen -dmS` daemon fork, so the
+/// session never registers in `screen -ls`. There the sanity precondition for
+/// these tests cannot hold, so they skip rather than fail.
+fn session_observably_alive(record: &ExecutionRecord) -> bool {
+    is_detached_session_alive(record) == Some(true)
+}
+
+fn quit_screen(session_name: &str) {
+    let _ = std::process::Command::new("screen")
+        .args(["-S", session_name, "-X", "quit"])
+        .output();
+}
+
+#[test]
+fn test_enrich_keeps_recorded_exit_code_when_session_lingers() {
+    if !screen_available() {
+        return;
+    }
+    let temp_dir = TempDir::new().unwrap();
+    let session_name = format!("enrich-134-recorded-{}", std::process::id());
+    let log_path = temp_dir.path().join(format!("{session_name}.log"));
+    // Footer exactly as `start` writes it for a SIGKILLed command.
+    std::fs::write(
+        &log_path,
+        "Killed\n\n==================================================\nFinished: 2026-06-14 19:10:49.822\nExit Code: 137\n",
+    )
+    .unwrap();
+
+    start_lingering_screen(&session_name);
+
+    let mut record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sleep 60".to_string(),
+        log_path: Some(log_path.to_string_lossy().to_string()),
+        options: Some(make_isolation_options(&session_name, "screen", "detached")),
+        ..Default::default()
+    });
+    record.complete(137);
+
+    // Sanity: the session must actually be alive for this test to be meaningful.
+    if !session_observably_alive(&record) {
+        quit_screen(&session_name);
+        return;
+    }
+
+    let enriched = enrich_detached_status(&record);
+    quit_screen(&session_name);
+
+    assert_eq!(enriched.status, ExecutionStatus::Executed);
+    assert_eq!(enriched.exit_code, Some(137));
+    assert!(enriched.end_time.is_some());
+}
+
+#[test]
+fn test_enrich_honors_log_footer_when_no_recorded_exit_code() {
+    if !screen_available() {
+        return;
+    }
+    let temp_dir = TempDir::new().unwrap();
+    let session_name = format!("enrich-134-footer-{}", std::process::id());
+    let log_path = temp_dir.path().join(format!("{session_name}.log"));
+    std::fs::write(
+        &log_path,
+        "Killed\n\n==================================================\nFinished: 2026-06-14 19:10:49.822\nExit Code: 137\n",
+    )
+    .unwrap();
+
+    start_lingering_screen(&session_name);
+
+    // Status 'executed' but exit_code never recorded; the footer is authoritative.
+    let mut record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sleep 60".to_string(),
+        status: Some(ExecutionStatus::Executed),
+        log_path: Some(log_path.to_string_lossy().to_string()),
+        options: Some(make_isolation_options(&session_name, "screen", "detached")),
+        ..Default::default()
+    });
+    record.exit_code = None;
+    record.end_time = None;
+
+    if !session_observably_alive(&record) {
+        quit_screen(&session_name);
+        return;
+    }
+
+    let enriched = enrich_detached_status(&record);
+    quit_screen(&session_name);
+
+    assert_eq!(enriched.status, ExecutionStatus::Executed);
+}
+
+#[test]
+fn test_enrich_flips_to_executing_when_no_terminal_record() {
+    if !screen_available() {
+        return;
+    }
+    let temp_dir = TempDir::new().unwrap();
+    let session_name = format!("enrich-134-nofooter-{}", std::process::id());
+    let log_path = temp_dir.path().join(format!("{session_name}.log"));
+    // Log with NO Exit Code footer.
+    std::fs::write(&log_path, "still running, no footer yet\n").unwrap();
+
+    start_lingering_screen(&session_name);
+
+    let mut record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sleep 60".to_string(),
+        status: Some(ExecutionStatus::Executed),
+        log_path: Some(log_path.to_string_lossy().to_string()),
+        options: Some(make_isolation_options(&session_name, "screen", "detached")),
+        ..Default::default()
+    });
+    record.exit_code = None;
+    record.end_time = None;
+
+    if !session_observably_alive(&record) {
+        quit_screen(&session_name);
+        return;
+    }
+
+    let enriched = enrich_detached_status(&record);
+    quit_screen(&session_name);
+
+    assert_eq!(enriched.status, ExecutionStatus::Executing);
+    assert_eq!(enriched.exit_code, None);
+    assert!(enriched.end_time.is_none());
+}
+
 #[test]
 fn test_get_most_recent_session_name_match() {
     let (_temp_dir, store) = create_test_store();

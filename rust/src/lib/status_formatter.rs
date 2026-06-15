@@ -87,10 +87,20 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
     let mut enriched = record.clone();
 
     if alive && enriched.status == ExecutionStatus::Executed {
-        // Session still running but record says executed - correct it
-        enriched.status = ExecutionStatus::Executing;
-        enriched.exit_code = None;
-        enriched.end_time = None;
+        // A live `screen -ls` (or `tmux`/`docker`) session does NOT mean the command
+        // is still running: a lingering shell can outlive a killed command (e.g. the
+        // OOM killer sends SIGKILL, exit 137, but the login shell stays up for a
+        // window after `start` already wrote the terminal footer). The footer/recorded
+        // exit code is authoritative. Only flip back to "executing" when there is NO
+        // recorded terminal exit code AND no `Exit Code:` footer in the log.
+        let footer_exit = read_exit_code_from_log(&enriched.log_path);
+        if enriched.exit_code.is_none() && footer_exit.is_none() {
+            // Session still running and no terminal record - correct it
+            enriched.status = ExecutionStatus::Executing;
+            enriched.exit_code = None;
+            enriched.end_time = None;
+        }
+        // Otherwise keep the recorded/footer exit code - the command has finished.
     } else if !alive && enriched.status == ExecutionStatus::Executing {
         // Session ended but record says executing - correct it
         enriched.status = ExecutionStatus::Executed;
