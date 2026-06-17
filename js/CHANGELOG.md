@@ -1,5 +1,13 @@
 # start-command
 
+## 0.29.1
+
+### Patch Changes
+
+- Fix detached docker `--status`/`--list` reporting a terminal status (`executed`) with the `-1` sentinel while the container is still running (or not visible yet on a slow Docker-in-Docker host). `isDetachedSessionAlive()` now treats a failed `docker inspect` as "unknown" (returns `null`) instead of "stopped", so a session whose container has not appeared yet stays `executing` rather than being marked finished. When a container has genuinely stopped, `enrichDetachedStatus()` resolves the real exit code from the `Exit Code:` log footer and then `docker inspect .State.ExitCode`, only falling back to `-1` when no real code can be obtained.
+
+  Fix `--status` for detached executions resurrecting a completed (killed) record. `enrichDetachedStatus()` no longer flips an already-`executed` record back to `executing` (and nulls its exit code) just because `screen -ls`/`tmux`/`docker` still lists a same-named session — a lingering shell can outlive a SIGKILLed command (e.g. OOM, exit 137). The recorded exit code and the `Exit Code:` log footer that `start` itself writes are now treated as authoritative; the record only flips to `executing` when there is no recorded exit code and no terminal footer in the log.
+
 ## 0.29.0
 
 ### Minor Changes
