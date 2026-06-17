@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.16.1] - 2026-06-17
+
+Fixed detached `--status` resurrecting a killed (exit 137) record back to `executing`. The `alive && executed` branch in `enrich_detached_status` now consults the recorded exit code and the `Exit Code:` log footer before flipping, so a lingering shell that outlives a `SIGKILL`ed command no longer reports a completed command as still running.
+
+Fixed detached docker `--status`/`--list` reporting a terminal status (`executed`) with the `-1` sentinel while the container is still running (or not visible yet on a slow Docker-in-Docker host). `is_detached_session_alive` now treats a failed `docker inspect` as "unknown" (`None`) instead of "stopped", so a session whose container has not appeared yet stays `executing` rather than being marked finished. When a container has genuinely stopped, `enrich_detached_status` resolves the real exit code from the `Exit Code:` log footer and then `docker inspect .State.ExitCode`, only falling back to `-1` when no real code can be obtained.
+
 ## [0.16.0] - 2026-06-09
 
 Add Docker isolation runtime controls: `--volume`/`-v`, `--mount`, `--env`/`-e`, and `--privileged`. These are threaded into the underlying `docker run` invocation and recorded in `--status`/`--list` metadata, allowing callers to mount tool credentials, pass environment variables, and run Docker-in-Docker images without wrapping `docker run` themselves.
