@@ -433,10 +433,19 @@ describe('Issue #101: Detached status enrichment', () => {
 // status (`executed`) and the `-1` sentinel while its container is still
 // running (or not visible yet on a slow Docker-in-Docker host).
 describe('Issue #136: detached docker session liveness', () => {
-  const dockerAvailable = (() => {
-    const probe = spawnSync('docker', ['info'], { stdio: 'ignore' });
+  // Use the repo's own probe: `docker` may be installed yet unable to run Linux
+  // images (e.g. Windows runners in Windows-containers mode, where `alpine`
+  // never starts). In that case `docker inspect` fails and liveness is `null`
+  // (unknown) rather than `false`, which would break the stopped-container
+  // assertions below.
+  const { canRunLinuxDockerImages } = require('../src/lib/isolation');
+  const dockerAvailable = canRunLinuxDockerImages();
+
+  // Whether the container actually exists (was created) per `docker inspect`.
+  function dockerContainerExists(name) {
+    const probe = spawnSync('docker', ['inspect', name], { stdio: 'ignore' });
     return probe.status === 0;
-  })();
+  }
 
   function makeDockerRecord(sessionName, extra = {}) {
     return new ExecutionRecord({
@@ -521,8 +530,9 @@ describe('Issue #136: detached docker session liveness', () => {
       'exit 1',
     ]);
     // `docker run` exits with the container's code (1 here); treat spawn errors
-    // (no daemon) as a skip.
-    if (ran.error) {
+    // (no daemon) or a container that never materialized (e.g. the Linux image
+    // could not be pulled) as a skip — there is nothing stopped to inspect.
+    if (ran.error || !dockerContainerExists(name)) {
       dockerRm(name);
       return;
     }
