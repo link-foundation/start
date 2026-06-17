@@ -412,6 +412,139 @@ fn test_enrich_flips_to_executing_when_no_terminal_record() {
     assert!(enriched.end_time.is_none());
 }
 
+// ===== Issue #136: detached docker session must not report a terminal -1 while the container is still running =====
+
+/// Probe whether `docker` is usable (CLI present and daemon reachable).
+fn docker_available() -> bool {
+    std::process::Command::new("docker")
+        .arg("info")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+fn docker_rm(name: &str) {
+    let _ = std::process::Command::new("docker")
+        .args(["rm", "-f", name])
+        .output();
+}
+
+/// A detached docker container that is not visible yet (still being created on a
+/// slow Docker-in-Docker host) cannot be inspected. Its liveness must be
+/// reported as `None` (unknown), NOT `Some(false)` — otherwise the enrich step
+/// would mark the still-pending session terminal with the `-1` sentinel.
+#[test]
+fn test_is_detached_session_alive_unknown_docker_container_is_none() {
+    if !docker_available() {
+        return;
+    }
+    let record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sleep 120".to_string(),
+        options: Some(make_isolation_options(
+            "issue136-container-does-not-exist-yet",
+            "docker",
+            "detached",
+        )),
+        ..Default::default()
+    });
+    assert_eq!(is_detached_session_alive(&record), None);
+}
+
+/// Regression for issue #136: while a detached docker container is not yet
+/// inspectable, the record must stay `executing` with `None` exit code rather
+/// than flipping to `executed` / `-1`.
+#[test]
+fn test_enrich_keeps_executing_when_docker_container_not_visible() {
+    if !docker_available() {
+        return;
+    }
+    let record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sleep 120".to_string(),
+        options: Some(make_isolation_options(
+            "issue136-container-not-visible",
+            "docker",
+            "detached",
+        )),
+        ..Default::default()
+    });
+    // Record defaults to executing with no exit code.
+    let enriched = enrich_detached_status(&record);
+    assert_eq!(enriched.status, ExecutionStatus::Executing);
+    assert_eq!(enriched.exit_code, None);
+    assert!(enriched.end_time.is_none());
+}
+
+/// A genuinely running detached container reports `Some(true)` and stays
+/// `executing`.
+#[test]
+fn test_enrich_running_docker_container_stays_executing() {
+    if !docker_available() {
+        return;
+    }
+    let name = format!("issue136-running-{}", std::process::id());
+    docker_rm(&name);
+    let started = std::process::Command::new("docker")
+        .args([
+            "run", "-d", "--name", &name, "alpine", "sh", "-c", "sleep 30",
+        ])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !started {
+        docker_rm(&name);
+        return;
+    }
+
+    let record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sleep 30".to_string(),
+        options: Some(make_isolation_options(&name, "docker", "detached")),
+        ..Default::default()
+    });
+    let alive = is_detached_session_alive(&record);
+    let enriched = enrich_detached_status(&record);
+    docker_rm(&name);
+
+    assert_eq!(alive, Some(true));
+    assert_eq!(enriched.status, ExecutionStatus::Executing);
+    assert_eq!(enriched.exit_code, None);
+}
+
+/// A stopped detached container with no log footer must resolve to its real
+/// exit code from `docker inspect`, never the `-1` sentinel.
+#[test]
+fn test_enrich_stopped_docker_container_uses_real_exit_code() {
+    if !docker_available() {
+        return;
+    }
+    let name = format!("issue136-stopped-{}", std::process::id());
+    docker_rm(&name);
+    let started = std::process::Command::new("docker")
+        .args(["run", "--name", &name, "alpine", "sh", "-c", "exit 1"])
+        .output()
+        .map(|o| o.status.success() || o.status.code() == Some(1))
+        .unwrap_or(false);
+    if !started {
+        docker_rm(&name);
+        return;
+    }
+
+    // No log footer: force exit-code resolution through `docker inspect`.
+    let record = ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "exit 1".to_string(),
+        log_path: Some("/nonexistent-issue136.log".to_string()),
+        options: Some(make_isolation_options(&name, "docker", "detached")),
+        ..Default::default()
+    });
+    let alive = is_detached_session_alive(&record);
+    let enriched = enrich_detached_status(&record);
+    docker_rm(&name);
+
+    assert_eq!(alive, Some(false));
+    assert_eq!(enriched.status, ExecutionStatus::Executed);
+    assert_eq!(enriched.exit_code, Some(1));
+    assert!(enriched.end_time.is_some());
+}
+
 #[test]
 fn test_get_most_recent_session_name_match() {
     let (_temp_dir, store) = create_test_store();
