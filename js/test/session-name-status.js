@@ -429,6 +429,129 @@ describe('Issue #101: Detached status enrichment', () => {
   });
 });
 
+// Issue #136: a detached docker session must not be reported with a terminal
+// status (`executed`) and the `-1` sentinel while its container is still
+// running (or not visible yet on a slow Docker-in-Docker host).
+describe('Issue #136: detached docker session liveness', () => {
+  // Use the repo's own probe: `docker` may be installed yet unable to run Linux
+  // images (e.g. Windows runners in Windows-containers mode, where `alpine`
+  // never starts). In that case `docker inspect` fails and liveness is `null`
+  // (unknown) rather than `false`, which would break the stopped-container
+  // assertions below.
+  const { canRunLinuxDockerImages } = require('../src/lib/isolation');
+  const dockerAvailable = canRunLinuxDockerImages();
+
+  // Whether the container actually exists (was created) per `docker inspect`.
+  function dockerContainerExists(name) {
+    const probe = spawnSync('docker', ['inspect', name], { stdio: 'ignore' });
+    return probe.status === 0;
+  }
+
+  function makeDockerRecord(sessionName, extra = {}) {
+    return new ExecutionRecord({
+      command: 'sleep 120; echo done',
+      options: {
+        sessionName,
+        isolated: 'docker',
+        isolationMode: 'detached',
+      },
+      ...extra,
+    });
+  }
+
+  function dockerRm(name) {
+    spawnSync('docker', ['rm', '-f', name], { stdio: 'ignore' });
+  }
+
+  it('reports unknown (null) — not false — when the container is not visible yet', () => {
+    if (!dockerAvailable) {
+      return;
+    }
+    const record = makeDockerRecord('issue136-container-does-not-exist-yet');
+    expect(isDetachedSessionAlive(record)).toBeNull();
+  });
+
+  it('keeps the record executing while the container is not visible yet', () => {
+    if (!dockerAvailable) {
+      return;
+    }
+    const record = makeDockerRecord('issue136-container-not-visible');
+    // Defaults to executing with a null exit code.
+    const enriched = enrichDetachedStatus(record);
+    expect(enriched.status).toBe('executing');
+    expect(enriched.exitCode).toBeNull();
+    expect(enriched.endTime).toBeNull();
+  });
+
+  it('keeps a running container executing', () => {
+    if (!dockerAvailable) {
+      return;
+    }
+    const name = `issue136-running-${process.pid}`;
+    dockerRm(name);
+    const started = spawnSync('docker', [
+      'run',
+      '-d',
+      '--name',
+      name,
+      'alpine',
+      'sh',
+      '-c',
+      'sleep 30',
+    ]);
+    if (started.status !== 0) {
+      dockerRm(name);
+      return;
+    }
+    try {
+      const record = makeDockerRecord(name);
+      expect(isDetachedSessionAlive(record)).toBe(true);
+      const enriched = enrichDetachedStatus(record);
+      expect(enriched.status).toBe('executing');
+      expect(enriched.exitCode).toBeNull();
+    } finally {
+      dockerRm(name);
+    }
+  });
+
+  it('resolves a stopped container to its real exit code, never the -1 sentinel', () => {
+    if (!dockerAvailable) {
+      return;
+    }
+    const name = `issue136-stopped-${process.pid}`;
+    dockerRm(name);
+    const ran = spawnSync('docker', [
+      'run',
+      '--name',
+      name,
+      'alpine',
+      'sh',
+      '-c',
+      'exit 1',
+    ]);
+    // `docker run` exits with the container's code (1 here); treat spawn errors
+    // (no daemon) or a container that never materialized (e.g. the Linux image
+    // could not be pulled) as a skip — there is nothing stopped to inspect.
+    if (ran.error || !dockerContainerExists(name)) {
+      dockerRm(name);
+      return;
+    }
+    try {
+      // No log footer: force exit-code resolution through `docker inspect`.
+      const record = makeDockerRecord(name, {
+        logPath: '/nonexistent-issue136.log',
+      });
+      expect(isDetachedSessionAlive(record)).toBe(false);
+      const enriched = enrichDetachedStatus(record);
+      expect(enriched.status).toBe('executed');
+      expect(enriched.exitCode).toBe(1);
+      expect(enriched.endTime).not.toBeNull();
+    } finally {
+      dockerRm(name);
+    }
+  });
+});
+
 describe('Issue #105: attachCurrentTime for executing status', () => {
   it('should add currentTime to serialization when status is executing', () => {
     const record = new ExecutionRecord({

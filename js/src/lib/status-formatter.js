@@ -7,13 +7,65 @@
  * - Text: Human-readable text format
  */
 
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const {
   escapeForLinksNotation,
   formatAsNestedLinksNotation,
 } = require('./output-blocks');
 const { collectProcessIds } = require('./execution-control');
+
+/**
+ * Inspect the live state of a detached docker container by name.
+ *
+ * Distinguishes three outcomes that matter for status reporting:
+ * - the container exists and is running,
+ * - the container exists but has stopped (with a real exit code), and
+ * - the container cannot be inspected at all.
+ *
+ * The last case is crucial on slow Docker-in-Docker hosts (issue #136): right
+ * after `docker run -d` returns, `docker inspect <name>` can transiently fail
+ * because the container is not visible yet. A failed inspect must NOT be read
+ * as "stopped"; it means "unknown", so callers can keep the session running
+ * instead of fabricating a terminal `-1` result.
+ *
+ * @param {string} sessionName - Container name
+ * @returns {{running: boolean, exitCode: number|null}|null} State, or null when
+ *   the container cannot be inspected (not found yet, removed, or docker error)
+ */
+function inspectDockerState(sessionName) {
+  const result = spawnSync(
+    'docker',
+    ['inspect', '-f', '{{.State.Running}} {{.State.ExitCode}}', sessionName],
+    { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+  );
+  if (result.error || result.status !== 0 || !result.stdout) {
+    return null;
+  }
+  const [runningRaw, exitRaw] = result.stdout.trim().split(/\s+/);
+  const exitCode = Number.parseInt(exitRaw, 10);
+  return {
+    running: runningRaw === 'true',
+    exitCode: Number.isFinite(exitCode) ? exitCode : null,
+  };
+}
+
+/**
+ * Best-effort terminal exit code reported by the isolation backend itself
+ * (currently docker via `docker inspect .State.ExitCode`). Returns null when
+ * the backend cannot provide a real code, so callers never surface the `-1`
+ * sentinel for a session whose real exit code is simply not available yet.
+ * @param {Object} record - Execution record
+ * @returns {number|null}
+ */
+function readBackendExitCode(record) {
+  const opts = record.options || {};
+  if (opts.isolated !== 'docker' || !opts.sessionName) {
+    return null;
+  }
+  const state = inspectDockerState(opts.sessionName);
+  return state && !state.running ? state.exitCode : null;
+}
 
 /**
  * Check if a detached isolation session is still running
@@ -46,11 +98,11 @@ function isDetachedSessionAlive(record) {
         return true;
       }
       case 'docker': {
-        const output = execSync(
-          `docker inspect -f "{{.State.Running}}" ${sessionName}`,
-          { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
-        );
-        return output.trim() === 'true';
+        // A failed inspect means the container is not visible yet (still being
+        // created on a slow DinD host) or already removed — not "stopped".
+        // Return null (unknown) so the session is not falsely marked finished.
+        const state = inspectDockerState(sessionName);
+        return state === null ? null : state.running;
       }
       case 'ssh': {
         // For SSH, check if the PID is still running on remote would require
@@ -100,13 +152,37 @@ function readExitCodeFromLog(logPath) {
  */
 function enrichDetachedStatus(record) {
   const alive = isDetachedSessionAlive(record);
+  const footerExit = readExitCodeFromLog(record.logPath);
+
+  // Create a shallow copy to avoid mutating the original
+  const cloneRecord = () => {
+    const enriched = Object.create(Object.getPrototypeOf(record));
+    Object.assign(enriched, record);
+    return enriched;
+  };
+
   if (alive === null) {
+    // Liveness is unknown: the backend could not be probed (e.g. a detached
+    // docker container that is not visible yet on a slow Docker-in-Docker host,
+    // or one that has already been removed). Honor a terminal `Exit Code:`
+    // footer if the command wrote one; otherwise leave the record untouched
+    // (still executing) rather than fabricating a `-1` terminal result that
+    // orchestrators misread as a finished/failed run (issue #136).
+    const isDetached =
+      record.options && record.options.isolationMode === 'detached';
+    if (isDetached && record.status === 'executing' && footerExit !== null) {
+      const enriched = cloneRecord();
+      enriched.status = 'executed';
+      enriched.exitCode = footerExit;
+      if (!enriched.endTime) {
+        enriched.endTime = new Date().toISOString();
+      }
+      return enriched;
+    }
     return record;
   }
 
-  // Create a shallow copy to avoid mutating the original
-  const enriched = Object.create(Object.getPrototypeOf(record));
-  Object.assign(enriched, record);
+  const enriched = cloneRecord();
 
   if (alive && enriched.status === 'executed') {
     // A live `screen -ls` (or `tmux`/`docker`) session does NOT mean the command
@@ -115,7 +191,6 @@ function enrichDetachedStatus(record) {
     // window after `start` already wrote the terminal footer). The footer/recorded
     // exit code is authoritative. Only flip back to 'executing' when there is NO
     // recorded terminal exit code AND no `Exit Code:` footer in the log.
-    const footerExit = readExitCodeFromLog(enriched.logPath);
     const hasRecordedExit =
       enriched.exitCode !== null && enriched.exitCode !== undefined;
     if (!hasRecordedExit && footerExit === null) {
@@ -126,10 +201,13 @@ function enrichDetachedStatus(record) {
     }
     // Otherwise keep the recorded/footer exit code - the command has finished.
   } else if (!alive && enriched.status === 'executing') {
-    // Session ended but record says executing - correct it
+    // Session ended but record says executing - correct it. Resolve a real exit
+    // code: prefer the log footer, then the backend's own record (e.g.
+    // `docker inspect .State.ExitCode`), and only fall back to the `-1` sentinel
+    // as a last resort when no real code can be obtained (issue #136).
     enriched.status = 'executed';
     if (enriched.exitCode === null || enriched.exitCode === undefined) {
-      enriched.exitCode = readExitCodeFromLog(enriched.logPath) ?? -1;
+      enriched.exitCode = footerExit ?? readBackendExitCode(enriched) ?? -1;
     }
     if (!enriched.endTime) {
       enriched.endTime = new Date().toISOString();

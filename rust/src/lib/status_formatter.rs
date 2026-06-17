@@ -12,6 +12,64 @@ use serde_json::Value;
 use std::fs;
 use std::process::Command;
 
+/// Live state of a detached docker container by name.
+struct DockerState {
+    running: bool,
+    exit_code: Option<i32>,
+}
+
+/// Inspect the live state of a detached docker container by name.
+///
+/// Distinguishes "running", "stopped (with a real exit code)", and "cannot be
+/// inspected at all". The last case matters on slow Docker-in-Docker hosts
+/// (issue #136): right after `docker run -d` returns, `docker inspect <name>`
+/// can transiently fail because the container is not visible yet. A failed
+/// inspect must NOT be read as "stopped"; it means "unknown", so callers can
+/// keep the session running instead of fabricating a terminal `-1` result.
+///
+/// Returns None when the container cannot be inspected (not found yet, removed,
+/// or docker error).
+fn inspect_docker_state(session_name: &str) -> Option<DockerState> {
+    let output = Command::new("docker")
+        .args([
+            "inspect",
+            "-f",
+            "{{.State.Running}} {{.State.ExitCode}}",
+            session_name,
+        ])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let trimmed = stdout.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let mut parts = trimmed.split_whitespace();
+    let running = parts.next() == Some("true");
+    let exit_code = parts.next().and_then(|value| value.parse::<i32>().ok());
+    Some(DockerState { running, exit_code })
+}
+
+/// Best-effort terminal exit code reported by the isolation backend itself
+/// (currently docker via `docker inspect .State.ExitCode`). Returns None when
+/// the backend cannot provide a real code, so callers never surface the `-1`
+/// sentinel for a session whose real exit code is simply not available yet.
+fn read_backend_exit_code(record: &ExecutionRecord) -> Option<i32> {
+    if record.options.get("isolated")?.as_str()? != "docker" {
+        return None;
+    }
+    let session_name = record.options.get("sessionName")?.as_str()?;
+    let state = inspect_docker_state(session_name)?;
+    if state.running {
+        None
+    } else {
+        state.exit_code
+    }
+}
+
 /// Check if a detached isolation session is still running
 /// Returns Some(true) if running, Some(false) if not, None if unable to determine
 pub fn is_detached_session_alive(record: &ExecutionRecord) -> Option<bool> {
@@ -37,12 +95,11 @@ pub fn is_detached_session_alive(record: &ExecutionRecord) -> Option<bool> {
             Some(status.status.success())
         }
         "docker" => {
-            let output = Command::new("docker")
-                .args(["inspect", "-f", "{{.State.Running}}", session_name])
-                .output()
-                .ok()?;
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            Some(stdout.trim() == "true")
+            // A failed inspect means the container is not visible yet (still
+            // being created on a slow DinD host) or already removed — not
+            // "stopped". Return None (unknown) so the session is not falsely
+            // marked finished (issue #136).
+            inspect_docker_state(session_name).map(|state| state.running)
         }
         "ssh" => {
             // For SSH, check if the local wrapper PID is still running
@@ -79,9 +136,31 @@ fn read_exit_code_from_log(log_path: &str) -> Option<i32> {
 /// returns an updated copy with status "executed". If it shows "executed" but
 /// the session is still running, returns a copy with status "executing".
 pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
+    let footer_exit = read_exit_code_from_log(&record.log_path);
+
     let alive = match is_detached_session_alive(record) {
         Some(v) => v,
-        None => return record.clone(),
+        None => {
+            // Liveness is unknown: the backend could not be probed (e.g. a
+            // detached docker container that is not visible yet on a slow
+            // Docker-in-Docker host, or one that has already been removed).
+            // Honor a terminal `Exit Code:` footer if the command wrote one;
+            // otherwise leave the record untouched (still executing) rather than
+            // fabricating a `-1` terminal result that orchestrators misread as a
+            // finished/failed run (issue #136).
+            let is_detached =
+                record.options.get("isolationMode").and_then(|v| v.as_str()) == Some("detached");
+            if is_detached && record.status == ExecutionStatus::Executing && footer_exit.is_some() {
+                let mut enriched = record.clone();
+                enriched.status = ExecutionStatus::Executed;
+                enriched.exit_code = footer_exit;
+                if enriched.end_time.is_none() {
+                    enriched.end_time = Some(chrono::Utc::now().to_rfc3339());
+                }
+                return enriched;
+            }
+            return record.clone();
+        }
     };
 
     let mut enriched = record.clone();
@@ -93,7 +172,6 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
         // window after `start` already wrote the terminal footer). The footer/recorded
         // exit code is authoritative. Only flip back to "executing" when there is NO
         // recorded terminal exit code AND no `Exit Code:` footer in the log.
-        let footer_exit = read_exit_code_from_log(&enriched.log_path);
         if enriched.exit_code.is_none() && footer_exit.is_none() {
             // Session still running and no terminal record - correct it
             enriched.status = ExecutionStatus::Executing;
@@ -102,10 +180,17 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
         }
         // Otherwise keep the recorded/footer exit code - the command has finished.
     } else if !alive && enriched.status == ExecutionStatus::Executing {
-        // Session ended but record says executing - correct it
+        // Session ended but record says executing - correct it. Resolve a real
+        // exit code: prefer the log footer, then the backend's own record (e.g.
+        // `docker inspect .State.ExitCode`), and only fall back to the `-1`
+        // sentinel as a last resort when no real code can be obtained (issue #136).
         enriched.status = ExecutionStatus::Executed;
         if enriched.exit_code.is_none() {
-            enriched.exit_code = Some(read_exit_code_from_log(&enriched.log_path).unwrap_or(-1));
+            enriched.exit_code = Some(
+                footer_exit
+                    .or_else(|| read_backend_exit_code(&enriched))
+                    .unwrap_or(-1),
+            );
         }
         if enriched.end_time.is_none() {
             enriched.end_time = Some(chrono::Utc::now().to_rfc3339());
