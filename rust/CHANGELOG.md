@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.16.2] - 2026-06-19
+
+Record the docker image-preparation phase in the session log (issue #138). When a `--isolated docker` run needs to `docker pull` an image, each line of pull output is now teed into the session-log file in real time and bracketed with `Preparing image <name>…` / `Image ready (<duration>)` markers (or `Image preparation failed` on error). Previously the time spent pulling a (potentially multi-GB) image left no trace in the log, so operators tailing the session log during startup saw only the header. The single session-log file is now a gap-free record of the run, including the longest, most failure-prone phase.
+
 ## [0.16.1] - 2026-06-17
 
 Fixed detached `--status` resurrecting a killed (exit 137) record back to `executing`. The `alive && executed` branch in `enrich_detached_status` now consults the recorded exit code and the `Exit Code:` log footer before flipping, so a lingering shell that outlives a `SIGKILL`ed command no longer reports a completed command as still running.
