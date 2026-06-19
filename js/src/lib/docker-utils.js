@@ -7,6 +7,8 @@
  */
 
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const { execSync, spawnSync } = require('child_process');
 
 /**
@@ -103,30 +105,140 @@ function dockerImageExists(image) {
 }
 
 /**
- * Pull a Docker image with output streaming
- * Displays the pull operation as a virtual command in the timeline
+ * Run `docker pull <image>` while teeing its output to the session log file.
+ *
+ * When a logPath is given (and tee is available, i.e. non-Windows), the pull
+ * output is streamed to BOTH the console and the log file in real time so the
+ * image-preparation phase is captured in the single session log (issue #138).
+ * docker's own exit code is recovered via a sentinel status file because the
+ * exit status of a `cmd | tee` pipeline reflects tee, not docker.
+ *
+ * Without a logPath, it falls back to the previous behavior: inherited stdio
+ * for real-time console output, with no log capture. On Windows (no portable
+ * shell `tee`) but with a logPath, the pull output is captured, echoed to the
+ * console, and appended to the log after the pull so the session log still
+ * records the image-preparation phase (issue #138) — just not streamed live.
+ *
  * @param {string} image - Docker image to pull
+ * @param {string|null} logPath - Session log file to append pull output to
+ * @returns {{status: number, error?: Error}} Spawn result (status = docker exit code)
+ */
+function runDockerPull(image, logPath) {
+  const { shellQuote } = require('./isolation-log-utils');
+
+  // Without a log target, keep the original inherited-stdio behavior for
+  // fancy real-time console output.
+  if (!logPath) {
+    return spawnSync('docker', ['pull', image], {
+      stdio: ['pipe', 'inherit', 'inherit'],
+    });
+  }
+
+  // Windows has no portable shell `tee`, so capture the pull output, echo it to
+  // the console, and append it to the log so the image-preparation phase is
+  // still recorded in the session log (issue #138), just not streamed live.
+  if (process.platform === 'win32') {
+    const { appendLogFile } = require('./isolation-log-utils');
+    const result = spawnSync('docker', ['pull', image], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      encoding: 'utf8',
+    });
+    const combined = `${result.stdout || ''}${result.stderr || ''}`;
+    if (combined) {
+      process.stdout.write(combined);
+      try {
+        appendLogFile(
+          logPath,
+          combined.endsWith('\n') ? combined : `${combined}\n`
+        );
+      } catch {
+        // best-effort: log capture must never break the pull
+      }
+    }
+    return result;
+  }
+
+  // Tee docker pull output to both the console and the log file. docker writes
+  // to a pipe here, so it emits plain progress lines (ideal for a log). The
+  // sentinel file captures docker's real exit code (the pipeline's own exit
+  // status would be tee's).
+  const statusFile = path.join(
+    os.tmpdir(),
+    `start-docker-pull-${process.pid}-${Date.now()}.status`
+  );
+  try {
+    const pipeline =
+      `{ docker pull ${shellQuote(image)} 2>&1; echo $? > ${shellQuote(statusFile)}; } ` +
+      `| tee -a ${shellQuote(logPath)}`;
+    const result = spawnSync('sh', ['-c', pipeline], {
+      stdio: ['pipe', 'inherit', 'inherit'],
+    });
+    if (result.error) {
+      return result;
+    }
+    let status = result.status;
+    try {
+      const recorded = fs.readFileSync(statusFile, 'utf8').trim();
+      if (recorded !== '') {
+        status = parseInt(recorded, 10);
+      }
+    } catch {
+      // Sentinel missing (e.g. sh/tee failed before docker ran); keep pipeline status.
+    }
+    return { ...result, status };
+  } finally {
+    try {
+      fs.unlinkSync(statusFile);
+    } catch {
+      // best-effort cleanup
+    }
+  }
+}
+
+/**
+ * Pull a Docker image with output streaming
+ * Displays the pull operation as a virtual command in the timeline.
+ *
+ * When a logPath is provided, the image-preparation phase (the `docker pull`)
+ * is also recorded in the session log so the single log file is a gap-free
+ * record of everything that ran (issue #138): a `Preparing image …` marker with
+ * a timestamp is written before the pull, the pull output is teed into the log,
+ * and an `Image ready (<duration>)` marker is written afterwards.
+ *
+ * @param {string} image - Docker image to pull
+ * @param {string|null} logPath - Optional session log file to append output to
  * @returns {{success: boolean, output: string}} Pull result
  */
-function dockerPullImage(image) {
+function dockerPullImage(image, logPath = null) {
   const {
     createVirtualCommandBlock,
     createVirtualCommandResult,
     createTimelineSeparator,
   } = require('./output-blocks');
+  const { appendLogFile, getTimestamp } = require('./isolation-log-utils');
 
   // Print the virtual command line followed by empty line for visual separation
   console.log(createVirtualCommandBlock(`docker pull ${image}`));
   console.log();
 
+  // Record the start of the image-preparation phase in the session log so
+  // operators tailing the log see progress instead of a header-only file.
+  const prepStartMs = Date.now();
+  if (logPath) {
+    appendLogFile(
+      logPath,
+      `$ docker pull ${image}\nPreparing image ${image}… (${getTimestamp()})\n`
+    );
+  }
+
   let output = '';
   let success;
 
   try {
-    // Run docker pull with inherited stdio for real-time output
-    const result = spawnSync('docker', ['pull', image], {
-      stdio: ['pipe', 'inherit', 'inherit'],
-    });
+    const result = runDockerPull(image, logPath);
+    if (result.error) {
+      throw result.error;
+    }
 
     success = result.status === 0;
 
@@ -140,6 +252,21 @@ function dockerPullImage(image) {
     console.error(`Failed to run docker pull: ${err.message}`);
     output = err.message;
     success = false;
+    if (logPath) {
+      appendLogFile(logPath, `Failed to run docker pull: ${err.message}\n`);
+    }
+  }
+
+  // Record the end of the image-preparation phase with elapsed duration so the
+  // prep time is visible even when full progress is unavailable (issue #138).
+  if (logPath) {
+    const durationSec = ((Date.now() - prepStartMs) / 1000).toFixed(1);
+    appendLogFile(
+      logPath,
+      success
+        ? `Image ready (${durationSec}s)\n`
+        : `Image preparation failed (${durationSec}s)\n`
+    );
   }
 
   // Print empty line before result marker for visual separation (issue #73)

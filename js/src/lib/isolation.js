@@ -588,7 +588,9 @@ function runInDocker(command, options = {}) {
 
   const containerName = options.session || generateSessionName('docker');
   if (!dockerImageExists(options.image)) {
-    const pullResult = dockerPullImage(options.image);
+    // Pass logPath so the image-preparation phase (docker pull) is recorded in
+    // the session log, keeping it a gap-free record of the run (issue #138).
+    const pullResult = dockerPullImage(options.image, options.logPath);
     if (!pullResult.success) {
       return Promise.resolve({
         success: false,
