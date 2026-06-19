@@ -558,9 +558,19 @@ pub fn docker_image_exists(image: &str) -> bool {
 }
 
 /// Pull a Docker image with output streaming
+///
+/// When `log_path` is provided, the image-preparation phase (the `docker pull`)
+/// is also recorded in the session log so the single log file is a gap-free
+/// record of everything that ran (issue #138): a `Preparing image …` marker with
+/// a timestamp is written before the pull, each line of pull output is teed into
+/// the log as it streams, and an `Image ready (<duration>)` marker is written
+/// afterwards. Without a `log_path` the behavior is unchanged.
+///
 /// Returns (success, output) tuple
-pub fn docker_pull_image(image: &str) -> (bool, String) {
+pub fn docker_pull_image(image: &str, log_path: Option<&PathBuf>) -> (bool, String) {
+    use crate::isolation::isolation_log::{append_log_file, get_timestamp};
     use std::io::{BufRead, BufReader};
+    use std::time::Instant;
 
     // Print the virtual command line followed by empty line for visual separation
     println!(
@@ -568,6 +578,21 @@ pub fn docker_pull_image(image: &str) -> (bool, String) {
         crate::output_blocks::create_virtual_command_block(&format!("docker pull {}", image))
     );
     println!();
+
+    // Record the start of the image-preparation phase in the session log so
+    // operators tailing the log see progress instead of a header-only file.
+    let prep_start = Instant::now();
+    if let Some(path) = log_path {
+        append_log_file(
+            path,
+            &format!(
+                "$ docker pull {}\nPreparing image {}… ({})\n",
+                image,
+                image,
+                get_timestamp()
+            ),
+        );
+    }
 
     let mut child = match Command::new("docker")
         .args(["pull", image])
@@ -579,6 +604,16 @@ pub fn docker_pull_image(image: &str) -> (bool, String) {
         Err(e) => {
             let error_msg = format!("Failed to run docker pull: {}", e);
             eprintln!("{}", error_msg);
+            if let Some(path) = log_path {
+                append_log_file(
+                    path,
+                    &format!(
+                        "{}\nImage preparation failed ({:.1}s)\n",
+                        error_msg,
+                        prep_start.elapsed().as_secs_f64()
+                    ),
+                );
+            }
             println!();
             println!(
                 "{}",
@@ -590,27 +625,47 @@ pub fn docker_pull_image(image: &str) -> (bool, String) {
 
     let mut output = String::new();
 
-    // Read and display stdout
+    // Read and display stdout, teeing each line into the session log.
     if let Some(stdout) = child.stdout.take() {
         let reader = BufReader::new(stdout);
         for line in reader.lines().map_while(Result::ok) {
             println!("{}", line);
+            if let Some(path) = log_path {
+                append_log_file(path, &format!("{}\n", line));
+            }
             output.push_str(&line);
             output.push('\n');
         }
     }
 
-    // Read and display stderr
+    // Read and display stderr, teeing each line into the session log.
     if let Some(stderr) = child.stderr.take() {
         let reader = BufReader::new(stderr);
         for line in reader.lines().map_while(Result::ok) {
             eprintln!("{}", line);
+            if let Some(path) = log_path {
+                append_log_file(path, &format!("{}\n", line));
+            }
             output.push_str(&line);
             output.push('\n');
         }
     }
 
     let success = child.wait().map(|s| s.success()).unwrap_or(false);
+
+    // Record the end of the image-preparation phase with elapsed duration so the
+    // prep time is visible even when full progress is unavailable (issue #138).
+    if let Some(path) = log_path {
+        let duration = prep_start.elapsed().as_secs_f64();
+        append_log_file(
+            path,
+            &if success {
+                format!("Image ready ({:.1}s)\n", duration)
+            } else {
+                format!("Image preparation failed ({:.1}s)\n", duration)
+            },
+        );
+    }
 
     // Print empty line before result marker for visual separation (issue #73)
     // This ensures output is visually separated from the result marker
@@ -670,9 +725,11 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         }
     };
 
-    // Check if image exists locally; if not, pull it as a virtual command
+    // Check if image exists locally; if not, pull it as a virtual command.
+    // Pass log_path so the image-preparation phase (docker pull) is recorded in
+    // the session log, keeping it a gap-free record of the run (issue #138).
     if !docker_image_exists(&image) {
-        let (pull_success, _pull_output) = docker_pull_image(&image);
+        let (pull_success, _pull_output) = docker_pull_image(&image, options.log_path.as_ref());
         if !pull_success {
             return IsolationResult {
                 success: false,
