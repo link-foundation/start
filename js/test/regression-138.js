@@ -96,6 +96,14 @@ describe('docker pull is recorded in the session log (issue #138)', () => {
       console.log('  Skipping: docker daemon not available');
       return;
     }
+    if (process.platform === 'win32') {
+      // Windows Docker runners pull Linux images slowly/unreliably and the
+      // capture path is exercised by the failed-pull test above; skip to avoid
+      // network-dependent timeouts. The real-pull streaming path is Unix-only.
+      console.log = originalLog;
+      console.log('  Skipping: real pull is unreliable on Windows Docker');
+      return;
+    }
 
     // Use a tiny image and force a real pull by removing it first.
     const image = 'hello-world:latest';

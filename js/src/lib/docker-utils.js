@@ -113,8 +113,11 @@ function dockerImageExists(image) {
  * docker's own exit code is recovered via a sentinel status file because the
  * exit status of a `cmd | tee` pipeline reflects tee, not docker.
  *
- * Without a logPath (or on Windows), it falls back to the previous behavior:
- * inherited stdio for real-time console output, with no log capture.
+ * Without a logPath, it falls back to the previous behavior: inherited stdio
+ * for real-time console output, with no log capture. On Windows (no portable
+ * shell `tee`) but with a logPath, the pull output is captured, echoed to the
+ * console, and appended to the log after the pull so the session log still
+ * records the image-preparation phase (issue #138) — just not streamed live.
  *
  * @param {string} image - Docker image to pull
  * @param {string|null} logPath - Session log file to append pull output to
@@ -123,12 +126,36 @@ function dockerImageExists(image) {
 function runDockerPull(image, logPath) {
   const { shellQuote } = require('./isolation-log-utils');
 
-  // Without a log target (or on Windows where tee is unreliable), keep the
-  // original inherited-stdio behavior for fancy real-time console output.
-  if (!logPath || process.platform === 'win32') {
+  // Without a log target, keep the original inherited-stdio behavior for
+  // fancy real-time console output.
+  if (!logPath) {
     return spawnSync('docker', ['pull', image], {
       stdio: ['pipe', 'inherit', 'inherit'],
     });
+  }
+
+  // Windows has no portable shell `tee`, so capture the pull output, echo it to
+  // the console, and append it to the log so the image-preparation phase is
+  // still recorded in the session log (issue #138), just not streamed live.
+  if (process.platform === 'win32') {
+    const { appendLogFile } = require('./isolation-log-utils');
+    const result = spawnSync('docker', ['pull', image], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      encoding: 'utf8',
+    });
+    const combined = `${result.stdout || ''}${result.stderr || ''}`;
+    if (combined) {
+      process.stdout.write(combined);
+      try {
+        appendLogFile(
+          logPath,
+          combined.endsWith('\n') ? combined : `${combined}\n`
+        );
+      } catch {
+        // best-effort: log capture must never break the pull
+      }
+    }
+    return result;
   }
 
   // Tee docker pull output to both the console and the log file. docker writes
