@@ -18,7 +18,10 @@
 //! --isolated-user, -u [username]   Create isolated user with same permissions
 //! --keep-user                      Keep isolated user after command completes
 //! --keep-alive, -k                 Keep isolation environment alive after command exits
-//! --auto-remove-docker-container   Automatically remove docker container after exit
+//! --auto-remove-docker-container   Always remove docker container after exit (compatibility alias)
+//! --always-cleanup-container       Always remove docker container after exit (default)
+//! --keep-container                 Keep docker container filesystem after exit
+//! --keep-container-on-fail         Remove successful docker containers, keep failed ones
 //! --shell <shell>                  Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
 //! --status <uuid-or-session-name>  Show status of a tracked execution
 //! --list                           List all tracked command executions
@@ -89,6 +92,12 @@ pub struct WrapperOptions {
     pub keep_alive: bool,
     /// Auto-remove docker container after exit
     pub auto_remove_docker_container: bool,
+    /// Explicitly request default always-cleanup docker policy
+    pub always_cleanup_container: bool,
+    /// Keep docker container filesystem after exit
+    pub keep_container: bool,
+    /// Keep docker container filesystem only when command fails
+    pub keep_container_on_fail: bool,
     /// Shell to use in isolation environments: auto, bash, zsh, sh
     pub shell: String,
     /// Use command-stream library for command execution
@@ -130,6 +139,9 @@ impl Default for WrapperOptions {
             keep_user: false,
             keep_alive: false,
             auto_remove_docker_container: false,
+            always_cleanup_container: false,
+            keep_container: false,
+            keep_container_on_fail: false,
             shell: "auto".to_string(),
             use_command_stream: false,
             status: None,
@@ -412,6 +424,24 @@ fn parse_option(
         return Ok(1);
     }
 
+    // --always-cleanup-container
+    if arg == "--always-cleanup-container" {
+        options.always_cleanup_container = true;
+        return Ok(1);
+    }
+
+    // --keep-container
+    if arg == "--keep-container" {
+        options.keep_container = true;
+        return Ok(1);
+    }
+
+    // --keep-container-on-fail
+    if arg == "--keep-container-on-fail" {
+        options.keep_container_on_fail = true;
+        return Ok(1);
+    }
+
     // --shell <shell>
     if arg == "--shell" {
         if index + 1 < args.len() && !args[index + 1].starts_with('-') {
@@ -650,9 +680,38 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
     }
 
     // Auto-remove-docker-container is only valid with docker isolation
-    if options.auto_remove_docker_container && options.isolated.as_deref() != Some("docker") {
+    let cleanup_flags = [
+        (
+            "--auto-remove-docker-container",
+            options.auto_remove_docker_container,
+        ),
+        (
+            "--always-cleanup-container",
+            options.always_cleanup_container,
+        ),
+        ("--keep-container", options.keep_container),
+        ("--keep-container-on-fail", options.keep_container_on_fail),
+    ];
+    for (flag, enabled) in cleanup_flags {
+        if enabled && !is_docker {
+            return Err(format!(
+                "{} option is only valid with --isolated docker",
+                flag
+            ));
+        }
+    }
+
+    let selected_cleanup_policies = [
+        options.auto_remove_docker_container || options.always_cleanup_container,
+        options.keep_container,
+        options.keep_container_on_fail,
+    ]
+    .into_iter()
+    .filter(|enabled| *enabled)
+    .count();
+    if selected_cleanup_policies > 1 {
         return Err(
-            "--auto-remove-docker-container option is only valid with --isolated docker"
+            "Cannot combine docker container cleanup policies. Choose only one of --always-cleanup-container, --keep-container, or --keep-container-on-fail."
                 .to_string(),
         );
     }

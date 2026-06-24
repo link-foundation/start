@@ -25,7 +25,10 @@ Options:
   --isolated-user, -u [name]  Create isolated user with same permissions
   --keep-user           Keep isolated user after command completes
   --keep-alive, -k      Keep isolation environment alive after command exits
-  --auto-remove-docker-container  Auto-remove docker container after exit
+  --auto-remove-docker-container  Always remove docker container after exit (compatibility alias)
+  --always-cleanup-container  Always remove docker container after exit (default)
+  --keep-container     Keep docker container filesystem after exit
+  --keep-container-on-fail  Remove successful docker containers, keep failed ones
   --shell <shell>       Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
   --use-command-stream  Use command-stream library for execution (experimental)
   --status <id>         Show status of execution by UUID or session name (--output-format: links-notation|json|text)

@@ -108,6 +108,22 @@ pub fn build_isolation_options_map(
         "keepAlive".to_string(),
         serde_json::Value::Bool(options.keep_alive),
     );
+    opts_map.insert(
+        "autoRemoveDockerContainer".to_string(),
+        serde_json::Value::Bool(options.auto_remove_docker_container),
+    );
+    opts_map.insert(
+        "alwaysCleanupContainer".to_string(),
+        serde_json::Value::Bool(options.always_cleanup_container),
+    );
+    opts_map.insert(
+        "keepContainer".to_string(),
+        serde_json::Value::Bool(options.keep_container),
+    );
+    opts_map.insert(
+        "keepContainerOnFail".to_string(),
+        serde_json::Value::Bool(options.keep_container_on_fail),
+    );
     opts_map
 }
 

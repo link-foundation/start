@@ -18,10 +18,19 @@ const {
 } = require('./screen-isolation');
 const {
   appendLogFile,
-  createShellLogFooterSnippet,
   shellQuote,
   wrapCommandWithLogFooter,
 } = require('./isolation-log-utils');
+const {
+  DOCKER_CONTAINER_CLEANUP_POLICY,
+  getDockerContainerCleanupPolicy,
+  shouldCleanupDockerContainer,
+  getDockerContainerCleanupInstructions,
+  appendDockerContainerCleanupPolicyMessage,
+  removeDockerContainer,
+  startDetachedDockerCompletionWatcher,
+  spawnAttachedDocker,
+} = require('./docker-cleanup');
 
 /**
  * Check if a command is available on the system
@@ -554,7 +563,7 @@ function buildDockerRuntimeMetadata(options = {}) {
 /**
  * Run command in Docker container
  * @param {string} command - Command to execute
- * @param {object} options - Options (image, session/name, detached, user, keepAlive, autoRemoveDockerContainer, volumes, mounts, env, privileged)
+ * @param {object} options - Options (image, session/name, detached, user, keepAlive, container cleanup policy, volumes, mounts, env, privileged)
  * @returns {Promise<{success: boolean, containerName: string, message: string}>}
  */
 function runInDocker(command, options = {}) {
@@ -587,6 +596,7 @@ function runInDocker(command, options = {}) {
   }
 
   const containerName = options.session || generateSessionName('docker');
+  const cleanupPolicy = getDockerContainerCleanupPolicy(options);
   if (!dockerImageExists(options.image)) {
     // Pass logPath so the image-preparation phase (docker pull) is recorded in
     // the session log, keeping it a gap-free record of the run (issue #138).
@@ -617,9 +627,6 @@ function runInDocker(command, options = {}) {
         dockerArgs.push('-i', '-t');
       }
       dockerArgs.push('--name', containerName);
-      if (options.autoRemoveDockerContainer) {
-        dockerArgs.push('--rm');
-      }
 
       if (options.user) {
         dockerArgs.push('--user', options.user);
@@ -647,6 +654,7 @@ function runInDocker(command, options = {}) {
         console.log(
           `[DEBUG] autoRemoveDockerContainer: ${options.autoRemoveDockerContainer || false}`
         );
+        console.log(`[DEBUG] docker cleanup policy: ${cleanupPolicy}`);
       }
 
       const dockerResult = spawnSync('docker', dockerArgs, {
@@ -667,18 +675,11 @@ function runInDocker(command, options = {}) {
 
       const containerId = dockerResult.stdout.trim();
 
-      if (options.logPath) {
-        const loggerScript = [
-          `docker logs -f ${shellQuote(containerName)} >> ${shellQuote(options.logPath)} 2>&1`,
-          `__start_command_exit=$(docker inspect -f '{{.State.ExitCode}}' ${shellQuote(containerName)} 2>/dev/null || printf '%s' '-1')`,
-          `${createShellLogFooterSnippet()} >> ${shellQuote(options.logPath)}`,
-        ].join('; ');
-        const logger = spawn('sh', ['-c', loggerScript], {
-          detached: true,
-          stdio: 'ignore',
-        });
-        logger.unref();
-      }
+      startDetachedDockerCompletionWatcher(
+        containerName,
+        cleanupPolicy,
+        options.logPath
+      );
 
       let message = `Command started in detached docker container: ${containerName}`;
       message += `\nContainer ID: ${containerId.substring(0, 12)}`;
@@ -687,11 +688,11 @@ function runInDocker(command, options = {}) {
       } else {
         message += `\nContainer will exit automatically after command completes.`;
       }
-      if (options.autoRemoveDockerContainer) {
-        message += `\nContainer will be automatically removed after exit.`;
-      } else {
-        message += `\nContainer filesystem will be preserved after exit.`;
-      }
+      message = appendDockerContainerCleanupPolicyMessage(
+        message,
+        containerName,
+        cleanupPolicy
+      );
       message += `\nAttach with: docker attach ${containerName}`;
       message += `\nView logs: docker logs ${containerName}`;
       if (options.logPath) {
@@ -705,7 +706,9 @@ function runInDocker(command, options = {}) {
         message,
       });
     } else {
-      const dockerArgs = ['run', '-it', '--rm', '--name', containerName];
+      const dockerArgs = ['run'];
+      dockerArgs.push(hasTTY() ? '-it' : '-i');
+      dockerArgs.push('--name', containerName);
       if (options.user) {
         dockerArgs.push('--user', options.user);
       }
@@ -739,13 +742,14 @@ function runInDocker(command, options = {}) {
 
       return new Promise((resolve) => {
         const startTime = Date.now();
-        const child = spawn('docker', dockerArgs, { stdio: 'inherit' });
+        const child = spawnAttachedDocker(dockerArgs, options.logPath);
 
         child.on('exit', (code) => {
           const durationMs = Date.now() - startTime;
-          let message = `Docker container "${containerName}" exited with code ${code}`;
+          const exitCode = code ?? 1;
+          let message = `Docker container "${containerName}" exited with code ${exitCode}`;
           // Bare shell exited non-zero quickly → startup file error; suggest --norc (issue #84).
-          if (isBareShell && code !== 0 && durationMs < 3000) {
+          if (isBareShell && exitCode !== 0 && durationMs < 3000) {
             const shell0 = command.trim().split(/\s+/)[0];
             // prettier-ignore
             const norc = path.basename(shell0) === 'zsh' ? '--no-rcs' : '--norc';
@@ -753,11 +757,28 @@ function runInDocker(command, options = {}) {
             console.log(hint);
             message += `\n${hint}`;
           }
+
+          if (shouldCleanupDockerContainer(cleanupPolicy, exitCode)) {
+            if (removeDockerContainer(containerName, options.logPath)) {
+              message += `\nContainer removed after completion.`;
+            } else {
+              message += `\nWarning: failed to remove container automatically.`;
+              message += `\nRemove when done: docker rm -f ${containerName}`;
+            }
+          } else if (cleanupPolicy === DOCKER_CONTAINER_CLEANUP_POLICY.KEEP) {
+            message += `\n${getDockerContainerCleanupInstructions(containerName)}`;
+          } else if (
+            cleanupPolicy === DOCKER_CONTAINER_CLEANUP_POLICY.KEEP_ON_FAIL
+          ) {
+            message += `\nContainer kept because the command failed.`;
+            message += `\nRemove when done: docker rm -f ${containerName}`;
+          }
+
           resolve({
-            success: code === 0,
+            success: exitCode === 0,
             containerName,
             message,
-            exitCode: code,
+            exitCode,
           });
         });
 

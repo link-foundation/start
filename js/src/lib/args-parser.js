@@ -19,7 +19,10 @@
  * --isolated-user, -u [username]   Create isolated user with same permissions (auto-generated name if not specified)
  * --keep-user                      Keep isolated user after command completes (don't delete)
  * --keep-alive, -k                 Keep isolation environment alive after command exits
- * --auto-remove-docker-container   Automatically remove docker container after exit (disabled by default)
+ * --auto-remove-docker-container   Always remove docker container after exit (compatibility alias)
+ * --always-cleanup-container       Always remove docker container after exit (default)
+ * --keep-container                 Keep docker container filesystem after exit
+ * --keep-container-on-fail         Remove successful docker containers, keep failed ones
  * --shell <shell>                  Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
  * --use-command-stream             Use command-stream library for command execution (experimental)
  * --verbose                        Enable verbose/debug output (sets START_VERBOSE=1)
@@ -181,7 +184,10 @@ function parseArgs(args) {
     userName: null, // Optional custom username for isolated user
     keepUser: false, // Keep isolated user after command completes (don't delete)
     keepAlive: false, // Keep environment alive after command exits
-    autoRemoveDockerContainer: false, // Auto-remove docker container after exit
+    autoRemoveDockerContainer: false, // Always remove docker container after exit (compatibility alias)
+    alwaysCleanupContainer: false, // Explicitly request default always-cleanup docker policy
+    keepContainer: false, // Keep docker container filesystem after exit
+    keepContainerOnFail: false, // Keep docker container filesystem only when command fails
     shell: 'auto', // Shell to use in isolation environments: auto, bash, zsh, sh
     useCommandStream: false, // Use command-stream library for command execution
     status: null, // UUID to show status for
@@ -449,6 +455,24 @@ function parseOption(args, index, options) {
     return 1;
   }
 
+  // --always-cleanup-container
+  if (arg === '--always-cleanup-container') {
+    options.alwaysCleanupContainer = true;
+    return 1;
+  }
+
+  // --keep-container
+  if (arg === '--keep-container') {
+    options.keepContainer = true;
+    return 1;
+  }
+
+  // --keep-container-on-fail
+  if (arg === '--keep-container-on-fail') {
+    options.keepContainerOnFail = true;
+    return 1;
+  }
+
   // --shell <shell>
   if (arg === '--shell') {
     if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
@@ -649,6 +673,35 @@ function validateDockerRuntimeOptionsRequireDocker(options) {
   }
 }
 
+function validateDockerCleanupOptions(options, hasDocker) {
+  const cleanupFlags = [
+    ['--auto-remove-docker-container', options.autoRemoveDockerContainer],
+    ['--always-cleanup-container', options.alwaysCleanupContainer],
+    ['--keep-container', options.keepContainer],
+    ['--keep-container-on-fail', options.keepContainerOnFail],
+  ];
+
+  for (const [flag, enabled] of cleanupFlags) {
+    if (enabled && !hasDocker) {
+      throw new Error(
+        `${flag} option is only valid when isolation stack includes docker`
+      );
+    }
+  }
+
+  const selectedPolicies = [
+    options.autoRemoveDockerContainer || options.alwaysCleanupContainer,
+    options.keepContainer,
+    options.keepContainerOnFail,
+  ].filter(Boolean).length;
+
+  if (selectedPolicies > 1) {
+    throw new Error(
+      'Cannot combine docker container cleanup policies. Choose only one of --always-cleanup-container, --keep-container, or --keep-container-on-fail.'
+    );
+  }
+}
+
 /**
  * Validate parsed options
  * @param {object} options - Parsed options
@@ -764,12 +817,7 @@ function validateOptions(options) {
       );
     }
 
-    // Auto-remove-docker-container is only valid with docker in stack
-    if (options.autoRemoveDockerContainer && !stack.includes('docker')) {
-      throw new Error(
-        '--auto-remove-docker-container option is only valid when isolation stack includes docker'
-      );
-    }
+    validateDockerCleanupOptions(options, stack.includes('docker'));
 
     // Docker runtime options (--volume, --mount, --env, --privileged) require docker
     if (!stack.includes('docker')) {
@@ -785,11 +833,7 @@ function validateOptions(options) {
     }
   } else {
     // Validate options that require isolation when no isolation is specified
-    if (options.autoRemoveDockerContainer) {
-      throw new Error(
-        '--auto-remove-docker-container option is only valid when isolation stack includes docker'
-      );
-    }
+    validateDockerCleanupOptions(options, false);
     if (options.image) {
       throw new Error(
         '--image option is only valid when isolation stack includes docker'
