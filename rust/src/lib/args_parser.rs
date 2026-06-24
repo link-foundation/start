@@ -26,7 +26,7 @@
 //! --status <uuid-or-session-name>  Show status of a tracked execution
 //! --list                           List all tracked command executions
 //! --upload-log <uuid-or-session>   Upload the stored log for a tracked execution
-//! --stop <uuid-or-session-name>    Send CTRL+C/SIGINT to a detached execution
+//! --stop <uuid-or-session-name>    Ask a detached execution to stop gracefully
 //! --terminate <uuid-or-session-name> Terminate a detached execution immediately
 
 use std::env;

@@ -4,11 +4,11 @@
 
 Use the tracked `sessionName` and `isolated` backend to call the native tool:
 
-| Backend | `--stop`                                  | `--terminate`                    |
-| ------- | ----------------------------------------- | -------------------------------- |
-| screen  | `screen -S <session> -X stuff <Ctrl-C>`   | `screen -S <session> -X quit`    |
-| tmux    | `tmux send-keys -t <session> C-c`         | `tmux kill-session -t <session>` |
-| docker  | `docker kill --signal=SIGINT <container>` | `docker kill <container>`        |
+| Backend | `--stop`                                | `--terminate`                    |
+| ------- | --------------------------------------- | -------------------------------- |
+| screen  | `screen -S <session> -X stuff <Ctrl-C>` | `screen -S <session> -X quit`    |
+| tmux    | `tmux send-keys -t <session> C-c`       | `tmux kill-session -t <session>` |
+| docker  | `docker stop <container>`               | `docker kill <container>`        |
 
 Advantages:
 
@@ -16,6 +16,8 @@ Advantages:
 - Does not require start-command to keep a live supervisor process.
 - Works by UUID or session name because records already store session names.
 - Keeps graceful and immediate termination semantics separate.
+- Uses Docker's container stop lifecycle for `--stop`, including the configured
+  stop signal and forced-kill fallback.
 
 Trade-offs:
 

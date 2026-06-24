@@ -197,9 +197,9 @@ function getControlCommand(record, action) {
       case 'docker':
         return {
           command: 'docker',
-          args: ['kill', '--signal=SIGINT', sessionName],
-          method: 'SIGINT',
-          message: `Sent SIGINT to detached docker container: ${sessionName}`,
+          args: ['stop', sessionName],
+          method: 'DOCKER_STOP',
+          message: `Requested graceful stop for detached docker container: ${sessionName}`,
         };
       default:
         return {

@@ -30,7 +30,7 @@
  * --list                           List all tracked command executions
  * --upload-log <uuid-or-session>    Upload the stored log for a tracked execution
  * --output-format <format>         Output format for status/list (links-notation, json, text)
- * --stop <uuid-or-session-name>     Send CTRL+C/SIGINT to a detached execution
+ * --stop <uuid-or-session-name>     Ask a detached execution to stop gracefully
  * --terminate <uuid-or-session-name> Terminate a detached execution immediately
  * --cleanup                        Clean up stale "executing" records (processes that crashed or were killed)
  * --cleanup-dry-run                Show stale records that would be cleaned up (without actually cleaning)

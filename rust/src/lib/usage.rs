@@ -34,7 +34,7 @@ Options:
   --status <id>         Show status of execution by UUID or session name (--output-format: links-notation|json|text)
   --list                List all tracked executions (--output-format: links-notation|json|text)
   --upload-log <id>     Upload the stored log for an execution UUID or session name
-  --stop <id>           Send CTRL+C/SIGINT to a detached isolated execution
+  --stop <id>           Ask a detached isolated execution to stop gracefully
   --terminate <id>      Terminate a detached isolated execution immediately
   --cleanup             Clean up stale "executing" records (crashed/killed processes)
   --cleanup-dry-run     Show stale records that would be cleaned up (without cleaning)

@@ -133,6 +133,40 @@ fn stop_sends_screen_control_command() {
 }
 
 #[test]
+fn stop_sends_docker_stop() {
+    let record = detached_record(Some(HashMap::from([
+        ("isolated".to_string(), json!("docker")),
+        ("sessionName".to_string(), json!("docker-session")),
+        ("containerId".to_string(), json!("abc123")),
+    ])));
+    let (_temp_dir, store) = store_with_record(&record);
+    let runner = FakeRunner::default().with_response(
+        "docker inspect -f {{.Id}} {{.State.Pid}} docker-session",
+        success("abcdef 0\n"),
+    );
+
+    let result = control_execution_with_runner(
+        Some(&store),
+        "control-test-uuid",
+        ControlAction::Stop,
+        &runner,
+    );
+
+    assert!(result.success);
+    let output = result.output.unwrap();
+    assert!(output.contains("action stop"));
+    assert!(output.contains("method DOCKER_STOP"));
+    assert!(output.contains("containerId abcdef"));
+    assert_eq!(
+        runner.calls()[0],
+        (
+            "docker".to_string(),
+            vec!["stop".to_string(), "docker-session".to_string()],
+        )
+    );
+}
+
+#[test]
 fn terminate_sends_docker_kill() {
     let record = detached_record(Some(HashMap::from([
         ("isolated".to_string(), json!("docker")),

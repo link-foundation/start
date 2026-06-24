@@ -174,8 +174,8 @@ looks up the stored `logPath`, installs `gh-upload-log` with Bun or npm if the
 uploader is missing, and then streams the uploader output directly.
 
 `--stop` and `--terminate` accept either the execution UUID or the isolation
-session/container name. `--stop` sends the graceful interrupt for the backend
-(CTRL+C for screen/tmux, `SIGINT` for Docker). `--terminate` uses the backend's
+session/container name. `--stop` asks the backend to stop gracefully (CTRL+C for
+screen/tmux, `docker stop` for Docker). `--terminate` uses the backend's
 immediate termination command.
 
 ### Exit Code Display
@@ -300,22 +300,22 @@ This is useful for:
 
 #### Isolation Options
 
-| Option                           | Description                                               |
-| -------------------------------- | --------------------------------------------------------- |
-| `--isolated, --isolation, -i`    | Isolation environment (screen, tmux, docker, ssh)         |
-| `--attached, -a`                 | Run in attached/foreground mode (default)                 |
-| `--detached, -d`                 | Run in detached/background mode                           |
-| `--session, -s`                  | Custom session/container name                             |
-| `--image`                        | Docker image (optional; defaults to OS-matched image)     |
-| `--volume, -v`                   | Docker bind mount/volume `host:container[:mode]` (repeatable, docker only) |
-| `--mount`                        | Docker `--mount` spec (repeatable, docker only)           |
+| Option                           | Description                                                                  |
+| -------------------------------- | ---------------------------------------------------------------------------- |
+| `--isolated, --isolation, -i`    | Isolation environment (screen, tmux, docker, ssh)                            |
+| `--attached, -a`                 | Run in attached/foreground mode (default)                                    |
+| `--detached, -d`                 | Run in detached/background mode                                              |
+| `--session, -s`                  | Custom session/container name                                                |
+| `--image`                        | Docker image (optional; defaults to OS-matched image)                        |
+| `--volume, -v`                   | Docker bind mount/volume `host:container[:mode]` (repeatable, docker only)   |
+| `--mount`                        | Docker `--mount` spec (repeatable, docker only)                              |
 | `--env, -e`                      | Environment variable `KEY=VALUE` for the container (repeatable, docker only) |
-| `--privileged`                   | Run docker container in privileged mode (docker only)     |
-| `--endpoint`                     | SSH endpoint (required for ssh, e.g., user@host)          |
-| `--isolated-user, -u [name]`     | Create isolated user with same permissions (screen/tmux)  |
-| `--keep-user`                    | Keep isolated user after command completes (don't delete) |
-| `--keep-alive, -k`               | Keep session alive after command completes                |
-| `--auto-remove-docker-container` | Auto-remove docker container after exit (docker only)     |
+| `--privileged`                   | Run docker container in privileged mode (docker only)                        |
+| `--endpoint`                     | SSH endpoint (required for ssh, e.g., user@host)                             |
+| `--isolated-user, -u [name]`     | Create isolated user with same permissions (screen/tmux)                     |
+| `--keep-user`                    | Keep isolated user after command completes (don't delete)                    |
+| `--keep-alive, -k`               | Keep session alive after command completes                                   |
+| `--auto-remove-docker-container` | Auto-remove docker container after exit (docker only)                        |
 
 **Note:** Using both `--attached` and `--detached` together will result in an error - you must choose one mode.
 
