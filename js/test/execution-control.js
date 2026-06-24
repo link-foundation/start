@@ -136,6 +136,46 @@ describe('execution control', () => {
     });
   });
 
+  it('should stop a detached docker container with docker stop', () => {
+    const store = createStore();
+    store.save(
+      createDetachedRecord({
+        uuid: 'docker-control-uuid',
+        options: {
+          isolated: 'docker',
+          isolationMode: 'detached',
+          sessionName: 'docker-session',
+          containerId: 'abc123',
+        },
+      })
+    );
+    const runner = createRunner({
+      'docker inspect -f {{.Id}} {{.State.Pid}} docker-session': {
+        success: true,
+        stdout: 'abcdef 0\n',
+        stderr: '',
+        status: 0,
+        error: null,
+      },
+    });
+
+    const result = controlExecution(
+      store,
+      'docker-control-uuid',
+      ControlAction.STOP,
+      runner
+    );
+
+    assert.strictEqual(result.success, true);
+    assert.match(result.output, /action stop/);
+    assert.match(result.output, /method DOCKER_STOP/);
+    assert.match(result.output, /containerId abcdef/);
+    assert.deepStrictEqual(runner.calls[0], {
+      command: 'docker',
+      args: ['stop', 'docker-session'],
+    });
+  });
+
   it('should send docker terminate through docker kill', () => {
     const store = createStore();
     store.save(

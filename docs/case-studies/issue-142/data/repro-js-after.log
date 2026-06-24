@@ -1,0 +1,14 @@
+bun test v1.3.14 (0d9b296a)
+
+js/test/execution-control.js:
+(pass) execution control > should map screen stop to CTRL+C injection [0.74ms]
+(pass) execution control > should send stop command to a detached screen session [2.98ms]
+(pass) execution control > should stop a detached docker container with docker stop [0.77ms]
+(pass) execution control > should send docker terminate through docker kill [0.86ms]
+(pass) execution control > should reject non-detached records [0.91ms]
+(pass) process id collection > should parse a GNU Screen process id from screen -ls output [0.07ms]
+(pass) process id collection > should collect wrapper, screen, and descendant process IDs [0.11ms]
+
+ 7 pass
+ 0 fail
+Ran 7 tests across 1 file. [48.00ms]

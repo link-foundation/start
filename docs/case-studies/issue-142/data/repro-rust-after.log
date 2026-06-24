@@ -1,0 +1,15 @@
+   Compiling start-command v0.17.0 (/tmp/gh-issue-solver-1782321682461/rust)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.86s
+     Running tests/execution_control.rs (rust/target/debug/deps/execution_control-884bd1a94af5000c)
+
+running 7 tests
+test collects_screen_and_descendant_process_ids ... ok
+test parses_screen_pid_from_screen_ls_output ... ok
+test screen_stop_maps_to_ctrl_c_injection ... ok
+test non_detached_records_are_rejected ... ok
+test stop_sends_screen_control_command ... ok
+test stop_sends_docker_stop ... ok
+test terminate_sends_docker_kill ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

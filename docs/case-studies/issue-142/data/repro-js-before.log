@@ -1,0 +1,44 @@
+bun test v1.3.14 (0d9b296a)
+
+js/test/execution-control.js:
+(pass) execution control > should map screen stop to CTRL+C injection [1.05ms]
+(pass) execution control > should send stop command to a detached screen session [3.11ms]
+166 |       runner
+167 |     );
+168 | 
+169 |     assert.strictEqual(result.success, true);
+170 |     assert.match(result.output, /action stop/);
+171 |     assert.match(result.output, /method DOCKER_STOP/);
+                 ^
+AssertionError: The input did not match the regular expression /method DOCKER_STOP/. Input:
+
+'executionControl\n' +
+  '  action stop\n' +
+  '  identifier docker-control-uuid\n' +
+  '  uuid docker-control-uuid\n' +
+  '  status signal-sent\n' +
+  '  backend docker\n' +
+  '  sessionName docker-session\n' +
+  '  method SIGINT\n' +
+  '  processIds\n' +
+  '      wrapperPid 12345\n' +
+  '      containerId abcdef\n' +
+  '  message "Sent SIGINT to detached docker container: docker-session"'
+
+ generatedMessage: true,
+     actual: "executionControl\n  action stop\n  identifier docker-control-uuid\n  uuid docker-control-uuid\n  status signal-sent\n  backend docker\n  sessionName docker-session\n  method SIGINT\n  processIds\n      wrapperPid 12345\n      containerId abcdef\n  message \"Sent SIGINT to detached docker container: docker-session\"",
+   expected: /method DOCKER_STOP/,
+   operator: "match",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1782321682461/js/test/execution-control.js:171:12
+      at fn (node:test:215:18)
+(fail) execution control > should stop a detached docker container with docker stop [5.18ms]
+(pass) execution control > should send docker terminate through docker kill [1.31ms]
+(pass) execution control > should reject non-detached records [0.83ms]
+(pass) process id collection > should parse a GNU Screen process id from screen -ls output [0.10ms]
+(pass) process id collection > should collect wrapper, screen, and descendant process IDs [0.16ms]
+
+ 6 pass
+ 1 fail
+Ran 7 tests across 1 file. [62.00ms]

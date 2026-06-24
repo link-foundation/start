@@ -315,13 +315,12 @@ pub fn get_control_command(
         },
         (ControlAction::Stop, "docker") => ControlCommand {
             command: "docker".to_string(),
-            args: vec![
-                "kill".to_string(),
-                "--signal=SIGINT".to_string(),
-                session_name.to_string(),
-            ],
-            method: "SIGINT".to_string(),
-            message: format!("Sent SIGINT to detached docker container: {}", session_name),
+            args: vec!["stop".to_string(), session_name.to_string()],
+            method: "DOCKER_STOP".to_string(),
+            message: format!(
+                "Requested graceful stop for detached docker container: {}",
+                session_name
+            ),
         },
         (ControlAction::Terminate, "screen") => ControlCommand {
             command: "screen".to_string(),

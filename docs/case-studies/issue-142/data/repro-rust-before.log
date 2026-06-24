@@ -1,0 +1,104 @@
+    Updating crates.io index
+     Locking 70 packages to latest compatible versions
+ Downloading crates ...
+  Downloaded bitflags v2.13.0
+  Downloaded zmij v1.0.21
+  Downloaded links-notation v0.13.0
+  Downloaded option-ext v0.2.0
+  Downloaded itoa v1.0.18
+  Downloaded dirs v6.0.0
+  Downloaded dirs-sys v0.5.0
+  Downloaded iana-time-zone v0.1.65
+  Downloaded aho-corasick v1.1.4
+  Downloaded autocfg v1.5.1
+  Downloaded cfg-if v1.0.4
+  Downloaded base64 v0.22.1
+  Downloaded uuid v1.23.3
+  Downloaded serde_core v1.0.228
+  Downloaded serde v1.0.228
+  Downloaded memchr v2.8.2
+  Downloaded serde_derive v1.0.228
+  Downloaded serde_json v1.0.150
+  Downloaded nom v8.0.0
+  Downloaded proc-macro2 v1.0.106
+  Downloaded regex v1.12.4
+  Downloaded once_cell v1.21.4
+  Downloaded num-traits v0.2.19
+  Downloaded chrono v0.4.45
+  Downloaded getrandom v0.4.3
+  Downloaded quote v1.0.46
+  Downloaded syn v2.0.118
+  Downloaded lino-objects-codec v0.2.1
+  Downloaded fastrand v2.4.1
+  Downloaded regex-syntax v0.8.11
+  Downloaded unicode-ident v1.0.24
+  Downloaded tempfile v3.27.0
+  Downloaded rustix v1.1.4
+  Downloaded errno v0.3.14
+  Downloaded regex-automata v0.4.14
+  Downloaded libc v0.2.186
+  Downloaded linux-raw-sys v0.12.1
+   Compiling libc v0.2.186
+   Compiling memchr v2.8.2
+   Compiling proc-macro2 v1.0.106
+   Compiling quote v1.0.46
+   Compiling unicode-ident v1.0.24
+   Compiling serde_core v1.0.228
+   Compiling getrandom v0.4.3
+   Compiling autocfg v1.5.1
+   Compiling cfg-if v1.0.4
+   Compiling zmij v1.0.21
+   Compiling aho-corasick v1.1.4
+   Compiling nom v8.0.0
+   Compiling num-traits v0.2.19
+   Compiling syn v2.0.118
+   Compiling serde v1.0.228
+   Compiling option-ext v0.2.0
+   Compiling serde_json v1.0.150
+   Compiling regex-syntax v0.8.11
+   Compiling dirs-sys v0.5.0
+   Compiling iana-time-zone v0.1.65
+   Compiling base64 v0.22.1
+   Compiling rustix v1.1.4
+   Compiling itoa v1.0.18
+   Compiling chrono v0.4.45
+   Compiling regex-automata v0.4.14
+   Compiling serde_derive v1.0.228
+   Compiling links-notation v0.13.0
+   Compiling lino-objects-codec v0.2.1
+   Compiling dirs v6.0.0
+   Compiling uuid v1.23.3
+   Compiling linux-raw-sys v0.12.1
+   Compiling bitflags v2.13.0
+   Compiling once_cell v1.21.4
+   Compiling fastrand v2.4.1
+   Compiling regex v1.12.4
+   Compiling start-command v0.17.0 (/tmp/gh-issue-solver-1782321682461/rust)
+   Compiling tempfile v3.27.0
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13.28s
+     Running tests/execution_control.rs (rust/target/debug/deps/execution_control-884bd1a94af5000c)
+
+running 7 tests
+test parses_screen_pid_from_screen_ls_output ... ok
+test collects_screen_and_descendant_process_ids ... ok
+test screen_stop_maps_to_ctrl_c_injection ... ok
+test non_detached_records_are_rejected ... ok
+test stop_sends_screen_control_command ... ok
+test stop_sends_docker_stop ... FAILED
+test terminate_sends_docker_kill ... ok
+
+failures:
+
+---- stop_sends_docker_stop stdout ----
+
+thread 'stop_sends_docker_stop' (5070) panicked at tests/execution_control.rs:158:5:
+assertion failed: output.contains("method DOCKER_STOP")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    stop_sends_docker_stop
+
+test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--test execution_control`
