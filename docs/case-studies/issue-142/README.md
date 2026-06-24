@@ -22,6 +22,9 @@ container executing. The issue data shows that the command sent `SIGINT` with
 - Focused regression test success after the fix:
   [data/repro-js-after.log](data/repro-js-after.log),
   [data/repro-rust-after.log](data/repro-rust-after.log)
+- Post-push CI metadata gate failures and logs:
+  [ci-logs/javascript-cicd-28117408439.log](ci-logs/javascript-cicd-28117408439.log),
+  [ci-logs/rust-cicd-28117408560.log](ci-logs/rust-cicd-28117408560.log)
 
 ## Implemented Plan
 
