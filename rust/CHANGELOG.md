@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.17.0] - 2026-06-24
+
+Clean up Docker isolation containers by default after completion, preserve host log files, and add explicit `--keep-container`, `--always-cleanup-container`, and `--keep-container-on-fail` cleanup policy flags.
+
 ## [0.16.2] - 2026-06-19
 
 Record the docker image-preparation phase in the session log (issue #138). When a `--isolated docker` run needs to `docker pull` an image, each line of pull output is now teed into the session-log file in real time and bracketed with `Preparing image <name>…` / `Image ready (<duration>)` markers (or `Image preparation failed` on error). Previously the time spent pulling a (potentially multi-GB) image left no trace in the log, so operators tailing the session log during startup saw only the header. The single session-log file is now a gap-free record of the run, including the longest, most failure-prone phase.
