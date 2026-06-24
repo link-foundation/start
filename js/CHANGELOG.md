@@ -1,5 +1,11 @@
 # start-command
 
+## 0.30.0
+
+### Minor Changes
+
+- 3d7fe09: Clean up Docker isolation containers by default after completion, preserve host log files, and add explicit `--keep-container`, `--always-cleanup-container`, and `--keep-container-on-fail` cleanup policy flags.
+
 ## 0.29.2
 
 ### Patch Changes
