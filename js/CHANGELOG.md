@@ -1,5 +1,11 @@
 # start-command
 
+## 0.30.1
+
+### Patch Changes
+
+- 1a040d6: Use `docker stop` for detached Docker `--stop` control so containers follow Docker's graceful stop lifecycle instead of receiving a raw `SIGINT`.
+
 ## 0.30.0
 
 ### Minor Changes
