@@ -625,6 +625,9 @@ fn run_with_isolation(
             user: created_user.clone(),
             keep_alive: wrapper_options.keep_alive,
             auto_remove_docker_container: wrapper_options.auto_remove_docker_container,
+            always_cleanup_container: wrapper_options.always_cleanup_container,
+            keep_container: wrapper_options.keep_container,
+            keep_container_on_fail: wrapper_options.keep_container_on_fail,
             shell: wrapper_options.shell.clone(),
             log_path: Some(log_file_path.clone()),
         };

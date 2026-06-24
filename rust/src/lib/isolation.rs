@@ -7,8 +7,12 @@
 //! - ssh: Remote SSH execution
 
 use std::env;
+use std::fs::OpenOptions;
+use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, ExitStatus, Stdio};
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 use crate::args_parser::generate_session_name;
 
@@ -54,6 +58,12 @@ pub struct IsolationOptions {
     pub keep_alive: bool,
     /// Auto-remove docker container after exit
     pub auto_remove_docker_container: bool,
+    /// Explicitly request default always-cleanup docker policy
+    pub always_cleanup_container: bool,
+    /// Keep docker container filesystem after exit
+    pub keep_container: bool,
+    /// Keep docker container filesystem only when command fails
+    pub keep_container_on_fail: bool,
     /// Shell to use in isolation environments: auto, bash, zsh, sh
     pub shell: String,
     /// Log path where isolation backends should append live output
@@ -74,6 +84,9 @@ impl Default for IsolationOptions {
             user: None,
             keep_alive: false,
             auto_remove_docker_container: false,
+            always_cleanup_container: false,
+            keep_container: false,
+            keep_container_on_fail: false,
             shell: "auto".to_string(),
             log_path: None,
         }
@@ -702,6 +715,257 @@ fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<&str> {
     args
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum DockerContainerCleanupPolicy {
+    Always,
+    Keep,
+    KeepOnFail,
+}
+
+fn get_docker_container_cleanup_policy(options: &IsolationOptions) -> DockerContainerCleanupPolicy {
+    if options.keep_container {
+        DockerContainerCleanupPolicy::Keep
+    } else if options.keep_container_on_fail {
+        DockerContainerCleanupPolicy::KeepOnFail
+    } else {
+        DockerContainerCleanupPolicy::Always
+    }
+}
+
+fn should_cleanup_docker_container(policy: DockerContainerCleanupPolicy, exit_code: i32) -> bool {
+    match policy {
+        DockerContainerCleanupPolicy::Always => true,
+        DockerContainerCleanupPolicy::Keep => false,
+        DockerContainerCleanupPolicy::KeepOnFail => exit_code == 0,
+    }
+}
+
+fn docker_container_cleanup_instructions(container_name: &str) -> String {
+    format!(
+        "Container kept for investigation: {}\nInspect: docker exec -it {} sh (if running) or docker start -ai {}\nRemove when done: docker rm -f {}",
+        container_name, container_name, container_name, container_name
+    )
+}
+
+fn append_docker_container_cleanup_policy_message(
+    message: &mut String,
+    container_name: &str,
+    policy: DockerContainerCleanupPolicy,
+) {
+    match policy {
+        DockerContainerCleanupPolicy::Always => {
+            message.push_str("\nContainer will be removed after command completes.");
+        }
+        DockerContainerCleanupPolicy::Keep => {
+            message.push('\n');
+            message.push_str(&docker_container_cleanup_instructions(container_name));
+        }
+        DockerContainerCleanupPolicy::KeepOnFail => {
+            message.push_str("\nContainer will be removed after successful completion.");
+            message.push_str("\nContainer will be kept if the command fails.");
+            message.push_str(&format!(
+                "\nRemove when done: docker rm -f {}",
+                container_name
+            ));
+        }
+    }
+}
+
+fn remove_docker_container(container_name: &str, log_path: Option<&PathBuf>) -> bool {
+    let output = Command::new("docker")
+        .args(["rm", "-f", container_name])
+        .output();
+    match output {
+        Ok(output) => {
+            if let Some(path) = log_path {
+                let mut combined = String::new();
+                combined.push_str(&String::from_utf8_lossy(&output.stdout));
+                combined.push_str(&String::from_utf8_lossy(&output.stderr));
+                if !combined.is_empty() {
+                    let content = if combined.ends_with('\n') {
+                        combined
+                    } else {
+                        format!("{}\n", combined)
+                    };
+                    crate::isolation::isolation_log::append_log_file(path, &content);
+                }
+            }
+            output.status.success()
+        }
+        Err(_) => false,
+    }
+}
+
+fn build_detached_docker_completion_script(
+    container_name: &str,
+    policy: DockerContainerCleanupPolicy,
+    log_path: Option<&PathBuf>,
+) -> String {
+    let quoted_name = crate::isolation::isolation_log::shell_quote(container_name);
+    let mut parts = Vec::new();
+
+    if let Some(path) = log_path {
+        let log_path_string = path.to_string_lossy().to_string();
+        let quoted_log_path = crate::isolation::isolation_log::shell_quote(&log_path_string);
+        parts.push(format!(
+            "docker logs -f {} >> {} 2>&1",
+            quoted_name, quoted_log_path
+        ));
+        parts.push(format!(
+            "__start_command_exit=$(docker inspect -f '{{{{.State.ExitCode}}}}' {} 2>/dev/null || printf '%s' '-1')",
+            quoted_name
+        ));
+        match policy {
+            DockerContainerCleanupPolicy::Always => parts.push(format!(
+                "docker rm -f {} >> {} 2>&1 || true",
+                quoted_name, quoted_log_path
+            )),
+            DockerContainerCleanupPolicy::KeepOnFail => parts.push(format!(
+                "if [ \"$__start_command_exit\" -eq 0 ] 2>/dev/null; then docker rm -f {} >> {} 2>&1 || true; fi",
+                quoted_name, quoted_log_path
+            )),
+            DockerContainerCleanupPolicy::Keep => {}
+        }
+        parts.push(format!(
+            "{} >> {}",
+            crate::isolation::isolation_log::create_shell_log_footer_snippet(),
+            quoted_log_path
+        ));
+    } else {
+        parts.push(format!("docker wait {} >/dev/null 2>&1", quoted_name));
+        parts.push(format!(
+            "__start_command_exit=$(docker inspect -f '{{{{.State.ExitCode}}}}' {} 2>/dev/null || printf '%s' '-1')",
+            quoted_name
+        ));
+        match policy {
+            DockerContainerCleanupPolicy::Always => parts.push(format!(
+                "docker rm -f {} >/dev/null 2>&1 || true",
+                quoted_name
+            )),
+            DockerContainerCleanupPolicy::KeepOnFail => parts.push(format!(
+                "if [ \"$__start_command_exit\" -eq 0 ] 2>/dev/null; then docker rm -f {} >/dev/null 2>&1 || true; fi",
+                quoted_name
+            )),
+            DockerContainerCleanupPolicy::Keep => {}
+        }
+    }
+
+    parts.join("; ")
+}
+
+fn start_detached_docker_completion_watcher(
+    container_name: &str,
+    policy: DockerContainerCleanupPolicy,
+    log_path: Option<&PathBuf>,
+) {
+    let script = build_detached_docker_completion_script(container_name, policy, log_path);
+    let _ = Command::new("sh")
+        .args(["-c", &script])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
+}
+
+struct AttachedDockerChild {
+    child: Child,
+    stdout_thread: Option<thread::JoinHandle<()>>,
+    stderr_thread: Option<thread::JoinHandle<()>>,
+}
+
+impl AttachedDockerChild {
+    fn wait(mut self) -> std::io::Result<ExitStatus> {
+        let status = self.child.wait();
+        if let Some(handle) = self.stdout_thread.take() {
+            let _ = handle.join();
+        }
+        if let Some(handle) = self.stderr_thread.take() {
+            let _ = handle.join();
+        }
+        status
+    }
+}
+
+fn spawn_attached_docker(
+    args: &[&str],
+    log_path: Option<&PathBuf>,
+) -> std::io::Result<AttachedDockerChild> {
+    if log_path.is_none() {
+        let child = Command::new("docker")
+            .args(args)
+            .stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn()?;
+        return Ok(AttachedDockerChild {
+            child,
+            stdout_thread: None,
+            stderr_thread: None,
+        });
+    }
+
+    let mut child = Command::new("docker")
+        .args(args)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log_path.unwrap())?;
+    let shared_log = Arc::new(Mutex::new(file));
+
+    let mut stdout_thread = None;
+    let mut stderr_thread = None;
+
+    if let Some(mut stdout) = child.stdout.take() {
+        let log = Arc::clone(&shared_log);
+        stdout_thread = Some(thread::spawn(move || {
+            let mut buffer = [0_u8; 8192];
+            let mut terminal = std::io::stdout();
+            while let Ok(size) = stdout.read(&mut buffer) {
+                if size == 0 {
+                    break;
+                }
+                let chunk = &buffer[..size];
+                let _ = terminal.write_all(chunk);
+                let _ = terminal.flush();
+                if let Ok(mut file) = log.lock() {
+                    let _ = file.write_all(chunk);
+                    let _ = file.flush();
+                }
+            }
+        }));
+    }
+
+    if let Some(mut stderr) = child.stderr.take() {
+        let log = Arc::clone(&shared_log);
+        stderr_thread = Some(thread::spawn(move || {
+            let mut buffer = [0_u8; 8192];
+            let mut terminal = std::io::stderr();
+            while let Ok(size) = stderr.read(&mut buffer) {
+                if size == 0 {
+                    break;
+                }
+                let chunk = &buffer[..size];
+                let _ = terminal.write_all(chunk);
+                let _ = terminal.flush();
+                if let Ok(mut file) = log.lock() {
+                    let _ = file.write_all(chunk);
+                    let _ = file.flush();
+                }
+            }
+        }));
+    }
+
+    Ok(AttachedDockerChild {
+        child,
+        stdout_thread,
+        stderr_thread,
+    })
+}
+
 /// Run command in Docker container
 pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResult {
     if !is_command_available("docker") {
@@ -744,6 +1008,7 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         .session
         .clone()
         .unwrap_or_else(|| generate_session_name(Some("docker")));
+    let cleanup_policy = get_docker_container_cleanup_policy(options);
 
     // Detect the shell to use in the container
     let shell_to_use = detect_shell_in_environment("docker", options);
@@ -763,10 +1028,6 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         };
 
         let mut args = vec!["run", "-d", "--name", &container_name];
-
-        if options.auto_remove_docker_container {
-            args.push("--rm");
-        }
 
         if let Some(ref user) = options.user {
             args.push("--user");
@@ -792,19 +1053,13 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                 let container_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
                 if let Some(log_path) = options.log_path.as_ref() {
-                    let logger_script = format!(
-                        "docker logs -f {} >> {} 2>&1; __start_command_exit=$(docker inspect -f '{{{{.State.ExitCode}}}}' {} 2>/dev/null || printf '%s' '-1'); {} >> {}",
-                        crate::isolation::isolation_log::shell_quote(&container_name),
-                        crate::isolation::isolation_log::shell_quote(&log_path.to_string_lossy()),
-                        crate::isolation::isolation_log::shell_quote(&container_name),
-                        crate::isolation::isolation_log::create_shell_log_footer_snippet(),
-                        crate::isolation::isolation_log::shell_quote(&log_path.to_string_lossy())
+                    start_detached_docker_completion_watcher(
+                        &container_name,
+                        cleanup_policy,
+                        Some(log_path),
                     );
-                    let _ = Command::new("sh")
-                        .args(["-c", &logger_script])
-                        .stdout(Stdio::null())
-                        .stderr(Stdio::null())
-                        .spawn();
+                } else {
+                    start_detached_docker_completion_watcher(&container_name, cleanup_policy, None);
                 }
 
                 let mut message = format!(
@@ -821,11 +1076,11 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                     message
                         .push_str("\nContainer will exit automatically after command completes.");
                 }
-                if options.auto_remove_docker_container {
-                    message.push_str("\nContainer will be automatically removed after exit.");
-                } else {
-                    message.push_str("\nContainer filesystem will be preserved after exit.");
-                }
+                append_docker_container_cleanup_policy_message(
+                    &mut message,
+                    &container_name,
+                    cleanup_policy,
+                );
                 message.push_str(&format!("\nAttach with: docker attach {}", container_name));
                 message.push_str(&format!("\nView logs: docker logs {}", container_name));
                 if let Some(log_path) = options.log_path.as_ref() {
@@ -858,7 +1113,9 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         }
     } else {
         // Attached mode
-        let mut args = vec!["run", "-it", "--rm", "--name", &container_name];
+        let mut args = vec!["run"];
+        args.push(if has_tty() { "-it" } else { "-i" });
+        args.extend(["--name", &container_name]);
 
         if let Some(ref user) = options.user {
             args.push("--user");
@@ -878,19 +1135,52 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         }
         args.extend(&["-c", command]);
 
-        let status = Command::new("docker").args(&args).status();
+        let child = spawn_attached_docker(&args, options.log_path.as_ref());
 
-        match status {
-            Ok(s) => IsolationResult {
-                success: s.success(),
-                session_name: Some(container_name.clone()),
-                message: format!(
-                    "Docker container \"{}\" exited with code {}",
-                    container_name,
-                    s.code().unwrap_or(-1)
-                ),
-                exit_code: s.code(),
-                ..Default::default()
+        match child {
+            Ok(child) => match child.wait() {
+                Ok(s) => {
+                    let exit_code = s.code().unwrap_or(1);
+                    let mut message = format!(
+                        "Docker container \"{}\" exited with code {}",
+                        container_name, exit_code
+                    );
+                    if should_cleanup_docker_container(cleanup_policy, exit_code) {
+                        if remove_docker_container(&container_name, options.log_path.as_ref()) {
+                            message.push_str("\nContainer removed after completion.");
+                        } else {
+                            message
+                                .push_str("\nWarning: failed to remove container automatically.");
+                            message.push_str(&format!(
+                                "\nRemove when done: docker rm -f {}",
+                                container_name
+                            ));
+                        }
+                    } else if cleanup_policy == DockerContainerCleanupPolicy::Keep {
+                        message.push('\n');
+                        message.push_str(&docker_container_cleanup_instructions(&container_name));
+                    } else if cleanup_policy == DockerContainerCleanupPolicy::KeepOnFail {
+                        message.push_str("\nContainer kept because the command failed.");
+                        message.push_str(&format!(
+                            "\nRemove when done: docker rm -f {}",
+                            container_name
+                        ));
+                    }
+
+                    IsolationResult {
+                        success: s.success(),
+                        session_name: Some(container_name.clone()),
+                        message,
+                        exit_code: Some(exit_code),
+                        ..Default::default()
+                    }
+                }
+                Err(e) => IsolationResult {
+                    success: false,
+                    session_name: Some(container_name),
+                    message: format!("Failed to wait for docker: {}", e),
+                    ..Default::default()
+                },
             },
             Err(e) => IsolationResult {
                 success: false,

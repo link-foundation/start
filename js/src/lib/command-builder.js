@@ -84,8 +84,19 @@ function buildNextLevelCommand(options, command) {
     parts.push(`--session-id ${options.sessionId}`);
   }
 
-  if (options.autoRemoveDockerContainer) {
-    parts.push('--auto-remove-docker-container');
+  if (remainingStack.includes('docker')) {
+    if (options.autoRemoveDockerContainer) {
+      parts.push('--auto-remove-docker-container');
+    }
+    if (options.alwaysCleanupContainer) {
+      parts.push('--always-cleanup-container');
+    }
+    if (options.keepContainer) {
+      parts.push('--keep-container');
+    }
+    if (options.keepContainerOnFail) {
+      parts.push('--keep-container-on-fail');
+    }
   }
 
   if (options.shell && options.shell !== 'auto') {

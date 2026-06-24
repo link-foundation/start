@@ -243,9 +243,56 @@ mod basic_command_parsing {
     }
 
     #[test]
+    fn should_parse_always_cleanup_container_flag() {
+        let result = parse_args(&args(&[
+            "--isolated",
+            "docker",
+            "--always-cleanup-container",
+            "--",
+            "ls",
+        ]))
+        .unwrap();
+        assert!(result.wrapper_options.always_cleanup_container);
+    }
+
+    #[test]
+    fn should_parse_keep_container_flag() {
+        let result = parse_args(&args(&[
+            "--isolated",
+            "docker",
+            "--keep-container",
+            "--",
+            "ls",
+        ]))
+        .unwrap();
+        assert!(result.wrapper_options.keep_container);
+    }
+
+    #[test]
+    fn should_parse_keep_container_on_fail_flag() {
+        let result = parse_args(&args(&[
+            "--isolated",
+            "docker",
+            "--keep-container-on-fail",
+            "--",
+            "ls",
+        ]))
+        .unwrap();
+        assert!(result.wrapper_options.keep_container_on_fail);
+    }
+
+    #[test]
     fn should_default_auto_remove_docker_container_to_false() {
         let result = parse_args(&args(&["ls"])).unwrap();
         assert!(!result.wrapper_options.auto_remove_docker_container);
+    }
+
+    #[test]
+    fn should_default_new_cleanup_flags_to_false() {
+        let result = parse_args(&args(&["ls"])).unwrap();
+        assert!(!result.wrapper_options.always_cleanup_container);
+        assert!(!result.wrapper_options.keep_container);
+        assert!(!result.wrapper_options.keep_container_on_fail);
     }
 
     #[test]
@@ -261,9 +308,33 @@ mod basic_command_parsing {
     }
 
     #[test]
+    fn should_error_for_new_cleanup_flags_without_docker_isolation() {
+        for flag in [
+            "--always-cleanup-container",
+            "--keep-container",
+            "--keep-container-on-fail",
+        ] {
+            let result = parse_args(&args(&["--isolated", "screen", flag, "--", "ls"]));
+            assert!(result.is_err(), "{} should require docker isolation", flag);
+        }
+    }
+
+    #[test]
     fn should_error_for_auto_remove_without_isolation() {
         let result = parse_args(&args(&["--auto-remove-docker-container", "--", "ls"]));
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn should_error_for_new_cleanup_flags_without_isolation() {
+        for flag in [
+            "--always-cleanup-container",
+            "--keep-container",
+            "--keep-container-on-fail",
+        ] {
+            let result = parse_args(&args(&[flag, "--", "ls"]));
+            assert!(result.is_err(), "{} should require docker isolation", flag);
+        }
     }
 
     #[test]
@@ -279,6 +350,29 @@ mod basic_command_parsing {
         .unwrap();
         assert!(result.wrapper_options.keep_alive);
         assert!(result.wrapper_options.auto_remove_docker_container);
+    }
+
+    #[test]
+    fn should_reject_conflicting_docker_cleanup_options() {
+        let keep_and_always = parse_args(&args(&[
+            "--isolated",
+            "docker",
+            "--keep-container",
+            "--always-cleanup-container",
+            "--",
+            "ls",
+        ]));
+        assert!(keep_and_always.is_err());
+
+        let keep_and_keep_on_fail = parse_args(&args(&[
+            "--isolated",
+            "docker",
+            "--keep-container",
+            "--keep-container-on-fail",
+            "--",
+            "ls",
+        ]));
+        assert!(keep_and_keep_on_fail.is_err());
     }
 
     #[test]
