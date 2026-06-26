@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.17.2] - 2026-06-26
+
+Surface detached Docker OOMKilled status and preserve abnormal containers under the default cleanup policy.
+
 ## [0.17.1] - 2026-06-24
 
 Use `docker stop` for detached Docker `--stop` control so Docker isolation containers stop reliably while `--terminate` remains immediate.
