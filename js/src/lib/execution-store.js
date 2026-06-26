@@ -14,6 +14,7 @@
  * - logPath: Path to the log file
  * - startTime: Timestamp when execution started
  * - endTime: Timestamp when execution completed (null while executing)
+ * - oomKilled: Docker resource-exhaustion signal when available
  * - options: Execution options (isolation mode, etc.)
  */
 
@@ -73,6 +74,8 @@ class ExecutionRecord {
     this.logPath = options.logPath || '';
     this.startTime = options.startTime || new Date().toISOString();
     this.endTime = options.endTime || null;
+    this.oomKilled =
+      options.oomKilled !== undefined ? options.oomKilled : undefined;
     this.workingDirectory = options.workingDirectory || process.cwd();
     this.shell = options.shell || process.env.SHELL || '/bin/sh';
     this.platform = options.platform || process.platform;
@@ -93,7 +96,7 @@ class ExecutionRecord {
    * Convert to plain object for serialization
    */
   toObject() {
-    return {
+    const obj = {
       uuid: this.uuid,
       pid: this.pid,
       status: this.status,
@@ -102,11 +105,17 @@ class ExecutionRecord {
       logPath: this.logPath,
       startTime: this.startTime,
       endTime: this.endTime,
+    };
+    if (this.oomKilled !== undefined && this.oomKilled !== null) {
+      obj.oomKilled = this.oomKilled;
+    }
+    Object.assign(obj, {
       workingDirectory: this.workingDirectory,
       shell: this.shell,
       platform: this.platform,
       options: this.options,
-    };
+    });
+    return obj;
   }
 
   /**

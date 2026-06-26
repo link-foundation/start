@@ -14,8 +14,8 @@ use crate::args_parser::generate_session_name;
 use crate::docker_cleanup::{
     append_docker_container_cleanup_policy_message, build_docker_runtime_args,
     docker_container_cleanup_instructions, get_docker_container_cleanup_policy,
-    remove_docker_container, should_cleanup_docker_container, spawn_attached_docker,
-    start_detached_docker_completion_watcher, DockerContainerCleanupPolicy,
+    read_docker_container_oom_killed, remove_docker_container, should_cleanup_docker_container,
+    spawn_attached_docker, start_detached_docker_completion_watcher, DockerContainerCleanupPolicy,
 };
 
 /// Result of an isolation run
@@ -60,11 +60,11 @@ pub struct IsolationOptions {
     pub keep_alive: bool,
     /// Auto-remove docker container after exit
     pub auto_remove_docker_container: bool,
-    /// Explicitly request default always-cleanup docker policy
+    /// Force docker container cleanup after exit
     pub always_cleanup_container: bool,
     /// Keep docker container filesystem after exit
     pub keep_container: bool,
-    /// Keep docker container filesystem only when command fails
+    /// Keep docker container filesystem when command fails or OOM-kills
     pub keep_container_on_fail: bool,
     /// Shell to use in isolation environments: auto, bash, zsh, sh
     pub shell: String,
@@ -873,7 +873,9 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                         "Docker container \"{}\" exited with code {}",
                         container_name, exit_code
                     );
-                    if should_cleanup_docker_container(cleanup_policy, exit_code) {
+                    let oom_killed =
+                        read_docker_container_oom_killed(&container_name).unwrap_or(false);
+                    if should_cleanup_docker_container(cleanup_policy, exit_code, oom_killed) {
                         if remove_docker_container(&container_name, options.log_path.as_ref()) {
                             message.push_str("\nContainer removed after completion.");
                         } else {
@@ -887,8 +889,18 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                     } else if cleanup_policy == DockerContainerCleanupPolicy::Keep {
                         message.push('\n');
                         message.push_str(&docker_container_cleanup_instructions(&container_name));
-                    } else if cleanup_policy == DockerContainerCleanupPolicy::KeepOnFail {
-                        message.push_str("\nContainer kept because the command failed.");
+                    } else if matches!(
+                        cleanup_policy,
+                        DockerContainerCleanupPolicy::KeepOnFail
+                            | DockerContainerCleanupPolicy::Default
+                    ) {
+                        if oom_killed {
+                            message.push_str(
+                                "\nContainer kept because Docker reports it was OOM-killed.",
+                            );
+                        } else {
+                            message.push_str("\nContainer kept because the command failed.");
+                        }
                         message.push_str(&format!(
                             "\nRemove when done: docker rm -f {}",
                             container_name

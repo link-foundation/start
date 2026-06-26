@@ -30,23 +30,30 @@ const { collectProcessIds } = require('./execution-control');
  * instead of fabricating a terminal `-1` result.
  *
  * @param {string} sessionName - Container name
- * @returns {{running: boolean, exitCode: number|null}|null} State, or null when
- *   the container cannot be inspected (not found yet, removed, or docker error)
+ * @returns {{running: boolean, exitCode: number|null, oomKilled: boolean|null}|null} State,
+ *   or null when the container cannot be inspected (not found yet, removed, or docker error)
  */
 function inspectDockerState(sessionName) {
   const result = spawnSync(
     'docker',
-    ['inspect', '-f', '{{.State.Running}} {{.State.ExitCode}}', sessionName],
-    { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+    [
+      'inspect',
+      '-f',
+      '{{.State.Running}} {{.State.ExitCode}} {{.State.OOMKilled}}',
+      sessionName,
+    ],
+    { encoding: 'utf8', env: process.env, stdio: ['pipe', 'pipe', 'pipe'] }
   );
   if (result.error || result.status !== 0 || !result.stdout) {
     return null;
   }
-  const [runningRaw, exitRaw] = result.stdout.trim().split(/\s+/);
+  const [runningRaw, exitRaw, oomKilledRaw] = result.stdout.trim().split(/\s+/);
   const exitCode = Number.parseInt(exitRaw, 10);
   return {
     running: runningRaw === 'true',
     exitCode: Number.isFinite(exitCode) ? exitCode : null,
+    oomKilled:
+      oomKilledRaw === 'true' ? true : oomKilledRaw === 'false' ? false : null,
   };
 }
 
@@ -65,6 +72,15 @@ function readBackendExitCode(record) {
   }
   const state = inspectDockerState(opts.sessionName);
   return state && !state.running ? state.exitCode : null;
+}
+
+function readDockerOomKilled(record) {
+  const opts = record.options || {};
+  if (opts.isolated !== 'docker' || !opts.sessionName) {
+    return null;
+  }
+  const state = inspectDockerState(opts.sessionName);
+  return state ? state.oomKilled : null;
 }
 
 /**
@@ -183,6 +199,10 @@ function enrichDetachedStatus(record) {
   }
 
   const enriched = cloneRecord();
+  const oomKilled = readDockerOomKilled(enriched);
+  if (oomKilled !== null) {
+    enriched.oomKilled = oomKilled;
+  }
 
   if (alive && enriched.status === 'executed') {
     // A live `screen -ls` (or `tmux`/`docker`) session does NOT mean the command
@@ -358,6 +378,9 @@ function formatRecordAsText(record) {
     `Status:            ${obj.status}`,
     `Command:           ${obj.command}`,
     `Exit Code:         ${obj.exitCode !== null ? obj.exitCode : 'N/A'}`,
+    ...(obj.oomKilled !== undefined
+      ? [`OOM Killed:        ${obj.oomKilled}`]
+      : []),
     `PID:               ${obj.pid !== null ? obj.pid : 'N/A'}`,
     `Working Directory: ${obj.workingDirectory}`,
     `Shell:             ${obj.shell}`,

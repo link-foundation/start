@@ -27,6 +27,7 @@ const {
   shouldCleanupDockerContainer,
   getDockerContainerCleanupInstructions,
   appendDockerContainerCleanupPolicyMessage,
+  readDockerContainerOomKilled,
   removeDockerContainer,
   startDetachedDockerCompletionWatcher,
   spawnAttachedDocker,
@@ -758,7 +759,11 @@ function runInDocker(command, options = {}) {
             message += `\n${hint}`;
           }
 
-          if (shouldCleanupDockerContainer(cleanupPolicy, exitCode)) {
+          const oomKilled = readDockerContainerOomKilled(containerName);
+
+          if (
+            shouldCleanupDockerContainer(cleanupPolicy, exitCode, oomKilled)
+          ) {
             if (removeDockerContainer(containerName, options.logPath)) {
               message += `\nContainer removed after completion.`;
             } else {
@@ -768,9 +773,13 @@ function runInDocker(command, options = {}) {
           } else if (cleanupPolicy === DOCKER_CONTAINER_CLEANUP_POLICY.KEEP) {
             message += `\n${getDockerContainerCleanupInstructions(containerName)}`;
           } else if (
-            cleanupPolicy === DOCKER_CONTAINER_CLEANUP_POLICY.KEEP_ON_FAIL
+            cleanupPolicy === DOCKER_CONTAINER_CLEANUP_POLICY.KEEP_ON_FAIL ||
+            cleanupPolicy === DOCKER_CONTAINER_CLEANUP_POLICY.DEFAULT
           ) {
-            message += `\nContainer kept because the command failed.`;
+            message +=
+              oomKilled === true
+                ? `\nContainer kept because Docker reports it was OOM-killed.`
+                : `\nContainer kept because the command failed.`;
             message += `\nRemove when done: docker rm -f ${containerName}`;
           }
 

@@ -16,6 +16,7 @@ const {
 } = require('../src/lib/execution-store');
 const {
   queryStatus,
+  listExecutions,
   isDetachedSessionAlive,
   enrichDetachedStatus,
   attachCurrentTime,
@@ -53,6 +54,58 @@ function runCli(args, env = {}) {
     stderr: result.stderr || '',
     exitCode: result.status,
   };
+}
+
+function createExecutable(filePath, content) {
+  fs.writeFileSync(filePath, content, 'utf8');
+  fs.chmodSync(filePath, 0o755);
+}
+
+function withFakeDockerInspect(stateLine, fn) {
+  const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'fake-docker-'));
+  const dockerPath = path.join(
+    fakeBin,
+    process.platform === 'win32' ? 'docker.cmd' : 'docker'
+  );
+  if (process.platform === 'win32') {
+    createExecutable(
+      dockerPath,
+      [
+        '@echo off',
+        'if not "%1"=="inspect" exit /b 1',
+        'echo %3 | findstr /C:"State.Pid" >nul',
+        'if %errorlevel%==0 (',
+        '  echo fake-container-id 4321',
+        '  exit /b 0',
+        ')',
+        `echo ${stateLine}`,
+        'exit /b 0',
+        '',
+      ].join('\r\n')
+    );
+  } else {
+    createExecutable(
+      dockerPath,
+      [
+        '#!/bin/sh',
+        '[ "$1" = "inspect" ] || exit 1',
+        'case "$3" in',
+        '  *State.Pid*) echo "fake-container-id 4321" ;;',
+        `  *) echo "${stateLine}" ;;`,
+        'esac',
+        '',
+      ].join('\n')
+    );
+  }
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBin}${path.delimiter}${originalPath || ''}`;
+  try {
+    return fn();
+  } finally {
+    process.env.PATH = originalPath;
+    fs.rmSync(fakeBin, { recursive: true, force: true });
+  }
 }
 
 describe('Issue #101: --status with session name lookup', () => {
@@ -549,6 +602,71 @@ describe('Issue #136: detached docker session liveness', () => {
     } finally {
       dockerRm(name);
     }
+  });
+});
+
+describe('Issue #144: detached docker OOMKilled status signal', () => {
+  let store;
+
+  beforeEach(() => {
+    cleanupTestDir();
+    store = new ExecutionStore({
+      appFolder: TEST_APP_FOLDER,
+      useLinks: false,
+    });
+  });
+
+  afterEach(() => {
+    cleanupTestDir();
+  });
+
+  function saveDockerRecord() {
+    const record = new ExecutionRecord({
+      command: 'sh -c "exit 0"',
+      logPath: '/tmp/issue-144.log',
+      options: {
+        sessionName: 'issue144-oom',
+        isolated: 'docker',
+        isolationMode: 'detached',
+      },
+    });
+    store.save(record);
+    return record;
+  }
+
+  it('surfaces oomKilled in status output even when Docker exit code is 0', () => {
+    const record = saveDockerRecord();
+
+    withFakeDockerInspect('false 0 true', () => {
+      const jsonResult = queryStatus(store, record.uuid, 'json');
+      expect(jsonResult.success).toBe(true);
+      const parsed = JSON.parse(jsonResult.output);
+      expect(parsed.status).toBe('executed');
+      expect(parsed.exitCode).toBe(0);
+      expect(parsed.oomKilled).toBe(true);
+
+      const linksResult = queryStatus(store, record.uuid, 'links-notation');
+      expect(linksResult.success).toBe(true);
+      expect(linksResult.output).toContain('  oomKilled true');
+
+      const textResult = queryStatus(store, record.uuid, 'text');
+      expect(textResult.success).toBe(true);
+      expect(textResult.output).toContain('OOM Killed:        true');
+    });
+  });
+
+  it('surfaces oomKilled in list output', () => {
+    saveDockerRecord();
+
+    withFakeDockerInspect('false 0 true', () => {
+      const result = listExecutions(store, 'json');
+      expect(result.success).toBe(true);
+      const parsed = JSON.parse(result.output);
+      expect(parsed.count).toBe(1);
+      expect(parsed.executions[0].status).toBe('executed');
+      expect(parsed.executions[0].exitCode).toBe(0);
+      expect(parsed.executions[0].oomKilled).toBe(true);
+    });
   });
 });
 

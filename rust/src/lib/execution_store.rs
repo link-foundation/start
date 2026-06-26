@@ -64,6 +64,8 @@ pub struct ExecutionRecord {
     pub log_path: String,
     pub start_time: String,
     pub end_time: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub oom_killed: Option<bool>,
     pub working_directory: String,
     pub shell: String,
     pub platform: String,
@@ -84,6 +86,7 @@ impl ExecutionRecord {
             log_path: String::new(),
             start_time: now.to_rfc3339(),
             end_time: None,
+            oom_killed: None,
             working_directory: env::current_dir()
                 .map(|p| p.to_string_lossy().to_string())
                 .unwrap_or_default(),
@@ -116,6 +119,9 @@ impl ExecutionRecord {
         }
         if let Some(end_time) = options.end_time {
             record.end_time = Some(end_time);
+        }
+        if let Some(oom_killed) = options.oom_killed {
+            record.oom_killed = Some(oom_killed);
         }
         if let Some(working_directory) = options.working_directory {
             record.working_directory = working_directory;
@@ -161,6 +167,7 @@ pub struct ExecutionRecordOptions {
     pub log_path: Option<String>,
     pub start_time: Option<String>,
     pub end_time: Option<String>,
+    pub oom_killed: Option<bool>,
     pub working_directory: Option<String>,
     pub shell: Option<String>,
     pub platform: Option<String>,
