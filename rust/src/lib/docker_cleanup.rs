@@ -41,6 +41,10 @@ pub(crate) enum DockerContainerCleanupPolicy {
     KeepOnFail,
 }
 
+pub(crate) fn docker_command() -> std::ffi::OsString {
+    std::env::var_os("START_DOCKER_BIN").unwrap_or_else(|| std::ffi::OsString::from("docker"))
+}
+
 pub(crate) fn get_docker_container_cleanup_policy(
     options: &IsolationOptions,
 ) -> DockerContainerCleanupPolicy {
@@ -116,7 +120,7 @@ pub(crate) fn append_docker_container_cleanup_policy_message(
 }
 
 pub(crate) fn read_docker_container_oom_killed(container_name: &str) -> Option<bool> {
-    let output = Command::new("docker")
+    let output = Command::new(docker_command())
         .args(["inspect", "-f", "{{.State.OOMKilled}}", container_name])
         .output()
         .ok()?;
@@ -131,7 +135,7 @@ pub(crate) fn read_docker_container_oom_killed(container_name: &str) -> Option<b
 }
 
 pub(crate) fn remove_docker_container(container_name: &str, log_path: Option<&PathBuf>) -> bool {
-    let output = Command::new("docker")
+    let output = Command::new(docker_command())
         .args(["rm", "-f", container_name])
         .output();
     match output {
@@ -281,7 +285,7 @@ pub(crate) fn spawn_attached_docker(
     log_path: Option<&PathBuf>,
 ) -> std::io::Result<AttachedDockerChild> {
     if log_path.is_none() {
-        let child = Command::new("docker")
+        let child = Command::new(docker_command())
             .args(args)
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
@@ -294,7 +298,7 @@ pub(crate) fn spawn_attached_docker(
         });
     }
 
-    let mut child = Command::new("docker")
+    let mut child = Command::new(docker_command())
         .args(args)
         .stdin(Stdio::inherit())
         .stdout(Stdio::piped())

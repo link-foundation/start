@@ -14,6 +14,7 @@ const {
   formatAsNestedLinksNotation,
 } = require('./output-blocks');
 const { collectProcessIds } = require('./execution-control');
+const { getDockerCommand, getDockerSpawnOptions } = require('./docker-cleanup');
 
 /**
  * Inspect the live state of a detached docker container by name.
@@ -35,14 +36,18 @@ const { collectProcessIds } = require('./execution-control');
  */
 function inspectDockerState(sessionName) {
   const result = spawnSync(
-    'docker',
+    getDockerCommand(),
     [
       'inspect',
       '-f',
       '{{.State.Running}} {{.State.ExitCode}} {{.State.OOMKilled}}',
       sessionName,
     ],
-    { encoding: 'utf8', env: process.env, stdio: ['pipe', 'pipe', 'pipe'] }
+    getDockerSpawnOptions({
+      encoding: 'utf8',
+      env: process.env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
   );
   if (result.error || result.status !== 0 || !result.stdout) {
     return null;

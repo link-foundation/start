@@ -4,6 +4,7 @@
 //! controls so callers can stop or terminate a running session by UUID or
 //! session name.
 
+use crate::docker_cleanup::docker_command;
 use crate::execution_store::{ExecutionRecord, ExecutionStore};
 use crate::output_blocks::{escape_for_links_notation, format_value_for_links_notation};
 use serde_json::{json, Map, Value};
@@ -235,7 +236,8 @@ pub fn collect_process_ids_with_runner<R: CommandRunner>(
                 "{{.Id}} {{.State.Pid}}".to_string(),
                 session_name.to_string(),
             ];
-            let result = runner.run("docker", &inspect_args);
+            let docker = docker_command().to_string_lossy().to_string();
+            let result = runner.run(&docker, &inspect_args);
             if result.success && !result.stdout.trim().is_empty() {
                 let mut parts = result.stdout.split_whitespace();
                 if let Some(container_id) = parts.next() {

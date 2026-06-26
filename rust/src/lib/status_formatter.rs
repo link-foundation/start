@@ -5,6 +5,7 @@
 //! - JSON: Standard JSON output
 //! - Text: Human-readable text format
 
+use crate::docker_cleanup::docker_command;
 use crate::execution_control::collect_process_ids;
 use crate::execution_store::{ExecutionRecord, ExecutionStatus, ExecutionStore};
 use crate::output_blocks::{escape_for_links_notation, format_value_for_links_notation};
@@ -31,7 +32,7 @@ struct DockerState {
 /// Returns None when the container cannot be inspected (not found yet, removed,
 /// or docker error).
 fn inspect_docker_state(session_name: &str) -> Option<DockerState> {
-    let output = Command::new("docker")
+    let output = Command::new(docker_command())
         .args([
             "inspect",
             "-f",
@@ -773,7 +774,8 @@ mod tests {
     use crate::execution_store::{ExecutionRecordOptions, ExecutionStoreOptions};
     use serde_json::json;
     use std::collections::HashMap;
-    use std::path::Path;
+    use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
+    use std::path::{Path, PathBuf};
     use tempfile::TempDir;
 
     fn executing_record() -> ExecutionRecord {
@@ -812,7 +814,7 @@ mod tests {
         })
     }
 
-    fn write_fake_docker(fake_dir: &Path, state_line: &str) {
+    fn write_fake_docker(fake_dir: &Path, state_line: &str) -> PathBuf {
         #[cfg(windows)]
         {
             let script = [
@@ -828,7 +830,9 @@ mod tests {
                 "",
             ]
             .join("\r\n");
-            std::fs::write(fake_dir.join("docker.cmd"), script).unwrap();
+            let docker_path = fake_dir.join("docker.cmd");
+            std::fs::write(&docker_path, script).unwrap();
+            docker_path
         }
 
         #[cfg(not(windows))]
@@ -850,24 +854,35 @@ mod tests {
             let mut permissions = std::fs::metadata(&docker_path).unwrap().permissions();
             permissions.set_mode(0o755);
             std::fs::set_permissions(&docker_path, permissions).unwrap();
+            docker_path
         }
     }
 
     fn with_fake_docker_inspect<F: FnOnce()>(state_line: &str, run: F) {
         let fake_dir = TempDir::new().unwrap();
-        write_fake_docker(fake_dir.path(), state_line);
+        let docker_path = write_fake_docker(fake_dir.path(), state_line);
         let original_path = std::env::var_os("PATH");
+        let original_docker_bin = std::env::var_os("START_DOCKER_BIN");
         let mut paths = vec![fake_dir.path().to_path_buf()];
         if let Some(existing) = original_path.as_ref() {
             paths.extend(std::env::split_paths(existing));
         }
         let joined = std::env::join_paths(paths).unwrap();
         std::env::set_var("PATH", &joined);
-        run();
+        std::env::set_var("START_DOCKER_BIN", &docker_path);
+        let result = catch_unwind(AssertUnwindSafe(run));
         if let Some(path) = original_path {
             std::env::set_var("PATH", path);
         } else {
             std::env::remove_var("PATH");
+        }
+        if let Some(path) = original_docker_bin {
+            std::env::set_var("START_DOCKER_BIN", path);
+        } else {
+            std::env::remove_var("START_DOCKER_BIN");
+        }
+        if let Err(payload) = result {
+            resume_unwind(payload);
         }
     }
 

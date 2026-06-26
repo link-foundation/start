@@ -99,11 +99,18 @@ function withFakeDockerInspect(stateLine, fn) {
   }
 
   const originalPath = process.env.PATH;
+  const originalDockerBin = process.env.START_DOCKER_BIN;
   process.env.PATH = `${fakeBin}${path.delimiter}${originalPath || ''}`;
+  process.env.START_DOCKER_BIN = dockerPath;
   try {
     return fn();
   } finally {
     process.env.PATH = originalPath;
+    if (originalDockerBin === undefined) {
+      delete process.env.START_DOCKER_BIN;
+    } else {
+      process.env.START_DOCKER_BIN = originalDockerBin;
+    }
     fs.rmSync(fakeBin, { recursive: true, force: true });
   }
 }

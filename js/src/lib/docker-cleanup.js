@@ -12,6 +12,17 @@ const DOCKER_CONTAINER_CLEANUP_POLICY = {
   KEEP_ON_FAIL: 'keep-on-fail',
 };
 
+function getDockerCommand() {
+  return process.env.START_DOCKER_BIN || 'docker';
+}
+
+function getDockerSpawnOptions(options = {}) {
+  if (process.platform === 'win32' && process.env.START_DOCKER_BIN) {
+    return { ...options, shell: true };
+  }
+  return options;
+}
+
 function getDockerContainerCleanupPolicy(options = {}) {
   if (options.keepContainer) {
     return DOCKER_CONTAINER_CLEANUP_POLICY.KEEP;
@@ -77,13 +88,13 @@ function appendDockerContainerCleanupPolicyMessage(
 
 function readDockerContainerOomKilled(containerName) {
   const result = spawnSync(
-    'docker',
+    getDockerCommand(),
     ['inspect', '-f', '{{.State.OOMKilled}}', containerName],
-    {
+    getDockerSpawnOptions({
       encoding: 'utf8',
       env: process.env,
       stdio: ['pipe', 'pipe', 'pipe'],
-    }
+    })
   );
   if (result.error || result.status !== 0) {
     return null;
@@ -99,11 +110,15 @@ function readDockerContainerOomKilled(containerName) {
 }
 
 function removeDockerContainer(containerName, logPath = null) {
-  const result = spawnSync('docker', ['rm', '-f', containerName], {
-    encoding: 'utf8',
-    env: process.env,
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
+  const result = spawnSync(
+    getDockerCommand(),
+    ['rm', '-f', containerName],
+    getDockerSpawnOptions({
+      encoding: 'utf8',
+      env: process.env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+  );
   const output = `${result.stdout || ''}${result.stderr || ''}`;
   if (logPath && output) {
     appendLogFile(logPath, output.endsWith('\n') ? output : `${output}\n`);
@@ -189,12 +204,20 @@ function startDetachedDockerCompletionWatcher(containerName, policy, logPath) {
 
 function spawnAttachedDocker(dockerArgs, logPath) {
   if (!logPath) {
-    return spawn('docker', dockerArgs, { stdio: 'inherit' });
+    return spawn(
+      getDockerCommand(),
+      dockerArgs,
+      getDockerSpawnOptions({ stdio: 'inherit' })
+    );
   }
 
-  const child = spawn('docker', dockerArgs, {
-    stdio: ['inherit', 'pipe', 'pipe'],
-  });
+  const child = spawn(
+    getDockerCommand(),
+    dockerArgs,
+    getDockerSpawnOptions({
+      stdio: ['inherit', 'pipe', 'pipe'],
+    })
+  );
   const tee = (chunk, stream) => {
     stream.write(chunk);
     appendLogFile(logPath, chunk.toString());
@@ -206,6 +229,8 @@ function spawnAttachedDocker(dockerArgs, logPath) {
 
 module.exports = {
   DOCKER_CONTAINER_CLEANUP_POLICY,
+  getDockerCommand,
+  getDockerSpawnOptions,
   getDockerContainerCleanupPolicy,
   isAbnormalDockerExit,
   shouldCleanupDockerContainer,
