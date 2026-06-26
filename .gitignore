@@ -142,3 +142,4 @@ vite.config.ts.timestamp-*
 # Rust build artifacts
 rust/target/
 Cargo.lock
+!rust/Cargo.lock

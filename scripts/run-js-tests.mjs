@@ -2,12 +2,13 @@
 import { spawnSync } from 'child_process';
 import { existsSync, readdirSync, statSync } from 'fs';
 import { dirname, join, relative } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const scriptsDir = dirname(fileURLToPath(import.meta.url));
 const root = join(scriptsDir, '..');
 const jsDir = join(root, 'js');
 const testDir = join(jsDir, 'test');
+const DEFAULT_TEST_TIMEOUT_MS = '30000';
 
 const flagsWithValues = new Set([
   '--bail',
@@ -62,7 +63,6 @@ function hasPattern(args) {
   return false;
 }
 
-const userArgs = process.argv.slice(2);
 function normalizePathArg(arg) {
   const absolute = join(jsDir, arg);
   if (!existsSync(absolute)) {
@@ -98,17 +98,44 @@ function normalizeUserArgs(args) {
   return normalized;
 }
 
-const normalizedUserArgs = normalizeUserArgs(userArgs);
-const testFiles = hasPattern(userArgs) ? [] : collectTests(testDir);
-const bun = process.versions.bun ? process.execPath : 'bun';
-const result = spawnSync(bun, ['test', ...normalizedUserArgs, ...testFiles], {
-  cwd: jsDir,
-  stdio: 'inherit',
-});
-
-if (result.error) {
-  console.error(result.error.message);
-  process.exit(1);
+export function hasExplicitTimeout(args) {
+  for (const arg of args) {
+    if (arg === '--') {
+      return false;
+    }
+    if (arg === '--timeout' || arg === '-t' || arg.startsWith('--timeout=')) {
+      return true;
+    }
+  }
+  return false;
 }
 
-process.exit(result.status ?? 1);
+export function applyDefaultTimeout(args) {
+  if (hasExplicitTimeout(args)) {
+    return args;
+  }
+  return ['--timeout', DEFAULT_TEST_TIMEOUT_MS, ...args];
+}
+
+function run() {
+  const userArgs = process.argv.slice(2);
+  const normalizedUserArgs = normalizeUserArgs(userArgs);
+  const effectiveUserArgs = applyDefaultTimeout(normalizedUserArgs);
+  const testFiles = hasPattern(userArgs) ? [] : collectTests(testDir);
+  const bun = process.versions.bun ? process.execPath : 'bun';
+  const result = spawnSync(bun, ['test', ...effectiveUserArgs, ...testFiles], {
+    cwd: jsDir,
+    stdio: 'inherit',
+  });
+
+  if (result.error) {
+    console.error(result.error.message);
+    process.exit(1);
+  }
+
+  process.exit(result.status ?? 1);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  run();
+}
