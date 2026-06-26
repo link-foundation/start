@@ -1,5 +1,13 @@
 # start-command
 
+## 0.30.2
+
+### Patch Changes
+
+- Apply the CI test runner's 30 second timeout consistently so slower integration-style tests do not fail at Bun's default 5 second limit.
+
+  Surface detached Docker OOMKilled status and preserve abnormal containers under the default cleanup policy.
+
 ## 0.30.1
 
 ### Patch Changes
