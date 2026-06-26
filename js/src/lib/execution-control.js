@@ -10,6 +10,7 @@ const {
   escapeForLinksNotation,
   formatAsNestedLinksNotation,
 } = require('./output-blocks');
+const { getDockerCommand, getDockerSpawnOptions } = require('./docker-cleanup');
 
 const ControlAction = {
   STOP: 'stop',
@@ -17,10 +18,15 @@ const ControlAction = {
 };
 
 function runCommand(command, args) {
-  const result = spawnSync(command, args, {
+  const options = {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  };
+  const result = spawnSync(
+    command,
+    args,
+    command === getDockerCommand() ? getDockerSpawnOptions(options) : options
+  );
 
   return {
     success: !result.error && result.status === 0,
@@ -143,7 +149,7 @@ function collectProcessIds(record, runner = runCommand) {
     addIfPresent(processIds, 'commandPids', commandPids);
   } else if (isolated === 'docker') {
     addIfPresent(processIds, 'containerId', opts.containerId);
-    const result = runner('docker', [
+    const result = runner(getDockerCommand(), [
       'inspect',
       '-f',
       '{{.Id}} {{.State.Pid}}',

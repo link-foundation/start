@@ -19,9 +19,9 @@
 //! --keep-user                      Keep isolated user after command completes
 //! --keep-alive, -k                 Keep isolation environment alive after command exits
 //! --auto-remove-docker-container   Always remove docker container after exit (compatibility alias)
-//! --always-cleanup-container       Always remove docker container after exit (default)
+//! --always-cleanup-container       Always remove docker container after exit
 //! --keep-container                 Keep docker container filesystem after exit
-//! --keep-container-on-fail         Remove successful docker containers, keep failed ones
+//! --keep-container-on-fail         Remove successful docker containers, keep failed or OOM-killed ones
 //! --shell <shell>                  Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
 //! --status <uuid-or-session-name>  Show status of a tracked execution
 //! --list                           List all tracked command executions
@@ -92,11 +92,11 @@ pub struct WrapperOptions {
     pub keep_alive: bool,
     /// Auto-remove docker container after exit
     pub auto_remove_docker_container: bool,
-    /// Explicitly request default always-cleanup docker policy
+    /// Force docker container cleanup after exit
     pub always_cleanup_container: bool,
     /// Keep docker container filesystem after exit
     pub keep_container: bool,
-    /// Keep docker container filesystem only when command fails
+    /// Keep docker container filesystem when command fails or OOM-kills
     pub keep_container_on_fail: bool,
     /// Shell to use in isolation environments: auto, bash, zsh, sh
     pub shell: String,

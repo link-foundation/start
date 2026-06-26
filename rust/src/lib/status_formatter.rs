@@ -5,6 +5,7 @@
 //! - JSON: Standard JSON output
 //! - Text: Human-readable text format
 
+use crate::docker_cleanup::docker_command;
 use crate::execution_control::collect_process_ids;
 use crate::execution_store::{ExecutionRecord, ExecutionStatus, ExecutionStore};
 use crate::output_blocks::{escape_for_links_notation, format_value_for_links_notation};
@@ -16,6 +17,7 @@ use std::process::Command;
 struct DockerState {
     running: bool,
     exit_code: Option<i32>,
+    oom_killed: Option<bool>,
 }
 
 /// Inspect the live state of a detached docker container by name.
@@ -30,11 +32,11 @@ struct DockerState {
 /// Returns None when the container cannot be inspected (not found yet, removed,
 /// or docker error).
 fn inspect_docker_state(session_name: &str) -> Option<DockerState> {
-    let output = Command::new("docker")
+    let output = Command::new(docker_command())
         .args([
             "inspect",
             "-f",
-            "{{.State.Running}} {{.State.ExitCode}}",
+            "{{.State.Running}} {{.State.ExitCode}} {{.State.OOMKilled}}",
             session_name,
         ])
         .output()
@@ -50,7 +52,16 @@ fn inspect_docker_state(session_name: &str) -> Option<DockerState> {
     let mut parts = trimmed.split_whitespace();
     let running = parts.next() == Some("true");
     let exit_code = parts.next().and_then(|value| value.parse::<i32>().ok());
-    Some(DockerState { running, exit_code })
+    let oom_killed = parts.next().and_then(|value| match value {
+        "true" => Some(true),
+        "false" => Some(false),
+        _ => None,
+    });
+    Some(DockerState {
+        running,
+        exit_code,
+        oom_killed,
+    })
 }
 
 /// Best-effort terminal exit code reported by the isolation backend itself
@@ -68,6 +79,14 @@ fn read_backend_exit_code(record: &ExecutionRecord) -> Option<i32> {
     } else {
         state.exit_code
     }
+}
+
+fn read_docker_oom_killed(record: &ExecutionRecord) -> Option<bool> {
+    if record.options.get("isolated")?.as_str()? != "docker" {
+        return None;
+    }
+    let session_name = record.options.get("sessionName")?.as_str()?;
+    inspect_docker_state(session_name)?.oom_killed
 }
 
 /// Check if a detached isolation session is still running
@@ -164,6 +183,9 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
     };
 
     let mut enriched = record.clone();
+    if let Some(oom_killed) = read_docker_oom_killed(&enriched) {
+        enriched.oom_killed = Some(oom_killed);
+    }
 
     if alive && enriched.status == ExecutionStatus::Executed {
         // A live `screen -ls` (or `tmux`/`docker`) session does NOT mean the command
@@ -407,8 +429,11 @@ fn format_record_as_text_with_enrichments(
         format!("Status:            {}", record.status),
         format!("Command:           {}", record.command),
         format!("Exit Code:         {}", exit_code_str),
-        format!("PID:               {}", pid_str),
     ];
+    if let Some(oom_killed) = record.oom_killed {
+        lines.push(format!("OOM Killed:        {}", oom_killed));
+    }
+    lines.push(format!("PID:               {}", pid_str));
     if let Some(process_ids) = process_ids {
         append_text_process_ids(&mut lines, process_ids);
     }
@@ -746,8 +771,12 @@ pub fn query_status(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::execution_store::ExecutionRecordOptions;
+    use crate::execution_store::{ExecutionRecordOptions, ExecutionStoreOptions};
     use serde_json::json;
+    use std::collections::HashMap;
+    use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
+    use std::path::{Path, PathBuf};
+    use tempfile::TempDir;
 
     fn executing_record() -> ExecutionRecord {
         ExecutionRecord::with_options(ExecutionRecordOptions {
@@ -762,6 +791,99 @@ mod tests {
             platform: Some("linux".to_string()),
             ..Default::default()
         })
+    }
+
+    fn docker_record() -> ExecutionRecord {
+        let mut options = HashMap::new();
+        options.insert(
+            "sessionName".to_string(),
+            Value::String("issue144-oom".to_string()),
+        );
+        options.insert("isolated".to_string(), Value::String("docker".to_string()));
+        options.insert(
+            "isolationMode".to_string(),
+            Value::String("detached".to_string()),
+        );
+
+        ExecutionRecord::with_options(ExecutionRecordOptions {
+            command: "sh -c 'exit 0'".to_string(),
+            uuid: Some("issue144-rust".to_string()),
+            log_path: Some("/tmp/issue144.log".to_string()),
+            options: Some(options),
+            ..Default::default()
+        })
+    }
+
+    fn write_fake_docker(fake_dir: &Path, state_line: &str) -> PathBuf {
+        #[cfg(windows)]
+        {
+            let script = [
+                "@echo off",
+                "if not \"%1\"==\"inspect\" exit /b 1",
+                "echo %3 | findstr /C:\"State.Pid\" >nul",
+                "if %errorlevel%==0 (",
+                "  echo fake-container-id 4321",
+                "  exit /b 0",
+                ")",
+                &format!("echo {}", state_line),
+                "exit /b 0",
+                "",
+            ]
+            .join("\r\n");
+            let docker_path = fake_dir.join("docker.cmd");
+            std::fs::write(&docker_path, script).unwrap();
+            docker_path
+        }
+
+        #[cfg(not(windows))]
+        {
+            use std::os::unix::fs::PermissionsExt;
+
+            let script = [
+                "#!/bin/sh",
+                "[ \"$1\" = \"inspect\" ] || exit 1",
+                "case \"$3\" in",
+                "  *State.Pid*) echo \"fake-container-id 4321\" ;;",
+                &format!("  *) echo \"{}\" ;;", state_line),
+                "esac",
+                "",
+            ]
+            .join("\n");
+            let docker_path = fake_dir.join("docker");
+            std::fs::write(&docker_path, script).unwrap();
+            let mut permissions = std::fs::metadata(&docker_path).unwrap().permissions();
+            permissions.set_mode(0o755);
+            std::fs::set_permissions(&docker_path, permissions).unwrap();
+            docker_path
+        }
+    }
+
+    fn with_fake_docker_inspect<F: FnOnce()>(state_line: &str, run: F) {
+        let fake_dir = TempDir::new().unwrap();
+        let docker_path = write_fake_docker(fake_dir.path(), state_line);
+        let original_path = std::env::var_os("PATH");
+        let original_docker_bin = std::env::var_os("START_DOCKER_BIN");
+        let mut paths = vec![fake_dir.path().to_path_buf()];
+        if let Some(existing) = original_path.as_ref() {
+            paths.extend(std::env::split_paths(existing));
+        }
+        let joined = std::env::join_paths(paths).unwrap();
+        std::env::set_var("PATH", &joined);
+        std::env::set_var("START_DOCKER_BIN", &docker_path);
+        let result = catch_unwind(AssertUnwindSafe(run));
+        if let Some(path) = original_path {
+            std::env::set_var("PATH", path);
+        } else {
+            std::env::remove_var("PATH");
+        }
+        if let Some(path) = original_docker_bin {
+            std::env::set_var("START_DOCKER_BIN", path);
+        } else {
+            std::env::remove_var("START_DOCKER_BIN");
+        }
+        if let Err(payload) = result {
+            resume_unwind(payload);
+        }
     }
 
     #[test]
@@ -791,5 +913,45 @@ mod tests {
             "opening parenthesis must not start at column 1: {}",
             output
         );
+    }
+
+    #[test]
+    fn docker_oom_killed_is_exposed_in_status_and_list_output() {
+        let temp_dir = TempDir::new().unwrap();
+        let store = ExecutionStore::with_options(ExecutionStoreOptions {
+            app_folder: Some(temp_dir.path().to_path_buf()),
+            use_links: Some(false),
+            verbose: false,
+        });
+        let record = docker_record();
+        store.save(&record).unwrap();
+
+        with_fake_docker_inspect("false 0 true", || {
+            let json_result = query_status(Some(&store), "issue144-rust", Some("json"));
+            assert!(json_result.success);
+            let parsed: Value = serde_json::from_str(&json_result.output.unwrap()).unwrap();
+            assert_eq!(parsed["status"], "executed");
+            assert_eq!(parsed["exitCode"], 0);
+            assert_eq!(parsed["oomKilled"], true);
+
+            let links_result = query_status(Some(&store), "issue144-rust", Some("links-notation"));
+            assert!(links_result.success);
+            assert!(links_result.output.unwrap().contains("  oomKilled true"));
+
+            let text_result = query_status(Some(&store), "issue144-rust", Some("text"));
+            assert!(text_result.success);
+            assert!(text_result
+                .output
+                .unwrap()
+                .contains("OOM Killed:        true"));
+
+            let list_result = list_executions(Some(&store), Some("json"));
+            assert!(list_result.success);
+            let listed: Value = serde_json::from_str(&list_result.output.unwrap()).unwrap();
+            assert_eq!(listed["count"], 1);
+            assert_eq!(listed["executions"][0]["status"], "executed");
+            assert_eq!(listed["executions"][0]["exitCode"], 0);
+            assert_eq!(listed["executions"][0]["oomKilled"], true);
+        });
     }
 }

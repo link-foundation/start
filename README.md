@@ -315,7 +315,10 @@ This is useful for:
 | `--isolated-user, -u [name]`     | Create isolated user with same permissions (screen/tmux)                     |
 | `--keep-user`                    | Keep isolated user after command completes (don't delete)                    |
 | `--keep-alive, -k`               | Keep session alive after command completes                                   |
-| `--auto-remove-docker-container` | Auto-remove docker container after exit (docker only)                        |
+| `--auto-remove-docker-container` | Always remove docker container after exit (docker only)                      |
+| `--always-cleanup-container`     | Always remove docker container after exit (docker only)                      |
+| `--keep-container`               | Keep docker container filesystem after exit (docker only)                    |
+| `--keep-container-on-fail`       | Keep failed or OOM-killed docker containers after exit (docker only)         |
 
 **Note:** Using both `--attached` and `--detached` together will result in an error - you must choose one mode.
 
@@ -336,7 +339,7 @@ $ -i screen -d -k -- echo "hello"
 # You can reattach with: screen -r <session-name>
 ```
 
-For Docker containers, by default the container filesystem is preserved (appears in `docker ps -a`) so you can re-enter it later. Use `--auto-remove-docker-container` to remove the container immediately after exit.
+For Docker containers, successful runs are removed by default. Failed containers, including containers Docker reports as `OOMKilled`, are kept for investigation and include a `docker rm -f <container>` cleanup hint. Use `--always-cleanup-container` or `--auto-remove-docker-container` to force removal after exit, or `--keep-container` to preserve the container filesystem after every run.
 
 ### Graceful Degradation
 

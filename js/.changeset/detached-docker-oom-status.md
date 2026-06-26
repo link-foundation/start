@@ -1,0 +1,5 @@
+---
+'start-command': patch
+---
+
+Surface detached Docker OOMKilled status and preserve abnormal containers under the default cleanup policy.

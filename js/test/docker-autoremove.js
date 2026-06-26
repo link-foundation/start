@@ -11,6 +11,12 @@ const path = require('path');
 const { isCommandAvailable } = require('../src/lib/isolation');
 const { runInDocker } = require('../src/lib/isolation');
 const { execSync } = require('child_process');
+const {
+  DOCKER_CONTAINER_CLEANUP_POLICY,
+  buildDetachedDockerCompletionScript,
+  getDockerContainerCleanupPolicy,
+  shouldCleanupDockerContainer,
+} = require('../src/lib/docker-cleanup');
 
 // Helper to wait for a condition with timeout
 async function waitFor(conditionFn, timeout = 5000, interval = 100) {
@@ -32,6 +38,47 @@ const DOCKER_TEST_TIMEOUT = 20000;
 describe('Docker Container Cleanup Policy', () => {
   // These tests verify that docker isolation removes finished containers by
   // default while still providing explicit flags to keep them for investigation.
+
+  describe('cleanup decisions', () => {
+    it('should keep abnormal containers under the default policy', () => {
+      const policy = getDockerContainerCleanupPolicy({});
+      assert.strictEqual(policy, DOCKER_CONTAINER_CLEANUP_POLICY.DEFAULT);
+      assert.strictEqual(shouldCleanupDockerContainer(policy, 0, false), true);
+      assert.strictEqual(shouldCleanupDockerContainer(policy, 7, false), false);
+      assert.strictEqual(shouldCleanupDockerContainer(policy, 0, true), false);
+    });
+
+    it('should keep OOM-killed containers with keepContainerOnFail', () => {
+      const policy = getDockerContainerCleanupPolicy({
+        keepContainerOnFail: true,
+      });
+      assert.strictEqual(policy, DOCKER_CONTAINER_CLEANUP_POLICY.KEEP_ON_FAIL);
+      assert.strictEqual(shouldCleanupDockerContainer(policy, 0, false), true);
+      assert.strictEqual(shouldCleanupDockerContainer(policy, 0, true), false);
+    });
+
+    it('should honor explicit always-cleanup policy', () => {
+      const policy = getDockerContainerCleanupPolicy({
+        alwaysCleanupContainer: true,
+      });
+      assert.strictEqual(policy, DOCKER_CONTAINER_CLEANUP_POLICY.ALWAYS);
+      assert.strictEqual(shouldCleanupDockerContainer(policy, 7, false), true);
+      assert.strictEqual(shouldCleanupDockerContainer(policy, 0, true), true);
+    });
+
+    it('should make the detached watcher inspect OOMKilled before default cleanup', () => {
+      const script = buildDetachedDockerCompletionScript(
+        'issue144-container',
+        DOCKER_CONTAINER_CLEANUP_POLICY.DEFAULT,
+        '/tmp/issue144.log'
+      );
+      assert.match(script, /\.State\.ExitCode.*\.State\.OOMKilled/);
+      assert.match(script, /__start_command_oom/);
+      assert.match(script, /Container kept for investigation/);
+      assert.match(script, /docker rm -f/);
+      assert.match(script, /issue144-container/);
+    });
+  });
 
   describe('auto-remove enabled', () => {
     it(

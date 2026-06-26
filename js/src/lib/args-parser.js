@@ -20,9 +20,9 @@
  * --keep-user                      Keep isolated user after command completes (don't delete)
  * --keep-alive, -k                 Keep isolation environment alive after command exits
  * --auto-remove-docker-container   Always remove docker container after exit (compatibility alias)
- * --always-cleanup-container       Always remove docker container after exit (default)
+ * --always-cleanup-container       Always remove docker container after exit
  * --keep-container                 Keep docker container filesystem after exit
- * --keep-container-on-fail         Remove successful docker containers, keep failed ones
+ * --keep-container-on-fail         Remove successful docker containers, keep failed or OOM-killed ones
  * --shell <shell>                  Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
  * --use-command-stream             Use command-stream library for command execution (experimental)
  * --verbose                        Enable verbose/debug output (sets START_VERBOSE=1)
@@ -185,9 +185,9 @@ function parseArgs(args) {
     keepUser: false, // Keep isolated user after command completes (don't delete)
     keepAlive: false, // Keep environment alive after command exits
     autoRemoveDockerContainer: false, // Always remove docker container after exit (compatibility alias)
-    alwaysCleanupContainer: false, // Explicitly request default always-cleanup docker policy
+    alwaysCleanupContainer: false, // Force docker container cleanup after exit
     keepContainer: false, // Keep docker container filesystem after exit
-    keepContainerOnFail: false, // Keep docker container filesystem only when command fails
+    keepContainerOnFail: false, // Keep docker container filesystem when command fails or OOM-kills
     shell: 'auto', // Shell to use in isolation environments: auto, bash, zsh, sh
     useCommandStream: false, // Use command-stream library for command execution
     status: null, // UUID to show status for
