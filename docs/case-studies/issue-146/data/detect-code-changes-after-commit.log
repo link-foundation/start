@@ -1,0 +1,82 @@
+Detecting file changes for CI/CD...
+
+Comparing PR: ffa747adf1abe07cff0daf9a27c577fbc774cf17...HEAD
+Changed files:
+  .github/workflows/rust.yml
+  .gitignore
+  .gitkeep
+  docs/case-studies/issue-146/README.md
+  docs/case-studies/issue-146/ci-logs/run-28246415576.log
+  docs/case-studies/issue-146/ci-logs/run-28246415639.log
+  docs/case-studies/issue-146/ci-run-28246415576.json
+  docs/case-studies/issue-146/ci-run-28246415639.json
+  docs/case-studies/issue-146/data/cargo-generate-lockfile.log
+  docs/case-studies/issue-146/data/csharp-template-file-tree.txt
+  docs/case-studies/issue-146/data/file-size-check.log
+  docs/case-studies/issue-146/data/git-diff-check.log
+  docs/case-studies/issue-146/data/js-bun-install.log
+  docs/case-studies/issue-146/data/js-cli-screen-regression.log
+  docs/case-studies/issue-146/data/js-coverage-test.log
+  docs/case-studies/issue-146/data/js-format-check.log
+  docs/case-studies/issue-146/data/js-full-test.log
+  docs/case-studies/issue-146/data/js-lint.log
+  docs/case-studies/issue-146/data/js-targeted-tests.log
+  docs/case-studies/issue-146/data/js-template-file-tree.txt
+  docs/case-studies/issue-146/data/local-cicd-files.txt
+  docs/case-studies/issue-146/data/mjs-syntax-check.log
+  docs/case-studies/issue-146/data/python-template-file-tree.txt
+  docs/case-studies/issue-146/data/recent-ci-prs.json
+  docs/case-studies/issue-146/data/reproducer-run-js-tests-after.log
+  docs/case-studies/issue-146/data/reproducer-run-js-tests-before.log
+  docs/case-studies/issue-146/data/rust-build-release.log
+  docs/case-studies/issue-146/data/rust-clippy.log
+  docs/case-studies/issue-146/data/rust-doc-test.log
+  docs/case-studies/issue-146/data/rust-fmt-check.log
+  docs/case-studies/issue-146/data/rust-package.log
+  docs/case-studies/issue-146/data/rust-template-file-tree.txt
+  docs/case-studies/issue-146/data/rust-test.log
+  docs/case-studies/issue-146/issue-comments.json
+  docs/case-studies/issue-146/issue-data.json
+  docs/case-studies/issue-146/online-research.md
+  docs/case-studies/issue-146/pr-147.json
+  docs/case-studies/issue-146/recent-runs.json
+  docs/case-studies/issue-146/requirements.md
+  docs/case-studies/issue-146/root-cause.md
+  docs/case-studies/issue-146/solutions.md
+  docs/case-studies/issue-146/template-comparison.md
+  docs/case-studies/issue-146/template-rust-http2-issue.md
+  docs/case-studies/issue-146/templates/csharp/docs.yml
+  docs/case-studies/issue-146/templates/csharp/release.yml
+  docs/case-studies/issue-146/templates/js/release.yml
+  docs/case-studies/issue-146/templates/local/js.yml
+  docs/case-studies/issue-146/templates/local/rust.yml
+  docs/case-studies/issue-146/templates/python/docs.yml
+  docs/case-studies/issue-146/templates/python/release.yml
+  docs/case-studies/issue-146/templates/rust/release.yml
+  docs/case-studies/issue-146/timeline.md
+  js/.changeset/ci-test-timeouts.md
+  js/test/run-js-tests.mjs
+  rust/Cargo.lock
+  scripts/run-js-tests.mjs
+
+rs-changed=false
+toml-changed=false
+js-changed=false
+mjs-changed=true
+package-changed=false
+docs-changed=true
+workflow-changed=true
+
+Files considered as code changes:
+  .github/workflows/rust.yml
+  .gitignore
+  .gitkeep
+  js/test/run-js-tests.mjs
+  rust/Cargo.lock
+  scripts/run-js-tests.mjs
+
+any-rust-code-changed=false
+any-js-code-changed=true
+any-code-changed=true
+
+Change detection completed.

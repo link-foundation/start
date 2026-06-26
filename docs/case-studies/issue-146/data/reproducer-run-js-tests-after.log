@@ -1,0 +1,12 @@
+bun test v1.3.14 (0d9b296a)
+
+test/run-js-tests.mjs:
+(pass) run-js-tests timeout defaults > adds a 30 second timeout when no timeout is supplied [3.79ms]
+(pass) run-js-tests timeout defaults > preserves an explicit long timeout flag [1.11ms]
+(pass) run-js-tests timeout defaults > preserves an explicit inline timeout flag [0.08ms]
+(pass) run-js-tests timeout defaults > preserves Bun short timeout flag [0.03ms]
+
+ 4 pass
+ 0 fail
+ 7 expect() calls
+Ran 4 tests across 1 file. [35.00ms]

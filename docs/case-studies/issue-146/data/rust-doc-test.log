@@ -1,0 +1,51 @@
+       Fresh memchr v2.8.2
+       Fresh libc v0.2.186
+       Fresh unicode-ident v1.0.24
+       Fresh proc-macro2 v1.0.106
+       Fresh autocfg v1.5.1
+       Fresh quote v1.0.46
+       Fresh cfg-if v1.0.4
+       Fresh nom v8.0.0
+       Fresh syn v2.0.118
+       Fresh serde_core v1.0.228
+       Fresh getrandom v0.4.3
+       Fresh aho-corasick v1.1.4
+       Fresh option-ext v0.2.0
+       Fresh regex-syntax v0.8.11
+       Fresh serde_derive v1.0.228
+       Fresh zmij v1.0.21
+       Fresh regex-automata v0.4.14
+       Fresh dirs-sys v0.5.0
+       Fresh links-notation v0.13.0
+       Fresh num-traits v0.2.19
+       Fresh linux-raw-sys v0.12.1
+       Fresh bitflags v2.13.0
+       Fresh base64 v0.22.1
+       Fresh iana-time-zone v0.1.65
+       Fresh itoa v1.0.18
+       Fresh lino-objects-codec v0.2.1
+       Fresh chrono v0.4.45
+       Fresh rustix v1.1.4
+       Fresh serde_json v1.0.150
+       Fresh regex v1.12.4
+       Fresh dirs v6.0.0
+       Fresh serde v1.0.228
+       Fresh uuid v1.23.4
+       Fresh fastrand v2.4.1
+       Fresh once_cell v1.21.4
+       Fresh tempfile v3.27.0
+       Fresh start-command v0.17.1 (/tmp/gh-issue-solver-1782490940169/rust)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s
+   Doc-tests start_command
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustdoc --edition=2021 --crate-type lib --color auto --crate-name start_command --test src/lib/mod.rs --test-run-directory /tmp/gh-issue-solver-1782490940169/rust --extern base64=/tmp/gh-issue-solver-1782490940169/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1782490940169/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1782490940169/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1782490940169/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1782490940169/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1782490940169/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1782490940169/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1782490940169/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1782490940169/rust/target/debug/deps/libstart_command-37b9995ebb63d727.rlib --extern tempfile=/tmp/gh-issue-solver-1782490940169/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1782490940169/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib -L dependency=/tmp/gh-issue-solver-1782490940169/rust/target/debug/deps -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format human`
+
+running 6 tests
+test src/lib/sequence_parser.rs - sequence_parser::distribute_option (line 96) ... ok
+test src/lib/sequence_parser.rs - sequence_parser::format_isolation_chain (line 152) ... ok
+test src/lib/sequence_parser.rs - sequence_parser::shift_sequence (line 61) ... ok
+test src/lib/sequence_parser.rs - sequence_parser::format_sequence (line 40) ... ok
+test src/lib/sequence_parser.rs - sequence_parser::parse_sequence (line 15) ... ok
+test src/lib/sequence_parser.rs - sequence_parser::is_sequence (line 77) ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s
+

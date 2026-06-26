@@ -1,0 +1,6 @@
+Using PR diff ffa747a...HEAD for changeset validation
+Found 1 changeset file(s)
+Validating changeset: js/.changeset/ci-test-timeouts.md
+✅ Changeset validation passed
+   Type: patch
+   Description: Apply the CI test runner's 30 second timeout consistently so slower integration-style tests do not fail at Bun's default 5 second limit.

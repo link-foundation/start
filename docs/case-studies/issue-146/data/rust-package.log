@@ -1,0 +1,6 @@
+   Packaging start-command v0.17.1 (/tmp/gh-issue-solver-1782490940169/rust)
+    Updating crates.io index
+    Packaged 56 files, 591.4KiB (116.4KiB compressed)
+   Verifying start-command v0.17.1 (/tmp/gh-issue-solver-1782490940169/rust)
+   Compiling start-command v0.17.1 (/tmp/gh-issue-solver-1782490940169/rust/target/package/start-command-0.17.1)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.81s

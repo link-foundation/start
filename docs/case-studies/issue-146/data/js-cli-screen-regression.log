@@ -1,0 +1,16 @@
+bun test v1.3.14 (0d9b296a)
+
+test/cli.js:
+(pass) CLI version flag > should display version with --version [99.92ms]
+(pass) CLI version flag > should display version with -v [86.34ms]
+(pass) CLI version flag > should show correct package version [92.84ms]
+(pass) CLI basic behavior > should show usage when no arguments provided [55.89ms]
+(pass) CLI basic behavior > should show usage when no command provided after -- [50.12ms]
+(pass) CLI isolation output (issue #67) > should display screen session name when using screen isolation [231.85ms]
+  Skipping: tmux not installed
+(pass) CLI isolation output (issue #67) > should display tmux session name when using tmux isolation [5.05ms]
+(pass) CLI isolation output (issue #67) > should display docker container name when using docker isolation [3459.27ms]
+
+ 8 pass
+ 0 fail
+Ran 8 tests across 1 file. [4.12s]

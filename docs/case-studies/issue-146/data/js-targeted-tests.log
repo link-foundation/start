@@ -1,0 +1,17 @@
+bun test v1.3.14 (0d9b296a)
+
+test/run-js-tests.mjs:
+(pass) run-js-tests timeout defaults > adds a 30 second timeout when no timeout is supplied [1.19ms]
+(pass) run-js-tests timeout defaults > preserves an explicit long timeout flag [0.13ms]
+(pass) run-js-tests timeout defaults > preserves an explicit inline timeout flag [0.02ms]
+(pass) run-js-tests timeout defaults > preserves Bun short timeout flag [0.01ms]
+
+test/publish-to-crates.mjs:
+(pass) publish-to-crates script > reports success without a token when the version is already published [178.78ms]
+(pass) publish-to-crates script > fails clearly when a missing version needs a crates token [170.13ms]
+(pass) publish-to-crates script > publishes a missing version with cargo publish [179.41ms]
+
+ 7 pass
+ 0 fail
+ 17 expect() calls
+Ran 7 tests across 2 files. [568.00ms]

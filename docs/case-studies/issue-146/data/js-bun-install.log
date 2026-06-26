@@ -1,0 +1,16 @@
+bun install v1.3.14 (0d9b296a)
+
+$ cd .. && husky .husky || true
+
++ @changesets/cli@2.31.0
++ @eslint/js@10.0.1
++ eslint@10.3.0
++ eslint-config-prettier@10.1.8
++ eslint-plugin-prettier@5.5.5
++ husky@9.1.7
++ lint-staged@17.0.4
++ prettier@3.8.3
++ command-stream@0.9.4
++ lino-objects-codec@0.4.0
+
+199 packages installed [1.51s]
