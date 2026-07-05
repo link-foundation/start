@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.17.3] - 2026-07-05
+
+Treat detached Docker sessions with OOMKilled as terminal in status output, using Docker's exit code when available and 137 as the OOM fallback.
+
 ## [0.17.2] - 2026-06-26
 
 Surface detached Docker OOMKilled status and preserve abnormal containers under the default cleanup policy.
