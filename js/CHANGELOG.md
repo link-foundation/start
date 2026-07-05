@@ -1,5 +1,11 @@
 # start-command
 
+## 0.30.3
+
+### Patch Changes
+
+- 55ff85b: Treat detached Docker sessions with `oomKilled` as terminal in status output, using Docker's exit code when available and 137 as the OOM fallback.
+
 ## 0.30.2
 
 ### Patch Changes
