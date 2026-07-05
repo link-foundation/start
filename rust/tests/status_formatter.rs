@@ -2,6 +2,7 @@
 //!
 //! Tests for execution record formatting in various output formats.
 
+use serde_json::Value;
 use start_command::{
     attach_current_time, format_record, format_record_as_links_notation,
     format_record_as_links_notation_with_current_time, format_record_as_text,
@@ -9,6 +10,10 @@ use start_command::{
     list_executions, query_status, ExecutionRecord, ExecutionRecordOptions, ExecutionStatus,
     ExecutionStore, ExecutionStoreOptions,
 };
+use std::collections::HashMap;
+use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 use tempfile::TempDir;
 
 fn create_test_record() -> ExecutionRecord {
@@ -232,6 +237,189 @@ fn test_list_executions_no_store() {
     let result = list_executions(None, None);
     assert!(!result.success);
     assert!(result.error.unwrap().contains("tracking is disabled"));
+}
+
+fn docker_record() -> ExecutionRecord {
+    let mut options = HashMap::new();
+    options.insert(
+        "sessionName".to_string(),
+        Value::String("issue144-oom".to_string()),
+    );
+    options.insert("isolated".to_string(), Value::String("docker".to_string()));
+    options.insert(
+        "isolationMode".to_string(),
+        Value::String("detached".to_string()),
+    );
+
+    ExecutionRecord::with_options(ExecutionRecordOptions {
+        command: "sh -c 'exit 0'".to_string(),
+        uuid: Some("issue144-rust".to_string()),
+        log_path: Some("/tmp/issue144.log".to_string()),
+        options: Some(options),
+        ..Default::default()
+    })
+}
+
+fn write_fake_docker(fake_dir: &Path, state_line: &str) -> PathBuf {
+    #[cfg(windows)]
+    {
+        let script = [
+            "@echo off",
+            "if not \"%1\"==\"inspect\" exit /b 1",
+            "echo %3 | findstr /C:\"State.Pid\" >nul",
+            "if %errorlevel%==0 (",
+            "  echo fake-container-id 4321",
+            "  exit /b 0",
+            ")",
+            &format!("echo {}", state_line),
+            "exit /b 0",
+            "",
+        ]
+        .join("\r\n");
+        let docker_path = fake_dir.join("docker.cmd");
+        std::fs::write(&docker_path, script).unwrap();
+        docker_path
+    }
+
+    #[cfg(not(windows))]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let script = [
+            "#!/bin/sh",
+            "[ \"$1\" = \"inspect\" ] || exit 1",
+            "case \"$3\" in",
+            "  *State.Pid*) echo \"fake-container-id 4321\" ;;",
+            &format!("  *) echo \"{}\" ;;", state_line),
+            "esac",
+            "",
+        ]
+        .join("\n");
+        let docker_path = fake_dir.join("docker");
+        std::fs::write(&docker_path, script).unwrap();
+        let mut permissions = std::fs::metadata(&docker_path).unwrap().permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(&docker_path, permissions).unwrap();
+        docker_path
+    }
+}
+
+fn with_fake_docker_inspect<F: FnOnce()>(state_line: &str, run: F) {
+    static FAKE_DOCKER_ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    let _guard = FAKE_DOCKER_ENV_LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let fake_dir = TempDir::new().unwrap();
+    let docker_path = write_fake_docker(fake_dir.path(), state_line);
+    let original_path = std::env::var_os("PATH");
+    let original_docker_bin = std::env::var_os("START_DOCKER_BIN");
+    let mut paths = vec![fake_dir.path().to_path_buf()];
+    if let Some(existing) = original_path.as_ref() {
+        paths.extend(std::env::split_paths(existing));
+    }
+    let joined = std::env::join_paths(paths).unwrap();
+    std::env::set_var("PATH", &joined);
+    std::env::set_var("START_DOCKER_BIN", &docker_path);
+    let result = catch_unwind(AssertUnwindSafe(run));
+    if let Some(path) = original_path {
+        std::env::set_var("PATH", path);
+    } else {
+        std::env::remove_var("PATH");
+    }
+    if let Some(path) = original_docker_bin {
+        std::env::set_var("START_DOCKER_BIN", path);
+    } else {
+        std::env::remove_var("START_DOCKER_BIN");
+    }
+    if let Err(payload) = result {
+        resume_unwind(payload);
+    }
+}
+
+#[test]
+fn docker_oom_killed_is_exposed_in_status_and_list_output() {
+    let temp_dir = TempDir::new().unwrap();
+    let store = ExecutionStore::with_options(ExecutionStoreOptions {
+        app_folder: Some(temp_dir.path().to_path_buf()),
+        use_links: Some(false),
+        verbose: false,
+    });
+    let record = docker_record();
+    store.save(&record).unwrap();
+
+    with_fake_docker_inspect("false 0 true", || {
+        let json_result = query_status(Some(&store), "issue144-rust", Some("json"));
+        assert!(json_result.success);
+        let parsed: Value = serde_json::from_str(&json_result.output.unwrap()).unwrap();
+        assert_eq!(parsed["status"], "executed");
+        assert_eq!(parsed["exitCode"], 0);
+        assert_eq!(parsed["oomKilled"], true);
+
+        let links_result = query_status(Some(&store), "issue144-rust", Some("links-notation"));
+        assert!(links_result.success);
+        assert!(links_result.output.unwrap().contains("  oomKilled true"));
+
+        let text_result = query_status(Some(&store), "issue144-rust", Some("text"));
+        assert!(text_result.success);
+        assert!(text_result
+            .output
+            .unwrap()
+            .contains("OOM Killed:        true"));
+
+        let list_result = list_executions(Some(&store), Some("json"));
+        assert!(list_result.success);
+        let listed: Value = serde_json::from_str(&list_result.output.unwrap()).unwrap();
+        assert_eq!(listed["count"], 1);
+        assert_eq!(listed["executions"][0]["status"], "executed");
+        assert_eq!(listed["executions"][0]["exitCode"], 0);
+        assert_eq!(listed["executions"][0]["oomKilled"], true);
+    });
+}
+
+#[test]
+fn docker_oom_killed_forces_terminal_status_even_when_container_reports_running() {
+    let temp_dir = TempDir::new().unwrap();
+    let store = ExecutionStore::with_options(ExecutionStoreOptions {
+        app_folder: Some(temp_dir.path().to_path_buf()),
+        use_links: Some(false),
+        verbose: false,
+    });
+    let record = docker_record();
+    store.save(&record).unwrap();
+
+    with_fake_docker_inspect("true 137 true", || {
+        let json_result = query_status(Some(&store), "issue144-rust", Some("json"));
+        assert!(json_result.success);
+        let parsed: Value = serde_json::from_str(&json_result.output.unwrap()).unwrap();
+        assert_eq!(parsed["status"], "executed");
+        assert_eq!(parsed["exitCode"], 137);
+        assert_eq!(parsed["oomKilled"], true);
+        assert!(parsed.get("endTime").is_some());
+        assert!(parsed.get("currentTime").is_none());
+    });
+}
+
+#[test]
+fn docker_oom_killed_uses_137_when_running_state_has_no_terminal_exit_code() {
+    let temp_dir = TempDir::new().unwrap();
+    let store = ExecutionStore::with_options(ExecutionStoreOptions {
+        app_folder: Some(temp_dir.path().to_path_buf()),
+        use_links: Some(false),
+        verbose: false,
+    });
+    let record = docker_record();
+    store.save(&record).unwrap();
+
+    with_fake_docker_inspect("true 0 true", || {
+        let json_result = query_status(Some(&store), "issue144-rust", Some("json"));
+        assert!(json_result.success);
+        let parsed: Value = serde_json::from_str(&json_result.output.unwrap()).unwrap();
+        assert_eq!(parsed["status"], "executed");
+        assert_eq!(parsed["exitCode"], 137);
+        assert_eq!(parsed["oomKilled"], true);
+        assert!(parsed.get("endTime").is_some());
+    });
 }
 
 // ===== Issue #105: currentTime in formatter output =====
