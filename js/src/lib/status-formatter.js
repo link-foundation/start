@@ -62,6 +62,23 @@ function inspectDockerState(sessionName) {
   };
 }
 
+function isDetachedDockerRecord(record) {
+  const opts = record.options || {};
+  return (
+    opts.isolated === 'docker' &&
+    opts.isolationMode === 'detached' &&
+    Boolean(opts.sessionName)
+  );
+}
+
+function readDockerState(record) {
+  const opts = record.options || {};
+  if (opts.isolated !== 'docker' || !opts.sessionName) {
+    return null;
+  }
+  return inspectDockerState(opts.sessionName);
+}
+
 /**
  * Best-effort terminal exit code reported by the isolation backend itself
  * (currently docker via `docker inspect .State.ExitCode`). Returns null when
@@ -71,21 +88,23 @@ function inspectDockerState(sessionName) {
  * @returns {number|null}
  */
 function readBackendExitCode(record) {
-  const opts = record.options || {};
-  if (opts.isolated !== 'docker' || !opts.sessionName) {
-    return null;
-  }
-  const state = inspectDockerState(opts.sessionName);
+  const state = readDockerState(record);
   return state && !state.running ? state.exitCode : null;
 }
 
-function readDockerOomKilled(record) {
-  const opts = record.options || {};
-  if (opts.isolated !== 'docker' || !opts.sessionName) {
-    return null;
+function resolveOomExitCode(footerExit, dockerState) {
+  if (footerExit !== null && footerExit !== undefined) {
+    return footerExit;
   }
-  const state = inspectDockerState(opts.sessionName);
-  return state ? state.oomKilled : null;
+  if (
+    dockerState &&
+    dockerState.exitCode !== null &&
+    dockerState.exitCode !== undefined &&
+    (!dockerState.running || dockerState.exitCode !== 0)
+  ) {
+    return dockerState.exitCode;
+  }
+  return 137;
 }
 
 /**
@@ -172,8 +191,15 @@ function readExitCodeFromLog(logPath) {
  * @returns {Object} Possibly updated execution record
  */
 function enrichDetachedStatus(record) {
-  const alive = isDetachedSessionAlive(record);
   const footerExit = readExitCodeFromLog(record.logPath);
+  const dockerState = isDetachedDockerRecord(record)
+    ? readDockerState(record)
+    : null;
+  const alive = isDetachedDockerRecord(record)
+    ? dockerState === null
+      ? null
+      : dockerState.running
+    : isDetachedSessionAlive(record);
 
   // Create a shallow copy to avoid mutating the original
   const cloneRecord = () => {
@@ -181,6 +207,19 @@ function enrichDetachedStatus(record) {
     Object.assign(enriched, record);
     return enriched;
   };
+
+  if (record.oomKilled === true || dockerState?.oomKilled === true) {
+    const enriched = cloneRecord();
+    enriched.oomKilled = true;
+    enriched.status = 'executed';
+    if (enriched.exitCode === null || enriched.exitCode === undefined) {
+      enriched.exitCode = resolveOomExitCode(footerExit, dockerState);
+    }
+    if (!enriched.endTime) {
+      enriched.endTime = new Date().toISOString();
+    }
+    return enriched;
+  }
 
   if (alive === null) {
     // Liveness is unknown: the backend could not be probed (e.g. a detached
@@ -204,9 +243,8 @@ function enrichDetachedStatus(record) {
   }
 
   const enriched = cloneRecord();
-  const oomKilled = readDockerOomKilled(enriched);
-  if (oomKilled !== null) {
-    enriched.oomKilled = oomKilled;
+  if (dockerState?.oomKilled !== null && dockerState?.oomKilled !== undefined) {
+    enriched.oomKilled = dockerState.oomKilled;
   }
 
   if (alive && enriched.status === 'executed') {

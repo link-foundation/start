@@ -677,6 +677,65 @@ describe('Issue #144: detached docker OOMKilled status signal', () => {
   });
 });
 
+describe('Issue #148: detached docker OOMKilled terminal status', () => {
+  let store;
+
+  beforeEach(() => {
+    cleanupTestDir();
+    store = new ExecutionStore({
+      appFolder: TEST_APP_FOLDER,
+      useLinks: false,
+    });
+  });
+
+  afterEach(() => {
+    cleanupTestDir();
+  });
+
+  function saveDockerRecord() {
+    const record = new ExecutionRecord({
+      command: 'sh -c "allocate memory"',
+      logPath: '/tmp/issue-148.log',
+      options: {
+        sessionName: 'issue148-oom',
+        isolated: 'docker',
+        isolationMode: 'detached',
+      },
+    });
+    store.save(record);
+    return record;
+  }
+
+  it('treats oomKilled as terminal even while Docker still reports running', () => {
+    const record = saveDockerRecord();
+
+    withFakeDockerInspect('true 137 true', () => {
+      const result = queryStatus(store, record.uuid, 'json');
+      expect(result.success).toBe(true);
+      const parsed = JSON.parse(result.output);
+      expect(parsed.status).toBe('executed');
+      expect(parsed.exitCode).toBe(137);
+      expect(parsed.oomKilled).toBe(true);
+      expect(parsed.endTime).toBeTruthy();
+      expect(parsed.currentTime).toBeUndefined();
+    });
+  });
+
+  it('uses 137 when oomKilled is terminal but Docker has no terminal exit code yet', () => {
+    const record = saveDockerRecord();
+
+    withFakeDockerInspect('true 0 true', () => {
+      const result = queryStatus(store, record.uuid, 'json');
+      expect(result.success).toBe(true);
+      const parsed = JSON.parse(result.output);
+      expect(parsed.status).toBe('executed');
+      expect(parsed.exitCode).toBe(137);
+      expect(parsed.oomKilled).toBe(true);
+      expect(parsed.endTime).toBeTruthy();
+    });
+  });
+});
+
 describe('Issue #105: attachCurrentTime for executing status', () => {
   it('should add currentTime to serialization when status is executing', () => {
     const record = new ExecutionRecord({
