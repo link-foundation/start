@@ -4,7 +4,7 @@
 
 use serde_json::Value;
 use start_command::{
-    attach_current_time, format_record, format_record_as_links_notation,
+    attach_current_time, enrich_detached_status, format_record, format_record_as_links_notation,
     format_record_as_links_notation_with_current_time, format_record_as_text,
     format_record_as_text_with_current_time, format_record_list, format_record_with_current_time,
     list_executions, query_status, ExecutionRecord, ExecutionRecordOptions, ExecutionStatus,
@@ -304,14 +304,39 @@ fn write_fake_docker(fake_dir: &Path, state_line: &str) -> PathBuf {
     }
 }
 
-fn with_fake_docker_inspect<F: FnOnce()>(state_line: &str, run: F) {
+/// A fake `docker` whose every `inspect` fails, i.e. the container is gone
+/// (removed) or not visible yet — the "unknown liveness" case of issue #136.
+fn write_missing_container_docker(fake_dir: &Path) -> PathBuf {
+    #[cfg(windows)]
+    {
+        let script = ["@echo off", "exit /b 1", ""].join("\r\n");
+        let docker_path = fake_dir.join("docker.cmd");
+        std::fs::write(&docker_path, script).unwrap();
+        docker_path
+    }
+
+    #[cfg(not(windows))]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let script = ["#!/bin/sh", "exit 1", ""].join("\n");
+        let docker_path = fake_dir.join("docker");
+        std::fs::write(&docker_path, script).unwrap();
+        let mut permissions = std::fs::metadata(&docker_path).unwrap().permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(&docker_path, permissions).unwrap();
+        docker_path
+    }
+}
+
+fn with_fake_docker<F: FnOnce()>(write_docker: impl FnOnce(&Path) -> PathBuf, run: F) {
     static FAKE_DOCKER_ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     let _guard = FAKE_DOCKER_ENV_LOCK
         .get_or_init(|| Mutex::new(()))
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     let fake_dir = TempDir::new().unwrap();
-    let docker_path = write_fake_docker(fake_dir.path(), state_line);
+    let docker_path = write_docker(fake_dir.path());
     let original_path = std::env::var_os("PATH");
     let original_docker_bin = std::env::var_os("START_DOCKER_BIN");
     let mut paths = vec![fake_dir.path().to_path_buf()];
@@ -335,6 +360,14 @@ fn with_fake_docker_inspect<F: FnOnce()>(state_line: &str, run: F) {
     if let Err(payload) = result {
         resume_unwind(payload);
     }
+}
+
+fn with_fake_docker_inspect<F: FnOnce()>(state_line: &str, run: F) {
+    with_fake_docker(|dir| write_fake_docker(dir, state_line), run);
+}
+
+fn with_fake_docker_missing_container<F: FnOnce()>(run: F) {
+    with_fake_docker(write_missing_container_docker, run);
 }
 
 #[test]
@@ -377,18 +410,23 @@ fn docker_oom_killed_is_exposed_in_status_and_list_output() {
     });
 }
 
+/// Issue #148: an OOM-killed session whose container is already gone and which
+/// wrote no `Exit Code:` footer must still become terminal, with the
+/// conventional SIGKILL code as the last-resort fallback.
 #[test]
-fn docker_oom_killed_forces_terminal_status_even_when_container_reports_running() {
+fn docker_oom_killed_is_terminal_once_the_container_is_gone() {
     let temp_dir = TempDir::new().unwrap();
     let store = ExecutionStore::with_options(ExecutionStoreOptions {
         app_folder: Some(temp_dir.path().to_path_buf()),
         use_links: Some(false),
         verbose: false,
     });
-    let record = docker_record();
+    let mut record = docker_record();
+    record.log_path = "/nonexistent-issue148.log".to_string();
+    record.oom_killed = Some(true);
     store.save(&record).unwrap();
 
-    with_fake_docker_inspect("true 137 true", || {
+    with_fake_docker_missing_container(|| {
         let json_result = query_status(Some(&store), "issue144-rust", Some("json"));
         assert!(json_result.success);
         let parsed: Value = serde_json::from_str(&json_result.output.unwrap()).unwrap();
@@ -400,8 +438,11 @@ fn docker_oom_killed_forces_terminal_status_even_when_container_reports_running(
     });
 }
 
+/// Issue #151: `State.OOMKilled` is a container-cgroup flag that is never
+/// cleared, so it must stay an observation — only the container's own state may
+/// decide `status` / `exitCode`.
 #[test]
-fn docker_oom_killed_uses_137_when_running_state_has_no_terminal_exit_code() {
+fn docker_oom_killed_keeps_running_container_executing() {
     let temp_dir = TempDir::new().unwrap();
     let store = ExecutionStore::with_options(ExecutionStoreOptions {
         app_folder: Some(temp_dir.path().to_path_buf()),
@@ -415,10 +456,89 @@ fn docker_oom_killed_uses_137_when_running_state_has_no_terminal_exit_code() {
         let json_result = query_status(Some(&store), "issue144-rust", Some("json"));
         assert!(json_result.success);
         let parsed: Value = serde_json::from_str(&json_result.output.unwrap()).unwrap();
+        assert_eq!(parsed["status"], "executing");
+        assert_eq!(parsed["exitCode"], Value::Null);
+        assert_eq!(parsed["oomKilled"], true);
+        assert_eq!(parsed["endTime"], Value::Null);
+        assert!(parsed.get("currentTime").is_some());
+
+        let list_result = list_executions(Some(&store), Some("json"));
+        assert!(list_result.success);
+        let listed: Value = serde_json::from_str(&list_result.output.unwrap()).unwrap();
+        assert_eq!(listed["executions"][0]["status"], "executing");
+        assert_eq!(listed["executions"][0]["exitCode"], Value::Null);
+        assert_eq!(listed["executions"][0]["oomKilled"], true);
+    });
+}
+
+#[test]
+fn docker_oom_killed_never_synthesizes_137_for_a_running_container() {
+    let temp_dir = TempDir::new().unwrap();
+    let store = ExecutionStore::with_options(ExecutionStoreOptions {
+        app_folder: Some(temp_dir.path().to_path_buf()),
+        use_links: Some(false),
+        verbose: false,
+    });
+    let record = docker_record();
+    store.save(&record).unwrap();
+
+    with_fake_docker_inspect("true 137 true", || {
+        let enriched = enrich_detached_status(&store.get("issue144-rust").unwrap());
+        assert_eq!(enriched.status, ExecutionStatus::Executing);
+        assert_eq!(enriched.exit_code, None);
+        assert_eq!(enriched.oom_killed, Some(true));
+    });
+}
+
+#[test]
+fn docker_oom_killed_uses_the_container_exit_code_when_it_stops() {
+    let temp_dir = TempDir::new().unwrap();
+    let store = ExecutionStore::with_options(ExecutionStoreOptions {
+        app_folder: Some(temp_dir.path().to_path_buf()),
+        use_links: Some(false),
+        verbose: false,
+    });
+    let record = docker_record();
+    store.save(&record).unwrap();
+
+    with_fake_docker_inspect("false 3 true", || {
+        let json_result = query_status(Some(&store), "issue144-rust", Some("json"));
+        assert!(json_result.success);
+        let parsed: Value = serde_json::from_str(&json_result.output.unwrap()).unwrap();
         assert_eq!(parsed["status"], "executed");
-        assert_eq!(parsed["exitCode"], 137);
+        assert_eq!(parsed["exitCode"], 3);
         assert_eq!(parsed["oomKilled"], true);
         assert!(parsed.get("endTime").is_some());
+    });
+}
+
+#[test]
+fn docker_oom_killed_prefers_the_log_footer_over_the_137_fallback() {
+    let temp_dir = TempDir::new().unwrap();
+    let log_path = temp_dir.path().join("issue-151.log");
+    // The anchored footer block `start` itself writes (issue #150).
+    std::fs::write(
+        &log_path,
+        "==================================================\nFinished: now\nExit Code: 0\n",
+    )
+    .unwrap();
+    let store = ExecutionStore::with_options(ExecutionStoreOptions {
+        app_folder: Some(temp_dir.path().to_path_buf()),
+        use_links: Some(false),
+        verbose: false,
+    });
+    let mut record = docker_record();
+    record.log_path = log_path.to_string_lossy().to_string();
+    record.oom_killed = Some(true);
+    store.save(&record).unwrap();
+
+    with_fake_docker_missing_container(|| {
+        let json_result = query_status(Some(&store), "issue144-rust", Some("json"));
+        assert!(json_result.success);
+        let parsed: Value = serde_json::from_str(&json_result.output.unwrap()).unwrap();
+        assert_eq!(parsed["status"], "executed");
+        assert_eq!(parsed["exitCode"], 0);
+        assert_eq!(parsed["oomKilled"], true);
     });
 }
 

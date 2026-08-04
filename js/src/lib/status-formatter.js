@@ -84,27 +84,36 @@ function readDockerState(record) {
  * (currently docker via `docker inspect .State.ExitCode`). Returns null when
  * the backend cannot provide a real code, so callers never surface the `-1`
  * sentinel for a session whose real exit code is simply not available yet.
- * @param {Object} record - Execution record
+ * A running container has no terminal exit code (docker reports `0` for it),
+ * so only a stopped container contributes one.
+ * @param {{running: boolean, exitCode: number|null}|null} dockerState - Inspected state
  * @returns {number|null}
  */
-function readBackendExitCode(record) {
-  const state = readDockerState(record);
-  return state && !state.running ? state.exitCode : null;
+function backendExitCode(dockerState) {
+  return dockerState && !dockerState.running ? dockerState.exitCode : null;
 }
 
-function resolveOomExitCode(footerExit, dockerState) {
-  if (footerExit !== null && footerExit !== undefined) {
-    return footerExit;
+/**
+ * Reconcile the OOM observation from the stored record and from `docker inspect`.
+ *
+ * `State.OOMKilled` is a container-cgroup flag: the kernel sets it when ANY
+ * process in the cgroup is OOM-killed and it is never cleared for the life of
+ * the container (moby/moby#47618). It is therefore an *observation*, never a
+ * verdict about the session (issue #151) — a container that lost one child
+ * process keeps running and can still exit `0`. Once observed, the flag stays
+ * `true` for the record.
+ * @param {Object} record - Execution record
+ * @param {{oomKilled: boolean|null}|null} dockerState - Inspected state
+ * @returns {boolean|undefined} Observation, or undefined when nothing is known
+ */
+function resolveOomObservation(record, dockerState) {
+  if (record.oomKilled === true || dockerState?.oomKilled === true) {
+    return true;
   }
-  if (
-    dockerState &&
-    dockerState.exitCode !== null &&
-    dockerState.exitCode !== undefined &&
-    (!dockerState.running || dockerState.exitCode !== 0)
-  ) {
-    return dockerState.exitCode;
+  if (record.oomKilled === false || dockerState?.oomKilled === false) {
+    return false;
   }
-  return 137;
+  return undefined;
 }
 
 /**
@@ -269,25 +278,18 @@ function enrichDetachedStatus(record) {
       : dockerState.running
     : isDetachedSessionAlive(record);
 
+  // `oomKilled` is exposed alongside the status, but never decides it (#151).
+  const oomKilled = resolveOomObservation(record, dockerState);
+
   // Create a shallow copy to avoid mutating the original
   const cloneRecord = () => {
     const enriched = Object.create(Object.getPrototypeOf(record));
     Object.assign(enriched, record);
+    if (oomKilled !== undefined) {
+      enriched.oomKilled = oomKilled;
+    }
     return enriched;
   };
-
-  if (record.oomKilled === true || dockerState?.oomKilled === true) {
-    const enriched = cloneRecord();
-    enriched.oomKilled = true;
-    enriched.status = 'executed';
-    if (enriched.exitCode === null || enriched.exitCode === undefined) {
-      enriched.exitCode = resolveOomExitCode(footerExit, dockerState);
-    }
-    if (!enriched.endTime) {
-      enriched.endTime = new Date().toISOString();
-    }
-    return enriched;
-  }
 
   if (alive === null) {
     // Liveness is unknown: the backend could not be probed (e.g. a detached
@@ -298,22 +300,35 @@ function enrichDetachedStatus(record) {
     // orchestrators misread as a finished/failed run (issue #136).
     const isDetached =
       record.options && record.options.isolationMode === 'detached';
-    if (isDetached && record.status === 'executing' && footerExit !== null) {
-      const enriched = cloneRecord();
-      enriched.status = 'executed';
-      enriched.exitCode = footerExit;
-      if (!enriched.endTime) {
-        enriched.endTime = new Date().toISOString();
+    if (isDetached && record.status === 'executing') {
+      if (footerExit !== null) {
+        const enriched = cloneRecord();
+        enriched.status = 'executed';
+        enriched.exitCode = footerExit;
+        if (!enriched.endTime) {
+          enriched.endTime = new Date().toISOString();
+        }
+        return enriched;
       }
-      return enriched;
+      if (oomKilled === true) {
+        // The container is gone and wrote no footer, so the OOM observation is
+        // the only evidence left: report the session as finished with the
+        // conventional SIGKILL code (issue #148). While the container is still
+        // inspectable this branch is never taken — a live container keeps the
+        // session `executing` no matter what the cgroup flag says (issue #151).
+        const enriched = cloneRecord();
+        enriched.status = 'executed';
+        enriched.exitCode = 137;
+        if (!enriched.endTime) {
+          enriched.endTime = new Date().toISOString();
+        }
+        return enriched;
+      }
     }
-    return record;
+    return oomKilled !== undefined ? cloneRecord() : record;
   }
 
   const enriched = cloneRecord();
-  if (dockerState?.oomKilled !== null && dockerState?.oomKilled !== undefined) {
-    enriched.oomKilled = dockerState.oomKilled;
-  }
 
   if (alive && enriched.status === 'executed') {
     // A live `screen -ls` (or `tmux`/`docker`) session does NOT mean the command
@@ -335,12 +350,16 @@ function enrichDetachedStatus(record) {
     // Session ended but record says executing - correct it. Resolve a real exit
     // code: prefer the backend's own record (e.g. `docker inspect
     // .State.ExitCode`, which is authoritative and cannot be spoofed by command
-    // output — issue #150), then the anchored log footer, and only fall back to
-    // the `-1` sentinel as a last resort when no real code can be obtained
-    // (issue #136).
+    // output — issue #150), then the anchored log footer, then `137` when the
+    // only evidence left is the OOM observation, and only fall back to the `-1`
+    // sentinel as a last resort when no real code can be obtained (issues #136,
+    // #151).
     enriched.status = 'executed';
     if (enriched.exitCode === null || enriched.exitCode === undefined) {
-      enriched.exitCode = readBackendExitCode(enriched) ?? footerExit ?? -1;
+      enriched.exitCode =
+        backendExitCode(dockerState) ??
+        footerExit ??
+        (oomKilled === true ? 137 : -1);
     }
     if (!enriched.endTime) {
       enriched.endTime = new Date().toISOString();

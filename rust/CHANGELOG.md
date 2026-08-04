@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.17.4] - 2026-08-04
+
+Treat Docker OOMKilled as an observation rather than a verdict in `--status` / `--list`: a detached session whose container is still running stays `executing` (with `oomKilled true` alongside), a stopped container reports its real `.State.ExitCode`, and `137` is used only when the container is gone and neither a log footer nor an exit code can be recovered.
+
 ## [0.17.3] - 2026-07-05
 
 Treat detached Docker sessions with OOMKilled as terminal in status output, using Docker's exit code when available and 137 as the OOM fallback.
