@@ -274,6 +274,13 @@ describe('Isolation Runner Error Handling', () => {
         console.log('  Skipping: docker not installed');
         return;
       }
+      // Skip if the daemon is not running - the error will be about the daemon
+      // instead of the missing image (Windows CI runners ship the docker CLI
+      // without a running daemon).
+      if (!require('../src/lib/docker-utils').isDockerAvailable()) {
+        console.log('  Skipping: docker daemon not running');
+        return;
+      }
 
       const result = await runInDocker('echo test', { detached: true });
       assert.strictEqual(result.success, false);
