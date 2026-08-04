@@ -61,6 +61,38 @@ function createExecutable(filePath, content) {
   fs.chmodSync(filePath, 0o755);
 }
 
+// A fake `docker` whose every `inspect` fails, i.e. the container is gone
+// (removed) or not visible yet — the "unknown liveness" case of issue #136.
+function withFakeDockerMissingContainer(fn) {
+  const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'fake-docker-gone-'));
+  const dockerPath = path.join(
+    fakeBin,
+    process.platform === 'win32' ? 'docker.cmd' : 'docker'
+  );
+  createExecutable(
+    dockerPath,
+    process.platform === 'win32'
+      ? ['@echo off', 'exit /b 1', ''].join('\r\n')
+      : ['#!/bin/sh', 'exit 1', ''].join('\n')
+  );
+
+  const originalPath = process.env.PATH;
+  const originalDockerBin = process.env.START_DOCKER_BIN;
+  process.env.PATH = `${fakeBin}${path.delimiter}${originalPath || ''}`;
+  process.env.START_DOCKER_BIN = dockerPath;
+  try {
+    return fn();
+  } finally {
+    process.env.PATH = originalPath;
+    if (originalDockerBin === undefined) {
+      delete process.env.START_DOCKER_BIN;
+    } else {
+      process.env.START_DOCKER_BIN = originalDockerBin;
+    }
+    fs.rmSync(fakeBin, { recursive: true, force: true });
+  }
+}
+
 function withFakeDockerInspect(stateLine, fn) {
   const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'fake-docker-'));
   const dockerPath = path.join(
@@ -677,7 +709,7 @@ describe('Issue #144: detached docker OOMKilled status signal', () => {
   });
 });
 
-describe('Issue #148: detached docker OOMKilled terminal status', () => {
+describe('Issue #148: detached docker OOMKilled terminal status when the container is gone', () => {
   let store;
 
   beforeEach(() => {
@@ -692,7 +724,7 @@ describe('Issue #148: detached docker OOMKilled terminal status', () => {
     cleanupTestDir();
   });
 
-  function saveDockerRecord() {
+  function saveDockerRecord(extra = {}) {
     const record = new ExecutionRecord({
       command: 'sh -c "allocate memory"',
       logPath: '/tmp/issue-148.log',
@@ -701,15 +733,16 @@ describe('Issue #148: detached docker OOMKilled terminal status', () => {
         isolated: 'docker',
         isolationMode: 'detached',
       },
+      ...extra,
     });
     store.save(record);
     return record;
   }
 
-  it('treats oomKilled as terminal even while Docker still reports running', () => {
-    const record = saveDockerRecord();
+  it('makes an OOM-killed session terminal once its container is gone', () => {
+    const record = saveDockerRecord({ oomKilled: true });
 
-    withFakeDockerInspect('true 137 true', () => {
+    withFakeDockerMissingContainer(() => {
       const result = queryStatus(store, record.uuid, 'json');
       expect(result.success).toBe(true);
       const parsed = JSON.parse(result.output);
@@ -721,17 +754,122 @@ describe('Issue #148: detached docker OOMKilled terminal status', () => {
     });
   });
 
-  it('uses 137 when oomKilled is terminal but Docker has no terminal exit code yet', () => {
+  it('uses the container exit code, not 137, for a stopped OOM-flagged container', () => {
     const record = saveDockerRecord();
 
-    withFakeDockerInspect('true 0 true', () => {
+    withFakeDockerInspect('false 3 true', () => {
       const result = queryStatus(store, record.uuid, 'json');
       expect(result.success).toBe(true);
       const parsed = JSON.parse(result.output);
       expect(parsed.status).toBe('executed');
-      expect(parsed.exitCode).toBe(137);
+      expect(parsed.exitCode).toBe(3);
       expect(parsed.oomKilled).toBe(true);
       expect(parsed.endTime).toBeTruthy();
+    });
+  });
+});
+
+describe('Issue #151: OOMKilled is an observation, not a verdict', () => {
+  let store;
+  let logPath;
+
+  beforeEach(() => {
+    cleanupTestDir();
+    store = new ExecutionStore({
+      appFolder: TEST_APP_FOLDER,
+      useLinks: false,
+    });
+    logPath = path.join(os.tmpdir(), `issue-151-${process.pid}.log`);
+    fs.rmSync(logPath, { force: true });
+  });
+
+  afterEach(() => {
+    fs.rmSync(logPath, { force: true });
+    cleanupTestDir();
+  });
+
+  function saveDockerRecord(extra = {}) {
+    const record = new ExecutionRecord({
+      command: 'node -e "setTimeout(() => process.exit(0), 600000)"',
+      logPath,
+      options: {
+        sessionName: 'issue151-oom',
+        isolated: 'docker',
+        isolationMode: 'detached',
+      },
+      ...extra,
+    });
+    store.save(record);
+    return record;
+  }
+
+  it('keeps a running container executing while exposing oomKilled', () => {
+    const record = saveDockerRecord();
+
+    // `docker inspect` reports the cgroup OOM flag while the container itself
+    // is still running: only the container state may decide the status.
+    withFakeDockerInspect('true 0 true', () => {
+      const result = queryStatus(store, record.uuid, 'json');
+      expect(result.success).toBe(true);
+      const parsed = JSON.parse(result.output);
+      expect(parsed.status).toBe('executing');
+      expect(parsed.exitCode).toBeNull();
+      expect(parsed.oomKilled).toBe(true);
+      expect(parsed.endTime).toBeNull();
+      expect(parsed.currentTime).toBeTruthy();
+    });
+  });
+
+  it('never synthesizes 137 for a running container that reports exit code 137', () => {
+    const record = saveDockerRecord();
+
+    withFakeDockerInspect('true 137 true', () => {
+      const enriched = enrichDetachedStatus(store.get(record.uuid));
+      expect(enriched.status).toBe('executing');
+      expect(enriched.exitCode).toBeNull();
+      expect(enriched.oomKilled).toBe(true);
+    });
+  });
+
+  it('reports the container exit code 0 once an OOM-flagged container finishes', () => {
+    const record = saveDockerRecord();
+
+    withFakeDockerInspect('false 0 true', () => {
+      const result = queryStatus(store, record.uuid, 'json');
+      expect(result.success).toBe(true);
+      const parsed = JSON.parse(result.output);
+      expect(parsed.status).toBe('executed');
+      expect(parsed.exitCode).toBe(0);
+      expect(parsed.oomKilled).toBe(true);
+      expect(parsed.endTime).toBeTruthy();
+    });
+  });
+
+  it('prefers the log footer exit code over the OOM fallback when the container is gone', () => {
+    fs.writeFileSync(logPath, 'Finished: now\nExit Code: 0\n', 'utf8');
+    const record = saveDockerRecord({ oomKilled: true });
+
+    withFakeDockerMissingContainer(() => {
+      const result = queryStatus(store, record.uuid, 'json');
+      expect(result.success).toBe(true);
+      const parsed = JSON.parse(result.output);
+      expect(parsed.status).toBe('executed');
+      expect(parsed.exitCode).toBe(0);
+      expect(parsed.oomKilled).toBe(true);
+    });
+  });
+
+  it('keeps the list output executing for an OOM-flagged running container', () => {
+    saveDockerRecord();
+
+    withFakeDockerInspect('true 0 true', () => {
+      const result = listExecutions(store, 'json');
+      expect(result.success).toBe(true);
+      const parsed = JSON.parse(result.output);
+      expect(parsed.count).toBe(1);
+      expect(parsed.executions[0].status).toBe('executing');
+      expect(parsed.executions[0].exitCode).toBeNull();
+      expect(parsed.executions[0].oomKilled).toBe(true);
     });
   });
 });

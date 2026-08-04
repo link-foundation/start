@@ -169,6 +169,13 @@ include best-effort `processIds` for tracked wrapper processes and detached
 screen, tmux, and Docker isolation containers when those native tools can
 report them.
 
+For detached Docker executions, `oomKilled` is reported as an observation of the
+container cgroup flag, not as a verdict: while `docker inspect` still reports the
+container as running the status stays `executing`, and once it stops the reported
+`exitCode` is the container's real exit code. `137` is only used as a fallback
+when the container is gone and neither a stored exit code nor a log footer can be
+recovered.
+
 `--upload-log` accepts either an execution UUID or an isolation session name. It
 looks up the stored `logPath`, installs `gh-upload-log` with Bun or npm if the
 uploader is missing, and then streams the uploader output directly.
