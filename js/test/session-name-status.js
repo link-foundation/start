@@ -846,7 +846,12 @@ describe('Issue #151: OOMKilled is an observation, not a verdict', () => {
   });
 
   it('prefers the log footer exit code over the OOM fallback when the container is gone', () => {
-    fs.writeFileSync(logPath, 'Finished: now\nExit Code: 0\n', 'utf8');
+    // The anchored footer block `start` itself writes (issue #150).
+    fs.writeFileSync(
+      logPath,
+      `${'='.repeat(50)}\nFinished: now\nExit Code: 0\n`,
+      'utf8'
+    );
     const record = saveDockerRecord({ oomKilled: true });
 
     withFakeDockerMissingContainer(() => {

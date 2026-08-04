@@ -516,7 +516,12 @@ fn docker_oom_killed_uses_the_container_exit_code_when_it_stops() {
 fn docker_oom_killed_prefers_the_log_footer_over_the_137_fallback() {
     let temp_dir = TempDir::new().unwrap();
     let log_path = temp_dir.path().join("issue-151.log");
-    std::fs::write(&log_path, "Finished: now\nExit Code: 0\n").unwrap();
+    // The anchored footer block `start` itself writes (issue #150).
+    std::fs::write(
+        &log_path,
+        "==================================================\nFinished: now\nExit Code: 0\n",
+    )
+    .unwrap();
     let store = ExecutionStore::with_options(ExecutionStoreOptions {
         app_folder: Some(temp_dir.path().to_path_buf()),
         use_links: Some(false),
