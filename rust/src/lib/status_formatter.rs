@@ -87,8 +87,10 @@ fn read_docker_state(record: &ExecutionRecord) -> Option<DockerState> {
 /// (currently docker via `docker inspect .State.ExitCode`). Returns None when
 /// the backend cannot provide a real code, so callers never surface the `-1`
 /// sentinel for a session whose real exit code is simply not available yet.
-fn read_backend_exit_code(record: &ExecutionRecord) -> Option<i32> {
-    let state = read_docker_state(record)?;
+/// A running container has no terminal exit code (docker reports `0` for it),
+/// so only a stopped container contributes one.
+fn backend_exit_code(docker_state: Option<DockerState>) -> Option<i32> {
+    let state = docker_state?;
     if state.running {
         None
     } else {
@@ -96,18 +98,26 @@ fn read_backend_exit_code(record: &ExecutionRecord) -> Option<i32> {
     }
 }
 
-fn resolve_oom_exit_code(footer_exit: Option<i32>, docker_state: Option<DockerState>) -> i32 {
-    if let Some(code) = footer_exit {
-        return code;
+/// Reconcile the OOM observation from the stored record and from `docker inspect`.
+///
+/// `State.OOMKilled` is a container-cgroup flag: the kernel sets it when ANY
+/// process in the cgroup is OOM-killed and it is never cleared for the life of
+/// the container (moby/moby#47618). It is therefore an *observation*, never a
+/// verdict about the session (issue #151) — a container that lost one child
+/// process keeps running and can still exit `0`. Once observed, the flag stays
+/// `true` for the record.
+fn resolve_oom_observation(
+    record: &ExecutionRecord,
+    docker_state: Option<DockerState>,
+) -> Option<bool> {
+    let inspected = docker_state.and_then(|state| state.oom_killed);
+    if record.oom_killed == Some(true) || inspected == Some(true) {
+        return Some(true);
     }
-    if let Some(state) = docker_state {
-        if let Some(code) = state.exit_code {
-            if !state.running || code != 0 {
-                return code;
-            }
-        }
+    if record.oom_killed == Some(false) || inspected == Some(false) {
+        return Some(false);
     }
-    137
+    None
 }
 
 /// Check if a detached isolation session is still running
@@ -184,20 +194,15 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
         None
     };
 
-    if record.oom_killed == Some(true)
-        || docker_state.and_then(|state| state.oom_killed) == Some(true)
-    {
+    // `oomKilled` is exposed alongside the status, but never decides it (#151).
+    let oom_killed = resolve_oom_observation(record, docker_state);
+    let clone_record = || {
         let mut enriched = record.clone();
-        enriched.oom_killed = Some(true);
-        enriched.status = ExecutionStatus::Executed;
-        if enriched.exit_code.is_none() {
-            enriched.exit_code = Some(resolve_oom_exit_code(footer_exit, docker_state));
+        if oom_killed.is_some() {
+            enriched.oom_killed = oom_killed;
         }
-        if enriched.end_time.is_none() {
-            enriched.end_time = Some(chrono::Utc::now().to_rfc3339());
-        }
-        return enriched;
-    }
+        enriched
+    };
 
     let alive = if is_detached_docker {
         docker_state.map(|state| state.running)
@@ -217,23 +222,37 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
             // finished/failed run (issue #136).
             let is_detached =
                 record.options.get("isolationMode").and_then(|v| v.as_str()) == Some("detached");
-            if is_detached && record.status == ExecutionStatus::Executing && footer_exit.is_some() {
-                let mut enriched = record.clone();
-                enriched.status = ExecutionStatus::Executed;
-                enriched.exit_code = footer_exit;
-                if enriched.end_time.is_none() {
-                    enriched.end_time = Some(chrono::Utc::now().to_rfc3339());
+            if is_detached && record.status == ExecutionStatus::Executing {
+                if footer_exit.is_some() {
+                    let mut enriched = clone_record();
+                    enriched.status = ExecutionStatus::Executed;
+                    enriched.exit_code = footer_exit;
+                    if enriched.end_time.is_none() {
+                        enriched.end_time = Some(chrono::Utc::now().to_rfc3339());
+                    }
+                    return enriched;
                 }
-                return enriched;
+                if oom_killed == Some(true) {
+                    // The container is gone and wrote no footer, so the OOM
+                    // observation is the only evidence left: report the session
+                    // as finished with the conventional SIGKILL code (issue
+                    // #148). While the container is still inspectable this
+                    // branch is never taken — a live container keeps the session
+                    // `executing` no matter what the cgroup flag says (#151).
+                    let mut enriched = clone_record();
+                    enriched.status = ExecutionStatus::Executed;
+                    enriched.exit_code = Some(137);
+                    if enriched.end_time.is_none() {
+                        enriched.end_time = Some(chrono::Utc::now().to_rfc3339());
+                    }
+                    return enriched;
+                }
             }
-            return record.clone();
+            return clone_record();
         }
     };
 
-    let mut enriched = record.clone();
-    if let Some(oom_killed) = docker_state.and_then(|state| state.oom_killed) {
-        enriched.oom_killed = Some(oom_killed);
-    }
+    let mut enriched = clone_record();
 
     if alive && enriched.status == ExecutionStatus::Executed {
         // A live `screen -ls` (or `tmux`/`docker`) session does NOT mean the command
@@ -252,13 +271,19 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
     } else if !alive && enriched.status == ExecutionStatus::Executing {
         // Session ended but record says executing - correct it. Resolve a real
         // exit code: prefer the log footer, then the backend's own record (e.g.
-        // `docker inspect .State.ExitCode`), and only fall back to the `-1`
-        // sentinel as a last resort when no real code can be obtained (issue #136).
+        // `docker inspect .State.ExitCode`), then `137` when the only evidence
+        // left is the OOM observation, and only fall back to the `-1` sentinel
+        // as a last resort when no real code can be obtained (issues #136, #151).
         enriched.status = ExecutionStatus::Executed;
         if enriched.exit_code.is_none() {
             enriched.exit_code = Some(
                 footer_exit
-                    .or_else(|| read_backend_exit_code(&enriched))
+                    .or_else(|| backend_exit_code(docker_state))
+                    .or(if oom_killed == Some(true) {
+                        Some(137)
+                    } else {
+                        None
+                    })
                     .unwrap_or(-1),
             );
         }
