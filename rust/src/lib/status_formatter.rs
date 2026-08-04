@@ -11,6 +11,7 @@ use crate::execution_store::{ExecutionRecord, ExecutionStatus, ExecutionStore};
 use crate::output_blocks::{escape_for_links_notation, format_value_for_links_notation};
 use serde_json::Value;
 use std::fs;
+use std::io::{Read, Seek, SeekFrom};
 use std::process::Command;
 
 /// Live state of a detached docker container by name.
@@ -162,13 +163,73 @@ pub fn is_detached_session_alive(record: &ExecutionRecord) -> Option<bool> {
     }
 }
 
-fn read_exit_code_from_log(log_path: &str) -> Option<i32> {
-    let content = fs::read_to_string(log_path).ok()?;
-    content
+/// Number of trailing bytes scanned for the terminal log footer. The footer is
+/// always appended at the very end of the log, so there is no reason to read
+/// (potentially megabytes of) command output on every `--status` call.
+const LOG_TAIL_BYTES: u64 = 16 * 1024;
+
+/// Read the last `bytes` bytes of a file as (lossy) UTF-8 text.
+///
+/// A partial first line is dropped: the slice can start in the middle of a
+/// line, and that fragment must not be treated as the beginning of a line by
+/// the anchored footer matcher.
+fn read_log_tail(log_path: &str, bytes: u64) -> Option<String> {
+    let mut file = fs::File::open(log_path).ok()?;
+    let size = file.metadata().ok()?.len();
+    let length = size.min(bytes);
+    file.seek(SeekFrom::Start(size - length)).ok()?;
+    let mut buffer = Vec::with_capacity(length as usize);
+    file.take(length).read_to_end(&mut buffer).ok()?;
+    let tail = String::from_utf8_lossy(&buffer).into_owned();
+    if size <= bytes {
+        return Some(tail);
+    }
+    Some(match tail.find('\n') {
+        Some(index) => tail[index + 1..].to_string(),
+        None => String::new(),
+    })
+}
+
+fn is_footer_separator_line(line: &str) -> bool {
+    line.len() >= 10 && line.chars().all(|c| c == '=')
+}
+
+/// Read the terminal exit code from the anchored footer at the end of a log.
+///
+/// The footer `start` itself writes (see `create_log_footer()` and
+/// `shell_log_footer_snippet()`) is a three-line block:
+///
+/// ```text
+/// ==================================================
+/// Finished: 2026-07-30 23:36:20.295
+/// Exit Code: 0
+/// ```
+///
+/// Matching the whole block at line starts means a bare `Exit Code: N`
+/// substring emitted by the wrapped command (inside a JSON payload, a quoted
+/// log excerpt, an `rg` dump, ...) can no longer be mistaken for the footer
+/// (issue #150). Returns None when the log has no footer yet — never a number
+/// parsed out of the command's own output.
+pub fn read_exit_code_from_log(log_path: &str) -> Option<i32> {
+    let tail = read_log_tail(log_path, LOG_TAIL_BYTES)?;
+    let lines: Vec<&str> = tail
         .lines()
-        .rev()
-        .find_map(|line| line.trim().strip_prefix("Exit Code:"))
-        .and_then(|value| value.trim().parse::<i32>().ok())
+        .map(|line| line.trim_end_matches('\r'))
+        .collect();
+    for index in (2..lines.len()).rev() {
+        let value = match lines[index].strip_prefix("Exit Code:") {
+            Some(value) => value,
+            None => continue,
+        };
+        if !lines[index - 1].starts_with("Finished:") || !is_footer_separator_line(lines[index - 2])
+        {
+            continue;
+        }
+        if let Ok(code) = value.trim().parse::<i32>() {
+            return Some(code);
+        }
+    }
+    None
 }
 
 /// Enrich execution record with live session status for detached executions.
@@ -251,14 +312,16 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
         // Otherwise keep the recorded/footer exit code - the command has finished.
     } else if !alive && enriched.status == ExecutionStatus::Executing {
         // Session ended but record says executing - correct it. Resolve a real
-        // exit code: prefer the log footer, then the backend's own record (e.g.
-        // `docker inspect .State.ExitCode`), and only fall back to the `-1`
-        // sentinel as a last resort when no real code can be obtained (issue #136).
+        // exit code: prefer the backend's own record (e.g. `docker inspect
+        // .State.ExitCode`, which is authoritative and cannot be spoofed by
+        // command output — issue #150), then the anchored log footer, and only
+        // fall back to the `-1` sentinel as a last resort when no real code can
+        // be obtained (issue #136).
         enriched.status = ExecutionStatus::Executed;
         if enriched.exit_code.is_none() {
             enriched.exit_code = Some(
-                footer_exit
-                    .or_else(|| read_backend_exit_code(&enriched))
+                read_backend_exit_code(&enriched)
+                    .or(footer_exit)
                     .unwrap_or(-1),
             );
         }

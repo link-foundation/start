@@ -166,20 +166,88 @@ function isDetachedSessionAlive(record) {
   }
 }
 
+/**
+ * Number of trailing bytes scanned for the terminal log footer. The footer is
+ * always appended at the very end of the log, so there is no reason to read
+ * (potentially megabytes of) command output on every `--status` call.
+ */
+const LOG_TAIL_BYTES = 16 * 1024;
+
+/**
+ * The three-line terminal footer that `start` itself writes (see
+ * `createLogFooter()` and `createShellLogFooterSnippet()`):
+ *
+ *   ==================================================
+ *   Finished: 2026-07-30 23:36:20.295
+ *   Exit Code: 0
+ *
+ * The whole block is anchored at line starts so that a bare `Exit Code: N`
+ * substring emitted by the wrapped command (inside a JSON payload, a quoted
+ * log excerpt, an `rg` dump, ...) can no longer be mistaken for the footer
+ * `start` appends itself (issue #150).
+ */
+const LOG_FOOTER_PATTERN =
+  /^={10,}[ \t]*\r?\n^Finished:[^\r\n]*\r?\n^Exit Code:[ \t]*(-?\d+)[ \t]*(?![^\r\n])/gm;
+
+/**
+ * Read the last `bytes` bytes of a file as UTF-8 text.
+ *
+ * A partial first line is dropped: the slice can start in the middle of a line,
+ * and that fragment must not be treated as the beginning of a line by the
+ * anchored footer pattern.
+ *
+ * @param {string} logPath - Path to the log file
+ * @param {number} [bytes] - Maximum number of trailing bytes to read
+ * @returns {string|null} Tail content, or null when the file cannot be read
+ */
+function readLogTail(logPath, bytes = LOG_TAIL_BYTES) {
+  let fd;
+  try {
+    fd = fs.openSync(logPath, 'r');
+    const size = fs.fstatSync(fd).size;
+    const length = Math.min(size, bytes);
+    const buffer = Buffer.alloc(length);
+    fs.readSync(fd, buffer, 0, length, size - length);
+    const tail = buffer.toString('utf8');
+    if (size <= bytes) {
+      return tail;
+    }
+    const firstNewline = tail.indexOf('\n');
+    return firstNewline === -1 ? '' : tail.slice(firstNewline + 1);
+  } catch {
+    return null;
+  } finally {
+    if (fd !== undefined) {
+      try {
+        fs.closeSync(fd);
+      } catch {
+        // ignore
+      }
+    }
+  }
+}
+
+/**
+ * Read the terminal exit code from the anchored footer at the end of a log.
+ * Returns null when the log has no footer yet (command still running, or the
+ * host-side watcher has not appended it yet) — never a number parsed out of the
+ * command's own output.
+ * @param {string} logPath - Path to the log file
+ * @returns {number|null}
+ */
 function readExitCodeFromLog(logPath) {
   if (!logPath) {
     return null;
   }
-  try {
-    const content = fs.readFileSync(logPath, 'utf8');
-    const matches = [...content.matchAll(/Exit Code:\s*(-?\d+)/g)];
-    if (matches.length === 0) {
-      return null;
-    }
-    return parseInt(matches[matches.length - 1][1], 10);
-  } catch {
+  const tail = readLogTail(logPath);
+  if (tail === null) {
     return null;
   }
+  const matches = [...tail.matchAll(LOG_FOOTER_PATTERN)];
+  if (matches.length === 0) {
+    return null;
+  }
+  return parseInt(matches[matches.length - 1][1], 10);
 }
 
 /**
@@ -265,12 +333,14 @@ function enrichDetachedStatus(record) {
     // Otherwise keep the recorded/footer exit code - the command has finished.
   } else if (!alive && enriched.status === 'executing') {
     // Session ended but record says executing - correct it. Resolve a real exit
-    // code: prefer the log footer, then the backend's own record (e.g.
-    // `docker inspect .State.ExitCode`), and only fall back to the `-1` sentinel
-    // as a last resort when no real code can be obtained (issue #136).
+    // code: prefer the backend's own record (e.g. `docker inspect
+    // .State.ExitCode`, which is authoritative and cannot be spoofed by command
+    // output — issue #150), then the anchored log footer, and only fall back to
+    // the `-1` sentinel as a last resort when no real code can be obtained
+    // (issue #136).
     enriched.status = 'executed';
     if (enriched.exitCode === null || enriched.exitCode === undefined) {
-      enriched.exitCode = footerExit ?? readBackendExitCode(enriched) ?? -1;
+      enriched.exitCode = readBackendExitCode(enriched) ?? footerExit ?? -1;
     }
     if (!enriched.endTime) {
       enriched.endTime = new Date().toISOString();
@@ -619,6 +689,8 @@ module.exports = {
   listExecutions,
   isDetachedSessionAlive,
   enrichDetachedStatus,
+  readExitCodeFromLog,
+  readLogTail,
   attachCurrentTime,
   attachProcessIds,
 };
