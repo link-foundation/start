@@ -11,7 +11,8 @@ use crate::isolation::isolation_log::{
 use crate::isolation::IsolationOptions;
 
 /// Build the extra `docker run` arguments contributed by runtime options
-/// (--privileged, --env/-e, --volume/-v, --mount). Returned references borrow
+/// (--privileged, --env/-e, --volume/-v, --mount, --network,
+/// --network-alias). Returned references borrow
 /// from `options`, which outlives the `docker run` invocation.
 pub(crate) fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<&str> {
     let mut args: Vec<&str> = Vec::new();
@@ -29,6 +30,14 @@ pub(crate) fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<&str>
     for mount in &options.mounts {
         args.push("--mount");
         args.push(mount);
+    }
+    if let Some(network) = &options.network {
+        args.push("--network");
+        args.push(network);
+    }
+    for alias in &options.network_aliases {
+        args.push("--network-alias");
+        args.push(alias);
     }
     args
 }
@@ -131,6 +140,63 @@ pub(crate) fn read_docker_container_oom_killed(container_name: &str) -> Option<b
         "true" => Some(true),
         "false" => Some(false),
         _ => None,
+    }
+}
+
+pub(crate) fn read_docker_container_status(container_name: &str) -> Option<String> {
+    let output = Command::new(docker_command())
+        .args(["inspect", "-f", "{{.State.Status}}", container_name])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let status = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if status.is_empty() {
+        None
+    } else {
+        Some(status)
+    }
+}
+
+pub(crate) fn append_attached_docker_cleanup_message(
+    message: &mut String,
+    container_name: &str,
+    policy: DockerContainerCleanupPolicy,
+    exit_code: i32,
+    log_path: Option<&PathBuf>,
+    container_existed_before_launch: bool,
+) {
+    let oom_killed = read_docker_container_oom_killed(container_name).unwrap_or(false);
+    if !container_existed_before_launch
+        && read_docker_container_status(container_name).as_deref() == Some("created")
+    {
+        if remove_docker_container(container_name, log_path) {
+            message.push_str("\nContainer removed after launch failure.");
+        } else {
+            message.push_str("\nWarning: failed to remove container after launch failure.");
+        }
+    } else if should_cleanup_docker_container(policy, exit_code, oom_killed) {
+        if remove_docker_container(container_name, log_path) {
+            message.push_str("\nContainer removed after completion.");
+        } else {
+            message.push_str("\nWarning: failed to remove container automatically.");
+            message.push_str(&format!(
+                "\nRemove when done: docker rm -f {container_name}"
+            ));
+        }
+    } else if policy == DockerContainerCleanupPolicy::Keep {
+        message.push('\n');
+        message.push_str(&docker_container_cleanup_instructions(container_name));
+    } else {
+        if oom_killed {
+            message.push_str("\nContainer kept because Docker reports it was OOM-killed.");
+        } else {
+            message.push_str("\nContainer kept because the command failed.");
+        }
+        message.push_str(&format!(
+            "\nRemove when done: docker rm -f {container_name}"
+        ));
     }
 }
 

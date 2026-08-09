@@ -48,6 +48,7 @@ pub use isolation::{
 };
 pub use isolation_metadata::{
     build_isolation_options_map, docker_runtime_metadata, docker_runtime_status_lines,
+    docker_runtime_status_lines_for_options,
 };
 pub use log_uploader::upload_execution_log;
 #[allow(deprecated)]

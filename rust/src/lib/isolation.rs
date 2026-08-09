@@ -12,10 +12,9 @@ use std::process::{Command, Stdio};
 
 use crate::args_parser::generate_session_name;
 use crate::docker_cleanup::{
-    append_docker_container_cleanup_policy_message, build_docker_runtime_args,
-    docker_container_cleanup_instructions, get_docker_container_cleanup_policy,
-    read_docker_container_oom_killed, remove_docker_container, should_cleanup_docker_container,
-    spawn_attached_docker, start_detached_docker_completion_watcher, DockerContainerCleanupPolicy,
+    append_attached_docker_cleanup_message, append_docker_container_cleanup_policy_message,
+    build_docker_runtime_args, get_docker_container_cleanup_policy, remove_docker_container,
+    spawn_attached_docker, start_detached_docker_completion_watcher,
 };
 
 /// Result of an isolation run
@@ -50,6 +49,10 @@ pub struct IsolationOptions {
     pub env: Vec<String>,
     /// Run docker container in privileged mode
     pub privileged: bool,
+    /// Docker network name
+    pub network: Option<String>,
+    /// Docker network-scoped aliases
+    pub network_aliases: Vec<String>,
     /// SSH endpoint
     pub endpoint: Option<String>,
     /// Run in detached mode
@@ -81,6 +84,8 @@ impl Default for IsolationOptions {
             mounts: Vec::new(),
             env: Vec::new(),
             privileged: false,
+            network: None,
+            network_aliases: Vec::new(),
             endpoint: None,
             detached: false,
             user: None,
@@ -736,6 +741,8 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         .session
         .clone()
         .unwrap_or_else(|| generate_session_name(Some("docker")));
+    let container_existed_before_launch =
+        crate::docker_cleanup::read_docker_container_status(&container_name).is_some();
     let cleanup_policy = get_docker_container_cleanup_policy(options);
 
     // Detect the shell to use in the container
@@ -825,6 +832,13 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
             }
             Ok(output) => {
                 let stderr = String::from_utf8_lossy(&output.stderr);
+                if !container_existed_before_launch
+                    && crate::docker_cleanup::read_docker_container_status(&container_name)
+                        .as_deref()
+                        == Some("created")
+                {
+                    remove_docker_container(&container_name, options.log_path.as_ref());
+                }
                 IsolationResult {
                     success: false,
                     session_name: Some(container_name),
@@ -873,39 +887,14 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                         "Docker container \"{}\" exited with code {}",
                         container_name, exit_code
                     );
-                    let oom_killed =
-                        read_docker_container_oom_killed(&container_name).unwrap_or(false);
-                    if should_cleanup_docker_container(cleanup_policy, exit_code, oom_killed) {
-                        if remove_docker_container(&container_name, options.log_path.as_ref()) {
-                            message.push_str("\nContainer removed after completion.");
-                        } else {
-                            message
-                                .push_str("\nWarning: failed to remove container automatically.");
-                            message.push_str(&format!(
-                                "\nRemove when done: docker rm -f {}",
-                                container_name
-                            ));
-                        }
-                    } else if cleanup_policy == DockerContainerCleanupPolicy::Keep {
-                        message.push('\n');
-                        message.push_str(&docker_container_cleanup_instructions(&container_name));
-                    } else if matches!(
+                    append_attached_docker_cleanup_message(
+                        &mut message,
+                        &container_name,
                         cleanup_policy,
-                        DockerContainerCleanupPolicy::KeepOnFail
-                            | DockerContainerCleanupPolicy::Default
-                    ) {
-                        if oom_killed {
-                            message.push_str(
-                                "\nContainer kept because Docker reports it was OOM-killed.",
-                            );
-                        } else {
-                            message.push_str("\nContainer kept because the command failed.");
-                        }
-                        message.push_str(&format!(
-                            "\nRemove when done: docker rm -f {}",
-                            container_name
-                        ));
-                    }
+                        exit_code,
+                        options.log_path.as_ref(),
+                        container_existed_before_launch,
+                    );
 
                     IsolationResult {
                         success: s.success(),

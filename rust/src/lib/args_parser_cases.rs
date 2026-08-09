@@ -211,6 +211,72 @@ fn test_docker_privileged() {
 }
 
 #[test]
+fn test_docker_network_forms_preserve_child_args() {
+    let spaced: Vec<String> = vec![
+        "-i",
+        "docker",
+        "--network",
+        "hive-formal-ai",
+        "--",
+        "--network",
+        "child-network",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+    let equals: Vec<String> = vec![
+        "-i",
+        "docker",
+        "--network=hive-formal-ai",
+        "--",
+        "echo",
+        "ok",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+
+    let spaced_result = parse_args(&spaced).unwrap();
+    let equals_result = parse_args(&equals).unwrap();
+    assert_eq!(
+        spaced_result.wrapper_options.network.as_deref(),
+        Some("hive-formal-ai")
+    );
+    assert_eq!(
+        spaced_result.raw_command,
+        vec!["--network", "child-network"]
+    );
+    assert_eq!(
+        equals_result.wrapper_options.network.as_deref(),
+        Some("hive-formal-ai")
+    );
+}
+
+#[test]
+fn test_docker_network_alias_repeatable() {
+    let args: Vec<String> = vec![
+        "-i",
+        "docker",
+        "--network",
+        "hive-formal-ai",
+        "--network-alias",
+        "formal-ai",
+        "--network-alias=checker",
+        "--",
+        "echo",
+        "ok",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+    let result = parse_args(&args).unwrap();
+    assert_eq!(
+        result.wrapper_options.network_aliases,
+        vec!["formal-ai", "checker"]
+    );
+}
+
+#[test]
 fn test_docker_runtime_options_default_empty() {
     let args: Vec<String> = vec!["-i", "docker", "--", "ls"]
         .into_iter()
@@ -221,6 +287,26 @@ fn test_docker_runtime_options_default_empty() {
     assert!(result.wrapper_options.mounts.is_empty());
     assert!(result.wrapper_options.env.is_empty());
     assert!(!result.wrapper_options.privileged);
+    assert!(result.wrapper_options.network.is_none());
+    assert!(result.wrapper_options.network_aliases.is_empty());
+}
+
+#[test]
+fn test_network_options_rejected_without_docker() {
+    let network: Vec<String> = vec!["-i", "tmux", "--network", "private", "--", "ls"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    let alias: Vec<String> = vec!["--network-alias", "service", "--", "ls"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    assert!(parse_args(&network)
+        .unwrap_err()
+        .contains("--network option is only valid"));
+    assert!(parse_args(&alias)
+        .unwrap_err()
+        .contains("--network-alias option is only valid"));
 }
 
 #[test]

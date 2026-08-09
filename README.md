@@ -318,6 +318,8 @@ This is useful for:
 | `--mount`                        | Docker `--mount` spec (repeatable, docker only)                              |
 | `--env, -e`                      | Environment variable `KEY=VALUE` for the container (repeatable, docker only) |
 | `--privileged`                   | Run docker container in privileged mode (docker only)                        |
+| `--network`                      | Connect docker container to a named network (docker only)                    |
+| `--network-alias`                | Add a network-scoped alias (repeatable, docker only)                         |
 | `--endpoint`                     | SSH endpoint (required for ssh, e.g., user@host)                             |
 | `--isolated-user, -u [name]`     | Create isolated user with same permissions (screen/tmux)                     |
 | `--keep-user`                    | Keep isolated user after command completes (don't delete)                    |

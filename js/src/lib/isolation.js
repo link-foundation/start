@@ -28,6 +28,7 @@ const {
   getDockerContainerCleanupInstructions,
   appendDockerContainerCleanupPolicyMessage,
   readDockerContainerOomKilled,
+  readDockerContainerStatus,
   removeDockerContainer,
   startDetachedDockerCompletionWatcher,
   spawnAttachedDocker,
@@ -499,9 +500,9 @@ const {
 /**
  * Build the docker run runtime argument list contributed by configurable
  * container options: privileged mode, environment variables, volumes/bind
- * mounts, and --mount specs. Returned in a stable order so they can be spliced
+ * mounts, --mount specs, and network configuration. Returned in a stable order so they can be spliced
  * into the `docker run` argv before the image name.
- * @param {object} options - Options (privileged, env, volumes, mounts)
+ * @param {object} options - Options (privileged, env, volumes, mounts, network, networkAliases)
  * @returns {string[]} Docker CLI arguments
  */
 function buildDockerRuntimeArgs(options = {}) {
@@ -517,6 +518,12 @@ function buildDockerRuntimeArgs(options = {}) {
   }
   for (const mount of options.mounts || []) {
     args.push('--mount', mount);
+  }
+  if (options.network) {
+    args.push('--network', options.network);
+  }
+  for (const alias of options.networkAliases || []) {
+    args.push('--network-alias', alias);
   }
   return args;
 }
@@ -542,6 +549,14 @@ function buildDockerRuntimeStatusLines(options = {}) {
   if (options.privileged) {
     lines.push(`[Isolation] Privileged: true`);
   }
+  if (options.network) {
+    lines.push(`[Isolation] Network: ${options.network}`);
+  }
+  if (options.networkAliases && options.networkAliases.length > 0) {
+    lines.push(
+      `[Isolation] Network aliases: ${options.networkAliases.join(', ')}`
+    );
+  }
   return lines;
 }
 
@@ -549,7 +564,7 @@ function buildDockerRuntimeStatusLines(options = {}) {
  * Build the execution-record metadata for docker runtime options, normalizing
  * empty collections and a falsy privileged flag to `null`.
  * @param {object} options - Options (volumes, mounts, env, privileged)
- * @returns {{volumes: ?string[], mounts: ?string[], env: ?string[], privileged: ?boolean}}
+ * @returns {{volumes: ?string[], mounts: ?string[], env: ?string[], privileged: ?boolean, network: ?string, networkAliases: ?string[]}}
  */
 function buildDockerRuntimeMetadata(options = {}) {
   return {
@@ -558,6 +573,11 @@ function buildDockerRuntimeMetadata(options = {}) {
     mounts: options.mounts && options.mounts.length > 0 ? options.mounts : null,
     env: options.env && options.env.length > 0 ? options.env : null,
     privileged: options.privileged || null,
+    network: options.network || null,
+    networkAliases:
+      options.networkAliases && options.networkAliases.length > 0
+        ? options.networkAliases
+        : null,
   };
 }
 
@@ -597,6 +617,8 @@ function runInDocker(command, options = {}) {
   }
 
   const containerName = options.session || generateSessionName('docker');
+  const containerExistedBeforeLaunch =
+    readDockerContainerStatus(containerName) !== null;
   const cleanupPolicy = getDockerContainerCleanupPolicy(options);
   if (!dockerImageExists(options.image)) {
     // Pass logPath so the image-preparation phase (docker pull) is recorded in
@@ -671,6 +693,12 @@ function runInDocker(command, options = {}) {
           dockerResult.stderr.trim() ||
           dockerResult.stdout.trim() ||
           `docker exited with code ${dockerResult.status}`;
+        if (
+          !containerExistedBeforeLaunch &&
+          readDockerContainerStatus(containerName) === 'created'
+        ) {
+          removeDockerContainer(containerName, options.logPath);
+        }
         throw new Error(dockerError);
       }
 
@@ -760,8 +788,17 @@ function runInDocker(command, options = {}) {
           }
 
           const oomKilled = readDockerContainerOomKilled(containerName);
+          const launchFailed =
+            !containerExistedBeforeLaunch &&
+            readDockerContainerStatus(containerName) === 'created';
 
-          if (
+          if (launchFailed) {
+            if (removeDockerContainer(containerName, options.logPath)) {
+              message += `\nContainer removed after launch failure.`;
+            } else {
+              message += `\nWarning: failed to remove container after launch failure.`;
+            }
+          } else if (
             shouldCleanupDockerContainer(cleanupPolicy, exitCode, oomKilled)
           ) {
             if (removeDockerContainer(containerName, options.logPath)) {

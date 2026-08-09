@@ -18,6 +18,8 @@ pub fn docker_runtime_status_lines(
     mounts: &[String],
     env: &[String],
     privileged: bool,
+    network: Option<&str>,
+    network_aliases: &[String],
 ) -> Vec<String> {
     let mut lines = Vec::new();
     if !volumes.is_empty() {
@@ -32,7 +34,28 @@ pub fn docker_runtime_status_lines(
     if privileged {
         lines.push("[Isolation] Privileged: true".to_string());
     }
+    if let Some(network) = network {
+        lines.push(format!("[Isolation] Network: {}", network));
+    }
+    if !network_aliases.is_empty() {
+        lines.push(format!(
+            "[Isolation] Network aliases: {}",
+            network_aliases.join(", ")
+        ));
+    }
     lines
+}
+
+/// Build Docker runtime status lines directly from parsed wrapper options.
+pub fn docker_runtime_status_lines_for_options(options: &WrapperOptions) -> Vec<String> {
+    docker_runtime_status_lines(
+        &options.volumes,
+        &options.mounts,
+        &options.env,
+        options.privileged,
+        options.network.as_deref(),
+        &options.network_aliases,
+    )
 }
 
 /// Build the execution-record metadata entries for docker runtime options.
@@ -43,6 +66,8 @@ pub fn docker_runtime_metadata(
     mounts: &[String],
     env: &[String],
     privileged: bool,
+    network: Option<&str>,
+    network_aliases: &[String],
 ) -> Vec<(String, serde_json::Value)> {
     let arr = |items: &[String]| {
         serde_json::Value::Array(
@@ -64,6 +89,15 @@ pub fn docker_runtime_metadata(
     }
     if privileged {
         entries.push(("privileged".to_string(), serde_json::Value::Bool(true)));
+    }
+    if let Some(network) = network {
+        entries.push((
+            "network".to_string(),
+            serde_json::Value::String(network.to_string()),
+        ));
+    }
+    if !network_aliases.is_empty() {
+        entries.push(("networkAliases".to_string(), arr(network_aliases)));
     }
     entries
 }
@@ -95,6 +129,8 @@ pub fn build_isolation_options_map(
         &options.mounts,
         &options.env,
         options.privileged,
+        options.network.as_deref(),
+        &options.network_aliases,
     ) {
         opts_map.insert(k, v);
     }

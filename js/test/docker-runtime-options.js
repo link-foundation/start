@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 /**
- * Tests for Docker runtime options: --volume/-v, --mount, --env/-e, --privileged
+ * Tests for Docker runtime options: --volume/-v, --mount, --env/-e,
+ * --privileged, --network, and --network-alias
  *
  * Reproduces issue #132: callers need to configure bind mounts, volumes,
  * environment variables, and privileged mode for the docker isolation backend
@@ -90,12 +91,58 @@ describe('Docker runtime options parsing', () => {
     assert.strictEqual(result.wrapperOptions.privileged, true);
   });
 
+  it('should parse --network value and equals forms without consuming child args', () => {
+    const spaced = parseArgs([
+      '-i',
+      'docker',
+      '--network',
+      'hive-formal-ai',
+      '--',
+      '--network',
+      'child-network',
+    ]);
+    const equals = parseArgs([
+      '-i',
+      'docker',
+      '--network=hive-formal-ai',
+      '--',
+      'echo',
+      'ok',
+    ]);
+
+    assert.strictEqual(spaced.wrapperOptions.network, 'hive-formal-ai');
+    assert.deepStrictEqual(spaced.rawCommand, ['--network', 'child-network']);
+    assert.strictEqual(equals.wrapperOptions.network, 'hive-formal-ai');
+  });
+
+  it('should parse repeatable --network-alias value and equals forms', () => {
+    const result = parseArgs([
+      '-i',
+      'docker',
+      '--network',
+      'hive-formal-ai',
+      '--network-alias',
+      'formal-ai',
+      '--network-alias=checker',
+      '--',
+      'echo',
+      'ok',
+    ]);
+
+    assert.deepStrictEqual(result.wrapperOptions.networkAliases, [
+      'formal-ai',
+      'checker',
+    ]);
+  });
+
   it('should default runtime options to empty/false', () => {
     const result = parseArgs(['-i', 'docker', '--', 'ls']);
     assert.deepStrictEqual(result.wrapperOptions.volumes, []);
     assert.deepStrictEqual(result.wrapperOptions.mounts, []);
     assert.deepStrictEqual(result.wrapperOptions.env, []);
     assert.strictEqual(result.wrapperOptions.privileged, false);
+    assert.strictEqual(result.wrapperOptions.network, null);
+    assert.deepStrictEqual(result.wrapperOptions.networkAliases, []);
   });
 
   it('should throw when --volume requires an argument', () => {
@@ -136,6 +183,15 @@ describe('Docker runtime options validation', () => {
     }, /--privileged option is only valid when isolation stack includes docker/);
   });
 
+  it('should reject network options without docker', () => {
+    assert.throws(() => {
+      parseArgs(['-i', 'tmux', '--network', 'private', '--', 'ls']);
+    }, /--network option is only valid when isolation stack includes docker/);
+    assert.throws(() => {
+      parseArgs(['--network-alias', 'service', '--', 'ls']);
+    }, /--network-alias option is only valid when isolation stack includes docker/);
+  });
+
   it('should accept runtime options when stack includes docker', () => {
     const result = parseArgs([
       '-i',
@@ -171,6 +227,8 @@ describe('buildDockerRuntimeArgs', () => {
       env: ['FOO=bar', 'GH_TOKEN=secret'],
       volumes: ['/h/a:/c/a', '/h/b:/c/b:ro'],
       mounts: ['type=bind,src=/h,dst=/c'],
+      network: 'hive-formal-ai',
+      networkAliases: ['formal-ai', 'checker'],
     });
     assert.deepStrictEqual(args, [
       '--privileged',
@@ -184,6 +242,12 @@ describe('buildDockerRuntimeArgs', () => {
       '/h/b:/c/b:ro',
       '--mount',
       'type=bind,src=/h,dst=/c',
+      '--network',
+      'hive-formal-ai',
+      '--network-alias',
+      'formal-ai',
+      '--network-alias',
+      'checker',
     ]);
   });
 });
@@ -199,12 +263,16 @@ describe('buildDockerRuntimeStatusLines', () => {
       mounts: ['type=bind,src=/h,dst=/c'],
       env: ['FOO=bar'],
       privileged: true,
+      network: 'hive-formal-ai',
+      networkAliases: ['formal-ai', 'checker'],
     });
     assert.deepStrictEqual(lines, [
       '[Isolation] Volumes: /h:/c:ro',
       '[Isolation] Mounts: type=bind,src=/h,dst=/c',
       '[Isolation] Env: FOO=bar',
       '[Isolation] Privileged: true',
+      '[Isolation] Network: hive-formal-ai',
+      '[Isolation] Network aliases: formal-ai, checker',
     ]);
   });
 
@@ -223,6 +291,8 @@ describe('buildDockerRuntimeMetadata', () => {
       mounts: null,
       env: null,
       privileged: null,
+      network: null,
+      networkAliases: null,
     });
   });
 
@@ -233,12 +303,16 @@ describe('buildDockerRuntimeMetadata', () => {
         mounts: ['type=bind,src=/h,dst=/c'],
         env: ['FOO=bar'],
         privileged: true,
+        network: 'hive-formal-ai',
+        networkAliases: ['formal-ai', 'checker'],
       }),
       {
         volumes: ['/h:/c'],
         mounts: ['type=bind,src=/h,dst=/c'],
         env: ['FOO=bar'],
         privileged: true,
+        network: 'hive-formal-ai',
+        networkAliases: ['formal-ai', 'checker'],
       }
     );
   });

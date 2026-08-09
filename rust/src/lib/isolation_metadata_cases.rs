@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn test_docker_runtime_status_lines_empty() {
-    assert!(docker_runtime_status_lines(&[], &[], &[], false).is_empty());
+    assert!(docker_runtime_status_lines(&[], &[], &[], false, None, &[]).is_empty());
 }
 
 #[test]
@@ -12,6 +12,8 @@ fn test_docker_runtime_status_lines_populated() {
         &["type=bind,src=/h,dst=/c".to_string()],
         &["FOO=bar".to_string()],
         true,
+        Some("hive-formal-ai"),
+        &["formal-ai".to_string(), "checker".to_string()],
     );
     assert_eq!(
         lines,
@@ -20,20 +22,28 @@ fn test_docker_runtime_status_lines_populated() {
             "[Isolation] Mounts: type=bind,src=/h,dst=/c".to_string(),
             "[Isolation] Env: FOO=bar".to_string(),
             "[Isolation] Privileged: true".to_string(),
+            "[Isolation] Network: hive-formal-ai".to_string(),
+            "[Isolation] Network aliases: formal-ai, checker".to_string(),
         ]
     );
 }
 
 #[test]
 fn test_docker_runtime_status_lines_joins_multiple() {
-    let lines =
-        docker_runtime_status_lines(&["/a:/a".to_string(), "/b:/b".to_string()], &[], &[], false);
+    let lines = docker_runtime_status_lines(
+        &["/a:/a".to_string(), "/b:/b".to_string()],
+        &[],
+        &[],
+        false,
+        None,
+        &[],
+    );
     assert_eq!(lines, vec!["[Isolation] Volumes: /a:/a, /b:/b".to_string()]);
 }
 
 #[test]
 fn test_docker_runtime_metadata_empty() {
-    assert!(docker_runtime_metadata(&[], &[], &[], false).is_empty());
+    assert!(docker_runtime_metadata(&[], &[], &[], false, None, &[]).is_empty());
 }
 
 #[test]
@@ -43,6 +53,8 @@ fn test_docker_runtime_metadata_populated() {
         &["type=bind,src=/h,dst=/c".to_string()],
         &["FOO=bar".to_string()],
         true,
+        Some("hive-formal-ai"),
+        &["formal-ai".to_string(), "checker".to_string()],
     );
     let map: std::collections::HashMap<_, _> = entries.into_iter().collect();
     assert_eq!(
@@ -58,11 +70,19 @@ fn test_docker_runtime_metadata_populated() {
         Some(&serde_json::json!(["FOO=bar".to_string()]))
     );
     assert_eq!(map.get("privileged"), Some(&serde_json::Value::Bool(true)));
+    assert_eq!(
+        map.get("network"),
+        Some(&serde_json::json!("hive-formal-ai"))
+    );
+    assert_eq!(
+        map.get("networkAliases"),
+        Some(&serde_json::json!(["formal-ai", "checker"]))
+    );
 }
 
 #[test]
 fn test_docker_runtime_metadata_omits_privileged_when_false() {
-    let entries = docker_runtime_metadata(&["/h:/c".to_string()], &[], &[], false);
+    let entries = docker_runtime_metadata(&["/h:/c".to_string()], &[], &[], false, None, &[]);
     let map: std::collections::HashMap<_, _> = entries.into_iter().collect();
     assert!(map.contains_key("volumes"));
     assert!(!map.contains_key("privileged"));
@@ -101,6 +121,8 @@ fn test_build_isolation_options_map_includes_runtime_options() {
         volumes: vec!["/h:/c:ro".to_string()],
         env: vec!["TOKEN=abc".to_string()],
         privileged: true,
+        network: Some("hive-formal-ai".to_string()),
+        network_aliases: vec!["formal-ai".to_string(), "checker".to_string()],
         ..Default::default()
     };
     let map = build_isolation_options_map(
@@ -120,5 +142,13 @@ fn test_build_isolation_options_map_includes_runtime_options() {
         Some(&serde_json::json!(["TOKEN=abc".to_string()]))
     );
     assert_eq!(map.get("privileged"), Some(&serde_json::Value::Bool(true)));
+    assert_eq!(
+        map.get("network"),
+        Some(&serde_json::json!("hive-formal-ai"))
+    );
+    assert_eq!(
+        map.get("networkAliases"),
+        Some(&serde_json::json!(["formal-ai", "checker"]))
+    );
     assert_eq!(map.get("user"), Some(&serde_json::json!("isolated-user")));
 }
