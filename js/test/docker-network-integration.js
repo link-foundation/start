@@ -22,7 +22,8 @@ function docker(args) {
 
 describe('Docker named network integration', { timeout: 60000 }, () => {
   before(() => {
-    dockerAvailable = docker(['info']).status === 0;
+    dockerAvailable =
+      process.platform === 'linux' && docker(['info']).status === 0;
     if (!dockerAvailable) {
       return;
     }
