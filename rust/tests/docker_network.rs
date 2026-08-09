@@ -25,7 +25,8 @@ impl Drop for DockerResources {
 
 #[test]
 fn named_network_alias_is_private_and_missing_network_leaves_no_orphan() {
-    if !docker(&["info"]).status.success() {
+    let docker_info = Command::new("docker").arg("info").output();
+    if !matches!(docker_info, Ok(output) if output.status.success()) {
         eprintln!("Skipping: Docker daemon is unavailable");
         return;
     }

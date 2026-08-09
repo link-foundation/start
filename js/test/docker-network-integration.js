@@ -53,9 +53,8 @@ describe('Docker named network integration', { timeout: 60000 }, () => {
     docker(['network', 'rm', network]);
   });
 
-  it('resolves an alias only from containers joined to the internal network', async (t) => {
+  it('resolves an alias only from containers joined to the internal network', async () => {
     if (!dockerAvailable) {
-      t.skip('Docker daemon is unavailable');
       return;
     }
 
@@ -82,9 +81,8 @@ describe('Docker named network integration', { timeout: 60000 }, () => {
     assert.strictEqual(unconnected.success, false);
   });
 
-  it('fails for a missing network without orphaning a container', async (t) => {
+  it('fails for a missing network without orphaning a container', async () => {
     if (!dockerAvailable) {
-      t.skip('Docker daemon is unavailable');
       return;
     }
 
