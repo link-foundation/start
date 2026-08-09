@@ -1,5 +1,11 @@
 # start-command
 
+## 0.31.0
+
+### Minor Changes
+
+- b14f11c: Add `--network` and repeatable `--network-alias` options for Docker-isolated commands.
+
 ## 0.30.5
 
 ### Patch Changes
