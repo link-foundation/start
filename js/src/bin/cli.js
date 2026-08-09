@@ -581,10 +581,7 @@ async function runWithIsolation(
       alwaysCleanupContainer: options.alwaysCleanupContainer,
       keepContainer: options.keepContainer,
       keepContainerOnFail: options.keepContainerOnFail,
-      volumes: options.volumes,
-      mounts: options.mounts,
-      env: options.env,
-      privileged: options.privileged,
+      ...buildDockerRuntimeMetadata(options),
       shell: options.shell,
       logPath: logFilePath,
     });

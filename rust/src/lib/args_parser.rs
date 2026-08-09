@@ -14,6 +14,8 @@
 //! --mount <mount-spec>             Docker --mount spec (repeatable, docker only)
 //! --env, -e <KEY=VALUE>            Environment variable for docker container (repeatable, docker only)
 //! --privileged                     Run docker container in privileged mode (docker only)
+//! --network <name>                 Connect docker container to a named network (docker only)
+//! --network-alias <alias>          Add a network-scoped alias (repeatable, docker only)
 //! --endpoint <endpoint>            SSH endpoint (required for ssh isolation, e.g., user@host)
 //! --isolated-user, -u [username]   Create isolated user with same permissions
 //! --keep-user                      Keep isolated user after command completes
@@ -80,6 +82,10 @@ pub struct WrapperOptions {
     pub env: Vec<String>,
     /// Run docker container in privileged mode
     pub privileged: bool,
+    /// Docker network name
+    pub network: Option<String>,
+    /// Docker network-scoped aliases
+    pub network_aliases: Vec<String>,
     /// SSH endpoint (e.g., user@host)
     pub endpoint: Option<String>,
     /// Create isolated user
@@ -133,6 +139,8 @@ impl Default for WrapperOptions {
             mounts: Vec::new(),
             env: Vec::new(),
             privileged: false,
+            network: None,
+            network_aliases: Vec::new(),
             endpoint: None,
             user: false,
             user_name: None,
@@ -364,6 +372,36 @@ fn parse_option(
     // --privileged (for docker)
     if arg == "--privileged" {
         options.privileged = true;
+        return Ok(1);
+    }
+
+    // --network (for docker)
+    if arg == "--network" {
+        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
+            options.network = Some(args[index + 1].clone());
+            return Ok(2);
+        }
+        return Err(format!("Option {} requires a network name argument", arg));
+    }
+
+    // --network=<value>
+    if let Some(value) = arg.strip_prefix("--network=") {
+        options.network = Some(value.to_string());
+        return Ok(1);
+    }
+
+    // --network-alias (for docker) - repeatable network-scoped alias
+    if arg == "--network-alias" {
+        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
+            options.network_aliases.push(args[index + 1].clone());
+            return Ok(2);
+        }
+        return Err(format!("Option {} requires an alias argument", arg));
+    }
+
+    // --network-alias=<value>
+    if let Some(value) = arg.strip_prefix("--network-alias=") {
+        options.network_aliases.push(value.to_string());
         return Ok(1);
     }
 
@@ -667,6 +705,12 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
     }
     if options.privileged && !is_docker {
         return Err("--privileged option is only valid with --isolated docker".to_string());
+    }
+    if options.network.is_some() && !is_docker {
+        return Err("--network option is only valid with --isolated docker".to_string());
+    }
+    if !options.network_aliases.is_empty() && !is_docker {
+        return Err("--network-alias option is only valid with --isolated docker".to_string());
     }
 
     // Endpoint is only valid with ssh

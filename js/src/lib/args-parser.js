@@ -15,6 +15,8 @@
  * --mount <mount-spec>             Docker --mount spec (repeatable, docker only)
  * --env, -e <KEY=VALUE>            Environment variable for docker container (repeatable, docker only)
  * --privileged                     Run docker container in privileged mode (docker only)
+ * --network <name>                 Connect docker container to a named network (docker only)
+ * --network-alias <alias>          Add a network-scoped alias (repeatable, docker only)
  * --endpoint <endpoint>            SSH endpoint (required for ssh isolation, e.g., user@host)
  * --isolated-user, -u [username]   Create isolated user with same permissions (auto-generated name if not specified)
  * --keep-user                      Keep isolated user after command completes (don't delete)
@@ -37,6 +39,7 @@
  */
 
 const { getDefaultDockerImage } = require('./docker-utils');
+const dockerNetworkOptions = require('./docker-network-options');
 const { parseSequence, isSequence } = require('./sequence-parser');
 
 // Debug mode from environment
@@ -178,6 +181,8 @@ function parseArgs(args) {
     mounts: [], // Docker --mount specs, applied to docker levels
     env: [], // Docker environment variables (-e/--env, KEY=VALUE), applied to docker levels
     privileged: false, // Run docker container in privileged mode
+    network: null, // Docker network name
+    networkAliases: [], // Docker network-scoped aliases
     endpoint: null, // SSH endpoint (current level, e.g., user@host)
     endpointStack: null, // SSH endpoints for each level (with nulls for non-ssh levels)
     user: false, // Create isolated user
@@ -394,6 +399,11 @@ function parseOption(args, index, options) {
   if (arg === '--privileged') {
     options.privileged = true;
     return 1;
+  }
+
+  const networkOption = dockerNetworkOptions.parse(args, index, options);
+  if (networkOption) {
+    return networkOption;
   }
 
   // --endpoint (for ssh) - supports sequence for stacked isolation
@@ -645,8 +655,7 @@ function parseOption(args, index, options) {
 }
 
 /**
- * Throw if docker runtime options (--volume, --mount, --env, --privileged)
- * are present but the isolation configuration does not include docker.
+ * Throw if docker runtime options are present without docker isolation.
  * @param {object} options - Parsed options
  * @throws {Error} If a docker-only option is set without docker isolation
  */
@@ -671,6 +680,7 @@ function validateDockerRuntimeOptionsRequireDocker(options) {
       '--privileged option is only valid when isolation stack includes docker'
     );
   }
+  dockerNetworkOptions.validateRequireDocker(options);
 }
 
 function validateDockerCleanupOptions(options, hasDocker) {

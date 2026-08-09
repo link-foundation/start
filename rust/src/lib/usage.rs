@@ -21,6 +21,8 @@ Options:
   --mount <spec>        Docker --mount spec (repeatable, docker only)
   --env, -e <KEY=VALUE> Environment variable for docker container (repeatable, docker only)
   --privileged          Run docker container in privileged mode (docker only)
+  --network <name>      Connect docker container to a named network (docker only)
+  --network-alias <alias> Add network-scoped alias (repeatable, docker only)
   --endpoint <endpoint> SSH endpoint (required for ssh isolation, e.g., user@host)
   --isolated-user, -u [name]  Create isolated user with same permissions
   --keep-user           Keep isolated user after command completes

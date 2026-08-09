@@ -18,7 +18,7 @@ use start_command::{
     },
     build_isolation_options_map, clear_current_execution, create_finish_block, create_log_footer,
     create_log_header, create_log_path_for_execution, create_start_block,
-    docker_runtime_status_lines,
+    docker_runtime_status_lines_for_options,
     execution_control::{control_execution, ControlAction},
     execution_store::{
         CleanupOptions, ExecutionRecord, ExecutionRecordOptions, ExecutionStore,
@@ -517,12 +517,7 @@ fn run_with_isolation(
     if let Some(ref image) = effective_image {
         extra_lines.push(format!("[Isolation] Image: {}", image));
     }
-    extra_lines.extend(docker_runtime_status_lines(
-        &wrapper_options.volumes,
-        &wrapper_options.mounts,
-        &wrapper_options.env,
-        wrapper_options.privileged,
-    ));
+    extra_lines.extend(docker_runtime_status_lines_for_options(wrapper_options));
     if let Some(ref endpoint) = wrapper_options.endpoint {
         extra_lines.push(format!("[Isolation] Endpoint: {}", endpoint));
     }
@@ -620,6 +615,8 @@ fn run_with_isolation(
             mounts: wrapper_options.mounts.clone(),
             env: wrapper_options.env.clone(),
             privileged: wrapper_options.privileged,
+            network: wrapper_options.network.clone(),
+            network_aliases: wrapper_options.network_aliases.clone(),
             endpoint: wrapper_options.endpoint.clone(),
             detached: mode == "detached",
             user: created_user.clone(),

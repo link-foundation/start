@@ -226,6 +226,8 @@ fn test_build_docker_runtime_args_order() {
         env: vec!["FOO=bar".to_string(), "GH_TOKEN=secret".to_string()],
         volumes: vec!["/h/a:/c/a".to_string(), "/h/b:/c/b:ro".to_string()],
         mounts: vec!["type=bind,src=/h,dst=/c".to_string()],
+        network: Some("hive-formal-ai".to_string()),
+        network_aliases: vec!["formal-ai".to_string(), "checker".to_string()],
         ..Default::default()
     };
     assert_eq!(
@@ -242,6 +244,12 @@ fn test_build_docker_runtime_args_order() {
             "/h/b:/c/b:ro",
             "--mount",
             "type=bind,src=/h,dst=/c",
+            "--network",
+            "hive-formal-ai",
+            "--network-alias",
+            "formal-ai",
+            "--network-alias",
+            "checker",
         ]
     );
 }

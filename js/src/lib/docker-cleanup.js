@@ -109,6 +109,22 @@ function readDockerContainerOomKilled(containerName) {
   return null;
 }
 
+function readDockerContainerStatus(containerName) {
+  const result = spawnSync(
+    getDockerCommand(),
+    ['inspect', '-f', '{{.State.Status}}', containerName],
+    getDockerSpawnOptions({
+      encoding: 'utf8',
+      env: process.env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+  );
+  if (result.error || result.status !== 0) {
+    return null;
+  }
+  return String(result.stdout || '').trim() || null;
+}
+
 function removeDockerContainer(containerName, logPath = null) {
   const result = spawnSync(
     getDockerCommand(),
@@ -237,6 +253,7 @@ module.exports = {
   getDockerContainerCleanupInstructions,
   appendDockerContainerCleanupPolicyMessage,
   readDockerContainerOomKilled,
+  readDockerContainerStatus,
   removeDockerContainer,
   buildDetachedDockerCompletionScript,
   startDetachedDockerCompletionWatcher,
