@@ -41,11 +41,10 @@ on:
         required: false
         type: string
 
-concurrency:
-  group: rust-${{ github.workflow }}-${{ github.ref }}
-  # Only auto-cancel feature branches; never cancel in-flight `main` runs
-  # because they may already be publishing to crates.io.
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+# Least-privilege default; jobs that publish or push to main opt back in to
+# `contents: write` individually.
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -58,12 +57,20 @@ env:
   # Silences the "Node.js 20 actions are deprecated" annotation that fired
   # on every job in run 25282945820. Adopted from `link-assistant/hive-mind`.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Silence the `hint: Using 'master' as the name for the initial branch`
+  # block that `actions/checkout` printed 15 times in run 31380353470.
+  GIT_CONFIG_COUNT: '1'
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: main
 
 jobs:
   # === SYNTAX PRE-CHECK ===
   # ~7 s sanity check for shared `.mjs` helpers; catches broken merge
   # resolutions before the slow lint / test matrix has to spin up.
   syntax-check:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-syntax-check
+      cancel-in-progress: true
     name: Syntax Pre-Check (.mjs)
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -86,6 +93,9 @@ jobs:
 
   # === DETECT CHANGES ===
   detect-changes:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-detect-changes
+      cancel-in-progress: true
     name: Detect Changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -118,6 +128,9 @@ jobs:
   # === VERSION CHANGE CHECK ===
   # Prohibit manual version changes in Cargo.toml - versions should only be changed by CI/CD
   version-check:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-version-check
+      cancel-in-progress: true
     name: Check for Manual Version Changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -151,6 +164,9 @@ jobs:
 
   # === CHANGELOG CHECK ===
   changelog:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-changelog
+      cancel-in-progress: true
     name: Changelog Fragment Check
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -191,12 +207,15 @@ jobs:
 
   # === LINT AND FORMAT CHECK ===
   lint:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-lint
+      cancel-in-progress: true
     name: Lint and Format Check
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [detect-changes]
     if: |
-      always() && !cancelled() && (
+      !cancelled() && (
         github.event_name == 'push' ||
         github.event_name == 'workflow_dispatch' ||
         needs.detect-changes.outputs.rs-changed == 'true' ||
@@ -242,11 +261,14 @@ jobs:
 
   # === TEST ===
   test:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-test-${{ matrix.os }}
+      cancel-in-progress: true
     name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     needs: [detect-changes, changelog]
-    if: always() && !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success' || needs.changelog.result == 'skipped')
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success' || needs.changelog.result == 'skipped') }}
     strategy:
       fail-fast: false
       matrix:
@@ -319,11 +341,14 @@ jobs:
   # === TEST PARITY CHECK ===
   # Fail if Rust has at least 10% fewer test cases than JavaScript
   test-parity:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-test-parity
+      cancel-in-progress: true
     name: Test Count Parity (Rust vs JS)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [detect-changes]
-    if: always() && !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.any-rust-code-changed == 'true')
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.any-rust-code-changed == 'true') }}
     steps:
       - uses: actions/checkout@v6
 
@@ -338,11 +363,14 @@ jobs:
   # === CODE COVERAGE ===
   # Fail if Rust test coverage drops below the configured threshold
   coverage:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-coverage
+      cancel-in-progress: true
     name: Code Coverage (Rust, Linux only)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [detect-changes, changelog]
-    if: always() && !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success' || needs.changelog.result == 'skipped')
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success' || needs.changelog.result == 'skipped') }}
     steps:
       - uses: actions/checkout@v6
 
@@ -395,11 +423,14 @@ jobs:
   # === BUILD ===
   # Only build on push to main, not on PRs (tests already verify the code builds)
   build:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-build
+      cancel-in-progress: true
     name: Build Package
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [lint, test]
-    if: always() && !cancelled() && github.event_name == 'push' && needs.lint.result == 'success' && needs.test.result == 'success'
+    if: ${{ !cancelled() && github.event_name == 'push' && needs.lint.result == 'success' && needs.test.result == 'success' }}
     steps:
       - uses: actions/checkout@v6
 
@@ -427,15 +458,20 @@ jobs:
 
   # === AUTO RELEASE ===
   # Automatic release on push to main using changelog fragments.
-  # `always() && !cancelled()` is required so this job runs even though
-  # its transitive dependencies (build, test) use `if: always()`. Without
-  # it, GitHub Actions propagates the `skipped` status down the chain and
-  # no Rust release is ever created (see docs/case-studies/issue-108/).
+  # `!cancelled()` is required so this job runs even though its transitive
+  # dependencies (build, test) are themselves conditional. Without it, GitHub
+  # Actions propagates the `skipped` status down the chain and no Rust release
+  # is ever created (see docs/case-studies/issue-108/).
   auto-release:
+    # Shared with every other job that writes to main, including
+    # jobs in the other workflow file, so releases never race.
+    concurrency:
+      group: main-writer-${{ github.repository }}-main
+      cancel-in-progress: false
     name: Auto Release
     needs: [lint, test, build]
     if: |
-      always() && !cancelled() &&
+      !cancelled() &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
       needs.build.result == 'success'
@@ -544,13 +580,18 @@ jobs:
             --release-version "${{ steps.current_version.outputs.version }}"
 
   # === MANUAL RELEASE ===
-  # Same always()/!cancelled() guard as `auto-release` — without it the
-  # job is silently skipped when its dependencies use `if: always()`.
+  # Same `!cancelled()` guard as `auto-release` — without it the job is
+  # silently skipped when its dependencies are conditional.
   manual-release:
+    # Shared with every other job that writes to main, including
+    # jobs in the other workflow file, so releases never race.
+    concurrency:
+      group: main-writer-${{ github.repository }}-main
+      cancel-in-progress: false
     name: Manual Release
     needs: [lint, test, build]
     if: |
-      always() && !cancelled() &&
+      !cancelled() &&
       github.event_name == 'workflow_dispatch' &&
       needs.build.result == 'success'
     runs-on: ubuntu-latest
@@ -638,3 +679,33 @@ jobs:
             --badge-type crates \
             --package-name start-command \
             --release-version "${{ steps.version.outputs.new_version }}"
+
+  # === PIPELINE STATUS ===
+  # Aggregates every job so a run cannot look green while a job failed or was
+  # silently cancelled. A job killed by `timeout-minutes` is reported as
+  # `cancelled`, which would otherwise hide the failure (issue #158).
+  pipeline-status:
+    name: Pipeline Status
+    needs:
+      - syntax-check
+      - detect-changes
+      - version-check
+      - changelog
+      - lint
+      - test
+      - test-parity
+      - coverage
+      - build
+      - auto-release
+      - manual-release
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check aggregate pipeline status
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+        run: bash scripts/check-pipeline-status.sh
