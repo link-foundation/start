@@ -8,14 +8,17 @@ function parseDockerNetworkOption(args, index, options) {
       throw new Error(`Option ${arg} requires a ${value} argument`);
     }
     if (arg === '--network') {
-      options.network = args[index + 1];
+      options.networks.push(args[index + 1]);
+      options.network ??= args[index + 1];
     } else {
       options.networkAliases.push(args[index + 1]);
     }
     return 2;
   }
   if (arg.startsWith('--network=')) {
-    options.network = arg.slice('--network='.length);
+    const network = arg.slice('--network='.length);
+    options.networks.push(network);
+    options.network ??= network;
     return 1;
   }
   if (arg.startsWith('--network-alias=')) {

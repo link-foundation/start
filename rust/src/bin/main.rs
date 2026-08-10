@@ -616,6 +616,7 @@ fn run_with_isolation(
             env: wrapper_options.env.clone(),
             privileged: wrapper_options.privileged,
             network: wrapper_options.network.clone(),
+            networks: wrapper_options.networks.clone(),
             network_aliases: wrapper_options.network_aliases.clone(),
             endpoint: wrapper_options.endpoint.clone(),
             detached: mode == "detached",

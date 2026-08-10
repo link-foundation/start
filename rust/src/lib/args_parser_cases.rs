@@ -217,6 +217,7 @@ fn test_docker_network_forms_preserve_child_args() {
         "docker",
         "--network",
         "hive-formal-ai",
+        "--network=public-egress",
         "--",
         "--network",
         "child-network",
@@ -243,12 +244,20 @@ fn test_docker_network_forms_preserve_child_args() {
         Some("hive-formal-ai")
     );
     assert_eq!(
+        spaced_result.wrapper_options.networks,
+        vec!["hive-formal-ai", "public-egress"]
+    );
+    assert_eq!(
         spaced_result.raw_command,
         vec!["--network", "child-network"]
     );
     assert_eq!(
         equals_result.wrapper_options.network.as_deref(),
         Some("hive-formal-ai")
+    );
+    assert_eq!(
+        equals_result.wrapper_options.networks,
+        vec!["hive-formal-ai"]
     );
 }
 
@@ -288,6 +297,7 @@ fn test_docker_runtime_options_default_empty() {
     assert!(result.wrapper_options.env.is_empty());
     assert!(!result.wrapper_options.privileged);
     assert!(result.wrapper_options.network.is_none());
+    assert!(result.wrapper_options.networks.is_empty());
     assert!(result.wrapper_options.network_aliases.is_empty());
 }
 

@@ -1,4 +1,4 @@
-//! Real-daemon integration coverage for Docker network isolation (issue #154).
+//! Real-daemon integration coverage for Docker network isolation (issues #154, #156).
 
 use start_command::isolation::run_in_docker;
 use start_command::IsolationOptions;
@@ -77,12 +77,12 @@ fn named_network_alias_is_private_and_missing_network_leaves_no_orphan() {
     );
 
     let joined = run_in_docker(
-        "ping -c 1 formal-ai",
+        "ping -c 1 formal-ai && wget -q --spider https://api.github.com",
         &IsolationOptions {
             image: Some("alpine:3.23".to_string()),
             session: Some(connected),
-            network: Some(network.clone()),
-            network_aliases: vec!["task".to_string()],
+            network: Some("bridge".to_string()),
+            networks: vec!["bridge".to_string(), network.clone()],
             detached: true,
             shell: "sh".to_string(),
             keep_container: true,
@@ -119,6 +119,21 @@ fn named_network_alias_is_private_and_missing_network_leaves_no_orphan() {
         },
     );
     assert!(!failed.success);
+    assert!(!docker(&["inspect", &missing]).status.success());
+
+    let failed_second = run_in_docker(
+        "echo should-not-run",
+        &IsolationOptions {
+            image: Some("alpine:3.23".to_string()),
+            session: Some(missing.clone()),
+            network: Some("bridge".to_string()),
+            networks: vec!["bridge".to_string(), format!("{network}-absent")],
+            detached: true,
+            shell: "sh".to_string(),
+            ..Default::default()
+        },
+    );
+    assert!(!failed_second.success);
     assert!(!docker(&["inspect", &missing]).status.success());
 
     let conflict = run_in_docker(

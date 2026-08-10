@@ -318,8 +318,8 @@ This is useful for:
 | `--mount`                        | Docker `--mount` spec (repeatable, docker only)                              |
 | `--env, -e`                      | Environment variable `KEY=VALUE` for the container (repeatable, docker only) |
 | `--privileged`                   | Run docker container in privileged mode (docker only)                        |
-| `--network`                      | Connect docker container to a named network (docker only)                    |
-| `--network-alias`                | Add a network-scoped alias (repeatable, docker only)                         |
+| `--network`                      | Connect to a named network (repeatable, docker only)                         |
+| `--network-alias`                | Add an alias on the first network (repeatable, docker only)                  |
 | `--endpoint`                     | SSH endpoint (required for ssh, e.g., user@host)                             |
 | `--isolated-user, -u [name]`     | Create isolated user with same permissions (screen/tmux)                     |
 | `--keep-user`                    | Keep isolated user after command completes (don't delete)                    |
@@ -330,6 +330,17 @@ This is useful for:
 | `--keep-container-on-fail`       | Keep failed or OOM-killed docker containers after exit (docker only)         |
 
 **Note:** Using both `--attached` and `--detached` together will result in an error - you must choose one mode.
+
+When `--network` is repeated, Docker creates the container on the first network,
+connects every additional network, and only then starts the command. This lets a
+container retain egress through one network while reaching services on a private
+network without a startup race. Repeated `--network-alias` values apply to the
+first network.
+
+```bash
+$ --isolated docker --image alpine:3.23 \
+    --network bridge --network my-sidecar-net -- ping -c 1 sidecar
+```
 
 #### Auto-Exit Behavior
 

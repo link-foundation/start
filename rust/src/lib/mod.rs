@@ -4,6 +4,7 @@
 
 pub mod args_parser;
 pub(crate) mod docker_cleanup;
+mod docker_network_lifecycle;
 pub mod execution_control;
 pub mod execution_store;
 pub mod failure_handler;

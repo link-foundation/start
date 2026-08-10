@@ -31,7 +31,7 @@ pub(crate) fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<&str>
         args.push("--mount");
         args.push(mount);
     }
-    if let Some(network) = &options.network {
+    if let Some(network) = docker_networks(options).first() {
         args.push("--network");
         args.push(network);
     }
@@ -40,6 +40,14 @@ pub(crate) fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<&str>
         args.push(alias);
     }
     args
+}
+
+pub(crate) fn docker_networks(options: &IsolationOptions) -> Vec<&str> {
+    if options.networks.is_empty() {
+        options.network.iter().map(String::as_str).collect()
+    } else {
+        options.networks.iter().map(String::as_str).collect()
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
