@@ -64,7 +64,31 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # The dependency graph is an owner-level setting. When it is off, the
+      # review action fails with "Dependency review is not supported on this
+      # repository", which is a configuration gap, not a vulnerability. Detect
+      # it explicitly and warn loudly instead of either hiding the gate behind
+      # continue-on-error or reporting a false vulnerability failure (#158).
+      - name: Check whether the dependency graph is enabled
+        id: graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          status=$(gh api \
+            "repos/${{ github.repository }}/dependency-graph/compare/${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" \
+            --silent -i 2>/dev/null | head -n 1 | awk '{print $2}' || true)
+          if [ "$status" = "200" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Dependency review skipped: the dependency graph is \
+            disabled for ${{ github.repository }} (API returned ${status:-error}). \
+            Enable it under Settings > Code security to activate this gate."
+          fi
+
       - name: Review dependency changes
+        if: steps.graph.outputs.enabled == 'true'
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
