@@ -1,0 +1,33 @@
+    Blocking waiting for file lock on build directory
+    Checking memchr v2.8.2
+    Checking libc v0.2.186
+    Checking cfg-if v1.0.4
+    Checking serde_core v1.0.228
+    Checking option-ext v0.2.0
+    Checking regex-syntax v0.8.11
+    Checking zmij v1.0.21
+    Checking num-traits v0.2.19
+    Checking iana-time-zone v0.1.65
+    Checking base64 v0.22.1
+    Checking itoa v1.0.18
+    Checking chrono v0.4.45
+    Checking bitflags v2.13.0
+    Checking nom v8.0.0
+    Checking aho-corasick v1.1.4
+    Checking getrandom v0.4.3
+    Checking dirs-sys v0.5.0
+    Checking uuid v1.23.4
+    Checking dirs v6.0.0
+    Checking linux-raw-sys v0.12.1
+    Checking rustix v1.1.4
+    Checking fastrand v2.4.1
+    Checking once_cell v1.21.4
+    Checking regex-automata v0.4.14
+    Checking serde v1.0.228
+    Checking serde_json v1.0.150
+    Checking tempfile v3.27.0
+    Checking links-notation v0.13.0
+    Checking lino-objects-codec v0.2.1
+    Checking regex v1.12.4
+    Checking start-command v0.19.1 (/tmp/gh-issue-solver-1786375395447/rust)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 42.00s

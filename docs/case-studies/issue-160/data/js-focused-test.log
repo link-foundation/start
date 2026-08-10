@@ -1,0 +1,26 @@
+bun test v1.3.14 (0d9b296a)
+
+test/docker-network-integration.js:
+(pass) Docker named network integration > keeps the multi-network probe hermetic [1.03ms]
+$ ping -c 1 formal-ai && ping -c 1 formal-db && ip route | grep -q '^default '
+
+$ ping -c 1 formal-ai
+
+ping: bad address 'formal-ai'
+(pass) Docker named network integration > reaches a private sidecar on each of two networks [4034.64ms]
+$ echo should-not-run
+
+$ echo should-not-run
+
+$ echo should-not-run
+
+docker: Error response from daemon: failed to set up container networking: network start-network-914dc7c2-absent not found
+
+Run 'docker run --help' for more information
+$ echo should-not-run
+
+(pass) Docker named network integration > fails for a missing network without orphaning a container [4382.70ms]
+
+ 3 pass
+ 0 fail
+Ran 3 tests across 1 file. [10.57s]
