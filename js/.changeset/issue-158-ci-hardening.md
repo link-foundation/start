@@ -1,0 +1,6 @@
+---
+'start-command': patch
+---
+
+Make the Docker multi-network integration test hermetic and add opt-in
+`START_DEBUG` tracing to the Docker network lifecycle helpers.
