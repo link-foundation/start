@@ -47,11 +47,10 @@ on:
         required: false
         type: string
 
-concurrency:
-  group: js-${{ github.workflow }}-${{ github.ref }}
-  # Only auto-cancel feature branches; never cancel in-flight `main` runs
-  # because they may already be publishing to npm.
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+# Least-privilege default; jobs that publish or push to main opt back in to
+# `contents: write` individually.
+permissions:
+  contents: read
 
 # Force JavaScript-based actions to use the Node 24 runtime that the runner
 # already ships with. Silences the "Node.js 20 actions are deprecated"
@@ -59,6 +58,11 @@ concurrency:
 # 2026-06-02 hard cutover. Adopted from `link-assistant/hive-mind`.
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Silence the `hint: Using 'master' as the name for the initial branch`
+  # block that `actions/checkout` printed 15 times in run 31380353470.
+  GIT_CONFIG_COUNT: '1'
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: main
 
 jobs:
   # === SYNTAX PRE-CHECK ===
@@ -66,6 +70,9 @@ jobs:
   # slow lint / test matrix has to spin up. See
   # docs/case-studies/issue-118/comparison-with-templates.md.
   syntax-check:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-syntax-check
+      cancel-in-progress: true
     name: Syntax Pre-Check (.mjs)
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -88,6 +95,9 @@ jobs:
 
   # === DETECT CHANGES ===
   detect-changes:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-detect-changes
+      cancel-in-progress: true
     name: Detect Changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -120,6 +130,9 @@ jobs:
   # === VERSION CHANGE CHECK ===
   # Prohibit manual version changes in package.json - versions should only be changed by CI/CD
   version-check:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-version-check
+      cancel-in-progress: true
     name: Check for Manual Version Changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -159,6 +172,9 @@ jobs:
 
   # === CHANGESET CHECK ===
   changeset-check:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-changeset-check
+      cancel-in-progress: true
     name: Check for Changesets
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -195,12 +211,15 @@ jobs:
 
   # === LINT AND FORMAT CHECK ===
   lint:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-lint
+      cancel-in-progress: true
     name: Lint and Format Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [detect-changes]
     if: |
-      always() && !cancelled() && (
+      !cancelled() && (
         github.event_name == 'push' ||
         github.event_name == 'workflow_dispatch' ||
         needs.detect-changes.outputs.js-changed == 'true' ||
@@ -234,11 +253,14 @@ jobs:
 
   # === TEST ===
   test:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-test-${{ matrix.os }}
+      cancel-in-progress: true
     name: Test (Bun on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     needs: [detect-changes, changeset-check]
-    if: always() && !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changeset-check.result == 'success' || needs.changeset-check.result == 'skipped')
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changeset-check.result == 'success' || needs.changeset-check.result == 'skipped') }}
     strategy:
       fail-fast: false
       matrix:
@@ -390,11 +412,14 @@ jobs:
   # === CODE COVERAGE ===
   # Fail if JavaScript test coverage drops below the configured threshold
   coverage:
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-coverage
+      cancel-in-progress: true
     name: Code Coverage (JavaScript)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [detect-changes, changeset-check]
-    if: always() && !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changeset-check.result == 'success' || needs.changeset-check.result == 'skipped')
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changeset-check.result == 'success' || needs.changeset-check.result == 'skipped') }}
     steps:
       - uses: actions/checkout@v6
 
@@ -408,25 +433,30 @@ jobs:
         run: bun install
 
       - name: Run tests with coverage
+        id: coverage
         working-directory: js
+        # `set -o pipefail` keeps a failing test run from being hidden by `tee`;
+        # the previous `|| true` swallowed it (issue #158).
         run: |
-          bun run test --coverage --coverage-reporter=text 2>&1 | tee coverage.txt || true
-          # Extract coverage percentage from Bun output
-          COVERAGE=$(grep -oP '\d+\.\d+(?=%)' coverage.txt | tail -1 || echo "0")
-          echo "Coverage: ${COVERAGE}%"
-          # Fail if coverage is below 45%
-          node -e "
-            const cov = parseFloat('${COVERAGE}');
-            if (isNaN(cov)) { console.log('Could not determine coverage, skipping check'); process.exit(0); }
-            if (cov >= 45) { console.log('✅ Coverage ' + cov + '% meets the 45% threshold'); }
-            else { console.error('❌ Coverage ' + cov + '% is below the 45% threshold'); process.exit(1); }
-          "
+          set -o pipefail
+          bun run test --coverage --coverage-reporter=text 2>&1 | tee coverage.txt
+
+      - name: Enforce coverage threshold
+        # Runs even when tests failed above, so the report is still evaluated.
+        if: ${{ !cancelled() && steps.coverage.outcome != 'skipped' }}
+        working-directory: js
+        run: node ../scripts/check-js-coverage.mjs coverage.txt --threshold 45
 
   # === RELEASE ===
   release:
+    # Shared with every other job that writes to main, including
+    # jobs in the other workflow file, so releases never race.
+    concurrency:
+      group: main-writer-${{ github.repository }}-main
+      cancel-in-progress: false
     name: Release
     needs: [lint, test]
-    if: always() && !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint.result == 'success' && needs.test.result == 'success'
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint.result == 'success' && needs.test.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -518,6 +548,11 @@ jobs:
 
   # === MANUAL INSTANT RELEASE ===
   instant-release:
+    # Shared with every other job that writes to main, including
+    # jobs in the other workflow file, so releases never race.
+    concurrency:
+      group: main-writer-${{ github.repository }}-main
+      cancel-in-progress: false
     name: Instant Release
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant'
     runs-on: ubuntu-latest
@@ -592,6 +627,11 @@ jobs:
 
   # === MANUAL CHANGESET PR ===
   changeset-pr:
+    # Shared with every other job that writes to main, including
+    # jobs in the other workflow file, so releases never race.
+    concurrency:
+      group: main-writer-${{ github.repository }}-main
+      cancel-in-progress: false
     name: Create Changeset PR
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changeset-pr'
     runs-on: ubuntu-latest
@@ -634,3 +674,32 @@ jobs:
             1. Review the changeset in this PR
             2. Merge this PR to main
             3. The automated release workflow will publish to npm and create a GitHub release
+
+  # === PIPELINE STATUS ===
+  # Aggregates every job so a run cannot look green while a job failed or was
+  # silently cancelled. A job killed by `timeout-minutes` is reported as
+  # `cancelled`, which would otherwise hide the failure (issue #158).
+  pipeline-status:
+    name: Pipeline Status
+    needs:
+      - syntax-check
+      - detect-changes
+      - version-check
+      - changeset-check
+      - lint
+      - test
+      - coverage
+      - release
+      - instant-release
+      - changeset-pr
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check aggregate pipeline status
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+        run: bash scripts/check-pipeline-status.sh
