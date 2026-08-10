@@ -39,7 +39,7 @@ future HTTP URL in the probe.
 | `root-cause.md`      | Technical and process root causes, with raw-log line references.                       |
 | `solutions.md`       | Alternatives considered, selected design, and verification plan.                       |
 | `online-research.md` | Official documentation and existing components reviewed.                               |
-| `ci-logs/`           | Complete pre-fix and post-fix JavaScript and Rust workflow logs.                       |
+| `ci-logs/`           | Complete pre-fix, fixed-main, and PR-policy JavaScript and Rust workflow logs.         |
 | `data/`              | Issue, PR, review, workflow, release, registry, source, diff, and local-test evidence. |
 
 ## Evidence highlights
@@ -56,6 +56,11 @@ future HTTP URL in the probe.
   publication timestamp.
 - `data/js-focused-test.log` and `data/rust-focused-test.log` record successful
   real-Docker verification of the final route-preserving probe.
+- The first PR run exposed mandatory release metadata: JavaScript reports zero
+  changesets at `ci-logs/javascript-pr-31405026454.log:1837`, while Rust reports
+  one changed source file and no fragment at
+  `ci-logs/rust-pr-31405026291.log:1616`–1618. Both validated patch fragments
+  are included in the final branch.
 
 No upstream defect was filed. GitHub's rate limit, GitHub-hosted runner address
 model, IANA's best-effort example service, and BusyBox's nonzero response to an

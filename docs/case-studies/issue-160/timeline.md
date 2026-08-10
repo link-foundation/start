@@ -40,6 +40,13 @@ All timestamps are UTC.
 20. **PR #161** — The tests are strengthened to start on `bridge`, attach two
     internal networks, check both aliases and the retained default route, and
     enforce a no-HTTP invariant in both languages.
+21. **15:42:26** — The first PR JavaScript and Rust workflows start on
+    `3562e61`. Their release-policy gates fail because changes under both test
+    suites require package release metadata; downstream test matrices are
+    skipped.
+22. **PR #161 follow-up** — A validated JavaScript patch changeset and Rust
+    patch changelog fragment are added. The complete failed-run logs and local
+    validation output are retained with the case study.
 
 The raw timestamps and SHAs are retained in `data/recent-main-runs.json`, the
 four `*-run-*.json` files, issue metadata, PR metadata, and release metadata.
