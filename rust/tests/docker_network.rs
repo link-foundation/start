@@ -1,4 +1,4 @@
-//! Real-daemon integration coverage for Docker network isolation (issues #154, #156).
+//! Real-daemon integration coverage for Docker network isolation (issues #154, #156, #158).
 
 use start_command::isolation::run_in_docker;
 use start_command::IsolationOptions;
@@ -10,7 +10,7 @@ fn docker(args: &[&str]) -> std::process::Output {
 }
 
 struct DockerResources {
-    network: String,
+    networks: Vec<String>,
     containers: Vec<String>,
 }
 
@@ -19,8 +19,57 @@ impl Drop for DockerResources {
         let mut rm_args = vec!["rm", "-f"];
         rm_args.extend(self.containers.iter().map(String::as_str));
         let _ = docker(&rm_args);
-        let _ = docker(&["network", "rm", &self.network]);
+        let mut network_args = vec!["network", "rm"];
+        network_args.extend(self.networks.iter().map(String::as_str));
+        let _ = docker(&network_args);
     }
+}
+
+/// Container output, folded into assertion messages so a CI failure carries the
+/// evidence needed to diagnose it instead of only reporting the exit code.
+fn container_diagnostics(name: &str) -> String {
+    let logs = docker(&["logs", name]);
+    let output = format!(
+        "{}{}",
+        String::from_utf8_lossy(&logs.stdout),
+        String::from_utf8_lossy(&logs.stderr)
+    );
+    let output = output.trim().to_string();
+    format!(
+        "\n--- docker logs {name} ---\n{}\n---",
+        if output.is_empty() {
+            "<no output>".to_string()
+        } else {
+            output
+        }
+    )
+}
+
+fn create_internal_network_with_sidecar(network: &str, container: &str, alias: &str) {
+    let created = docker(&["network", "create", "--internal", network]);
+    assert!(
+        created.status.success(),
+        "{}",
+        String::from_utf8_lossy(&created.stderr)
+    );
+    let started = docker(&[
+        "run",
+        "-d",
+        "--name",
+        container,
+        "--network",
+        network,
+        "--network-alias",
+        alias,
+        "alpine:3.23",
+        "sleep",
+        "300",
+    ]);
+    assert!(
+        started.status.success(),
+        "{}",
+        String::from_utf8_lossy(&started.stderr)
+    );
 }
 
 #[test]
@@ -37,52 +86,37 @@ fn named_network_alias_is_private_and_missing_network_leaves_no_orphan() {
 
     let suffix = &Uuid::new_v4().to_string()[..8];
     let network = format!("start-rust-network-{suffix}");
+    let second_network = format!("start-rust-network-b-{suffix}");
     let sidecar = format!("start-rust-sidecar-{suffix}");
+    let second_sidecar = format!("start-rust-sidecar-b-{suffix}");
     let connected = format!("start-rust-connected-{suffix}");
     let control = format!("start-rust-control-{suffix}");
     let missing = format!("start-rust-missing-{suffix}");
     let _resources = DockerResources {
-        network: network.clone(),
+        networks: vec![network.clone(), second_network.clone()],
         containers: vec![
             sidecar.clone(),
+            second_sidecar.clone(),
             connected.clone(),
             control.clone(),
             missing.clone(),
         ],
     };
 
-    let created = docker(&["network", "create", "--internal", &network]);
-    assert!(
-        created.status.success(),
-        "{}",
-        String::from_utf8_lossy(&created.stderr)
-    );
-    let started = docker(&[
-        "run",
-        "-d",
-        "--name",
-        &sidecar,
-        "--network",
-        &network,
-        "--network-alias",
-        "formal-ai",
-        "alpine:3.23",
-        "sleep",
-        "60",
-    ]);
-    assert!(
-        started.status.success(),
-        "{}",
-        String::from_utf8_lossy(&started.stderr)
-    );
+    create_internal_network_with_sidecar(&network, &sidecar, "formal-ai");
+    create_internal_network_with_sidecar(&second_network, &second_sidecar, "formal-db");
 
+    // Both endpoints are local, user-defined networks on purpose: probing a
+    // public endpoint (previously `https://api.github.com`) made this test fail
+    // whenever the shared runner IP hit the 60 requests/hour unauthenticated
+    // GitHub API rate limit (issue #158).
     let joined = run_in_docker(
-        "ping -c 1 formal-ai && wget -q --spider https://api.github.com",
+        "ping -c 1 formal-ai && ping -c 1 formal-db",
         &IsolationOptions {
             image: Some("alpine:3.23".to_string()),
             session: Some(connected),
-            network: Some("bridge".to_string()),
-            networks: vec!["bridge".to_string(), network.clone()],
+            network: Some(network.clone()),
+            networks: vec![network.clone(), second_network.clone()],
             detached: true,
             shell: "sh".to_string(),
             keep_container: true,
@@ -90,9 +124,15 @@ fn named_network_alias_is_private_and_missing_network_leaves_no_orphan() {
         },
     );
     assert!(joined.success, "{}", joined.message);
-    let joined_exit = docker(&["wait", joined.session_name.as_deref().unwrap()]);
+    let joined_name = joined.session_name.as_deref().unwrap();
+    let joined_exit = docker(&["wait", joined_name]);
     assert!(joined_exit.status.success());
-    assert_eq!(String::from_utf8_lossy(&joined_exit.stdout).trim(), "0");
+    assert_eq!(
+        String::from_utf8_lossy(&joined_exit.stdout).trim(),
+        "0",
+        "container did not exit cleanly{}",
+        container_diagnostics(joined_name)
+    );
 
     let unconnected = run_in_docker(
         "ping -c 1 formal-ai",
@@ -126,8 +166,8 @@ fn named_network_alias_is_private_and_missing_network_leaves_no_orphan() {
         &IsolationOptions {
             image: Some("alpine:3.23".to_string()),
             session: Some(missing.clone()),
-            network: Some("bridge".to_string()),
-            networks: vec!["bridge".to_string(), format!("{network}-absent")],
+            network: Some(network.clone()),
+            networks: vec![network.clone(), format!("{network}-absent")],
             detached: true,
             shell: "sh".to_string(),
             ..Default::default()
