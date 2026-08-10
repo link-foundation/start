@@ -27,10 +27,10 @@
 
 ## Verification requirements
 
-| ID  | Requirement                        | Evidence                                                                                                                |
-| --- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| V1  | Preserve a minimal reproduction.   | `experiments/docker-network-flake-repro.mjs` and the historical source snapshots in `data/`.                            |
-| V2  | Add an automated regression test.  | `keeps the multi-network probe hermetic` in JavaScript and `multi_network_probe_is_hermetic` in Rust.                   |
-| V3  | Exercise the real Docker daemon.   | Focused logs in `data/js-focused-test.log` and `data/rust-focused-test.log`.                                            |
-| V4  | Keep tests bounded.                | The JavaScript integration cases retain their explicit 120-second per-test budgets.                                     |
-| V5  | Avoid an unnecessary release bump. | The changes affect integration tests and documentation only; published runtime behavior and package APIs do not change. |
+| ID  | Requirement                               | Evidence                                                                                                                                                        |
+| --- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| V1  | Preserve a minimal reproduction.          | `experiments/docker-network-flake-repro.mjs` and the historical source snapshots in `data/`.                                                                    |
+| V2  | Add an automated regression test.         | `keeps the multi-network probe hermetic` in JavaScript and `multi_network_probe_is_hermetic` in Rust.                                                           |
+| V3  | Exercise the real Docker daemon.          | Focused logs in `data/js-focused-test.log` and `data/rust-focused-test.log`.                                                                                    |
+| V4  | Keep tests bounded.                       | The JavaScript integration cases retain their explicit 120-second per-test budgets.                                                                             |
+| V5  | Supply the repository's release triggers. | Patch fragments are included for both packages because their CI policies classify implementation test changes as releasable code. Versioning remains automated. |

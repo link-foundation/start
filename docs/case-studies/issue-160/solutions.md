@@ -60,6 +60,7 @@ local sidecars and restores bridge coverage.
 | JavaScript full suite, lint, format, file size | Pass.                                                                    |
 | Rust full suite, formatting, Clippy            | Pass.                                                                    |
 | Test-count parity and workflow invariants      | Pass.                                                                    |
+| JavaScript changeset and Rust changelog gates  | Patch release fragments validate.                                        |
 | Repository search for executable public probe  | Only the intentional historical reproducer/evidence may contain it.      |
 
 Focused and full local results are retained in `data/`, and complete pre-fix and
