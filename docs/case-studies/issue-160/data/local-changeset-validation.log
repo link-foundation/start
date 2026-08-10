@@ -1,0 +1,5 @@
+Found 1 changeset file(s)
+Validating changeset: js/.changeset/issue-160.md
+✅ Changeset validation passed
+   Type: patch
+   Description: Keep Docker multi-network regression coverage hermetic while verifying the default bridge route.

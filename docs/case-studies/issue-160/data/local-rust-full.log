@@ -1,0 +1,916 @@
+       Fresh memchr v2.8.2
+       Fresh libc v0.2.186
+       Fresh unicode-ident v1.0.24
+       Fresh proc-macro2 v1.0.106
+       Fresh autocfg v1.5.1
+       Fresh cfg-if v1.0.4
+       Fresh nom v8.0.0
+       Fresh quote v1.0.46
+       Fresh serde_core v1.0.228
+       Fresh getrandom v0.4.3
+       Fresh aho-corasick v1.1.4
+       Fresh syn v2.0.118
+       Fresh option-ext v0.2.0
+       Fresh regex-syntax v0.8.11
+       Fresh num-traits v0.2.19
+       Fresh serde_derive v1.0.228
+       Fresh dirs-sys v0.5.0
+       Fresh regex-automata v0.4.14
+       Fresh zmij v1.0.21
+       Fresh links-notation v0.13.0
+       Fresh itoa v1.0.18
+       Fresh iana-time-zone v0.1.65
+       Fresh base64 v0.22.1
+       Fresh dirs v6.0.0
+       Fresh lino-objects-codec v0.2.1
+       Fresh chrono v0.4.45
+       Fresh serde_json v1.0.150
+       Fresh serde v1.0.228
+       Fresh regex v1.12.4
+       Fresh uuid v1.23.4
+       Fresh bitflags v2.13.0
+       Fresh linux-raw-sys v0.12.1
+       Fresh once_cell v1.21.4
+       Fresh fastrand v2.4.1
+       Fresh rustix v1.1.4
+       Fresh tempfile v3.27.0
+   Compiling start-command v0.19.1 (/tmp/gh-issue-solver-1786375395447/rust)
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name utils --edition=2021 tests/utils.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=a16d63c541f68eea -C extra-filename=-dd41bce0a4f01416 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name ci_workflow_invariants --edition=2021 tests/ci_workflow_invariants.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=17ad9fd0db95bb7d -C extra-filename=-227fab40eeca8cac --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name signal_handler --edition=2021 tests/signal_handler.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=5241ebcbf28dd018 -C extra-filename=-288a50dc80eb0732 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name output_blocks_extended --edition=2021 tests/output_blocks_extended.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=8946a08cef4e4505 -C extra-filename=-7cfa7d908c1ac02f --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name isolation --edition=2021 tests/isolation.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=8ea638f1238db458 -C extra-filename=-b7a49e69f8e8bb6c --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name cleanup --edition=2021 tests/cleanup.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=e997a0ef219484a3 -C extra-filename=-a217dd194e1389ff --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name start --edition=2021 src/bin/main.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=8e6836b6e53fc219 -C extra-filename=-a1d7af4c1684f370 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name args_parser --edition=2021 tests/args_parser.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=44baa1e6d501067a -C extra-filename=-1048f80d159c2492 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name sequence_parser --edition=2021 tests/sequence_parser.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=aa9cb51a223d0963 -C extra-filename=-ef331236b1b61646 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name args_parser_shell --edition=2021 tests/args_parser_shell.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=f64d4991c797c408 -C extra-filename=-05796859234780c0 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name docker_network --edition=2021 tests/docker_network.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=f66d095199d8ac7c -C extra-filename=-666baaee6ff4d314 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name session_name_status --edition=2021 tests/session_name_status.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=91e61a3f31c13878 -C extra-filename=-0f538ad060cb3381 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name output_blocks --edition=2021 tests/output_blocks.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=a7d6bdf2b00a9633 -C extra-filename=-b55b455d7d529336 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name regression_150 --edition=2021 tests/regression_150.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=e42109dc9db0186a -C extra-filename=-254d849499b8b7d7 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name user_manager --edition=2021 tests/user_manager.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=275daa62af583e20 -C extra-filename=-9872cd1dd6fd7700 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name status_formatter --edition=2021 tests/status_formatter.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=70dc7790abc73120 -C extra-filename=-96c53430aab7f75f --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name failure_handler --edition=2021 tests/failure_handler.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=fd78fef35138a2aa -C extra-filename=-25f12b2406243d9d --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name execution_control --edition=2021 tests/execution_control.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=61c99c5752a0fec0 -C extra-filename=-957fe83091e6d0e0 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name start_command --edition=2021 src/lib/mod.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=2c932000f1c10cbd -C extra-filename=-e2c87ddba70a3d91 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name integration --edition=2021 tests/integration.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=b5d0923cfcbeceb6 -C extra-filename=-9eff9bb9944e7596 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name isolation_log --edition=2021 tests/isolation_log.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=52217ce26f7ecc97 -C extra-filename=-f59ff6434f191c4d --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name regression_84 --edition=2021 tests/regression_84.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=2af61e4926920e7d -C extra-filename=-ff62b85775233b3d --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name echo_integration --edition=2021 tests/echo_integration.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=49494461213a0caa -C extra-filename=-7b54c366f2fe15bd --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name execution_store --edition=2021 tests/execution_store.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=025b0ac562fe603f -C extra-filename=-6f113d423e54b91d --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name regression_91 --edition=2021 tests/regression_91.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=d5f0c2a546cd12b3 -C extra-filename=-e6c5b24de65c36a7 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name isolation_unit --edition=2021 tests/isolation_unit.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=a5ca3f28ae7bea14 -C extra-filename=-88207882868b26a4 --out-dir /tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C incremental=/tmp/gh-issue-solver-1786375395447/rust/target/debug/incremental -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib`
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 18.96s
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/start_command-e2c87ddba70a3d91`
+
+running 179 tests
+test args_parser::tests::test_cleanup_option ... ok
+test args_parser::tests::test_docker_env_short_flag ... ok
+test args_parser::tests::test_docker_mount_eq_form ... ok
+test args_parser::tests::test_docker_mounts_repeatable ... ok
+test args_parser::tests::test_docker_network_alias_repeatable ... ok
+test args_parser::tests::test_docker_network_forms_preserve_child_args ... ok
+test args_parser::tests::test_docker_privileged ... ok
+test args_parser::tests::test_attached_detached_conflict ... ok
+test args_parser::tests::test_docker_runtime_options_default_empty ... ok
+test args_parser::tests::test_docker_volume_eq_form ... ok
+test args_parser::tests::test_docker_volumes_repeatable ... ok
+test args_parser::tests::test_docker_with_image ... ok
+test args_parser::tests::test_docker_combined_runtime_options ... ok
+test args_parser::tests::test_env_rejected_for_non_docker ... ok
+test args_parser::tests::test_env_requires_argument ... ok
+test args_parser::tests::test_generate_session_name_with_prefix ... ok
+test args_parser::tests::test_generate_session_name ... ok
+test args_parser::tests::test_docker_env_eq_form ... ok
+test args_parser::tests::test_has_isolation ... ok
+test args_parser::tests::test_docker_env_repeatable ... ok
+test args_parser::tests::test_get_effective_mode ... ok
+test args_parser::tests::test_invalid_output_format ... ok
+test args_parser::tests::test_cleanup_dry_run_option ... ok
+test args_parser::tests::test_isolated_user ... ok
+test args_parser::tests::test_docker_uses_default_image ... ok
+test args_parser::tests::test_list_with_output_format ... ok
+test args_parser::tests::test_mount_rejected_for_non_docker ... ok
+test args_parser::tests::test_network_options_rejected_without_docker ... ok
+test args_parser::tests::test_mount_requires_argument ... ok
+test args_parser::tests::test_keep_user_requires_user ... ok
+test args_parser::tests::test_output_format_equals_syntax ... ok
+test args_parser::tests::test_output_format_without_status ... ok
+test args_parser::tests::test_parse_isolated_option ... ok
+test args_parser::tests::test_output_format_requires_format ... ok
+test args_parser::tests::test_privileged_rejected_without_docker ... ok
+test args_parser::tests::test_parse_shorthand ... ok
+test args_parser::tests::test_query_and_control_modes_are_mutually_exclusive ... ok
+test args_parser::tests::test_parse_simple_command ... ok
+test args_parser::tests::test_shell_auto ... ok
+test args_parser::tests::test_shell_bash ... ok
+test args_parser::tests::test_isolated_user_with_name ... ok
+test args_parser::tests::test_shell_invalid ... ok
+test args_parser::tests::test_shell_missing_argument ... ok
+test args_parser::tests::test_shell_equals_syntax ... ok
+test args_parser::tests::test_shell_with_ssh ... ok
+test args_parser::tests::test_shell_default_is_auto ... ok
+test args_parser::tests::test_shell_sh ... ok
+test args_parser::tests::test_ssh_requires_endpoint ... ok
+test args_parser::tests::test_parse_with_separator ... ok
+test args_parser::tests::test_ssh_with_endpoint ... ok
+test args_parser::tests::test_list_option ... ok
+test args_parser::tests::test_status_with_links_notation ... ok
+test args_parser::tests::test_status_equals_syntax ... ok
+test args_parser::tests::test_status_option ... ok
+test args_parser::tests::test_shell_lowercase_normalization ... ok
+test args_parser::tests::test_shell_zsh ... ok
+test args_parser::tests::test_status_requires_uuid ... ok
+test args_parser::tests::test_status_with_output_format ... ok
+test args_parser::tests::test_status_with_text_format ... ok
+test args_parser::tests::test_stop_option ... ok
+test args_parser::tests::test_stop_equals_syntax ... ok
+test args_parser::tests::test_terminate_requires_identifier ... ok
+test args_parser::tests::test_upload_log_and_control_modes_are_mutually_exclusive ... ok
+test args_parser::tests::test_upload_log_equals_syntax ... ok
+test args_parser::tests::test_upload_log_option ... ok
+test args_parser::tests::test_upload_log_requires_identifier ... ok
+test args_parser::tests::test_terminate_equals_syntax ... ok
+test args_parser::tests::test_terminate_option ... ok
+test args_parser::tests::test_use_command_stream ... ok
+test args_parser::tests::test_volume_requires_argument ... ok
+test args_parser::tests::test_volume_rejected_for_non_docker ... ok
+test docker_cleanup::tests::keep_on_fail_policy_keeps_oom_killed_containers ... ok
+test args_parser::tests::test_stop_requires_identifier ... ok
+test docker_cleanup::tests::explicit_always_policy_cleans_abnormal_containers ... ok
+test docker_network_lifecycle::tests::ignores_an_empty_networks_list_and_falls_back_to_network ... ok
+test docker_cleanup::tests::detached_watcher_inspects_oom_killed_before_default_cleanup ... ok
+test docker_cleanup::tests::default_policy_keeps_abnormal_containers ... ok
+test docker_network_lifecycle::tests::keeps_verbose_output_switched_off_by_default ... ok
+test docker_network_lifecycle::tests::returns_an_empty_list_when_no_network_is_requested ... ok
+test docker_network_lifecycle::tests::prefers_the_explicit_networks_list_over_the_single_network ... ok
+test docker_network_lifecycle::tests::wraps_a_single_network_into_a_list ... ok
+test execution_store::tests::test_execution_record_complete ... ok
+test execution_store::tests::test_execution_record_new ... ok
+test execution_store::tests::test_execution_record_json_roundtrip ... ok
+test execution_store::tests::test_store_delete ... ok
+test execution_store::tests::test_store_get_stats ... ok
+test execution_store::tests::test_store_save_and_get ... ok
+test execution_store::tests::test_store_get_by_status ... ok
+test execution_store::tests::test_store_clear ... ok
+test execution_store::tests::test_store_update ... ok
+test failure_handler::tests::test_parse_git_url_ssh ... ok
+test failure_handler::tests::test_parse_git_url_with_git_suffix ... ok
+test failure_handler::tests::test_parse_git_url_https ... ok
+test isolation::tests::test_create_log_path ... ok
+test isolation::tests::test_get_shell ... ok
+test isolation::tests::test_build_docker_runtime_args_order ... ok
+test isolation::tests::test_generate_log_filename ... ok
+test isolation::tests::test_get_timestamp ... ok
+test execution_store::tests::test_store_get_all ... ok
+test isolation::tests::test_build_docker_runtime_args_empty ... ok
+test isolation::tests::test_is_command_available ... ok
+test isolation::tests::test_wrap_command_with_user ... ok
+test isolation_metadata::tests::test_build_isolation_options_map_basic ... ok
+test isolation_metadata::tests::test_build_isolation_options_map_includes_runtime_options ... ok
+test isolation_metadata::tests::test_docker_runtime_metadata_empty ... ok
+test isolation_metadata::tests::test_docker_runtime_metadata_omits_privileged_when_false ... ok
+test isolation_metadata::tests::test_docker_runtime_metadata_populated ... ok
+test isolation_metadata::tests::test_docker_runtime_status_lines_empty ... ok
+test isolation_metadata::tests::test_docker_runtime_status_lines_joins_multiple ... ok
+test isolation_metadata::tests::test_docker_runtime_status_lines_populated ... ok
+test lino_value_json::tests::converts_json_arrays_and_objects_to_lino_values ... ok
+test lino_value_json::tests::converts_json_float_to_lino_float ... ok
+test lino_value_json::tests::converts_json_scalars_to_lino_values ... ok
+test lino_value_json::tests::converts_lino_values_to_json ... ok
+test lino_value_json::tests::converts_non_finite_lino_float_to_json_null ... ok
+test output_blocks::tests::test_create_command_line ... ok
+test failure_handler::tests::test_parse_git_url_invalid ... ok
+test output_blocks::tests::test_create_finish_block_with_isolation ... ok
+test output_blocks::tests::test_create_timeline_line ... ok
+test output_blocks::tests::test_escape_for_links_notation ... ok
+test output_blocks::tests::test_format_duration ... ok
+test output_blocks::tests::test_generate_isolation_lines_docker ... ok
+test output_blocks::tests::test_generate_isolation_lines_screen ... ok
+test output_blocks::tests::test_generate_isolation_lines_tmux ... ok
+test isolation::tests::test_run_in_screen_captures_exit_code ... ok
+test output_blocks::tests::test_parse_isolation_metadata_docker ... ok
+test isolation::tests::test_run_in_screen_captures_stderr ... ok
+test sequence_parser::tests::test_distribute_option_empty_returns_nulls ... ok
+test output_blocks::tests::test_parse_isolation_metadata_tmux ... ok
+test sequence_parser::tests::test_distribute_option_sequence_with_matching_length ... ok
+test sequence_parser::tests::test_distribute_option_single_value_replicates ... ok
+test sequence_parser::tests::test_format_isolation_chain_empty ... ok
+test sequence_parser::tests::test_format_isolation_chain_simple ... ok
+test sequence_parser::tests::test_format_isolation_chain_with_docker_image_short_name ... ok
+test sequence_parser::tests::test_format_isolation_chain_with_placeholders ... ok
+test sequence_parser::tests::test_format_isolation_chain_with_ssh_endpoint ... ok
+test sequence_parser::tests::test_format_sequence_empty ... ok
+test sequence_parser::tests::test_format_sequence_with_nulls ... ok
+test sequence_parser::tests::test_format_sequence_with_values ... ok
+test sequence_parser::tests::test_get_value_at_level_null_value ... ok
+test sequence_parser::tests::test_get_value_at_level_out_of_bounds ... ok
+test sequence_parser::tests::test_get_value_at_level_valid_index ... ok
+test sequence_parser::tests::test_is_sequence_false_for_empty ... ok
+test sequence_parser::tests::test_distribute_option_throws_on_length_mismatch ... ok
+test sequence_parser::tests::test_is_sequence_true_for_space_separated ... ok
+test sequence_parser::tests::test_parse_sequence_all_underscores ... ok
+test sequence_parser::tests::test_parse_sequence_empty_string ... ok
+test sequence_parser::tests::test_parse_sequence_multiple ... ok
+test sequence_parser::tests::test_parse_sequence_multiple_spaces ... ok
+test sequence_parser::tests::test_parse_sequence_single ... ok
+test sequence_parser::tests::test_parse_sequence_trims_whitespace ... ok
+test sequence_parser::tests::test_parse_sequence_with_underscores ... ok
+test sequence_parser::tests::test_shift_sequence_empty ... ok
+test sequence_parser::tests::test_shift_sequence_removes_first ... ok
+test sequence_parser::tests::test_shift_sequence_single_element ... ok
+test sequence_parser::tests::test_shift_sequence_with_nulls ... ok
+test signal_handler::tests::test_set_and_clear_current_execution ... ok
+test signal_handler::tests::test_signal_received_initially_false ... ok
+test status_formatter::tests::links_notation_indents_nested_process_id_arrays ... ok
+test sequence_parser::tests::test_is_sequence_false_for_single_value ... ok
+test substitution::tests::test_case_insensitive_matching ... ok
+test isolation::tests::test_run_in_screen_captures_version_output ... ok
+test output_blocks::tests::test_parse_isolation_metadata_screen ... ok
+test substitution::tests::test_match_and_substitute_multiple_vars ... ok
+test substitution::tests::test_match_and_substitute_no_match ... ok
+test substitution::tests::test_create_rule ... ok
+test substitution::tests::test_match_and_substitute_basic ... ok
+test substitution::tests::test_parse_lino_content ... ok
+test user_manager::tests::test_generate_isolated_username ... ok
+test user_manager::tests::test_generate_isolated_username_with_prefix ... ok
+test output_blocks::tests::test_create_start_block_with_isolation ... ok
+test user_manager::tests::test_get_current_user ... ok
+test user_manager::tests::test_get_current_user_groups ... ok
+test user_manager::tests::test_user_not_exists ... ok
+test user_manager::tests::test_group_exists ... ok
+test user_manager::tests::test_user_exists_root ... ok
+test isolation::tests::test_run_in_screen_detached_writes_to_provided_log_path ... ok
+test substitution::tests::test_sort_rules_by_specificity ... ok
+test substitution::tests::test_specificity_matching ... ok
+
+test result: ok. 179 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.73s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/start-a1d7af4c1684f370`
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/args_parser-1048f80d159c2492`
+
+running 89 tests
+test basic_command_parsing::should_default_auto_remove_docker_container_to_false ... ok
+test basic_command_parsing::keep_alive_should_work_with_docker ... ok
+test basic_command_parsing::should_default_new_cleanup_flags_to_false ... ok
+test basic_command_parsing::should_error_for_auto_remove_without_docker_isolation ... ok
+test basic_command_parsing::should_error_for_auto_remove_without_isolation ... ok
+test basic_command_parsing::should_error_for_endpoint_with_non_ssh_backend ... ok
+test basic_command_parsing::should_default_keep_alive_to_false ... ok
+test basic_command_parsing::auto_remove_and_keep_alive_can_coexist ... ok
+test basic_command_parsing::should_error_for_keep_alive_without_isolation ... ok
+test basic_command_parsing::should_error_for_image_with_non_docker_backend ... ok
+test basic_command_parsing::should_error_for_missing_backend_argument ... ok
+test basic_command_parsing::should_error_for_new_cleanup_flags_without_docker_isolation ... ok
+test basic_command_parsing::should_error_for_session_without_isolation ... ok
+test basic_command_parsing::should_error_for_unknown_wrapper_option_before_separator ... ok
+test basic_command_parsing::should_error_for_unknown_wrapper_option_without_separator ... ok
+test basic_command_parsing::should_handle_mixed_options_and_command ... ok
+test basic_command_parsing::should_parse_a_shorthand ... ok
+test basic_command_parsing::should_normalize_backend_to_lowercase ... ok
+test basic_command_parsing::should_parse_attached_flag ... ok
+test basic_command_parsing::should_parse_always_cleanup_container_flag ... ok
+test basic_command_parsing::should_parse_command_after_options_without_separator ... ok
+test basic_command_parsing::should_parse_auto_remove_docker_container_flag ... ok
+test basic_command_parsing::should_parse_d_shorthand ... ok
+test basic_command_parsing::should_parse_endpoint_equals_format ... ok
+test basic_command_parsing::should_parse_detached_flag ... ok
+test basic_command_parsing::should_parse_empty_command_correctly ... ok
+test basic_command_parsing::should_parse_image_equals_format ... ok
+test basic_command_parsing::should_parse_isolated_equals_value_format ... ok
+test basic_command_parsing::should_parse_isolation_alias_before_command_without_separator ... ok
+test basic_command_parsing::keep_alive_should_work_with_detached_mode ... ok
+test basic_command_parsing::should_error_for_new_cleanup_flags_without_isolation ... ok
+test basic_command_parsing::should_parse_isolation_alias_with_value ... ok
+test basic_command_parsing::should_parse_isolation_equals_alias_format ... ok
+test basic_command_parsing::should_parse_keep_alive_flag ... ok
+test basic_command_parsing::should_parse_keep_container_on_fail_flag ... ok
+test basic_command_parsing::should_parse_session_equals_format ... ok
+test basic_command_parsing::should_provide_helpful_error_for_mode_conflict ... ok
+test basic_command_parsing::should_parse_keep_container_flag ... ok
+test basic_command_parsing::should_parse_k_shorthand ... ok
+test keep_user_tests::keep_user_should_work_with_user_and_isolation_options ... ok
+test keep_user_tests::should_parse_keep_user_flag ... ok
+test basic_command_parsing::should_parse_session_shorthand ... ok
+test list_tests::should_default_list_to_false ... ok
+test keep_user_tests::should_error_for_keep_user_without_user ... ok
+test basic_command_parsing::should_reject_conflicting_docker_cleanup_options ... ok
+test cleanup_cases::should_default_cleanup_to_false ... ok
+test list_tests::should_normalize_output_format_with_list ... ok
+test list_tests::should_parse_list_with_json_output_format ... ok
+test status_tests::should_default_output_format_to_none ... ok
+test list_tests::should_parse_list_flag ... ok
+test status_tests::should_default_status_to_none ... ok
+test status_tests::should_error_for_terminate_with_empty_equals_identifier ... ok
+test keep_user_tests::should_default_keep_user_to_false ... ok
+test status_tests::should_error_for_stop_without_identifier ... ok
+test status_tests::should_error_for_status_with_flag_as_next_arg ... ok
+test status_tests::should_error_for_stop_with_empty_equals_identifier ... ok
+test status_tests::should_accept_all_valid_output_formats ... ok
+test status_tests::should_error_for_upload_log_with_empty_equals_identifier ... ok
+test status_tests::should_error_for_terminate_without_identifier ... ok
+test status_tests::should_error_when_combining_query_and_control_modes ... ok
+test status_tests::should_normalize_output_format_to_lowercase ... ok
+test status_tests::should_parse_terminate_with_identifier ... ok
+test status_tests::should_parse_upload_log_equals_format ... ok
+test status_tests::should_parse_upload_log_with_identifier ... ok
+test use_command_stream_tests::should_default_use_command_stream_to_false ... ok
+test status_tests::should_parse_stop_equals_format ... ok
+test status_tests::should_parse_terminate_equals_format ... ok
+test status_tests::should_parse_stop_with_identifier ... ok
+test use_command_stream_tests::should_work_with_other_options ... ok
+test use_command_stream_tests::should_parse_use_command_stream_flag ... ok
+test user_isolation_cases::should_work_with_tmux_isolation ... ok
+test status_tests::should_error_for_upload_log_without_identifier ... ok
+test valid_backends_tests::error_should_list_valid_backends ... ok
+test valid_backends_tests::should_accept_all_valid_backends ... ok
+test valid_backends_tests::should_error_for_invalid_backend ... ok
+test valid_backends_tests::should_include_docker ... ok
+test valid_backends_tests::should_include_screen ... ok
+test valid_backends_tests::should_include_tmux ... ok
+test valid_output_formats_tests::should_include_json ... ok
+test valid_output_formats_tests::should_include_links_notation ... ok
+test valid_output_formats_tests::should_include_text ... ok
+test validate_options_tests::should_error_for_attached_and_detached_together ... ok
+test validate_options_tests::should_pass_for_docker_with_image ... ok
+test validate_options_tests::should_pass_for_valid_options ... ok
+test user_isolation_cases::should_error_for_user_with_docker_isolation ... ok
+test user_isolation_cases::should_parse_u_shorthand ... ok
+test user_isolation_cases::should_parse_isolated_user_equals_value_format ... ok
+test user_isolation_cases::should_parse_u_with_custom_username ... ok
+test user_isolation_cases::should_work_without_isolation ... ok
+
+test result: ok. 89 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/args_parser_shell-05796859234780c0`
+
+running 15 tests
+test shell_option_tests::should_error_for_invalid_shell ... ok
+test shell_option_tests::should_error_for_missing_shell_argument ... ok
+test shell_option_tests::should_parse_shell_bash ... ok
+test shell_option_tests::should_parse_shell_equals_value_format ... ok
+test shell_option_tests::should_parse_shell_sh ... ok
+test shell_option_tests::should_work_with_ssh_isolation ... ok
+test valid_shells_tests::should_include_auto ... ok
+test valid_shells_tests::should_include_bash ... ok
+test valid_shells_tests::should_include_sh ... ok
+test valid_shells_tests::should_include_zsh ... ok
+test shell_option_tests::should_normalize_shell_to_lowercase ... ok
+test shell_option_tests::should_parse_shell_auto ... ok
+test shell_option_tests::should_parse_shell_zsh ... ok
+test shell_option_tests::should_default_shell_to_auto ... ok
+test shell_option_tests::error_should_list_valid_shells ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/ci_workflow_invariants-227fab40eeca8cac`
+
+running 17 tests
+test coverage_step_enables_pipefail_so_tee_cannot_hide_failures ... ok
+test configures_git_before_checkout_so_no_init_hints_are_printed ... ok
+test link_workflow_checks_links_and_falls_back_to_the_web_archive ... ok
+test finds_every_workflow_file ... ok
+test aggregates_every_job_into_a_pipeline_status_gate ... ok
+test declares_a_least_privilege_default_permission_set ... ok
+test never_puts_concurrency_at_workflow_level ... ok
+test gives_every_job_a_timeout ... ok
+test never_swallows_a_failing_command_in_a_quality_gate ... ok
+test parses_coverage_through_the_tested_helper_not_an_inline_grep ... ok
+test read_only_checks_are_cancellable ... ok
+test rust_workflow_keeps_the_test_parity_gate ... ok
+test security_workflow_scans_code_dependencies_and_secrets ... ok
+test gives_every_job_its_own_concurrency_group ... ok
+test uses_not_cancelled_rather_than_always_outside_the_status_job ... ok
+test writers_share_the_main_writer_group_and_are_not_cancellable ... ok
+test references_only_helper_scripts_that_exist ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/cleanup-a217dd194e1389ff`
+
+running 5 tests
+test test_cleanup_stale_no_stale_records ... ok
+test test_cleanup_stale_actual_cleanup ... ok
+test test_cleanup_stale_only_executing_records ... ok
+test test_cleanup_stale_custom_max_age ... ok
+test test_cleanup_stale_dry_run ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/docker_network-666baaee6ff4d314`
+
+running 2 tests
+test multi_network_probe_is_hermetic ... ok
+ping: bad address 'formal-ai'
+test named_network_alias_is_private_and_missing_network_leaves_no_orphan ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.87s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/echo_integration-7b54c366f2fe15bd`
+
+running 18 tests
+test no_isolation_mode::test_echo_hi_works_correctly ... ok
+test no_isolation_mode::test_echo_with_quotes ... ok
+test no_isolation_mode::test_exit_code_formatting ... ok
+test no_isolation_mode::test_timing_information ... ok
+test output_block_formatting::test_log_paths_not_truncated ... ok
+test output_block_formatting::test_session_ids_in_both_blocks ... ok
+test screen_isolation_mode::attached::test_echo_hi_in_attached_screen_mode ... ok
+test screen_isolation_mode::attached::test_echo_with_quotes_in_attached_screen ... ok
+test screen_isolation_mode::detached::test_echo_hi_in_detached_screen_mode ... ok
+test screen_isolation_mode::detached::test_reattach_instructions_in_detached_screen ... ok
+test tmux_isolation_mode::detached::test_echo_hi_in_detached_tmux_mode ... ok
+test tmux_isolation_mode::detached::test_echo_with_quotes_in_detached_tmux ... ok
+test tmux_isolation_mode::detached::test_reattach_instructions_in_detached_tmux ... ok
+test docker_isolation_mode::attached::test_exit_code_in_attached_docker ... ok
+test docker_isolation_mode::detached::test_echo_hi_in_detached_docker_mode ... ok
+test docker_isolation_mode::detached::test_reattach_instructions_in_detached_docker ... ok
+test docker_isolation_mode::attached::test_echo_hi_in_attached_docker_mode ... ok
+test docker_isolation_mode::attached::test_echo_with_quotes_in_attached_docker ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.83s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/execution_control-957fe83091e6d0e0`
+
+running 7 tests
+test screen_stop_maps_to_ctrl_c_injection ... ok
+test parses_screen_pid_from_screen_ls_output ... ok
+test stop_sends_screen_control_command ... ok
+test collects_screen_and_descendant_process_ids ... ok
+test stop_sends_docker_stop ... ok
+test non_detached_records_are_rejected ... ok
+test terminate_sends_docker_kill ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/execution_store-6f113d423e54b91d`
+
+running 18 tests
+test execution_record_tests::should_create_execution_record_with_custom_values ... ok
+test execution_record_tests::should_create_new_execution_record_with_default_values ... ok
+test execution_record_tests::should_mark_execution_as_completed ... ok
+test execution_status_tests::executed_status_as_str ... ok
+test execution_status_tests::executing_status_as_str ... ok
+test execution_store_cases::should_create_app_folder_on_initialization ... ok
+test execution_record_tests::should_mark_execution_as_failed ... ok
+test execution_store_cases::should_handle_special_characters_in_command ... ok
+test execution_store_cases::should_get_all_records ... ok
+test execution_store_cases::should_delete_a_record ... ok
+test execution_store_cases::should_return_false_when_deleting_non_existent_record ... ok
+test execution_status_tests::should_get_recent_records ... ok
+test execution_store_cases::should_save_and_retrieve_an_execution_record ... ok
+test execution_store_cases::should_get_records_by_status ... ok
+test execution_store_cases::should_update_an_existing_record ... ok
+test execution_store_cases::should_return_empty_cleanup_result_when_no_stale_records_exist ... ok
+test execution_store_cases::should_handle_unicode_characters ... ok
+test execution_store_cases::should_get_statistics ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/failure_handler-25f12b2406243d9d`
+
+running 21 tests
+test config_tests::should_have_correct_default_values ... ok
+test handle_failure_tests::should_not_panic_when_disable_auto_issue_is_true ... ok
+test handle_failure_tests::should_not_panic_when_verbose_and_disable_auto_issue ... ok
+test config_tests::should_allow_setting_disable_auto_issue ... ok
+test config_tests::should_allow_setting_verbose ... ok
+test config_tests::should_allow_setting_disable_log_upload ... ok
+test is_gh_upload_log_available_tests::return_value_is_bool_type ... ok
+test is_gh_upload_log_available_tests::should_return_a_bool ... ok
+test parse_git_url_tests::should_parse_git_at_format ... ok
+test parse_git_url_tests::should_normalize_url_to_https ... ok
+test parse_git_url_tests::should_parse_npm_style_git_url ... ok
+test parse_git_url_tests::should_parse_https_url ... ok
+test parse_git_url_tests::should_return_none_for_empty_string ... ok
+test parse_git_url_tests::should_parse_ssh_url ... ok
+test parse_git_url_tests::should_return_none_for_invalid_url ... ok
+test parse_git_url_tests::should_strip_git_suffix_from_repo ... ok
+test parse_git_url_tests::should_return_none_for_non_github_url ... ok
+test is_gh_authenticated_tests::return_value_is_bool_type ... ok
+test can_create_issue_tests::should_return_bool ... ok
+test is_gh_authenticated_tests::should_return_a_bool ... ok
+test can_create_issue_tests::should_return_false_for_invalid_repo ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/integration-9eff9bb9944e7596`
+
+running 18 tests
+test args_parser_integration_cases::test_parse_with_session_name ... ok
+test args_parser_integration_cases::test_parse_isolated_mode_integration ... ok
+test args_parser_integration_cases::test_docker_with_image ... ok
+test args_parser_integration_cases::test_parse_simple_command_integration ... ok
+test args_parser_integration_cases::test_validate_options_valid_backends ... ok
+test args_parser_integration_cases::test_parse_detached_mode ... ok
+test public_exports_tests::test_execution_status_export ... ok
+test public_exports_tests::test_execution_record_export ... ok
+test public_exports_tests::test_execution_record_options_export ... ok
+test args_parser_integration_cases::test_parse_with_separator ... ok
+test public_exports_tests::test_execution_stats_export ... ok
+test public_exports_tests::test_execution_store_options_export ... ok
+test version_tests::test_cargo_version_format ... ok
+test version_tests::test_package_has_description ... ok
+test version_tests::test_package_name ... ok
+test public_exports_tests::test_is_clink_installed_export ... ok
+test public_exports_tests::test_execution_store_export ... ok
+test public_exports_tests::test_full_workflow ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/isolation-b7a49e69f8e8bb6c`
+
+running 4 tests
+test test_get_default_docker_image ... ok
+test test_get_default_docker_image_returns_known_images ... ok
+test test_docker_pull_image_without_log_path ... ok
+test test_docker_pull_image_records_prep_phase_in_log ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/isolation_log-f59ff6434f191c4d`
+
+running 30 tests
+test create_log_footer_tests::should_contain_end_time ... ok
+test create_log_footer_tests::should_contain_exit_code_label ... ok
+test create_log_footer_tests::should_contain_finished_label ... ok
+test create_log_header_tests::should_contain_command ... ok
+test create_log_header_tests::should_contain_environment ... ok
+test create_log_header_tests::should_contain_image_when_provided ... ok
+test create_log_header_tests::should_contain_session_name ... ok
+test create_log_footer_tests::should_contain_exit_code ... ok
+test create_log_header_tests::should_contain_start_command_log_header ... ok
+test create_log_header_tests::should_contain_user_when_provided ... ok
+test create_log_path_tests::should_contain_environment_in_path ... ok
+test create_log_path_tests::should_create_stable_direct_path_without_duplicate_environment ... ok
+test create_log_path_tests::should_create_stable_isolation_path_for_execution_id ... ok
+test generate_log_filename_tests::should_contain_environment_name ... ok
+test generate_log_filename_tests::should_start_with_start_command_prefix ... ok
+test get_default_docker_image_tests::should_return_image_with_tag ... ok
+test generate_log_filename_tests::should_end_with_dot_log ... ok
+test get_default_docker_image_tests::should_return_known_base_image ... ok
+test get_log_dir_tests::should_return_a_valid_path ... ok
+test get_log_dir_tests::should_return_temp_dir_by_default ... ok
+test get_timestamp_tests::should_contain_date_separator ... ok
+test get_timestamp_tests::should_contain_time_separator ... ok
+test get_timestamp_tests::should_contain_year ... ok
+test get_timestamp_tests::should_return_non_empty_string ... ok
+test create_log_path_tests::should_return_path_ending_in_dot_log ... ok
+test generate_log_filename_tests::should_be_unique_for_same_environment ... ok
+test write_log_file_tests::should_return_false_for_invalid_path ... ok
+test write_log_file_tests::should_return_true_when_writing_to_temp_path ... ok
+test write_log_file_tests::should_append_to_existing_log_file ... ok
+test get_default_docker_image_tests::should_return_non_empty_string ... ok
+
+test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/isolation_unit-88207882868b26a4`
+
+running 42 tests
+test build_shell_with_args_cmd_args_tests::should_join_script_parts_after_c ... ok
+test detect_shell_in_environment_tests::should_read_shell_preference_from_options_shell ... ok
+test build_shell_with_args_cmd_args_tests::should_handle_bash_i_c_cmd ... ok
+test detect_shell_in_environment_tests::should_return_sh_when_preference_is_sh ... ok
+test detect_shell_in_environment_tests::should_return_the_forced_shell_when_preference_is_not_auto ... ok
+test detect_shell_in_environment_tests::should_return_zsh_when_preference_is_zsh ... ok
+test get_default_docker_image_tests::should_return_a_valid_docker_image_string ... ok
+test build_shell_with_args_cmd_args_tests::should_return_all_parts_when_no_c_flag ... ok
+test get_default_docker_image_tests::should_return_a_known_base_image ... ok
+test detect_shell_in_environment_tests::should_return_sh_fallback_for_unknown_environment ... ok
+test get_default_docker_image_tests::should_return_an_image_with_a_tag ... ok
+test is_interactive_shell_command_tests::should_return_false_for_bash_c_echo ... ok
+test is_interactive_shell_command_tests::should_return_false_for_bash_c_echo_hi_quoted ... ok
+test is_command_available_tests::should_return_true_for_common_commands_echo ... ok
+test is_interactive_shell_command_tests::should_return_false_for_echo_hello ... ok
+test is_command_available_tests::should_return_false_for_non_existent_command ... ok
+test is_interactive_shell_command_tests::should_return_false_for_empty_string ... ok
+test build_shell_with_args_cmd_args_tests::should_return_full_args_for_bash_c_echo ... ok
+test is_interactive_shell_command_tests::should_return_false_for_npm_test ... ok
+test is_interactive_shell_command_tests::should_return_false_for_whitespace_only ... ok
+test is_interactive_shell_command_tests::should_return_false_for_ls_la ... ok
+test is_interactive_shell_command_tests::should_return_true_for_bash ... ok
+test is_interactive_shell_command_tests::should_return_true_for_slash_usr_bin_zsh ... ok
+test is_command_available_tests::should_return_a_boolean ... ok
+test is_interactive_shell_command_tests::should_return_true_for_slash_bin_bash ... ok
+test is_shell_invocation_with_args_tests::should_return_false_for_empty_string ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_bash_c_echo ... ok
+test is_shell_invocation_with_args_tests::should_return_false_for_npm_run_test ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_bash_i_c_cmd ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_slash_bin_bash_c ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_zsh_c_cmd ... ok
+test isolation_options_tests::should_allow_custom_shell ... ok
+test is_command_available_tests::should_return_false_for_empty_command ... ok
+test is_interactive_shell_command_tests::should_return_true_for_bash_l_login_flag_no_c ... ok
+test is_interactive_shell_command_tests::should_return_true_for_sh ... ok
+test isolation_options_tests::should_allow_detached_mode ... ok
+test isolation_options_tests::should_have_correct_defaults ... ok
+test wrap_command_with_user_tests::should_escape_single_quotes_in_command ... ok
+test wrap_command_with_user_tests::should_return_command_unchanged_when_user_is_null ... ok
+test wrap_command_with_user_tests::should_use_non_interactive_sudo ... ok
+test wrap_command_with_user_tests::should_wrap_command_with_sudo_when_user_is_specified ... ok
+test is_interactive_shell_command_tests::should_return_true_for_zsh ... ok
+
+test result: ok. 42 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/output_blocks-b55b455d7d529336`
+
+running 22 tests
+test test_create_finish_block_failure ... ok
+test test_create_finish_block_without_duration ... ok
+test test_create_start_block ... ok
+test test_escape_for_links_notation_no_quoting ... ok
+test test_escape_for_links_notation_with_colon ... ok
+test test_escape_for_links_notation_with_double_quotes ... ok
+test test_escape_for_links_notation_with_single_quotes ... ok
+test test_escape_for_links_notation_with_space ... ok
+test test_create_finish_block ... ok
+test test_format_duration ... ok
+test test_get_result_marker ... ok
+test test_create_start_block_with_defer_command ... ok
+test test_create_start_block_with_isolation ... ok
+test test_create_start_block_with_docker_isolation ... ok
+test test_timeline_constants ... ok
+test test_create_finish_block_with_isolation_repeated ... ok
+test test_visual_continuity_output_formatting ... ok
+test test_parse_isolation_metadata ... ok
+test test_finish_block_log_session_last ... ok
+test test_visual_continuity_command_output_pattern ... ok
+test test_visual_continuity_start_block_for_docker_isolation ... ok
+test test_start_block_ends_with_empty_timeline_when_defer_command_true ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/output_blocks_extended-7cfa7d908c1ac02f`
+
+running 29 tests
+test create_command_line_tests::should_create_a_line_with_dollar_prefix ... ok
+test create_empty_timeline_line_tests::should_create_just_the_timeline_marker_character ... ok
+test create_timeline_line_tests::should_create_a_line_with_timeline_marker_prefix_and_padded_label ... ok
+test create_timeline_line_tests::create_spine_line_should_work_as_alias ... ok
+test create_timeline_line_tests::should_pad_labels_to_10_characters ... ok
+test create_virtual_command_tests::should_create_virtual_command_result ... ok
+test create_empty_timeline_line_tests::create_empty_spine_line_should_work_as_alias ... ok
+test escape_for_links_notation_tests::should_not_quote_simple_values ... ok
+test format_duration_tests::should_format_millisecond_durations ... ok
+test format_duration_tests::should_format_second_durations ... ok
+test format_duration_tests::should_format_very_small_durations ... ok
+test create_timeline_separator_tests::should_create_a_separator_line ... ok
+test format_value_for_links_notation_tests::should_handle_null_values ... ok
+test escape_for_links_notation_tests::should_quote_values_with_colons ... ok
+test generate_isolation_lines_tests::should_generate_lines_for_docker_isolation ... ok
+test create_virtual_command_tests::should_create_virtual_command_block ... ok
+test generate_isolation_lines_tests::should_generate_lines_for_screen_isolation ... ok
+test get_result_marker_tests::should_return_failure_marker_for_non_zero_exit_codes ... ok
+test get_result_marker_tests::should_return_success_marker_for_exit_code_0 ... ok
+test escape_for_links_notation_tests::should_quote_values_with_spaces ... ok
+test format_duration_tests::should_format_longer_durations_with_less_precision ... ok
+test timeline_constants_tests::should_export_result_markers ... ok
+test format_value_for_links_notation_tests::should_format_simple_objects ... ok
+test timeline_constants_tests::should_export_spine_as_alias_for_backward_compatibility ... ok
+test timeline_constants_tests::should_export_timeline_marker_character ... ok
+test parse_isolation_metadata_tests::should_parse_environment_and_mode ... ok
+test parse_isolation_metadata_tests::should_parse_all_fields_together ... ok
+test parse_isolation_metadata_tests::should_parse_session_name ... ok
+test parse_isolation_metadata_tests::should_parse_docker_image ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/regression_150-254d849499b8b7d7`
+
+running 11 tests
+test test_ignores_bare_exit_code_line_without_footer_block ... ok
+test test_ignores_exit_code_in_the_middle_of_a_line ... ok
+test test_last_anchored_footer_wins ... ok
+test test_ignores_exit_code_substring_in_command_output ... ok
+test test_reads_the_real_footer ... ok
+test test_returns_none_without_footer_or_file ... ok
+test test_finds_footer_at_the_end_of_a_large_log ... ok
+test test_partial_first_line_of_the_tail_is_dropped ... ok
+test test_reads_crlf_and_negative_codes ... ok
+test test_genuine_footer_terminates_the_record ... ok
+test test_forged_output_does_not_terminate_an_executing_record ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/regression_84-ff62b85775233b3d`
+
+running 19 tests
+test build_cmd_args_regression_84_cases::bash_should_get_i_flag_not_wrapped_in_shell_c ... ok
+test build_cmd_args_regression_84_cases::bash_already_has_i_flag_no_duplicate ... ok
+test build_cmd_args_regression_84_cases::zsh_should_get_i_flag_not_wrapped_in_shell_c ... ok
+test is_interactive_shell_command_tests::should_return_false_for_bash_c_echo_hello ... ok
+test is_interactive_shell_command_tests::should_return_false_for_echo_hello ... ok
+test is_interactive_shell_command_tests::should_return_false_for_npm_test ... ok
+test is_interactive_shell_command_tests::should_return_true_for_bash ... ok
+test build_cmd_args_regression_84_cases::sh_should_not_get_i_flag_not_wrapped_in_shell_c ... ok
+test build_cmd_args_regression_84_cases::echo_hello_should_be_wrapped_in_shell_c ... ok
+test is_interactive_shell_command_tests::should_return_true_for_dash ... ok
+test is_interactive_shell_command_tests::should_return_true_for_fish ... ok
+test is_interactive_shell_command_tests::should_return_true_for_bash_i_interactive_flag ... ok
+test is_interactive_shell_command_tests::should_return_false_for_empty_string ... ok
+test is_interactive_shell_command_tests::should_return_true_for_full_path_bash ... ok
+test is_interactive_shell_command_tests::should_return_true_for_bash_norc ... ok
+test is_interactive_shell_command_tests::should_return_true_for_zsh_no_rcs ... ok
+test is_interactive_shell_command_tests::should_return_true_for_zsh ... ok
+test build_cmd_args_regression_84_cases::npm_test_should_be_wrapped_in_shell_c ... ok
+test is_interactive_shell_command_tests::should_return_true_for_sh ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/regression_91-e6c5b24de65c36a7`
+
+running 24 tests
+test build_shell_with_args_cmd_args_tests::should_reconstruct_bash_c_echo_hello ... ok
+test build_shell_with_args_cmd_args_tests::should_handle_single_word_script_bash_c_ls ... ok
+test build_shell_with_args_cmd_args_tests::should_handle_zsh_with_c ... ok
+test build_shell_with_args_cmd_args_tests::should_handle_slash_bin_bash_i_c_with_multi_word_script ... ok
+test build_shell_with_args_cmd_args_tests::should_reconstruct_bash_i_c_nvm_version ... ok
+test docker_attached_cmd_args_regression_91_cases::bare_bash_should_still_get_i_flag ... ok
+test docker_attached_cmd_args_regression_91_cases::mutual_exclusion_bare_shell_and_shell_with_args ... ok
+test docker_attached_cmd_args_regression_91_cases::npm_test_should_be_wrapped_in_outer_shell_c ... ok
+test docker_attached_cmd_args_regression_91_cases::npm_test_still_wrapped_in_outer_shell ... ok
+test docker_attached_cmd_args_regression_91_cases::should_not_introduce_second_bash_layer ... ok
+test docker_attached_cmd_args_regression_91_cases::zsh_c_nvm_version_should_pass_directly ... ok
+test is_shell_invocation_with_args_tests::should_return_false_for_bare_bash ... ok
+test is_shell_invocation_with_args_tests::should_return_false_for_bash_i ... ok
+test build_shell_with_args_cmd_args_tests::should_not_include_c_argument_inside_script_no_double_c ... ok
+test is_shell_invocation_with_args_tests::should_return_false_for_bash_norc ... ok
+test is_shell_invocation_with_args_tests::should_return_false_for_non_shell_commands ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_bash_c_echo_hello ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_bash_c_echo_hello_no_quotes ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_bash_i_c_nvm_version ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_slash_bin_bash_c_echo_hi ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_zsh_c_nvm_version ... ok
+test docker_attached_cmd_args_regression_91_cases::bash_i_c_nvm_version_should_pass_directly ... ok
+test docker_attached_cmd_args_regression_91_cases::bash_c_echo_hello_should_pass_directly ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_sh_c_ls ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/sequence_parser-ef331236b1b61646`
+
+running 29 tests
+test distribute_option_tests::should_replicate_single_value_for_all_levels ... ok
+test format_isolation_chain_tests::should_add_docker_image_short_name ... ok
+test distribute_option_tests::should_parse_sequence_with_matching_length ... ok
+test distribute_option_tests::should_err_on_length_mismatch ... ok
+test format_isolation_chain_tests::should_add_ssh_endpoint ... ok
+test distribute_option_tests::should_handle_empty_value ... ok
+test format_isolation_chain_tests::should_handle_empty_array ... ok
+test format_isolation_chain_tests::should_handle_placeholders ... ok
+test format_sequence_tests::should_format_array_with_values ... ok
+test format_sequence_tests::should_format_array_with_nulls_as_underscores ... ok
+test get_value_at_level_tests::should_handle_null_value ... ok
+test get_value_at_level_tests::should_get_value_at_valid_index ... ok
+test format_isolation_chain_tests::should_format_simple_chain ... ok
+test get_value_at_level_tests::should_return_none_for_out_of_bounds ... ok
+test is_sequence_tests::should_return_false_for_empty_string ... ok
+test is_sequence_tests::should_return_false_for_single_value ... ok
+test is_sequence_tests::should_return_true_for_space_separated_values ... ok
+test parse_sequence_tests::should_handle_all_underscores ... ok
+test parse_sequence_tests::should_handle_empty_string ... ok
+test format_sequence_tests::should_handle_empty_array ... ok
+test parse_sequence_tests::should_handle_multiple_spaces_between_values ... ok
+test parse_sequence_tests::should_parse_single_value ... ok
+test parse_sequence_tests::should_parse_sequence_with_underscores_as_null ... ok
+test parse_sequence_tests::should_trim_whitespace ... ok
+test shift_sequence_tests::should_handle_empty_array ... ok
+test parse_sequence_tests::should_parse_space_separated_sequence ... ok
+test shift_sequence_tests::should_handle_single_element ... ok
+test shift_sequence_tests::should_remove_first_element ... ok
+test shift_sequence_tests::should_handle_nulls ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/session_name_status-0f538ad060cb3381`
+
+running 28 tests
+test test_attach_current_time_returns_none_for_executed_record ... ok
+test test_attach_current_time_does_not_mutate_record ... ok
+test test_attach_current_time_returns_some_for_executing_record ... ok
+test test_enrich_detached_status_non_detached ... ok
+test test_enrich_detached_status_marks_dead_session_as_executed ... ok
+test test_enrich_keeps_recorded_exit_code_when_session_lingers ... ok
+test test_get_by_session_name ... ok
+test test_get_by_uuid ... ok
+test test_get_most_recent_session_name_match ... ok
+test test_get_nonexistent_session_name ... ok
+test test_get_prefers_uuid_over_session_name ... ok
+test test_get_record_without_session_name ... ok
+test test_is_detached_session_alive_no_session_name ... ok
+test test_is_detached_session_alive_non_detached ... ok
+test test_enrich_keeps_executing_when_docker_container_not_visible ... ok
+test test_is_detached_session_alive_nonexistent_screen ... ok
+test test_query_status_by_session_name ... ok
+test test_query_status_json_includes_current_time_for_executing ... ok
+test test_query_status_json_omits_current_time_for_executed ... ok
+test test_query_status_links_notation_includes_current_time_for_executing ... ok
+test test_query_status_nonexistent_session_name ... ok
+test test_query_status_text_includes_current_time_for_executing ... ok
+test test_query_status_text_omits_current_time_for_executed ... ok
+test test_enrich_honors_log_footer_when_no_recorded_exit_code ... ok
+test test_enrich_flips_to_executing_when_no_terminal_record ... ok
+test test_is_detached_session_alive_unknown_docker_container_is_none ... ok
+test test_enrich_running_docker_container_stays_executing ... ok
+test test_enrich_stopped_docker_container_uses_real_exit_code ... ok
+
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.65s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/signal_handler-288a50dc80eb0732`
+
+running 6 tests
+test clear_current_execution_does_not_panic ... ok
+test get_signal_exit_code_initial_value_is_zero ... ok
+test clear_current_execution_can_be_called_multiple_times ... ok
+test setup_signal_handlers_can_be_called_multiple_times ... ok
+test was_signal_received_returns_bool ... ok
+test get_signal_exit_code_returns_i32 ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/status_formatter-96c53430aab7f75f`
+
+running 27 tests
+test docker_oom_killed_prefers_the_log_footer_over_the_137_fallback ... ok
+test test_attach_current_time_none_for_completed ... ok
+test test_attach_current_time_some_for_executing ... ok
+test test_format_record_as_json ... ok
+test test_format_record_as_links_notation ... ok
+test test_format_record_as_text ... ok
+test test_format_record_invalid_format ... ok
+test test_format_record_list_as_links_notation ... ok
+test test_format_record_unchanged_when_no_current_time ... ok
+test test_json_format_includes_current_time_when_provided ... ok
+test test_json_format_no_current_time_when_absent ... ok
+test test_links_notation_includes_current_time_when_provided ... ok
+test test_links_notation_no_current_time_when_absent ... ok
+test test_list_executions_empty_store ... ok
+test test_list_executions_json_includes_all_records ... ok
+test test_list_executions_no_store ... ok
+test test_query_status_default_format ... ok
+test test_query_status_no_store ... ok
+test docker_oom_killed_is_terminal_once_the_container_is_gone ... ok
+test test_query_status_not_found ... ok
+test test_text_format_includes_current_time_when_provided ... ok
+test test_query_status_success ... ok
+test test_text_format_no_current_time_when_absent ... ok
+test docker_oom_killed_keeps_running_container_executing ... ok
+test docker_oom_killed_is_exposed_in_status_and_list_output ... ok
+test docker_oom_killed_uses_the_container_exit_code_when_it_stops ... ok
+test docker_oom_killed_never_synthesizes_137_for_a_running_container ... ok
+
+test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/user_manager-9872cd1dd6fd7700`
+
+running 10 tests
+test generate_isolated_username_with_no_prefix_length_at_most_31 ... ok
+test generate_isolated_username_with_no_prefix_starts_with_start_dash ... ok
+test generate_isolated_username_returns_unique_names ... ok
+test generate_isolated_username_with_custom_prefix ... ok
+test get_current_user_groups_returns_strings ... ok
+test get_current_user_groups_returns_non_empty_vec ... ok
+test user_exists_returns_true_for_root ... ok
+test get_current_user_returns_non_empty_string ... ok
+test get_current_user_returns_known_user ... ok
+test user_exists_returns_false_for_nonexistent_user ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running `/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/utils-dd41bce0a4f01416`
+
+running 12 tests
+test generate_session_name_tests::should_return_non_empty_string ... ok
+test generate_session_name_tests::should_use_custom_prefix ... ok
+test generate_uuid_tests::should_return_a_string_matching_uuid_v4_format ... ok
+test generate_uuid_tests::should_return_unique_uuids ... ok
+test generate_session_name_tests::should_use_default_prefix_start ... ok
+test is_valid_uuid_tests::should_return_false_for_empty_string ... ok
+test is_valid_uuid_tests::should_return_false_for_non_uuid_string ... ok
+test generate_session_name_tests::should_return_unique_names ... ok
+test is_valid_uuid_tests::should_return_false_for_uuid_with_wrong_length ... ok
+test generate_uuid_tests::should_return_a_non_empty_string ... ok
+test is_valid_uuid_tests::should_return_true_for_valid_uuid ... ok
+test generate_uuid_tests::should_pass_is_valid_uuid_check ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests start_command
+     Running `/home/box/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustdoc --edition=2021 --crate-type lib --color auto --crate-name start_command --test src/lib/mod.rs --test-run-directory /tmp/gh-issue-solver-1786375395447/rust --extern base64=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libbase64-76f54f820f429c43.rlib --extern chrono=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libchrono-f08418f89917e01d.rlib --extern dirs=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libdirs-6d5340721b3fd3de.rlib --extern libc=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblibc-df491add64751ce6.rlib --extern lino_objects_codec=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/liblino_objects_codec-3dcee34bae56cf40.rlib --extern regex=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libregex-036f9d4ab3b6ad4a.rlib --extern serde=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde-513064818089a754.rlib --extern serde_json=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libserde_json-931041b93abb2475.rlib --extern start_command=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libstart_command-66bc32e73e01a7a0.rlib --extern tempfile=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libtempfile-f38afb811541b078.rlib --extern uuid=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps/libuuid-2bc4bbfe6798b1d4.rlib -L dependency=/tmp/gh-issue-solver-1786375395447/rust/target/debug/deps -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' --error-format human`
+
+running 6 tests
+test src/lib/sequence_parser.rs - sequence_parser::format_sequence (line 40) ... ok
+test src/lib/sequence_parser.rs - sequence_parser::format_isolation_chain (line 152) ... ok
+test src/lib/sequence_parser.rs - sequence_parser::parse_sequence (line 15) ... ok
+test src/lib/sequence_parser.rs - sequence_parser::distribute_option (line 96) ... ok
+test src/lib/sequence_parser.rs - sequence_parser::shift_sequence (line 61) ... ok
+test src/lib/sequence_parser.rs - sequence_parser::is_sequence (line 77) ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.50s
+

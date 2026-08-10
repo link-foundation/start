@@ -1,0 +1,449 @@
+diff --git a/js/test/docker-network-integration.js b/js/test/docker-network-integration.js
+index a85757a..8766529 100644
+--- a/js/test/docker-network-integration.js
++++ b/js/test/docker-network-integration.js
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env bun
+-/** Real-daemon integration coverage for Docker network isolation (issues #154, #156). */
++/** Real-daemon integration coverage for Docker network isolation (issues #154, #156, #158). */
+ 
+ const { after, before, describe, it } = require('node:test');
+ const assert = require('assert');
+@@ -7,9 +7,15 @@ const { spawnSync } = require('child_process');
+ const { randomUUID } = require('crypto');
+ const { runInDocker } = require('../src/lib/isolation');
+ 
++// Bun's `node:test` shim ignores a `describe`-level timeout, so every `it`
++// declares its own budget explicitly (issue #158).
++const TEST_TIMEOUT = 120000;
++
+ const suffix = randomUUID().slice(0, 8);
+ const network = `start-network-${suffix}`;
++const secondNetwork = `start-network-b-${suffix}`;
+ const sidecar = `start-sidecar-${suffix}`;
++const secondSidecar = `start-sidecar-b-${suffix}`;
+ const connected = `start-connected-${suffix}`;
+ const control = `start-control-${suffix}`;
+ const missing = `start-missing-${suffix}`;
+@@ -20,7 +26,36 @@ function docker(args) {
+   return spawnSync('docker', args, { encoding: 'utf8' });
+ }
+ 
+-describe('Docker named network integration', { timeout: 60000 }, () => {
++/**
++ * Container output, folded into assertion messages so a CI failure carries the
++ * evidence needed to diagnose it instead of only reporting the exit code.
++ */
++function containerDiagnostics(name) {
++  const logs = docker(['logs', name]);
++  const output = `${logs.stdout || ''}${logs.stderr || ''}`.trim();
++  return `\n--- docker logs ${name} ---\n${output || '<no output>'}\n---`;
++}
++
++function createInternalNetworkWithSidecar(networkName, containerName, alias) {
++  const created = docker(['network', 'create', '--internal', networkName]);
++  assert.strictEqual(created.status, 0, created.stderr);
++  const started = docker([
++    'run',
++    '-d',
++    '--name',
++    containerName,
++    '--network',
++    networkName,
++    '--network-alias',
++    alias,
++    'alpine:3.23',
++    'sleep',
++    '300',
++  ]);
++  assert.strictEqual(started.status, 0, started.stderr);
++}
++
++describe('Docker named network integration', () => {
+   before(() => {
+     dockerAvailable =
+       process.platform === 'linux' && docker(['info']).status === 0;
+@@ -28,108 +63,119 @@ describe('Docker named network integration', { timeout: 60000 }, () => {
+       return;
+     }
+ 
+-    const created = docker(['network', 'create', '--internal', network]);
+-    assert.strictEqual(created.status, 0, created.stderr);
+-    const started = docker([
+-      'run',
+-      '-d',
+-      '--name',
+-      sidecar,
+-      '--network',
+-      network,
+-      '--network-alias',
+-      'formal-ai',
+-      'alpine:3.23',
+-      'sleep',
+-      '60',
+-    ]);
+-    assert.strictEqual(started.status, 0, started.stderr);
++    createInternalNetworkWithSidecar(network, sidecar, 'formal-ai');
++    createInternalNetworkWithSidecar(secondNetwork, secondSidecar, 'formal-db');
+   });
+ 
+   after(() => {
+     if (!dockerAvailable) {
+       return;
+     }
+-    docker(['rm', '-f', sidecar, connected, control, missing, missingAttached]);
+-    docker(['network', 'rm', network]);
++    docker([
++      'rm',
++      '-f',
++      sidecar,
++      secondSidecar,
++      connected,
++      control,
++      missing,
++      missingAttached,
++    ]);
++    docker(['network', 'rm', network, secondNetwork]);
+   });
+ 
+-  it('reaches a private sidecar and the internet through two networks', async () => {
+-    if (!dockerAvailable) {
+-      return;
++  it(
++    'reaches a private sidecar on each of two networks',
++    { timeout: TEST_TIMEOUT },
++    async () => {
++      if (!dockerAvailable) {
++        return;
++      }
++
++      // Both endpoints are local, user-defined networks on purpose: probing a
++      // public endpoint (previously `https://api.github.com`) made this test
++      // fail whenever the shared runner IP hit the 60 requests/hour
++      // unauthenticated GitHub API rate limit (issue #158).
++      const joined = await runInDocker(
++        'ping -c 1 formal-ai && ping -c 1 formal-db',
++        {
++          image: 'alpine:3.23',
++          session: connected,
++          network,
++          networks: [network, secondNetwork],
++          detached: true,
++          shell: 'sh',
++          keepContainer: true,
++        }
++      );
++      assert.strictEqual(joined.success, true, joined.message);
++      const joinedExit = docker(['wait', connected]);
++      assert.strictEqual(joinedExit.status, 0, joinedExit.stderr);
++      assert.strictEqual(
++        joinedExit.stdout.trim(),
++        '0',
++        `container did not exit cleanly${containerDiagnostics(connected)}`
++      );
++
++      const unconnected = await runInDocker('ping -c 1 formal-ai', {
++        image: 'alpine:3.23',
++        session: control,
++        shell: 'sh',
++        alwaysCleanupContainer: true,
++      });
++      assert.strictEqual(unconnected.success, false, unconnected.message);
+     }
++  );
++
++  it(
++    'fails for a missing network without orphaning a container',
++    { timeout: TEST_TIMEOUT },
++    async () => {
++      if (!dockerAvailable) {
++        return;
++      }
+ 
+-    const joined = await runInDocker(
+-      'ping -c 1 formal-ai && wget -q --spider https://api.github.com',
+-      {
++      const result = await runInDocker('echo should-not-run', {
+         image: 'alpine:3.23',
+-        session: connected,
+-        network: 'bridge',
+-        networks: ['bridge', network],
++        session: missing,
++        network: `${network}-absent`,
+         detached: true,
+         shell: 'sh',
+-        keepContainer: true,
+-      }
+-    );
+-    assert.strictEqual(joined.success, true, joined.message);
+-    const joinedExit = docker(['wait', connected]);
+-    assert.strictEqual(joinedExit.status, 0, joinedExit.stderr);
+-    assert.strictEqual(joinedExit.stdout.trim(), '0');
+-
+-    const unconnected = await runInDocker('ping -c 1 formal-ai', {
+-      image: 'alpine:3.23',
+-      session: control,
+-      shell: 'sh',
+-      alwaysCleanupContainer: true,
+-    });
+-    assert.strictEqual(unconnected.success, false);
+-  });
++      });
++      assert.strictEqual(result.success, false);
++      assert.match(result.message, /network .* not found/i);
++      assert.notStrictEqual(docker(['inspect', missing]).status, 0);
+ 
+-  it('fails for a missing network without orphaning a container', async () => {
+-    if (!dockerAvailable) {
+-      return;
+-    }
++      const missingSecond = await runInDocker('echo should-not-run', {
++        image: 'alpine:3.23',
++        session: missing,
++        network,
++        networks: [network, `${network}-absent`],
++        detached: true,
++        shell: 'sh',
++      });
++      assert.strictEqual(missingSecond.success, false);
++      assert.match(missingSecond.message, /network .* not found/i);
++      assert.notStrictEqual(docker(['inspect', missing]).status, 0);
+ 
+-    const result = await runInDocker('echo should-not-run', {
+-      image: 'alpine:3.23',
+-      session: missing,
+-      network: `${network}-absent`,
+-      detached: true,
+-      shell: 'sh',
+-    });
+-    assert.strictEqual(result.success, false);
+-    assert.match(result.message, /network .* not found/i);
+-    assert.notStrictEqual(docker(['inspect', missing]).status, 0);
+-
+-    const missingSecond = await runInDocker('echo should-not-run', {
+-      image: 'alpine:3.23',
+-      session: missing,
+-      network: 'bridge',
+-      networks: ['bridge', `${network}-absent`],
+-      detached: true,
+-      shell: 'sh',
+-    });
+-    assert.strictEqual(missingSecond.success, false);
+-    assert.match(missingSecond.message, /network .* not found/i);
+-    assert.notStrictEqual(docker(['inspect', missing]).status, 0);
+-
+-    const attachedResult = await runInDocker('echo should-not-run', {
+-      image: 'alpine:3.23',
+-      session: missingAttached,
+-      network: `${network}-absent`,
+-      shell: 'sh',
+-    });
+-    assert.strictEqual(attachedResult.success, false);
+-    assert.notStrictEqual(docker(['inspect', missingAttached]).status, 0);
+-
+-    const conflict = await runInDocker('echo should-not-run', {
+-      image: 'alpine:3.23',
+-      session: sidecar,
+-      network: `${network}-absent`,
+-      detached: true,
+-      shell: 'sh',
+-    });
+-    assert.strictEqual(conflict.success, false);
+-    assert.strictEqual(docker(['inspect', sidecar]).status, 0);
+-  });
++      const attachedResult = await runInDocker('echo should-not-run', {
++        image: 'alpine:3.23',
++        session: missingAttached,
++        network: `${network}-absent`,
++        shell: 'sh',
++      });
++      assert.strictEqual(attachedResult.success, false);
++      assert.notStrictEqual(docker(['inspect', missingAttached]).status, 0);
++
++      const conflict = await runInDocker('echo should-not-run', {
++        image: 'alpine:3.23',
++        session: sidecar,
++        network: `${network}-absent`,
++        detached: true,
++        shell: 'sh',
++      });
++      assert.strictEqual(conflict.success, false);
++      assert.strictEqual(docker(['inspect', sidecar]).status, 0);
++    }
++  );
+ });
+diff --git a/rust/tests/docker_network.rs b/rust/tests/docker_network.rs
+index 3d9c6f0..ab0f578 100644
+--- a/rust/tests/docker_network.rs
++++ b/rust/tests/docker_network.rs
+@@ -1,4 +1,4 @@
+-//! Real-daemon integration coverage for Docker network isolation (issues #154, #156).
++//! Real-daemon integration coverage for Docker network isolation (issues #154, #156, #158).
+ 
+ use start_command::isolation::run_in_docker;
+ use start_command::IsolationOptions;
+@@ -10,7 +10,7 @@ fn docker(args: &[&str]) -> std::process::Output {
+ }
+ 
+ struct DockerResources {
+-    network: String,
++    networks: Vec<String>,
+     containers: Vec<String>,
+ }
+ 
+@@ -19,10 +19,59 @@ impl Drop for DockerResources {
+         let mut rm_args = vec!["rm", "-f"];
+         rm_args.extend(self.containers.iter().map(String::as_str));
+         let _ = docker(&rm_args);
+-        let _ = docker(&["network", "rm", &self.network]);
++        let mut network_args = vec!["network", "rm"];
++        network_args.extend(self.networks.iter().map(String::as_str));
++        let _ = docker(&network_args);
+     }
+ }
+ 
++/// Container output, folded into assertion messages so a CI failure carries the
++/// evidence needed to diagnose it instead of only reporting the exit code.
++fn container_diagnostics(name: &str) -> String {
++    let logs = docker(&["logs", name]);
++    let output = format!(
++        "{}{}",
++        String::from_utf8_lossy(&logs.stdout),
++        String::from_utf8_lossy(&logs.stderr)
++    );
++    let output = output.trim().to_string();
++    format!(
++        "\n--- docker logs {name} ---\n{}\n---",
++        if output.is_empty() {
++            "<no output>".to_string()
++        } else {
++            output
++        }
++    )
++}
++
++fn create_internal_network_with_sidecar(network: &str, container: &str, alias: &str) {
++    let created = docker(&["network", "create", "--internal", network]);
++    assert!(
++        created.status.success(),
++        "{}",
++        String::from_utf8_lossy(&created.stderr)
++    );
++    let started = docker(&[
++        "run",
++        "-d",
++        "--name",
++        container,
++        "--network",
++        network,
++        "--network-alias",
++        alias,
++        "alpine:3.23",
++        "sleep",
++        "300",
++    ]);
++    assert!(
++        started.status.success(),
++        "{}",
++        String::from_utf8_lossy(&started.stderr)
++    );
++}
++
+ #[test]
+ fn named_network_alias_is_private_and_missing_network_leaves_no_orphan() {
+     if !cfg!(target_os = "linux") {
+@@ -37,52 +86,37 @@ fn named_network_alias_is_private_and_missing_network_leaves_no_orphan() {
+ 
+     let suffix = &Uuid::new_v4().to_string()[..8];
+     let network = format!("start-rust-network-{suffix}");
++    let second_network = format!("start-rust-network-b-{suffix}");
+     let sidecar = format!("start-rust-sidecar-{suffix}");
++    let second_sidecar = format!("start-rust-sidecar-b-{suffix}");
+     let connected = format!("start-rust-connected-{suffix}");
+     let control = format!("start-rust-control-{suffix}");
+     let missing = format!("start-rust-missing-{suffix}");
+     let _resources = DockerResources {
+-        network: network.clone(),
++        networks: vec![network.clone(), second_network.clone()],
+         containers: vec![
+             sidecar.clone(),
++            second_sidecar.clone(),
+             connected.clone(),
+             control.clone(),
+             missing.clone(),
+         ],
+     };
+ 
+-    let created = docker(&["network", "create", "--internal", &network]);
+-    assert!(
+-        created.status.success(),
+-        "{}",
+-        String::from_utf8_lossy(&created.stderr)
+-    );
+-    let started = docker(&[
+-        "run",
+-        "-d",
+-        "--name",
+-        &sidecar,
+-        "--network",
+-        &network,
+-        "--network-alias",
+-        "formal-ai",
+-        "alpine:3.23",
+-        "sleep",
+-        "60",
+-    ]);
+-    assert!(
+-        started.status.success(),
+-        "{}",
+-        String::from_utf8_lossy(&started.stderr)
+-    );
++    create_internal_network_with_sidecar(&network, &sidecar, "formal-ai");
++    create_internal_network_with_sidecar(&second_network, &second_sidecar, "formal-db");
+ 
++    // Both endpoints are local, user-defined networks on purpose: probing a
++    // public endpoint (previously `https://api.github.com`) made this test fail
++    // whenever the shared runner IP hit the 60 requests/hour unauthenticated
++    // GitHub API rate limit (issue #158).
+     let joined = run_in_docker(
+-        "ping -c 1 formal-ai && wget -q --spider https://api.github.com",
++        "ping -c 1 formal-ai && ping -c 1 formal-db",
+         &IsolationOptions {
+             image: Some("alpine:3.23".to_string()),
+             session: Some(connected),
+-            network: Some("bridge".to_string()),
+-            networks: vec!["bridge".to_string(), network.clone()],
++            network: Some(network.clone()),
++            networks: vec![network.clone(), second_network.clone()],
+             detached: true,
+             shell: "sh".to_string(),
+             keep_container: true,
+@@ -90,9 +124,15 @@ fn named_network_alias_is_private_and_missing_network_leaves_no_orphan() {
+         },
+     );
+     assert!(joined.success, "{}", joined.message);
+-    let joined_exit = docker(&["wait", joined.session_name.as_deref().unwrap()]);
++    let joined_name = joined.session_name.as_deref().unwrap();
++    let joined_exit = docker(&["wait", joined_name]);
+     assert!(joined_exit.status.success());
+-    assert_eq!(String::from_utf8_lossy(&joined_exit.stdout).trim(), "0");
++    assert_eq!(
++        String::from_utf8_lossy(&joined_exit.stdout).trim(),
++        "0",
++        "container did not exit cleanly{}",
++        container_diagnostics(joined_name)
++    );
+ 
+     let unconnected = run_in_docker(
+         "ping -c 1 formal-ai",
+@@ -126,8 +166,8 @@ fn named_network_alias_is_private_and_missing_network_leaves_no_orphan() {
+         &IsolationOptions {
+             image: Some("alpine:3.23".to_string()),
+             session: Some(missing.clone()),
+-            network: Some("bridge".to_string()),
+-            networks: vec!["bridge".to_string(), format!("{network}-absent")],
++            network: Some(network.clone()),
++            networks: vec![network.clone(), format!("{network}-absent")],
+             detached: true,
+             shell: "sh".to_string(),
+             ..Default::default()

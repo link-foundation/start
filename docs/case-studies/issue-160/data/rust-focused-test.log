@@ -1,0 +1,11 @@
+   Compiling start-command v0.19.1 (/tmp/gh-issue-solver-1786375395447/rust)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.94s
+     Running tests/docker_network.rs (target/debug/deps/docker_network-666baaee6ff4d314)
+
+running 2 tests
+test multi_network_probe_is_hermetic ... ok
+ping: bad address 'formal-ai'
+test named_network_alias_is_private_and_missing_network_leaves_no_orphan ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.76s
+

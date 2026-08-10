@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-/** Real-daemon integration coverage for Docker network isolation (issues #154, #156, #158). */
+/** Real-daemon integration coverage for Docker network isolation (issues #154, #156, #158, #160). */
 
 const { after, before, describe, it } = require('node:test');
 const assert = require('assert');
@@ -10,6 +10,8 @@ const { runInDocker } = require('../src/lib/isolation');
 // Bun's `node:test` shim ignores a `describe`-level timeout, so every `it`
 // declares its own budget explicitly (issue #158).
 const TEST_TIMEOUT = 120000;
+const MULTI_NETWORK_PROBE =
+  "ping -c 1 formal-ai && ping -c 1 formal-db && ip route | grep -q '^default '";
 
 const suffix = randomUUID().slice(0, 8);
 const network = `start-network-${suffix}`;
@@ -84,6 +86,13 @@ describe('Docker named network integration', () => {
     docker(['network', 'rm', network, secondNetwork]);
   });
 
+  it('keeps the multi-network probe hermetic', () => {
+    assert.doesNotMatch(MULTI_NETWORK_PROBE, /https?:\/\//);
+    assert.match(MULTI_NETWORK_PROBE, /formal-ai/);
+    assert.match(MULTI_NETWORK_PROBE, /formal-db/);
+    assert.match(MULTI_NETWORK_PROBE, /ip route/);
+  });
+
   it(
     'reaches a private sidecar on each of two networks',
     { timeout: TEST_TIMEOUT },
@@ -95,19 +104,18 @@ describe('Docker named network integration', () => {
       // Both endpoints are local, user-defined networks on purpose: probing a
       // public endpoint (previously `https://api.github.com`) made this test
       // fail whenever the shared runner IP hit the 60 requests/hour
-      // unauthenticated GitHub API rate limit (issue #158).
-      const joined = await runInDocker(
-        'ping -c 1 formal-ai && ping -c 1 formal-db',
-        {
-          image: 'alpine:3.23',
-          session: connected,
-          network,
-          networks: [network, secondNetwork],
-          detached: true,
-          shell: 'sh',
-          keepContainer: true,
-        }
-      );
+      // unauthenticated GitHub API rate limit. Checking the route table keeps
+      // the original assertion that the default bridge route survived without
+      // making the test depend on any internet service (issues #158, #160).
+      const joined = await runInDocker(MULTI_NETWORK_PROBE, {
+        image: 'alpine:3.23',
+        session: connected,
+        network: 'bridge',
+        networks: ['bridge', network, secondNetwork],
+        detached: true,
+        shell: 'sh',
+        keepContainer: true,
+      });
       assert.strictEqual(joined.success, true, joined.message);
       const joinedExit = docker(['wait', connected]);
       assert.strictEqual(joinedExit.status, 0, joinedExit.stderr);
