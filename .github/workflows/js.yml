@@ -408,19 +408,19 @@ jobs:
         run: bun install
 
       - name: Run tests with coverage
+        id: coverage
         working-directory: js
+        # `set -o pipefail` keeps a failing test run from being hidden by `tee`;
+        # the previous `|| true` swallowed it (issue #158).
         run: |
-          bun run test --coverage --coverage-reporter=text 2>&1 | tee coverage.txt || true
-          # Extract coverage percentage from Bun output
-          COVERAGE=$(grep -oP '\d+\.\d+(?=%)' coverage.txt | tail -1 || echo "0")
-          echo "Coverage: ${COVERAGE}%"
-          # Fail if coverage is below 45%
-          node -e "
-            const cov = parseFloat('${COVERAGE}');
-            if (isNaN(cov)) { console.log('Could not determine coverage, skipping check'); process.exit(0); }
-            if (cov >= 45) { console.log('✅ Coverage ' + cov + '% meets the 45% threshold'); }
-            else { console.error('❌ Coverage ' + cov + '% is below the 45% threshold'); process.exit(1); }
-          "
+          set -o pipefail
+          bun run test --coverage --coverage-reporter=text 2>&1 | tee coverage.txt
+
+      - name: Enforce coverage threshold
+        # Runs even when tests failed above, so the report is still evaluated.
+        if: ${{ !cancelled() && steps.coverage.outcome != 'skipped' }}
+        working-directory: js
+        run: node ../scripts/check-js-coverage.mjs coverage.txt --threshold 45
 
   # === RELEASE ===
   release:
