@@ -1,5 +1,11 @@
 # start-command
 
+## 0.32.1
+
+### Patch Changes
+
+- 5568403: Keep Docker multi-network regression coverage hermetic while verifying the default bridge route.
+
 ## 0.32.0
 
 ### Minor Changes
