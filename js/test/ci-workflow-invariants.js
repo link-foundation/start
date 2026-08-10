@@ -81,7 +81,12 @@ const workflows = listWorkflows();
 describe('CI workflow invariants', () => {
   it('finds every workflow file', () => {
     assert.ok(workflows.length >= 4, `only found ${workflows.join(', ')}`);
-    for (const expected of ['js.yml', 'rust.yml', 'security.yml', 'links.yml']) {
+    for (const expected of [
+      'js.yml',
+      'rust.yml',
+      'security.yml',
+      'links.yml',
+    ]) {
       assert.ok(workflows.includes(expected), `missing ${expected}`);
     }
   });
@@ -206,7 +211,11 @@ describe('CI workflow invariants', () => {
     for (const name of workflows) {
       const workflow = readWorkflow(name);
       assert.match(workflow, /GIT_CONFIG_COUNT: '1'/, `${name}`);
-      assert.match(workflow, /GIT_CONFIG_KEY_0: init\.defaultBranch/, `${name}`);
+      assert.match(
+        workflow,
+        /GIT_CONFIG_KEY_0: init\.defaultBranch/,
+        `${name}`
+      );
       assert.match(workflow, /GIT_CONFIG_VALUE_0: main/, `${name}`);
     }
   });
@@ -218,7 +227,9 @@ describe('CI workflow invariants', () => {
         // `|| true` on a `grep` that is allowed to find nothing is fine; the
         // regression was `... | tee coverage.txt || true`, which hid failing
         // tests from the coverage job.
-        const hidesAGate = /\btee\b|\bbun run\b|\bcargo\b|\bnpm run\b/.test(line);
+        const hidesAGate = /\btee\b|\bbun run\b|\bcargo\b|\bnpm run\b/.test(
+          line
+        );
         if (
           line.includes('|| true') &&
           hidesAGate &&
