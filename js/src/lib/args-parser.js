@@ -4,7 +4,6 @@
  * Supports two syntax patterns:
  * 1. $ [wrapper-options] -- [command-options]
  * 2. $ [wrapper-options] command [command-options]
- *
  * Wrapper Options:
  * --isolated, --isolation, -i <backend> Run in isolated environment (screen, tmux, docker, ssh)
  * --attached, -a                   Run in attached mode (foreground)
@@ -15,8 +14,8 @@
  * --mount <mount-spec>             Docker --mount spec (repeatable, docker only)
  * --env, -e <KEY=VALUE>            Environment variable for docker container (repeatable, docker only)
  * --privileged                     Run docker container in privileged mode (docker only)
- * --network <name>                 Connect docker container to a named network (docker only)
- * --network-alias <alias>          Add a network-scoped alias (repeatable, docker only)
+ * --network <name>                 Connect docker container to a named network (repeatable, docker only)
+ * --network-alias <alias>          Add an alias to the first network (repeatable, docker only)
  * --endpoint <endpoint>            SSH endpoint (required for ssh isolation, e.g., user@host)
  * --isolated-user, -u [username]   Create isolated user with same permissions (auto-generated name if not specified)
  * --keep-user                      Keep isolated user after command completes (don't delete)
@@ -181,7 +180,8 @@ function parseArgs(args) {
     mounts: [], // Docker --mount specs, applied to docker levels
     env: [], // Docker environment variables (-e/--env, KEY=VALUE), applied to docker levels
     privileged: false, // Run docker container in privileged mode
-    network: null, // Docker network name
+    network: null, // First Docker network name (compatibility accessor)
+    networks: [], // Ordered Docker network names
     networkAliases: [], // Docker network-scoped aliases
     endpoint: null, // SSH endpoint (current level, e.g., user@host)
     endpointStack: null, // SSH endpoints for each level (with nulls for non-ssh levels)

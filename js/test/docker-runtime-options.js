@@ -91,12 +91,13 @@ describe('Docker runtime options parsing', () => {
     assert.strictEqual(result.wrapperOptions.privileged, true);
   });
 
-  it('should parse --network value and equals forms without consuming child args', () => {
+  it('should parse repeatable --network forms without consuming child args', () => {
     const spaced = parseArgs([
       '-i',
       'docker',
       '--network',
       'hive-formal-ai',
+      '--network=public-egress',
       '--',
       '--network',
       'child-network',
@@ -111,8 +112,13 @@ describe('Docker runtime options parsing', () => {
     ]);
 
     assert.strictEqual(spaced.wrapperOptions.network, 'hive-formal-ai');
+    assert.deepStrictEqual(spaced.wrapperOptions.networks, [
+      'hive-formal-ai',
+      'public-egress',
+    ]);
     assert.deepStrictEqual(spaced.rawCommand, ['--network', 'child-network']);
     assert.strictEqual(equals.wrapperOptions.network, 'hive-formal-ai');
+    assert.deepStrictEqual(equals.wrapperOptions.networks, ['hive-formal-ai']);
   });
 
   it('should parse repeatable --network-alias value and equals forms', () => {
@@ -142,6 +148,7 @@ describe('Docker runtime options parsing', () => {
     assert.deepStrictEqual(result.wrapperOptions.env, []);
     assert.strictEqual(result.wrapperOptions.privileged, false);
     assert.strictEqual(result.wrapperOptions.network, null);
+    assert.deepStrictEqual(result.wrapperOptions.networks, []);
     assert.deepStrictEqual(result.wrapperOptions.networkAliases, []);
   });
 
@@ -228,6 +235,7 @@ describe('buildDockerRuntimeArgs', () => {
       volumes: ['/h/a:/c/a', '/h/b:/c/b:ro'],
       mounts: ['type=bind,src=/h,dst=/c'],
       network: 'hive-formal-ai',
+      networks: ['hive-formal-ai', 'public-egress'],
       networkAliases: ['formal-ai', 'checker'],
     });
     assert.deepStrictEqual(args, [
@@ -264,6 +272,7 @@ describe('buildDockerRuntimeStatusLines', () => {
       env: ['FOO=bar'],
       privileged: true,
       network: 'hive-formal-ai',
+      networks: ['hive-formal-ai', 'public-egress'],
       networkAliases: ['formal-ai', 'checker'],
     });
     assert.deepStrictEqual(lines, [
@@ -272,6 +281,7 @@ describe('buildDockerRuntimeStatusLines', () => {
       '[Isolation] Env: FOO=bar',
       '[Isolation] Privileged: true',
       '[Isolation] Network: hive-formal-ai',
+      '[Isolation] Networks: hive-formal-ai, public-egress',
       '[Isolation] Network aliases: formal-ai, checker',
     ]);
   });
@@ -292,6 +302,7 @@ describe('buildDockerRuntimeMetadata', () => {
       env: null,
       privileged: null,
       network: null,
+      networks: null,
       networkAliases: null,
     });
   });
@@ -304,6 +315,7 @@ describe('buildDockerRuntimeMetadata', () => {
         env: ['FOO=bar'],
         privileged: true,
         network: 'hive-formal-ai',
+        networks: ['hive-formal-ai', 'public-egress'],
         networkAliases: ['formal-ai', 'checker'],
       }),
       {
@@ -312,6 +324,7 @@ describe('buildDockerRuntimeMetadata', () => {
         env: ['FOO=bar'],
         privileged: true,
         network: 'hive-formal-ai',
+        networks: ['hive-formal-ai', 'public-egress'],
         networkAliases: ['formal-ai', 'checker'],
       }
     );

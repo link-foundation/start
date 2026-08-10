@@ -13,9 +13,10 @@ use std::process::{Command, Stdio};
 use crate::args_parser::generate_session_name;
 use crate::docker_cleanup::{
     append_attached_docker_cleanup_message, append_docker_container_cleanup_policy_message,
-    build_docker_runtime_args, get_docker_container_cleanup_policy, remove_docker_container,
-    spawn_attached_docker, start_detached_docker_completion_watcher,
+    build_docker_runtime_args, docker_networks, get_docker_container_cleanup_policy,
+    remove_docker_container, spawn_attached_docker, start_detached_docker_completion_watcher,
 };
+use crate::docker_network_lifecycle::{connect_and_start, create_and_connect};
 
 /// Result of an isolation run
 #[derive(Debug, Default)]
@@ -49,8 +50,10 @@ pub struct IsolationOptions {
     pub env: Vec<String>,
     /// Run docker container in privileged mode
     pub privileged: bool,
-    /// Docker network name
+    /// First Docker network name (compatibility accessor)
     pub network: Option<String>,
+    /// Ordered Docker network names
+    pub networks: Vec<String>,
     /// Docker network-scoped aliases
     pub network_aliases: Vec<String>,
     /// SSH endpoint
@@ -85,6 +88,7 @@ impl Default for IsolationOptions {
             env: Vec::new(),
             privileged: false,
             network: None,
+            networks: Vec::new(),
             network_aliases: Vec::new(),
             endpoint: None,
             detached: false,
@@ -136,54 +140,6 @@ pub fn wrap_command_with_user(command: &str, user: Option<&str>) -> String {
             format!("sudo -n -u {} sh -c '{}'", u, escaped)
         }
         None => command.to_string(),
-    }
-}
-
-/// Shell names recognized as bare interactive shells (without -c flag).
-/// Mirrors JS SHELL_NAMES constant in isolation.js.
-const SHELL_NAMES: [&str; 8] = ["bash", "zsh", "sh", "fish", "ksh", "csh", "tcsh", "dash"];
-
-/// Returns true if command is a bare interactive shell invocation (no -c flag).
-/// Used to avoid double-wrapping shells in isolation environments (issue #84).
-///
-/// Examples: "bash", "zsh", "bash --norc", "/usr/local/bin/bash"
-/// Counter-examples: "bash -c echo hi", "npm test"
-pub fn is_interactive_shell_command(command: &str) -> bool {
-    let parts: Vec<&str> = command.split_whitespace().collect();
-    if parts.is_empty() {
-        return false;
-    }
-    let basename = parts[0].rsplit('/').next().unwrap_or(parts[0]);
-    SHELL_NAMES.contains(&basename) && !parts.contains(&"-c")
-}
-
-/// Returns true if command is a shell invocation that includes -c (e.g. `bash -i -c "cmd"`).
-/// Used to pass such commands directly without double-wrapping (issue #91).
-pub fn is_shell_invocation_with_args(command: &str) -> bool {
-    let parts: Vec<&str> = command.split_whitespace().collect();
-    if parts.is_empty() {
-        return false;
-    }
-    let basename = parts[0].rsplit('/').next().unwrap_or(parts[0]);
-    SHELL_NAMES.contains(&basename) && parts.contains(&"-c")
-}
-
-/// Build argv for a shell-with-c command; everything after -c is joined as one argument.
-/// Reverses the join(' ') that collapsed the original quoted argument.
-/// Used to pass `bash -i -c "nvm --version"` directly as argv (issue #91 fix).
-pub fn build_shell_with_args_cmd_args(command: &str) -> Vec<String> {
-    let parts: Vec<&str> = command.split_whitespace().collect();
-    let c_idx = parts.iter().position(|&p| p == "-c");
-    match c_idx {
-        None => parts.iter().map(|s| s.to_string()).collect(),
-        Some(idx) => {
-            let script_arg = parts[idx + 1..].join(" ");
-            let mut result: Vec<String> = parts[..idx + 1].iter().map(|s| s.to_string()).collect();
-            if !script_arg.is_empty() {
-                result.push(script_arg);
-            }
-            result
-        }
     }
 }
 
@@ -755,6 +711,8 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
     println!("{}", crate::output_blocks::create_command_line(command));
     println!();
 
+    let needs_network_setup = docker_networks(options).len() > 1;
+
     if options.detached {
         let effective_command = if options.keep_alive {
             format!("{}; exec {}", command, shell_to_use)
@@ -762,7 +720,11 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
             command.to_string()
         };
 
-        let mut args = vec!["run", "-d", "--name", &container_name];
+        let mut args = vec![if needs_network_setup { "create" } else { "run" }];
+        if !needs_network_setup {
+            args.push("-d");
+        }
+        args.extend(["--name", &container_name]);
 
         if let Some(ref user) = options.user {
             args.push("--user");
@@ -786,6 +748,21 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         match Command::new("docker").args(&args).output() {
             Ok(output) if output.status.success() => {
                 let container_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+                if needs_network_setup {
+                    let setup_result = connect_and_start(&container_name, options);
+                    if let Err(error) = setup_result {
+                        if !container_existed_before_launch {
+                            remove_docker_container(&container_name, options.log_path.as_ref());
+                        }
+                        return IsolationResult {
+                            success: false,
+                            session_name: Some(container_name),
+                            message: format!("Failed to start docker container: {}", error),
+                            ..Default::default()
+                        };
+                    }
+                }
 
                 if let Some(log_path) = options.log_path.as_ref() {
                     start_detached_docker_completion_watcher(
@@ -855,7 +832,7 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         }
     } else {
         // Attached mode
-        let mut args = vec!["run"];
+        let mut args = vec![if needs_network_setup { "create" } else { "run" }];
         args.push(if has_tty() { "-it" } else { "-i" });
         args.extend(["--name", &container_name]);
 
@@ -877,7 +854,27 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         }
         args.extend(&["-c", command]);
 
-        let child = spawn_attached_docker(&args, options.log_path.as_ref());
+        if needs_network_setup {
+            let setup_result = create_and_connect(&args, &container_name, options);
+            if let Err(error) = setup_result {
+                if !container_existed_before_launch {
+                    remove_docker_container(&container_name, options.log_path.as_ref());
+                }
+                return IsolationResult {
+                    success: false,
+                    session_name: Some(container_name),
+                    message: format!("Failed to start docker container: {}", error),
+                    ..Default::default()
+                };
+            }
+        }
+
+        let start_args = ["start", "-a", "-i", &container_name];
+        let child = if needs_network_setup {
+            spawn_attached_docker(&start_args, options.log_path.as_ref())
+        } else {
+            spawn_attached_docker(&args, options.log_path.as_ref())
+        };
 
         match child {
             Ok(child) => match child.wait() {
@@ -964,10 +961,15 @@ pub fn run_as_isolated_user(command: &str, username: &str) -> IsolationResult {
 
 #[path = "isolation_log.rs"]
 pub mod isolation_log;
+#[path = "isolation_shell.rs"]
+mod isolation_shell;
 pub use self::isolation_log::{
     append_log_file, create_log_footer, create_log_header, create_log_path,
     create_log_path_for_execution, generate_log_filename, get_default_docker_image, get_log_dir,
     get_temp_dir, get_temp_root, get_timestamp, write_log_file, LogHeaderParams,
+};
+pub use isolation_shell::{
+    build_shell_with_args_cmd_args, is_interactive_shell_command, is_shell_invocation_with_args,
 };
 
 fn is_debug() -> bool {

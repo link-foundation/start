@@ -14,8 +14,8 @@
 //! --mount <mount-spec>             Docker --mount spec (repeatable, docker only)
 //! --env, -e <KEY=VALUE>            Environment variable for docker container (repeatable, docker only)
 //! --privileged                     Run docker container in privileged mode (docker only)
-//! --network <name>                 Connect docker container to a named network (docker only)
-//! --network-alias <alias>          Add a network-scoped alias (repeatable, docker only)
+//! --network <name>                 Connect docker container to a named network (repeatable, docker only)
+//! --network-alias <alias>          Add an alias to the first network (repeatable, docker only)
 //! --endpoint <endpoint>            SSH endpoint (required for ssh isolation, e.g., user@host)
 //! --isolated-user, -u [username]   Create isolated user with same permissions
 //! --keep-user                      Keep isolated user after command completes
@@ -82,8 +82,10 @@ pub struct WrapperOptions {
     pub env: Vec<String>,
     /// Run docker container in privileged mode
     pub privileged: bool,
-    /// Docker network name
+    /// First Docker network name (compatibility accessor)
     pub network: Option<String>,
+    /// Ordered Docker network names
+    pub networks: Vec<String>,
     /// Docker network-scoped aliases
     pub network_aliases: Vec<String>,
     /// SSH endpoint (e.g., user@host)
@@ -140,6 +142,7 @@ impl Default for WrapperOptions {
             env: Vec::new(),
             privileged: false,
             network: None,
+            networks: Vec::new(),
             network_aliases: Vec::new(),
             endpoint: None,
             user: false,
@@ -378,7 +381,11 @@ fn parse_option(
     // --network (for docker)
     if arg == "--network" {
         if index + 1 < args.len() && !args[index + 1].starts_with('-') {
-            options.network = Some(args[index + 1].clone());
+            let network = args[index + 1].clone();
+            options.networks.push(network.clone());
+            if options.network.is_none() {
+                options.network = Some(network);
+            }
             return Ok(2);
         }
         return Err(format!("Option {} requires a network name argument", arg));
@@ -386,7 +393,11 @@ fn parse_option(
 
     // --network=<value>
     if let Some(value) = arg.strip_prefix("--network=") {
-        options.network = Some(value.to_string());
+        let network = value.to_string();
+        options.networks.push(network.clone());
+        if options.network.is_none() {
+            options.network = Some(network);
+        }
         return Ok(1);
     }
 

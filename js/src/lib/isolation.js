@@ -4,6 +4,11 @@ const { execSync, spawn, spawnSync } = require('child_process');
 const path = require('path');
 const { generateSessionName } = require('./args-parser');
 const outputBlocks = require('./output-blocks');
+const {
+  connectAdditionalDockerNetworks,
+  getDockerNetworks,
+  runDockerCommand,
+} = require('./docker-network-lifecycle');
 
 // Debug mode from environment
 const DEBUG =
@@ -519,8 +524,9 @@ function buildDockerRuntimeArgs(options = {}) {
   for (const mount of options.mounts || []) {
     args.push('--mount', mount);
   }
-  if (options.network) {
-    args.push('--network', options.network);
+  const [firstNetwork] = getDockerNetworks(options);
+  if (firstNetwork) {
+    args.push('--network', firstNetwork);
   }
   for (const alias of options.networkAliases || []) {
     args.push('--network-alias', alias);
@@ -532,7 +538,7 @@ function buildDockerRuntimeArgs(options = {}) {
  * Build the human-readable `[Isolation]` status lines for docker runtime
  * options (volumes, mounts, env, privileged). Empty collections and a falsy
  * privileged flag contribute no lines.
- * @param {object} options - Options (volumes, mounts, env, privileged)
+ * @param {object} options - Options (volumes, mounts, env, privileged, network, networks, networkAliases)
  * @returns {string[]} Status lines for the start block / log header
  */
 function buildDockerRuntimeStatusLines(options = {}) {
@@ -549,8 +555,12 @@ function buildDockerRuntimeStatusLines(options = {}) {
   if (options.privileged) {
     lines.push(`[Isolation] Privileged: true`);
   }
-  if (options.network) {
-    lines.push(`[Isolation] Network: ${options.network}`);
+  const networks = getDockerNetworks(options);
+  if (networks.length > 0) {
+    lines.push(`[Isolation] Network: ${networks[0]}`);
+  }
+  if (networks.length > 1) {
+    lines.push(`[Isolation] Networks: ${networks.join(', ')}`);
   }
   if (options.networkAliases && options.networkAliases.length > 0) {
     lines.push(
@@ -563,17 +573,19 @@ function buildDockerRuntimeStatusLines(options = {}) {
 /**
  * Build the execution-record metadata for docker runtime options, normalizing
  * empty collections and a falsy privileged flag to `null`.
- * @param {object} options - Options (volumes, mounts, env, privileged)
- * @returns {{volumes: ?string[], mounts: ?string[], env: ?string[], privileged: ?boolean, network: ?string, networkAliases: ?string[]}}
+ * @param {object} options - Options (volumes, mounts, env, privileged, network, networks, networkAliases)
+ * @returns {{volumes: ?string[], mounts: ?string[], env: ?string[], privileged: ?boolean, network: ?string, networks: ?string[], networkAliases: ?string[]}}
  */
 function buildDockerRuntimeMetadata(options = {}) {
+  const networks = getDockerNetworks(options);
   return {
     volumes:
       options.volumes && options.volumes.length > 0 ? options.volumes : null,
     mounts: options.mounts && options.mounts.length > 0 ? options.mounts : null,
     env: options.env && options.env.length > 0 ? options.env : null,
     privileged: options.privileged || null,
-    network: options.network || null,
+    network: networks[0] || null,
+    networks: networks.length > 0 ? networks : null,
     networkAliases:
       options.networkAliases && options.networkAliases.length > 0
         ? options.networkAliases
@@ -644,8 +656,9 @@ function runInDocker(command, options = {}) {
   console.log();
 
   try {
+    const needsNetworkSetup = getDockerNetworks(options).length > 1;
     if (options.detached) {
-      const dockerArgs = ['run', '-d'];
+      const dockerArgs = needsNetworkSetup ? ['create'] : ['run', '-d'];
       if (options.keepAlive) {
         dockerArgs.push('-i', '-t');
       }
@@ -704,6 +717,18 @@ function runInDocker(command, options = {}) {
 
       const containerId = dockerResult.stdout.trim();
 
+      if (needsNetworkSetup) {
+        try {
+          connectAdditionalDockerNetworks(containerName, options);
+          runDockerCommand(['start', containerName]);
+        } catch (error) {
+          if (!containerExistedBeforeLaunch) {
+            removeDockerContainer(containerName, options.logPath);
+          }
+          throw error;
+        }
+      }
+
       startDetachedDockerCompletionWatcher(
         containerName,
         cleanupPolicy,
@@ -735,7 +760,7 @@ function runInDocker(command, options = {}) {
         message,
       });
     } else {
-      const dockerArgs = ['run'];
+      const dockerArgs = [needsNetworkSetup ? 'create' : 'run'];
       dockerArgs.push(hasTTY() ? '-it' : '-i');
       dockerArgs.push('--name', containerName);
       if (options.user) {
@@ -769,9 +794,24 @@ function runInDocker(command, options = {}) {
         console.log(`[DEBUG] Running: docker ${dockerArgs.join(' ')}`);
       }
 
+      if (needsNetworkSetup) {
+        try {
+          runDockerCommand(dockerArgs);
+          connectAdditionalDockerNetworks(containerName, options);
+        } catch (error) {
+          if (!containerExistedBeforeLaunch) {
+            removeDockerContainer(containerName, options.logPath);
+          }
+          throw error;
+        }
+      }
+
       return new Promise((resolve) => {
         const startTime = Date.now();
-        const child = spawnAttachedDocker(dockerArgs, options.logPath);
+        const launchArgs = needsNetworkSetup
+          ? ['start', '-a', '-i', containerName]
+          : dockerArgs;
+        const child = spawnAttachedDocker(launchArgs, options.logPath);
 
         child.on('exit', (code) => {
           const durationMs = Date.now() - startTime;

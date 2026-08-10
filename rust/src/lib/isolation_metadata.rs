@@ -19,6 +19,7 @@ pub fn docker_runtime_status_lines(
     env: &[String],
     privileged: bool,
     network: Option<&str>,
+    networks: &[String],
     network_aliases: &[String],
 ) -> Vec<String> {
     let mut lines = Vec::new();
@@ -34,8 +35,19 @@ pub fn docker_runtime_status_lines(
     if privileged {
         lines.push("[Isolation] Privileged: true".to_string());
     }
-    if let Some(network) = network {
-        lines.push(format!("[Isolation] Network: {}", network));
+    let resolved_networks = if networks.is_empty() {
+        network.into_iter().collect::<Vec<_>>()
+    } else {
+        networks.iter().map(String::as_str).collect::<Vec<_>>()
+    };
+    if let Some(first_network) = resolved_networks.first() {
+        lines.push(format!("[Isolation] Network: {}", first_network));
+    }
+    if resolved_networks.len() > 1 {
+        lines.push(format!(
+            "[Isolation] Networks: {}",
+            resolved_networks.join(", ")
+        ));
     }
     if !network_aliases.is_empty() {
         lines.push(format!(
@@ -54,6 +66,7 @@ pub fn docker_runtime_status_lines_for_options(options: &WrapperOptions) -> Vec<
         &options.env,
         options.privileged,
         options.network.as_deref(),
+        &options.networks,
         &options.network_aliases,
     )
 }
@@ -67,6 +80,7 @@ pub fn docker_runtime_metadata(
     env: &[String],
     privileged: bool,
     network: Option<&str>,
+    networks: &[String],
     network_aliases: &[String],
 ) -> Vec<(String, serde_json::Value)> {
     let arr = |items: &[String]| {
@@ -90,10 +104,24 @@ pub fn docker_runtime_metadata(
     if privileged {
         entries.push(("privileged".to_string(), serde_json::Value::Bool(true)));
     }
-    if let Some(network) = network {
+    let resolved_networks = if networks.is_empty() {
+        network.into_iter().collect::<Vec<_>>()
+    } else {
+        networks.iter().map(String::as_str).collect::<Vec<_>>()
+    };
+    if let Some(network) = resolved_networks.first() {
         entries.push((
             "network".to_string(),
-            serde_json::Value::String(network.to_string()),
+            serde_json::Value::String((*network).to_string()),
+        ));
+        entries.push((
+            "networks".to_string(),
+            serde_json::Value::Array(
+                resolved_networks
+                    .iter()
+                    .map(|value| serde_json::Value::String((*value).to_string()))
+                    .collect(),
+            ),
         ));
     }
     if !network_aliases.is_empty() {
@@ -130,6 +158,7 @@ pub fn build_isolation_options_map(
         &options.env,
         options.privileged,
         options.network.as_deref(),
+        &options.networks,
         &options.network_aliases,
     ) {
         opts_map.insert(k, v);
