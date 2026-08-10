@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.19.1] - 2026-08-10
+
+Make the Docker multi-network integration test hermetic and add opt-in
+`START_DEBUG` tracing to the Docker network lifecycle helpers.
+
 ## [0.19.0] - 2026-08-10
 
 Allow Docker isolation to join multiple networks before starting the command.
