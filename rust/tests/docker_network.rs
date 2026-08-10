@@ -1,9 +1,12 @@
-//! Real-daemon integration coverage for Docker network isolation (issues #154, #156, #158).
+//! Real-daemon integration coverage for Docker network isolation (issues #154, #156, #158, #160).
 
 use start_command::isolation::run_in_docker;
 use start_command::IsolationOptions;
 use std::process::Command;
 use uuid::Uuid;
+
+const MULTI_NETWORK_PROBE: &str =
+    "ping -c 1 formal-ai && ping -c 1 formal-db && ip route | grep -q '^default '";
 
 fn docker(args: &[&str]) -> std::process::Output {
     Command::new("docker").args(args).output().unwrap()
@@ -73,6 +76,15 @@ fn create_internal_network_with_sidecar(network: &str, container: &str, alias: &
 }
 
 #[test]
+fn multi_network_probe_is_hermetic() {
+    assert!(!MULTI_NETWORK_PROBE.contains("http://"));
+    assert!(!MULTI_NETWORK_PROBE.contains("https://"));
+    assert!(MULTI_NETWORK_PROBE.contains("formal-ai"));
+    assert!(MULTI_NETWORK_PROBE.contains("formal-db"));
+    assert!(MULTI_NETWORK_PROBE.contains("ip route"));
+}
+
+#[test]
 fn named_network_alias_is_private_and_missing_network_leaves_no_orphan() {
     if !cfg!(target_os = "linux") {
         eprintln!("Skipping: this integration test requires Linux containers");
@@ -109,14 +121,20 @@ fn named_network_alias_is_private_and_missing_network_leaves_no_orphan() {
     // Both endpoints are local, user-defined networks on purpose: probing a
     // public endpoint (previously `https://api.github.com`) made this test fail
     // whenever the shared runner IP hit the 60 requests/hour unauthenticated
-    // GitHub API rate limit (issue #158).
+    // GitHub API rate limit. Checking the route table keeps the original
+    // assertion that the default bridge route survived without making the test
+    // depend on any internet service (issues #158, #160).
     let joined = run_in_docker(
-        "ping -c 1 formal-ai && ping -c 1 formal-db",
+        MULTI_NETWORK_PROBE,
         &IsolationOptions {
             image: Some("alpine:3.23".to_string()),
             session: Some(connected),
-            network: Some(network.clone()),
-            networks: vec![network.clone(), second_network.clone()],
+            network: Some("bridge".to_string()),
+            networks: vec![
+                "bridge".to_string(),
+                network.clone(),
+                second_network.clone(),
+            ],
             detached: true,
             shell: "sh".to_string(),
             keep_container: true,
