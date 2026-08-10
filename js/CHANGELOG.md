@@ -1,5 +1,14 @@
 # start-command
 
+## 0.32.0
+
+### Minor Changes
+
+- Allow Docker isolation to join multiple networks before starting the command.
+
+  Make the Docker multi-network integration test hermetic and add opt-in
+  `START_DEBUG` tracing to the Docker network lifecycle helpers.
+
 ## 0.31.0
 
 ### Minor Changes

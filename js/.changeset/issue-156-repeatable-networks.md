@@ -1,5 +1,0 @@
----
-'start-command': minor
----
-
-Allow Docker isolation to join multiple networks before starting the command.
