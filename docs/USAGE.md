@@ -99,6 +99,10 @@ The two forms do not mix: in the multi-argument form an operator you quoted is
 just a literal word (`$ echo a '&&' echo b` prints `a && echo b`). Quote the
 whole pipeline instead when you want the inner shell to run it.
 
+On Windows the arguments are quoted for PowerShell (a quote is escaped by
+doubling it) because that is the shell `$` runs commands with there; on every
+other platform they are quoted for the POSIX shell.
+
 ## Shell Metacharacters
 
 The following characters are interpreted by the shell before reaching `$`:

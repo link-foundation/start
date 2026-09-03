@@ -17,7 +17,7 @@ use start_command::args_parser::parse_args;
 use start_command::{
     build_command_string, build_display_command, build_shell_with_args_cmd_args, command_name,
     is_interactive_shell_command, is_shell_invocation_with_args, quote_shell_arg,
-    split_shell_words,
+    quote_shell_arg_with, split_shell_words, ShellQuotingStyle,
 };
 use std::process::Command;
 
@@ -46,7 +46,9 @@ fn run_cli(args: &[&str]) -> (i32, String) {
 
 /// The command output sits between the start block and the finish block.
 fn command_output(stdout: &str) -> String {
-    let lines: Vec<&str> = stdout.split('\n').collect();
+    // PowerShell prefixes its output with a UTF-8 BOM on Windows.
+    let cleaned = stdout.replace('\u{feff}', "");
+    let lines: Vec<&str> = cleaned.split('\n').collect();
     let start = lines.iter().position(|l| l.starts_with("$ ")).unwrap_or(0);
     let finish = lines
         .iter()
@@ -68,9 +70,15 @@ mod parse_args_keeps_argv_boundaries {
 
     #[test]
     fn quotes_argument_with_shell_metacharacters() {
+        // PowerShell (the host shell on Windows) escapes a quote by doubling it.
+        let expected = if cfg!(windows) {
+            "node -e 'console.log(''hi'')'"
+        } else {
+            "node -e 'console.log('\\''hi'\\'')'"
+        };
         assert_eq!(
             parse_command(&["node", "-e", "console.log('hi')"]),
-            "node -e 'console.log('\\''hi'\\'')'"
+            expected
         );
     }
 
@@ -123,8 +131,36 @@ mod build_command_string_tests {
     }
 
     #[test]
-    fn escapes_embedded_single_quotes() {
-        assert_eq!(quote_shell_arg("it's"), "'it'\\''s'");
+    fn escapes_embedded_single_quotes_for_posix_shell() {
+        assert_eq!(
+            quote_shell_arg_with("it's", ShellQuotingStyle::Posix),
+            "'it'\\''s'"
+        );
+    }
+
+    #[test]
+    fn escapes_embedded_single_quotes_for_powershell_by_doubling() {
+        assert_eq!(
+            quote_shell_arg_with("it's", ShellQuotingStyle::PowerShell),
+            "'it''s'"
+        );
+    }
+
+    #[test]
+    fn quotes_characters_only_powershell_treats_specially() {
+        assert_eq!(quote_shell_arg_with("a,b", ShellQuotingStyle::Posix), "a,b");
+        assert_eq!(
+            quote_shell_arg_with("a,b", ShellQuotingStyle::PowerShell),
+            "'a,b'"
+        );
+    }
+
+    #[test]
+    fn uses_host_shell_dialect_by_default() {
+        assert_eq!(
+            quote_shell_arg("it's"),
+            quote_shell_arg_with("it's", ShellQuotingStyle::host())
+        );
     }
 
     #[test]

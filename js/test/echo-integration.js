@@ -19,22 +19,27 @@
 
 const { describe, it } = require('node:test');
 const assert = require('assert');
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 const path = require('path');
 const {
   isCommandAvailable,
   canRunLinuxDockerImages,
   hasTTY,
 } = require('../src/lib/isolation');
+const { toShellWords } = require('../src/lib/shell-utils');
 
 // Path to the CLI
 const CLI_PATH = path.join(__dirname, '..', 'src', 'bin', 'cli.js');
 
-// Helper function to run the CLI and capture output
+// Helper function to run the CLI and capture output.
+// The arguments are split here instead of being handed to a host shell, so the
+// CLI receives the same argv on every platform (issue #164).
 function runCli(args, options = {}) {
   const timeout = options.timeout || 30000;
-  try {
-    const result = execSync(`bun run ${CLI_PATH} ${args}`, {
+  const result = spawnSync(
+    process.execPath,
+    ['run', CLI_PATH, ...toShellWords(args)],
+    {
       encoding: 'utf8',
       timeout,
       env: {
@@ -43,16 +48,18 @@ function runCli(args, options = {}) {
         START_DISABLE_TRACKING: '1',
       },
       maxBuffer: 1024 * 1024, // 1MB
-    });
-    return { success: true, output: result };
-  } catch (err) {
-    return {
-      success: false,
-      output: err.stdout || '',
-      stderr: err.stderr || '',
-      exitCode: err.status,
-    };
+    }
+  );
+  const output = result.stdout || '';
+  if (result.status === 0) {
+    return { success: true, output };
   }
+  return {
+    success: false,
+    output,
+    stderr: result.stderr || '',
+    exitCode: result.status,
+  };
 }
 
 // Verify output contains expected structure for attached modes (shows finish block)

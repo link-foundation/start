@@ -7,9 +7,32 @@ const SHELL_NAMES = ['bash', 'zsh', 'sh', 'fish', 'ksh', 'csh', 'tcsh', 'dash'];
 /** Argument characters that a POSIX shell reads literally, so they need no quoting. */
 const SAFE_ARG_PATTERN = /^[A-Za-z0-9_@%+=:,./^-]+$/;
 
-/** Quote one argv element so a POSIX shell parses it back as exactly that element (issue #164). */
-function quoteShellArg(arg) {
+/**
+ * Argument characters PowerShell reads literally. Narrower than the POSIX set:
+ * `,` builds an array, `@` splats and `%` is an alias for ForEach-Object.
+ */
+const POWERSHELL_SAFE_ARG_PATTERN = /^[A-Za-z0-9_=:.\\/-]+$/;
+
+/** The quoting dialect of the shell that will run the rebuilt command line. */
+function defaultShellQuotingStyle() {
+  return process.platform === 'win32' ? 'powershell' : 'posix';
+}
+
+/**
+ * Quote one argv element so the target shell parses it back as exactly that
+ * element (issue #164). PowerShell escapes a single quote by doubling it;
+ * a POSIX shell closes the quote, escapes, and reopens.
+ * @param {string} arg - Argument to quote
+ * @param {'posix'|'powershell'} [style] - Quoting dialect; defaults to the host shell
+ * @returns {string} Quoted argument
+ */
+function quoteShellArg(arg, style = defaultShellQuotingStyle()) {
   const value = String(arg);
+  if (style === 'powershell') {
+    return POWERSHELL_SAFE_ARG_PATTERN.test(value)
+      ? value
+      : `'${value.replace(/'/g, "''")}'`;
+  }
   return SAFE_ARG_PATTERN.test(value)
     ? value
     : `'${value.replace(/'/g, "'\\''")}'`;
@@ -21,13 +44,16 @@ function quoteShellArg(arg) {
  * and is kept verbatim; multiple elements were split by the outer shell, so each
  * one is quoted to survive the inner shell unchanged.
  * @param {string[]} argv - Command arguments
- * @returns {string} Command line for `sh -c`
+ * @param {'posix'|'powershell'} [style] - Quoting dialect; defaults to the host shell
+ * @returns {string} Command line for `sh -c` (or `powershell -Command` on Windows)
  */
-function buildCommandString(argv) {
+function buildCommandString(argv, style = defaultShellQuotingStyle()) {
   if (!Array.isArray(argv) || argv.length === 0) {
     return '';
   }
-  return argv.length === 1 ? argv[0] : argv.map(quoteShellArg).join(' ');
+  return argv.length === 1
+    ? argv[0]
+    : argv.map((arg) => quoteShellArg(arg, style)).join(' ');
 }
 
 /**
@@ -153,9 +179,11 @@ function getCommandName(command) {
 
 module.exports = {
   SHELL_NAMES,
+  defaultShellQuotingStyle,
   quoteShellArg,
   buildCommandString,
   splitShellWords,
+  toShellWords,
   isInteractiveShellCommand,
   isShellInvocationWithArgs,
   buildShellWithArgsCmdArgs,

@@ -975,9 +975,10 @@ pub use self::isolation_log::{
     get_temp_dir, get_temp_root, get_timestamp, write_log_file, LogHeaderParams,
 };
 pub use isolation_shell::{
-    build_command_string, build_display_command, build_shell_with_args_cmd_args, command_name,
-    is_interactive_shell_command, is_shell_invocation_with_args, quote_shell_arg,
-    split_shell_words,
+    build_command_string, build_command_string_with, build_display_command,
+    build_shell_with_args_cmd_args, command_name, is_interactive_shell_command,
+    is_shell_invocation_with_args, quote_shell_arg, quote_shell_arg_with, split_shell_words,
+    to_shell_words, ShellQuotingStyle,
 };
 
 fn is_debug() -> bool {

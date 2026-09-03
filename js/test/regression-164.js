@@ -28,6 +28,7 @@ const path = require('path');
 const { parseArgs } = require('../src/lib/args-parser');
 const {
   buildCommandString,
+  defaultShellQuotingStyle,
   buildDisplayCommand,
   buildShellWithArgsCmdArgs,
   getCommandName,
@@ -35,9 +36,13 @@ const {
   isShellInvocationWithArgs,
   quoteShellArg,
   splitShellWords,
+  toShellWords,
 } = require('../src/lib/shell-utils');
 
 const CLI_PATH = path.join(__dirname, '../src/bin/cli.js');
+// PowerShell (the host shell on Windows) escapes a quote by doubling it, so the
+// rebuilt command line differs from the POSIX one (issue #164).
+const IS_POWERSHELL = defaultShellQuotingStyle() === 'powershell';
 const TEST_APP_FOLDER = path.join(
   os.tmpdir(),
   `regression-164-${process.pid}-${Date.now()}`
@@ -63,7 +68,8 @@ function runCli(argv) {
 
 /** The command output sits between the start block and the finish block. */
 function commandOutput(stdout) {
-  const lines = stdout.split('\n');
+  // PowerShell prefixes its output with a UTF-8 BOM on Windows.
+  const lines = stdout.replace(/\uFEFF/g, '').split('\n');
   const start = lines.findIndex((line) => line.startsWith('$ '));
   const finish = lines.findIndex((line) => line === '✓' || line === '✗');
   return lines.slice(start + 2, finish - 1).join('\n');
@@ -82,7 +88,11 @@ describe('parseArgs keeps argv boundaries (issue #164)', () => {
       '-e',
       "console.log('hi')",
     ]);
-    expect(command).toBe("node -e 'console.log('\\''hi'\\'')'");
+    expect(command).toBe(
+      IS_POWERSHELL
+        ? "node -e 'console.log(''hi'')'"
+        : "node -e 'console.log('\\''hi'\\'')'"
+    );
     expect(rawCommand).toEqual(['node', '-e', "console.log('hi')"]);
   });
 
@@ -123,8 +133,23 @@ describe('buildCommandString and quoteShellArg (issue #164)', () => {
     expect(buildCommandString([])).toBe('');
   });
 
-  it('escapes embedded single quotes', () => {
-    expect(quoteShellArg("it's")).toBe("'it'\\''s'");
+  it('escapes embedded single quotes for a POSIX shell', () => {
+    expect(quoteShellArg("it's", 'posix')).toBe("'it'\\''s'");
+  });
+
+  it('escapes embedded single quotes for PowerShell by doubling them', () => {
+    expect(quoteShellArg("it's", 'powershell')).toBe("'it''s'");
+  });
+
+  it('quotes characters PowerShell treats specially but a POSIX shell does not', () => {
+    expect(quoteShellArg('a,b', 'posix')).toBe('a,b');
+    expect(quoteShellArg('a,b', 'powershell')).toBe("'a,b'");
+  });
+
+  it('uses the host shell dialect by default', () => {
+    expect(quoteShellArg("it's")).toBe(
+      quoteShellArg("it's", defaultShellQuotingStyle())
+    );
   });
 
   it('quotes an empty argument so it survives as an argument', () => {
@@ -156,6 +181,20 @@ describe('splitShellWords (issue #164)', () => {
 
   it('returns null when quoting is unbalanced', () => {
     expect(splitShellWords('echo "a')).toBe(null);
+  });
+});
+
+describe('toShellWords (issue #164)', () => {
+  it('keeps a quoted bare-shell argument in one argv element', () => {
+    expect(toShellWords("bash --rcfile 'my file'")).toEqual([
+      'bash',
+      '--rcfile',
+      'my file',
+    ]);
+  });
+
+  it('falls back to whitespace splitting when quoting is unbalanced', () => {
+    expect(toShellWords('echo "a b')).toEqual(['echo', '"a', 'b']);
   });
 });
 

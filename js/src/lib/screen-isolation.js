@@ -8,6 +8,7 @@ const {
   getTempDir,
   wrapCommandWithLogFooter,
 } = require('./isolation-log-utils');
+const { toShellWords } = require('./shell-utils');
 
 const setTimeout = globalThis.setTimeout;
 
@@ -213,7 +214,7 @@ function runScreenWithLogCapture(
             '-L',
             '-c',
             screenrcFile,
-            ...command.trim().split(/\s+/),
+            ...toShellWords(command),
           ]
         : [
             '-dmS',

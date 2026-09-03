@@ -168,6 +168,7 @@ const {
   isShellInvocationWithArgs,
   buildShellWithArgsCmdArgs,
   buildDisplayCommand,
+  toShellWords,
 } = require('./shell-utils');
 
 /** Returns true if the current process has a TTY attached. */
@@ -452,7 +453,7 @@ function runInSsh(command, options = {}) {
     } else {
       const extraFlags = shellInteractiveFlag ? [shellInteractiveFlag] : [];
       const sshArgs = isInteractiveShellCommand(command)
-        ? [sshTarget, ...command.trim().split(/\s+/)]
+        ? [sshTarget, ...toShellWords(command)]
         : useExplicitShell
           ? [sshTarget, useExplicitShell, ...extraFlags, '-c', command]
           : [sshTarget, command];
@@ -677,7 +678,7 @@ function runInDocker(command, options = {}) {
         ? [shellToUse, shellInteractiveFlag]
         : [shellToUse];
       const cmdArgs = isBareShell
-        ? command.trim().split(/\s+/)
+        ? toShellWords(command)
         : isShellInvocationWithArgs(command)
           ? buildShellWithArgsCmdArgs(effectiveCommand)
           : [...shellArgs, '-c', effectiveCommand];
@@ -777,7 +778,7 @@ function runInDocker(command, options = {}) {
       // Shell with -c: pass directly as argv (avoids double-wrapping and quote-stripping, issue #91).
       let attachedCmdArgs;
       if (isBareShell) {
-        const parts = command.trim().split(/\s+/);
+        const parts = toShellWords(command);
         const bareFlag = getShellInteractiveFlag(parts[0]);
         attachedCmdArgs =
           bareFlag && !parts.includes(bareFlag)
@@ -819,7 +820,7 @@ function runInDocker(command, options = {}) {
           let message = `Docker container "${containerName}" exited with code ${exitCode}`;
           // Bare shell exited non-zero quickly → startup file error; suggest --norc (issue #84).
           if (isBareShell && exitCode !== 0 && durationMs < 3000) {
-            const shell0 = command.trim().split(/\s+/)[0];
+            const shell0 = toShellWords(command)[0];
             // prettier-ignore
             const norc = path.basename(shell0) === 'zsh' ? '--no-rcs' : '--norc';
             const hint = `Hint: The shell exited immediately — its startup file (.bashrc/.zshrc) may have errors.\nTry skipping startup files: ${shell0} ${norc}`;

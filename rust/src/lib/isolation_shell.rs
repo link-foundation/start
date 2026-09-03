@@ -2,38 +2,77 @@
 
 const SHELL_NAMES: [&str; 8] = ["bash", "zsh", "sh", "fish", "ksh", "csh", "tcsh", "dash"];
 
-/// True when every character is read literally by a POSIX shell, so no quoting is needed.
-fn is_safe_arg(arg: &str) -> bool {
-    !arg.is_empty()
-        && arg
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || "_@%+=:,./^-".contains(c))
+/// Quoting dialect of the shell that will run a rebuilt command line.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShellQuotingStyle {
+    /// `sh`, `bash`, `zsh`: a quote is escaped by closing, escaping and reopening.
+    Posix,
+    /// PowerShell: a quote inside a literal string is escaped by doubling it.
+    PowerShell,
 }
 
-/// Quote one argv element so a POSIX shell parses it back as exactly that element (issue #164).
-pub fn quote_shell_arg(arg: &str) -> String {
-    if is_safe_arg(arg) {
-        arg.to_string()
-    } else {
-        format!("'{}'", arg.replace('\'', "'\\''"))
+impl ShellQuotingStyle {
+    /// The dialect of the host shell (`powershell.exe` on Windows, `sh` elsewhere).
+    pub fn host() -> Self {
+        if cfg!(windows) {
+            ShellQuotingStyle::PowerShell
+        } else {
+            ShellQuotingStyle::Posix
+        }
     }
 }
 
-/// Rebuild a shell command line from the argv the user typed (issue #164).
+/// True when every character is read literally by the target shell, so no quoting is needed.
+///
+/// The PowerShell set is narrower than the POSIX one: `,` builds an array, `@`
+/// splats and `%` is an alias for ForEach-Object.
+fn is_safe_arg(arg: &str, style: ShellQuotingStyle) -> bool {
+    let extra = match style {
+        ShellQuotingStyle::Posix => "_@%+=:,./^-",
+        ShellQuotingStyle::PowerShell => "_=:./\\-",
+    };
+    !arg.is_empty()
+        && arg
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || extra.contains(c))
+}
+
+/// Quote one argv element so the target shell parses it back as exactly that element (issue #164).
+pub fn quote_shell_arg_with(arg: &str, style: ShellQuotingStyle) -> String {
+    if is_safe_arg(arg, style) {
+        return arg.to_string();
+    }
+    match style {
+        ShellQuotingStyle::Posix => format!("'{}'", arg.replace('\'', "'\\''")),
+        ShellQuotingStyle::PowerShell => format!("'{}'", arg.replace('\'', "''")),
+    }
+}
+
+/// Quote one argv element for the host shell (issue #164).
+pub fn quote_shell_arg(arg: &str) -> String {
+    quote_shell_arg_with(arg, ShellQuotingStyle::host())
+}
+
+/// Rebuild a shell command line from the argv the user typed, for a given shell dialect.
 ///
 /// A single element is a shell script the user quoted as a whole (`$ "ls | wc -l"`)
 /// and is kept verbatim; multiple elements were split by the outer shell, so each
 /// one is quoted to survive the inner shell unchanged.
-pub fn build_command_string(argv: &[String]) -> String {
+pub fn build_command_string_with(argv: &[String], style: ShellQuotingStyle) -> String {
     match argv {
         [] => String::new(),
         [single] => single.clone(),
         _ => argv
             .iter()
-            .map(|arg| quote_shell_arg(arg))
+            .map(|arg| quote_shell_arg_with(arg, style))
             .collect::<Vec<_>>()
             .join(" "),
     }
+}
+
+/// Rebuild a shell command line from the argv the user typed, for the host shell (issue #164).
+pub fn build_command_string(argv: &[String]) -> String {
+    build_command_string_with(argv, ShellQuotingStyle::host())
 }
 
 /// Split a command line into shell words, honouring quotes and backslash escapes.
@@ -81,7 +120,7 @@ pub fn split_shell_words(command: &str) -> Option<Vec<String>> {
 }
 
 /// Split a command into words, falling back to whitespace splitting when quoting is unbalanced.
-fn to_shell_words(command: &str) -> Vec<String> {
+pub fn to_shell_words(command: &str) -> Vec<String> {
     split_shell_words(command).unwrap_or_else(|| {
         command
             .split_whitespace()
@@ -128,7 +167,9 @@ pub fn build_shell_with_args_cmd_args(command: &str) -> Vec<String> {
 
 /// Quote an argument for display only, keeping the user-facing double-quoted form (issue #91).
 fn quote_for_display(arg: &str) -> String {
-    if is_safe_arg(arg) {
+    // Display is cosmetic, so it always uses the POSIX set: the rendered command
+    // must look the same on every platform.
+    if is_safe_arg(arg, ShellQuotingStyle::Posix) {
         arg.to_string()
     } else if arg.contains('"') {
         format!("'{}'", arg)
