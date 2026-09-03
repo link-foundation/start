@@ -423,6 +423,31 @@ describe('CI workflow invariants', () => {
     );
   });
 
+  it('scopes CodeQL to this project\u2019s own code', () => {
+    // Without this, CodeQL extracts the third-party bundles archived under
+    // dev/log/ as evidence and fails pull requests on other projects'
+    // findings (issue #168: js/redos in the vendored use-m snapshot).
+    const security = readWorkflow('security.yml');
+    const codeqlJob = parseJobs(security).find((job) => job.name === 'codeql');
+    assert.ok(codeqlJob, 'security.yml has no codeql job');
+    const configPath = jobKey(codeqlJob.body, 'config-file', 10);
+    assert.ok(
+      configPath,
+      'the CodeQL init step must pass config-file, or archived evidence is analysed'
+    );
+    const config = readFileSync(join(repoRoot, configPath), 'utf8');
+    assert.match(
+      config,
+      /^paths-ignore:/m,
+      `${configPath} has no paths-ignore`
+    );
+    assert.match(
+      config,
+      /^\s*-\s*dev\/log\s*$/m,
+      `${configPath} must exclude dev/log`
+    );
+  });
+
   it('parses coverage through the tested helper, not an inline grep', () => {
     const js = readWorkflow('js.yml');
     assert.doesNotMatch(

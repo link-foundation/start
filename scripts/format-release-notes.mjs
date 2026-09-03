@@ -24,6 +24,7 @@
  */
 
 import {
+  containsPackageVersionBadge,
   normalizeReleaseVersionForBadge,
   packageVersionBadge,
 } from './release-name.mjs';
@@ -89,8 +90,8 @@ try {
 
   const currentBody = releaseData.body || '';
 
-  // Skip if already formatted (has shields.io badge image)
-  if (currentBody.includes('img.shields.io')) {
+  // Skip if already formatted (the notes already embed a badge image)
+  if (containsPackageVersionBadge(currentBody)) {
     console.log('ℹ️ Release notes already formatted');
     process.exit(0);
   }

@@ -96,6 +96,9 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
+          # Keeps archived third-party evidence under dev/log/ out of the
+          # analysis; see the file for why (issue #168).
+          config-file: .github/codeql/codeql-config.yml
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v4

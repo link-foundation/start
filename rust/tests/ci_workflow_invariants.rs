@@ -647,3 +647,29 @@ fn lints_the_repository_level_scripts_directory() {
         "js.yml must format-check scripts/"
     );
 }
+
+#[test]
+fn scopes_codeql_to_this_projects_own_code() {
+    // Without this, CodeQL extracts the third-party bundles archived under
+    // dev/log/ as evidence and fails pull requests on other projects'
+    // findings (issue #168: js/redos in the vendored use-m snapshot).
+    let security = read_workflow("security.yml");
+    let codeql = parse_jobs(&security)
+        .into_iter()
+        .find(|job| job.name == "codeql")
+        .expect("security.yml has no codeql job");
+    let config_path = job_key_at(&codeql.body, "config-file", 10)
+        .expect("the CodeQL init step must pass config-file, or archived evidence is analysed");
+    let config = fs::read_to_string(repo_root().join(&config_path))
+        .unwrap_or_else(|error| panic!("cannot read {config_path}: {error}"));
+    assert!(
+        config.lines().any(|line| line == "paths-ignore:"),
+        "{config_path} has no paths-ignore"
+    );
+    assert!(
+        config
+            .lines()
+            .any(|line| line.trim_end() == "  - dev/log" || line.trim_end() == "- dev/log"),
+        "{config_path} must exclude dev/log"
+    );
+}

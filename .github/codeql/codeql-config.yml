@@ -1,0 +1,16 @@
+# CodeQL configuration for the advanced setup in `.github/workflows/security.yml`.
+#
+# `dev/log/` archives third-party evidence verbatim — the exact `use-m` bundle a
+# failing runner executed, snapshots of the CI/CD templates — so that incidents
+# stay reproducible. That code is not ours, is never executed by this project and
+# cannot be edited without destroying the evidence, yet CodeQL extracted it and
+# failed pull requests on findings belonging to other projects (issue #168:
+# `js/redos` in `dev/log/.../upstream/use-m-8.15.1-use.js`). Findings in vendored
+# snapshots are reported in the upstream repositories instead.
+#
+# This mirrors the boundary `eslint.config.mjs` (`dev/**`), `.prettierignore`
+# (`dev`) and `scripts/check-file-size.mjs` (`dev/log`) already draw.
+name: 'start CodeQL config'
+
+paths-ignore:
+  - dev/log

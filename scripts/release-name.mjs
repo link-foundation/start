@@ -113,6 +113,43 @@ export function packageVersionBadge({
 }
 
 /**
+ * Host serving the badge images `packageVersionBadge` embeds.
+ */
+export const BADGE_IMAGE_HOST = 'img.shields.io';
+
+/**
+ * Whether release notes already carry a badge image produced by
+ * `packageVersionBadge`, i.e. whether formatting has already run.
+ *
+ * Every markdown image target is parsed and its host compared exactly. A
+ * substring test (`body.includes('img.shields.io')`) would also match a URL
+ * that merely mentions the host in its own path, query or userinfo - e.g.
+ * `https://example.invalid/img.shields.io` - which is CodeQL's
+ * `js/incomplete-url-substring-sanitization` (issue #168).
+ *
+ * @param {string} body Release notes body.
+ * @returns {boolean}
+ */
+export function containsPackageVersionBadge(body) {
+  const imagePattern = /!\[[^\]]*\]\(([^)]*)\)/g;
+  for (const [, target] of String(body ?? '').matchAll(imagePattern)) {
+    // `(url "optional title")` - only the leading token is the URL.
+    const [href] = target.trim().split(/\s+/);
+    let url;
+    try {
+      url = new URL(href);
+    } catch {
+      // Relative or malformed image target: never a shields.io badge.
+      continue;
+    }
+    if (url.hostname.toLowerCase() === BADGE_IMAGE_HOST) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Extract one version entry from a changelog. Supports both Changesets headings
  * ("## 1.2.3") and Keep a Changelog headings ("## [1.2.3] - 2026-05-02").
  * @param {string} changelog
