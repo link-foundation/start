@@ -50,7 +50,7 @@ fn command_output(stdout: &str) -> String {
     // PowerShell prefixes its output with a UTF-8 BOM and ends its lines with a
     // carriage return on Windows, and the finish block is preceded by one more
     // blank line there, so trailing blank lines are trimmed (issue #164).
-    let cleaned = stdout.replace('\u{feff}', "").replace('\r', "");
+    let cleaned = stdout.replace(['\u{feff}', '\r'], "");
     let lines: Vec<&str> = cleaned.split('\n').collect();
     let start = lines.iter().position(|l| l.starts_with("$ ")).unwrap_or(0);
     let finish = lines
