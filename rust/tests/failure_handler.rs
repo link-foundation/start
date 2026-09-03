@@ -3,8 +3,8 @@
 //! Mirrors failure_handler test coverage from the JS test suite.
 
 use start_command::failure_handler::{
-    can_create_issue, create_issue, handle_failure, is_gh_authenticated,
-    is_gh_upload_log_available, parse_git_url, Config, RepoInfo,
+    can_create_issue, handle_failure, is_gh_authenticated, is_gh_upload_log_available,
+    parse_git_url, Config,
 };
 
 mod parse_git_url_tests {
@@ -191,23 +191,34 @@ mod can_create_issue_tests {
 /// body must reach `gh` verbatim, with real newlines and without shell escaping.
 #[cfg(unix)]
 mod create_issue_tests {
-    use super::*;
+    use start_command::failure_handler::{create_issue, RepoInfo};
     use std::os::unix::fs::PermissionsExt;
-    use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
-    use std::sync::{Mutex, OnceLock};
+    use std::process::Command;
     use tempfile::TempDir;
 
     const FAILING_COMMAND: &str = "echo \"quoted\" $(id) `hostname`";
+    const HELPER_TEST: &str = "create_issue_tests::helper_process_calls_create_issue";
+    const URL_PREFIX: &str = "created-issue-url:";
 
-    /// Run `create_issue` with a fake `gh` first on PATH that records its argv,
-    /// NUL-separated, and returns the recorded arguments.
+    /// Not a test on its own: re-executed by `create_issue_with_fake_gh` in a
+    /// child process, because `PATH` has to be replaced only for that child.
+    /// Mutating it in-process would also redirect the `gh` calls of the tests
+    /// running next to it in the same binary.
+    #[test]
+    #[ignore = "helper process, driven by create_issue_with_fake_gh"]
+    fn helper_process_calls_create_issue() {
+        let repo_info = RepoInfo {
+            owner: "owner".to_string(),
+            repo: "repo".to_string(),
+            url: "https://github.com/owner/repo".to_string(),
+        };
+        let url = create_issue(&repo_info, FAILING_COMMAND, 1, None).unwrap_or_default();
+        println!("{}{}", URL_PREFIX, url);
+    }
+
+    /// Run `create_issue` with a fake `gh` first on the child's PATH that
+    /// records its argv, NUL-separated, and return the URL and that argv.
     fn create_issue_with_fake_gh() -> (Option<String>, Vec<String>) {
-        static PATH_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        let _guard = PATH_LOCK
-            .get_or_init(|| Mutex::new(()))
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-
         let dir = TempDir::new().unwrap();
         let argv_file = dir.path().join("argv");
         let gh_path = dir.path().join("gh");
@@ -223,32 +234,29 @@ mod create_issue_tests {
         permissions.set_mode(0o755);
         std::fs::set_permissions(&gh_path, permissions).unwrap();
 
-        let original_path = std::env::var_os("PATH");
         let mut paths = vec![dir.path().to_path_buf()];
-        if let Some(existing) = original_path.as_ref() {
-            paths.extend(std::env::split_paths(existing));
-        }
-        std::env::set_var("PATH", std::env::join_paths(paths).unwrap());
-
-        let repo_info = RepoInfo {
-            owner: "owner".to_string(),
-            repo: "repo".to_string(),
-            url: "https://github.com/owner/repo".to_string(),
-        };
-        let result = catch_unwind(AssertUnwindSafe(|| {
-            create_issue(&repo_info, FAILING_COMMAND, 1, None)
-        }));
-
-        if let Some(path) = original_path {
-            std::env::set_var("PATH", path);
-        } else {
-            std::env::remove_var("PATH");
+        if let Some(existing) = std::env::var_os("PATH") {
+            paths.extend(std::env::split_paths(&existing));
         }
 
-        let url = match result {
-            Ok(url) => url,
-            Err(payload) => resume_unwind(payload),
-        };
+        let output = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", HELPER_TEST, "--ignored", "--nocapture"])
+            .env("PATH", std::env::join_paths(paths).unwrap())
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "helper process failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let url = stdout
+            .lines()
+            .find_map(|line| line.strip_prefix(URL_PREFIX))
+            .filter(|url| !url.is_empty())
+            .map(str::to_string);
+
         let recorded = std::fs::read_to_string(&argv_file).unwrap();
         // `printf '%s\0'` writes a trailing NUL, so the final split part is empty.
         let mut argv = recorded.split('\0').map(str::to_string).collect::<Vec<_>>();
