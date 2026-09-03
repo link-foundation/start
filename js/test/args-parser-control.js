@@ -54,19 +54,19 @@ describe('control options', () => {
   it('should reject combining query and control modes', () => {
     assert.throws(() => {
       parseArgs(['--status', 'uuid-here', '--stop', 'my-session']);
-    }, /Cannot combine --status, --list, --upload-log, --stop, --terminate, or --cleanup/);
+    }, /Cannot combine --status, --list, --upload-log, --stop, --terminate, --attach, --resume, --resume-all, or --cleanup/);
   });
 
   it('should reject combining upload-log with control modes', () => {
     assert.throws(() => {
       parseArgs(['--upload-log', 'uuid-here', '--terminate', 'my-session']);
-    }, /Cannot combine --status, --list, --upload-log, --stop, --terminate, or --cleanup/);
+    }, /Cannot combine --status, --list, --upload-log, --stop, --terminate, --attach, --resume, --resume-all, or --cleanup/);
   });
 
   it('should reject output-format with control modes', () => {
     assert.throws(() => {
       parseArgs(['--stop', 'my-session', '--output-format', 'json']);
-    }, /--output-format option is only valid with --status or --list/);
+    }, /--output-format option is only valid with --status, --list, --resume, or --resume-all/);
   });
 
   it('should default control options to null', () => {

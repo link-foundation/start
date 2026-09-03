@@ -76,6 +76,10 @@ class ExecutionRecord {
     this.endTime = options.endTime || null;
     this.oomKilled =
       options.oomKilled !== undefined ? options.oomKilled : undefined;
+    // Query-time hint explaining an opaque exit code (issue #162). Derived from
+    // the log tail by the status formatter; never persisted as a verdict.
+    this.exitReason =
+      options.exitReason !== undefined ? options.exitReason : undefined;
     this.workingDirectory = options.workingDirectory || process.cwd();
     this.shell = options.shell || process.env.SHELL || '/bin/sh';
     this.platform = options.platform || process.platform;
@@ -108,6 +112,9 @@ class ExecutionRecord {
     };
     if (this.oomKilled !== undefined && this.oomKilled !== null) {
       obj.oomKilled = this.oomKilled;
+    }
+    if (this.exitReason !== undefined && this.exitReason !== null) {
+      obj.exitReason = this.exitReason;
     }
     Object.assign(obj, {
       workingDirectory: this.workingDirectory,

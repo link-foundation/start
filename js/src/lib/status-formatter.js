@@ -15,6 +15,7 @@ const {
 } = require('./output-blocks');
 const { collectProcessIds } = require('./execution-control');
 const { getDockerCommand, getDockerSpawnOptions } = require('./docker-cleanup');
+const { resolveExitReason } = require('./exit-reason');
 
 /**
  * Inspect the live state of a detached docker container by name.
@@ -244,12 +245,8 @@ function readLogTail(logPath, bytes = LOG_TAIL_BYTES) {
  * @param {string} logPath - Path to the log file
  * @returns {number|null}
  */
-function readExitCodeFromLog(logPath) {
-  if (!logPath) {
-    return null;
-  }
-  const tail = readLogTail(logPath);
-  if (tail === null) {
+function parseExitCodeFromTail(tail) {
+  if (tail === null || tail === undefined) {
     return null;
   }
   const matches = [...tail.matchAll(LOG_FOOTER_PATTERN)];
@@ -259,16 +256,24 @@ function readExitCodeFromLog(logPath) {
   return parseInt(matches[matches.length - 1][1], 10);
 }
 
+function readExitCodeFromLog(logPath) {
+  if (!logPath) {
+    return null;
+  }
+  return parseExitCodeFromTail(readLogTail(logPath));
+}
+
 /**
- * Enrich execution record with live session status for detached executions.
+ * Resolve the live status of a detached execution.
  * If a record shows "executing" but the detached session has actually ended,
  * returns an updated copy with status "executed". If it shows "executed" but
  * the session is still running, returns a copy with status "executing".
  * @param {Object} record - Execution record
+ * @param {string|null} logTail - Tail of the execution log (already read once)
  * @returns {Object} Possibly updated execution record
  */
-function enrichDetachedStatus(record) {
-  const footerExit = readExitCodeFromLog(record.logPath);
+function resolveDetachedStatus(record, logTail) {
+  const footerExit = parseExitCodeFromTail(logTail);
   const dockerState = isDetachedDockerRecord(record)
     ? readDockerState(record)
     : null;
@@ -367,6 +372,50 @@ function enrichDetachedStatus(record) {
   }
 
   return enriched;
+}
+
+/**
+ * Attach an `exitReason` hint to a finished record.
+ *
+ * The hint explains an otherwise opaque exit code (`139` with `oomKilled
+ * false` is the motivating case from issue #162) and is derived from the same
+ * log tail the footer scan already reads. It is purely additive: `status`,
+ * `exitCode` and `oomKilled` are never changed by it.
+ *
+ * @param {Object} record - Execution record
+ * @param {string|null} logTail - Tail of the execution log
+ * @returns {Object} Record, or a copy carrying `exitReason`
+ */
+function attachExitReason(record, logTail) {
+  if (!record || record.status !== 'executed') {
+    return record;
+  }
+
+  const exitReason = resolveExitReason({
+    exitCode: record.exitCode,
+    logTail,
+    oomKilled: record.oomKilled,
+  });
+
+  if (!exitReason) {
+    return record;
+  }
+
+  const enriched = Object.create(Object.getPrototypeOf(record));
+  Object.assign(enriched, record);
+  enriched.exitReason = exitReason;
+  return enriched;
+}
+
+/**
+ * Enrich execution record with live session status and an exit reason hint.
+ * @param {Object} record - Execution record
+ * @returns {Object} Possibly updated execution record
+ */
+function enrichDetachedStatus(record) {
+  const logTail =
+    record && record.logPath ? readLogTail(record.logPath) : null;
+  return attachExitReason(resolveDetachedStatus(record, logTail), logTail);
 }
 
 /**
@@ -512,6 +561,9 @@ function formatRecordAsText(record) {
     `Exit Code:         ${obj.exitCode !== null ? obj.exitCode : 'N/A'}`,
     ...(obj.oomKilled !== undefined
       ? [`OOM Killed:        ${obj.oomKilled}`]
+      : []),
+    ...(obj.exitReason !== undefined
+      ? [`Exit Reason:       ${obj.exitReason}`]
       : []),
     `PID:               ${obj.pid !== null ? obj.pid : 'N/A'}`,
     `Working Directory: ${obj.workingDirectory}`,
@@ -710,6 +762,8 @@ module.exports = {
   enrichDetachedStatus,
   readExitCodeFromLog,
   readLogTail,
+  attachExitReason,
+  resolveDetachedStatus,
   attachCurrentTime,
   attachProcessIds,
 };

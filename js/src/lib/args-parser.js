@@ -28,11 +28,15 @@
  * --use-command-stream             Use command-stream library for command execution (experimental)
  * --verbose                        Enable verbose/debug output (sets START_VERBOSE=1)
  * --status <uuid>                  Show status of a previous command execution by UUID
- * --list                           List all tracked command executions
+ * --list [--running]               List all (or only running) tracked command executions
  * --upload-log <uuid-or-session>    Upload the stored log for a tracked execution
  * --output-format <format>         Output format for status/list (links-notation, json, text)
  * --stop <uuid-or-session-name>     Ask a detached execution to stop gracefully
  * --terminate <uuid-or-session-name> Terminate a detached execution immediately
+ * --attach <uuid-or-session-name>   Attach to a running detached session terminal
+ * --read-only                      Follow --attach output without forwarding stdin
+ * --resume <uuid-or-session> [-- cmd] Resume a stored execution (optionally with a new command)
+ * --resume-all                     Re-attach or reconcile every execution still marked running
  * --cleanup                        Clean up stale "executing" records (processes that crashed or were killed)
  * --cleanup-dry-run                Show stale records that would be cleaned up (without actually cleaning)
  */
@@ -40,6 +44,12 @@
 const { getDefaultDockerImage } = require('./docker-utils');
 const dockerNetworkOptions = require('./docker-network-options');
 const { parseSequence, isSequence } = require('./sequence-parser');
+const {
+  VALID_OUTPUT_FORMATS,
+  createQueryOptionDefaults,
+  parseQueryOption,
+  validateQueryOptions,
+} = require('./args-parser-queries');
 
 // Debug mode from environment
 const DEBUG =
@@ -60,10 +70,6 @@ const VALID_SHELLS = ['auto', 'bash', 'zsh', 'sh'];
  */
 const MAX_ISOLATION_DEPTH = 7;
 
-/**
- * Valid output formats for --status
- */
-const VALID_OUTPUT_FORMATS = ['links-notation', 'json', 'text'];
 
 function hasValue(value) {
   return value !== null && value !== undefined;
@@ -195,14 +201,7 @@ function parseArgs(args) {
     keepContainerOnFail: false, // Keep docker container filesystem when command fails or OOM-kills
     shell: 'auto', // Shell to use in isolation environments: auto, bash, zsh, sh
     useCommandStream: false, // Use command-stream library for command execution
-    status: null, // UUID to show status for
-    list: false, // List all tracked execution records
-    uploadLog: null, // UUID/session name whose stored log should be uploaded
-    outputFormat: null, // Output format for status/list (links-notation, json, text)
-    stop: null, // UUID/session name to stop gracefully
-    terminate: null, // UUID/session name to terminate immediately
-    cleanup: false, // Clean up stale "executing" records
-    cleanupDryRun: false, // Show what would be cleaned without actually cleaning
+    ...createQueryOptionDefaults(),
   };
 
   let commandArgs = [];
@@ -529,125 +528,10 @@ function parseOption(args, index, options) {
     return 1;
   }
 
-  // --status <uuid-or-session-name>
-  if (arg === '--status') {
-    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
-      options.status = args[index + 1];
-      return 2;
-    } else {
-      throw new Error(`Option ${arg} requires a UUID or session name argument`);
-    }
-  }
-
-  // --status=<value>
-  if (arg.startsWith('--status=')) {
-    const value = arg.slice('--status='.length);
-    if (!value) {
-      throw new Error(
-        `Option --status requires a UUID or session name argument`
-      );
-    }
-    options.status = value;
-    return 1;
-  }
-
-  // --upload-log <uuid-or-session-name>
-  if (arg === '--upload-log') {
-    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
-      options.uploadLog = args[index + 1];
-      return 2;
-    } else {
-      throw new Error(`Option ${arg} requires a UUID or session name argument`);
-    }
-  }
-
-  // --upload-log=<value>
-  if (arg.startsWith('--upload-log=')) {
-    const value = arg.slice('--upload-log='.length);
-    if (!value) {
-      throw new Error(
-        `Option --upload-log requires a UUID or session name argument`
-      );
-    }
-    options.uploadLog = value;
-    return 1;
-  }
-
-  // --stop <uuid-or-session-name>
-  if (arg === '--stop') {
-    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
-      options.stop = args[index + 1];
-      return 2;
-    } else {
-      throw new Error(`Option ${arg} requires a UUID or session name argument`);
-    }
-  }
-
-  // --stop=<value>
-  if (arg.startsWith('--stop=')) {
-    const value = arg.slice('--stop='.length);
-    if (!value) {
-      throw new Error(`Option --stop requires a UUID or session name argument`);
-    }
-    options.stop = value;
-    return 1;
-  }
-
-  // --terminate <uuid-or-session-name>
-  if (arg === '--terminate') {
-    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
-      options.terminate = args[index + 1];
-      return 2;
-    } else {
-      throw new Error(`Option ${arg} requires a UUID or session name argument`);
-    }
-  }
-
-  // --terminate=<value>
-  if (arg.startsWith('--terminate=')) {
-    const value = arg.slice('--terminate='.length);
-    if (!value) {
-      throw new Error(
-        `Option --terminate requires a UUID or session name argument`
-      );
-    }
-    options.terminate = value;
-    return 1;
-  }
-
-  // --list
-  if (arg === '--list') {
-    options.list = true;
-    return 1;
-  }
-
-  // --output-format <format>
-  if (arg === '--output-format') {
-    if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
-      options.outputFormat = args[index + 1].toLowerCase();
-      return 2;
-    } else {
-      throw new Error(`Option ${arg} requires a format argument`);
-    }
-  }
-
-  // --output-format=<value>
-  if (arg.startsWith('--output-format=')) {
-    options.outputFormat = arg.split('=')[1].toLowerCase();
-    return 1;
-  }
-
-  // --cleanup
-  if (arg === '--cleanup') {
-    options.cleanup = true;
-    return 1;
-  }
-
-  // --cleanup-dry-run
-  if (arg === '--cleanup-dry-run') {
-    options.cleanup = true;
-    options.cleanupDryRun = true;
-    return 1;
+  // Query/control options (--status, --list, --attach, --resume, ...)
+  const queryConsumed = parseQueryOption(args, index, options);
+  if (queryConsumed > 0) {
+    return queryConsumed;
   }
 
   // Not a recognized wrapper option
@@ -889,37 +773,7 @@ function validateOptions(options) {
     throw new Error('--keep-user option is only valid with --isolated-user');
   }
 
-  // Validate output format
-  if (hasValue(options.outputFormat)) {
-    if (!VALID_OUTPUT_FORMATS.includes(options.outputFormat)) {
-      throw new Error(
-        `Invalid output format: "${options.outputFormat}". Valid options are: ${VALID_OUTPUT_FORMATS.join(', ')}`
-      );
-    }
-  }
-
-  // Query/control modes are mutually exclusive
-  const queryModes = [
-    hasValue(options.status),
-    options.list,
-    hasValue(options.uploadLog),
-    hasValue(options.stop),
-    hasValue(options.terminate),
-    options.cleanup,
-  ].filter(Boolean).length;
-
-  if (queryModes > 1) {
-    throw new Error(
-      'Cannot combine --status, --list, --upload-log, --stop, --terminate, or --cleanup in the same invocation'
-    );
-  }
-
-  // Output format is only valid with read-only query modes
-  if (options.outputFormat && !options.status && !options.list) {
-    throw new Error(
-      '--output-format option is only valid with --status or --list'
-    );
-  }
+  validateQueryOptions(options);
 
   // Validate shell option
   if (options.shell !== null && options.shell !== undefined) {
