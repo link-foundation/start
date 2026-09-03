@@ -1,0 +1,376 @@
+bun test v1.3.14 (0d9b296a)
+
+test/cli.js:
+  Skipping: tmux not installed
+
+test/docker-autoremove.js:
+$ echo "test" && sleep 0.5
+
+  ✓ Docker container auto-removed after exit (filesystem not preserved)
+$ echo "test" && sleep 0.1
+
+$ echo "test" && sleep 0.1
+
+$ echo "test" && exit 7
+
+$ printf 'attached-log-line\n'
+
+attached-log-line
+
+test/docker-network-integration.js:
+$ ping -c 1 formal-ai && ping -c 1 formal-db && ip route | grep -q '^default '
+
+$ ping -c 1 formal-ai
+
+ping: bad address 'formal-ai'
+$ echo should-not-run
+
+$ echo should-not-run
+
+$ echo should-not-run
+
+docker: Error response from daemon: failed to set up container networking: network start-network-3f2e1fa7-absent not found
+
+Run 'docker run --help' for more information
+$ echo should-not-run
+
+
+test/echo-integration.js:
+=== Echo Integration Tests - Issue #55 ===
+Testing that "echo hi" works correctly across all isolation modes
+Coverage: No isolation, Screen (attached/detached), Tmux (attached/detached), Docker (attached/detached)
+
+  ✓ No isolation mode: echo hi works correctly
+  ✓ No isolation mode: echo with single quotes works
+  ✓ No isolation mode: echo with double quotes works
+  ✓ Empty line formatting is consistent
+  ✓ Screen isolation (attached): echo hi works correctly
+  ✓ Screen isolation (attached): echo with quotes works
+  ✓ Screen isolation (attached): finish block displays correctly
+  ✓ Screen isolation (detached): echo hi starts correctly
+  ✓ Screen isolation (detached): session name displayed for reattaching
+  ⚠ tmux not installed, skipping tmux tests
+  ⚠ no TTY available, skipping attached docker tests
+  ✓ Docker isolation (detached): echo hi starts correctly
+  ✓ Docker isolation (detached): session/container name displayed for reattaching
+  ✓ Docker isolation (detached): echo with quotes works
+  ✓ Log paths are not truncated
+  ✓ Session IDs are complete UUIDs in both blocks
+  ✓ Exit code formatting is consistent
+  ✓ Timing information is present in finish block
+
+test/execution-store.js:
+=== Execution Store Unit Tests ===
+
+test/failure-handler.js:
+
+
+Auto-issue creation disabled via START_DISABLE_AUTO_ISSUE
+
+test/isolation-cleanup.js:
+  ✓ Screen session auto-exited (no sessions found in screen -ls)
+  ✓ Screen session kept alive as expected with --keep-alive
+  Skipping: tmux not installed
+  Skipping: tmux not installed
+$ echo "test" && sleep 0.1
+
+  ✓ Docker container auto-exited and stopped (resources released, filesystem preserved)
+$ echo "test"
+
+  ✓ Docker container kept running as expected with --keep-alive
+
+test/isolation.js:
+  hasTTY: false
+  screen available: true
+  tmux available: false
+  docker available: true
+  ssh available: true
+  Detected screen version: 4.9.1
+  supportsLogfileOption: true
+  Version 4.9.1: -Logfile supported = true
+  Skipping: screen is installed
+  Skipping: docker is installed
+  Skipping: ssh is installed
+  Skipping: tmux not installed
+  Skipping: tmux not installed
+$ echo test
+
+$ echo test
+
+  Skipping: tmux not installed
+$ echo test
+
+test
+  Detected shell in alpine:latest: /bin/sh
+$ echo test
+
+  runInDocker with --shell sh result: true
+
+test/merge-changesets.mjs:
+Working directory: /tmp/merge-changesets-a1TS02
+Changeset directory: /tmp/merge-changesets-a1TS02/.changeset
+Package name: start-command
+Found 0 changeset file(s)
+No merging needed (0 or 1 changeset found)
+Working directory: /tmp/merge-changesets-KSgsi2
+Changeset directory: /tmp/merge-changesets-KSgsi2/.changeset
+Package name: start-command
+Found 1 changeset file(s)
+No merging needed (0 or 1 changeset found)
+Working directory: /tmp/merge-changesets-rFpNFL
+Changeset directory: /tmp/merge-changesets-rFpNFL/.changeset
+Package name: start-command
+Found 2 changeset file(s)
+Multiple changesets found, merging...
+  - a.md
+  - b.md
+
+Merge summary:
+  Bump types found: patch, minor
+  Using highest: minor
+  Descriptions to merge: 2
+
+Created merged changeset: merged-good-fish.md
+
+Removing original changeset files:
+  Removed: a.md
+  Removed: b.md
+
+Changeset merge completed successfully
+
+Merged changeset content:
+---
+'start-command': minor
+---
+
+Fix A
+
+Feature B
+
+Working directory: /tmp/merge-changesets-y9ikjj
+Changeset directory: /tmp/merge-changesets-y9ikjj/.changeset
+Package name: start-command
+Found 3 changeset file(s)
+Multiple changesets found, merging...
+  - c.md
+  - a.md
+  - b.md
+
+Merge summary:
+  Bump types found: minor, patch, major
+  Using highest: major
+  Descriptions to merge: 3
+
+Created merged changeset: merged-good-apple.md
+
+Removing original changeset files:
+  Removed: c.md
+  Removed: a.md
+  Removed: b.md
+
+Changeset merge completed successfully
+
+Merged changeset content:
+---
+'start-command': major
+---
+
+Feat
+
+Fix
+
+Breaking
+
+Working directory: /tmp/merge-changesets-other-NVt0AA
+Changeset directory: /tmp/merge-changesets-other-NVt0AA/.changeset
+Package name: some-other-pkg
+Found 2 changeset file(s)
+Multiple changesets found, merging...
+  - a.md
+  - b.md
+
+Merge summary:
+  Bump types found: minor, patch
+  Using highest: minor
+  Descriptions to merge: 2
+
+Created merged changeset: merged-sweet-desk.md
+
+Removing original changeset files:
+  Removed: a.md
+  Removed: b.md
+
+Changeset merge completed successfully
+
+Merged changeset content:
+---
+'some-other-pkg': minor
+---
+
+A
+
+B
+
+
+test/output-blocks.js:
+=== Output Blocks Unit Tests ===
+invalid reference format
+latest: Pulling from library/hello-world
+4f55086f7dd0: Pulling fs layer
+4f55086f7dd0: Verifying Checksum
+4f55086f7dd0: Download complete
+4f55086f7dd0: Pull complete
+Digest: sha256:5dd0d3e6e255913fc30f90b9f2b1d359cc2cbdb48090cc4b65f1676e203243cc
+Status: Downloaded newer image for hello-world:latest
+docker.io/library/hello-world:latest
+invalid reference format
+hello
+
+test/screen-integration.js:
+  Captured output: "hello"
+line1
+line2
+line3
+  Captured multi-line output: "line1\nline2\nline3"
+hello
+  Captured quoted output: "hello"
+hello from attached mode
+  Captured complex quote output: "hello from attached mode"
+quick command output
+  Verified output capture: "quick command output"
+v20.20.2
+  Captured version output: "v20.20.2"
+/bin/bash: line 1: nonexistent_command_12345: command not found
+  Captured exit code: 127
+stderr-test
+  Captured stderr output: "stderr-test"
+line1
+line2
+line3
+  Multi-line output with exit code 0: verified
+
+test/session-name-status.js:
+=== Session Name Status Tests (Issue #101) ===
+
+test/ssh-integration.js:
+  SSH to localhost not available, integration tests will be skipped
+  Skipping: SSH to localhost not available
+  Skipping: SSH to localhost not available
+  Skipping: SSH to localhost not available
+  Skipping: SSH to localhost not available
+  Skipping: SSH to localhost not available
+  Skipping: SSH to localhost not available
+  Skipping: SSH to localhost not available
+  Skipping: SSH to localhost not available
+  Note: SSH connection error handling is tested via unit tests
+  Skipping: SSH to localhost not available
+
+test/status-query.js:
+=== Status Query Integration Tests ===
+
+test/substitution.js:
+=== Substitution Engine Unit Tests ===
+
+✓ Loaded 48 substitution rules
+
+✓ Test: loadDefaultSubstitutions() returns array of rules
+✓ Test: Rules have correct structure (pattern, replacement, regex)
+
+=== Pattern Matching Tests ===
+
+✓ PASS: Basic npm install
+  Input:  "install gh-upload-log npm package"
+  Output: "npm install gh-upload-log"
+
+✓ PASS: npm install with version
+  Input:  "install 0.0.1 version of gh-upload-log npm package"
+  Output: "npm install gh-upload-log@0.0.1"
+
+✓ PASS: Global npm install
+  Input:  "install lodash npm package globally"
+  Output: "npm install -g lodash"
+
+✓ PASS: Global npm install with version
+  Input:  "install 4.17.21 version of lodash npm package globally"
+  Output: "npm install -g lodash@4.17.21"
+
+✓ PASS: npm uninstall
+  Input:  "uninstall lodash npm package"
+  Output: "npm uninstall lodash"
+
+✓ PASS: Git clone with URL
+  Input:  "clone https://github.com/user/repo repository"
+  Output: "git clone https://github.com/user/repo"
+
+✓ PASS: Git clone with SSH URL
+  Input:  "clone git@github.com:user/repo.git repository"
+  Output: "git clone git@github.com:user/repo.git"
+
+✓ PASS: Git checkout branch
+  Input:  "checkout main branch"
+  Output: "git checkout main"
+
+✓ PASS: Git create branch
+  Input:  "create feature-x branch"
+  Output: "git checkout -b feature-x"
+
+✓ PASS: List files
+  Input:  "list files"
+  Output: "ls -la"
+
+✓ PASS: Show working directory
+  Input:  "show current directory"
+  Output: "pwd"
+
+✓ PASS: Create directory
+  Input:  "create my-project directory"
+  Output: "mkdir -p my-project"
+
+✓ PASS: pip install
+  Input:  "install requests python package"
+  Output: "pip install requests"
+
+✓ PASS: Non-matching command (pass through)
+  Input:  "echo hello world"
+  Output: "echo hello world"
+
+✓ PASS: Regular npm command (pass through)
+  Input:  "npm test"
+  Output: "npm test"
+
+=== Pattern Specificity Tests ===
+
+✓ Test: Pattern specificity works correctly
+  Input:  "install 1.0.0 version of express npm package globally"
+  Output: "npm install -g express@1.0.0"
+
+=== Variable Extraction Tests ===
+
+✓ Test: Variable extraction and substitution works correctly
+  Pattern matched: "install $packageName npm package"
+  Variables in pattern: [packageName]
+  Result command: "npm install my-package"
+
+=== processCommand Integration Tests ===
+
+✓ Test: processCommand applies substitutions
+  Input:  "list files"
+  Output: "ls -la"
+  Matched: true
+
+✓ Test: processCommand passes through non-matching commands
+  Input:  "echo test"
+  Output: "echo test"
+  Matched: false
+
+=== Test Summary ===
+Pattern Matching: 15/15 tests passed
+Total Tests: 22/22 passed
+
+✓ All tests passed!
+
+
+ 838 pass
+ 0 fail
+ 634 expect() calls
+Ran 838 tests across 47 files. [116.27s]

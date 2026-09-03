@@ -33,9 +33,7 @@ const {
 } = require('../lib/user-manager');
 const { handleFailure } = require('../lib/failure-handler');
 const { ExecutionStore, ExecutionRecord } = require('../lib/execution-store');
-const { queryStatus, listExecutions } = require('../lib/status-formatter');
-const { ControlAction, controlExecution } = require('../lib/execution-control');
-const { uploadExecutionLog } = require('../lib/log-uploader');
+const { dispatchQueryCommand, hasQueryMode } = require('../lib/query-commands');
 const { printVersion } = require('../lib/version');
 const { createStartBlock, createFinishBlock } = require('../lib/output-blocks');
 const { runWithBunSpawn, runWithNodeSpawn } = require('../lib/spawn-helpers');
@@ -192,47 +190,12 @@ try {
 
 const { wrapperOptions, command: parsedCommand } = parsedArgs;
 
-// Handle --status flag
-if (wrapperOptions.status) {
-  handleStatusQuery(wrapperOptions.status, wrapperOptions.outputFormat);
-  process.exit(0);
-}
-
-// Handle --list flag
-if (wrapperOptions.list) {
-  handleListQuery(wrapperOptions.outputFormat);
-  process.exit(0);
-}
-
-// Handle --upload-log flag
-if (wrapperOptions.uploadLog) {
-  const exitCode = handleUploadLogQuery(wrapperOptions.uploadLog);
-  process.exit(exitCode);
-}
-
-// Handle --stop flag
-if (wrapperOptions.stop !== null && wrapperOptions.stop !== undefined) {
-  handleControlQuery(wrapperOptions.stop, ControlAction.STOP);
-  process.exit(0);
-}
-
-// Handle --terminate flag
-if (
-  wrapperOptions.terminate !== null &&
-  wrapperOptions.terminate !== undefined
-) {
-  handleControlQuery(wrapperOptions.terminate, ControlAction.TERMINATE);
-  process.exit(0);
-}
-
-// Handle --cleanup flag
-if (wrapperOptions.cleanup) {
-  handleCleanup(wrapperOptions.cleanupDryRun);
-  process.exit(0);
-}
+// Query/control modes (--status, --list, --attach, --resume, ...) address an
+// execution that already exists, so they never need a command of their own.
+const isQueryMode = hasQueryMode(wrapperOptions);
 
 // Check if no command was provided
-if (!parsedCommand || parsedCommand.trim() === '') {
+if (!isQueryMode && (!parsedCommand || parsedCommand.trim() === '')) {
   console.error('Error: No command provided');
   printUsage();
   process.exit(1);
@@ -242,7 +205,7 @@ if (!parsedCommand || parsedCommand.trim() === '') {
 let command = parsedCommand;
 let substitutionResult = null;
 
-if (!config.disableSubstitutions) {
+if (!config.disableSubstitutions && parsedCommand && parsedCommand.trim()) {
   substitutionResult = processCommand(parsedCommand, {
     customLinoPath: config.substitutionsPath,
     verbose: config.verbose,
@@ -267,6 +230,14 @@ const sessionId = wrapperOptions.sessionId || generateUUID();
 
 // Main execution
 (async () => {
+  if (isQueryMode) {
+    const queryExitCode = await dispatchQueryCommand(wrapperOptions, {
+      store: getExecutionStore(),
+      command: command && command.trim() ? command : null,
+    });
+    process.exit(queryExitCode === null ? 0 : queryExitCode);
+  }
+
   // Check if running in isolation mode or with user isolation
   if (hasIsolation(wrapperOptions) || wrapperOptions.user) {
     await runWithIsolation(
@@ -288,93 +259,6 @@ const sessionId = wrapperOptions.sessionId || generateUUID();
     }
   }
 })();
-
-function handleStatusQuery(uuid, outputFormat) {
-  const result = queryStatus(getExecutionStore(), uuid, outputFormat);
-  if (result.success) {
-    console.log(result.output);
-  } else {
-    console.error(`Error: ${result.error}`);
-    process.exit(1);
-  }
-}
-
-function handleListQuery(outputFormat) {
-  const result = listExecutions(getExecutionStore(), outputFormat);
-  if (result.success) {
-    console.log(result.output);
-  } else {
-    console.error(`Error: ${result.error}`);
-    process.exit(1);
-  }
-}
-
-function handleUploadLogQuery(identifier) {
-  const result = uploadExecutionLog(getExecutionStore(), identifier);
-  if (result.success) {
-    return result.exitCode || 0;
-  }
-
-  console.error(`Error: ${result.error}`);
-  return result.exitCode || 1;
-}
-
-function handleControlQuery(identifier, action) {
-  const result = controlExecution(getExecutionStore(), identifier, action);
-  if (result.success) {
-    console.log(result.output);
-  } else {
-    console.error(`Error: ${result.error}`);
-    process.exit(1);
-  }
-}
-
-/**
- * Handle --cleanup flag
- * Cleans up stale "executing" records (processes that crashed or were killed)
- * @param {boolean} dryRun - If true, just report what would be cleaned
- */
-function handleCleanup(dryRun) {
-  const store = getExecutionStore();
-  if (!store) {
-    console.error('Error: Execution tracking is disabled.');
-    process.exit(1);
-  }
-
-  const result = store.cleanupStale({ dryRun });
-
-  if (result.errors.length > 0) {
-    for (const error of result.errors) {
-      console.error(`Error: ${error}`);
-    }
-  }
-
-  if (result.records.length === 0) {
-    console.log('No stale records found.');
-    return;
-  }
-
-  if (dryRun) {
-    console.log(
-      `Found ${result.records.length} stale record(s) that would be cleaned up:\n`
-    );
-  } else {
-    console.log(`Cleaned up ${result.cleaned} stale record(s):\n`);
-  }
-
-  for (const record of result.records) {
-    const startTime = new Date(record.startTime).toLocaleString();
-    console.log(`  UUID: ${record.uuid}`);
-    console.log(`  Command: ${record.command}`);
-    console.log(`  Started: ${startTime}`);
-    console.log(`  PID: ${record.pid || 'N/A'}`);
-    console.log('');
-  }
-
-  if (dryRun) {
-    console.log('Run with --cleanup to actually clean up these records.');
-  }
-}
 
 /**
  * Run command in isolation mode

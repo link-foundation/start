@@ -859,7 +859,7 @@ describe('output-format option', () => {
   it('should throw error for output-format without status', () => {
     assert.throws(() => {
       parseArgs(['--output-format', 'json', '--', 'npm', 'test']);
-    }, /--output-format option is only valid with --status or --list/);
+    }, /--output-format option is only valid with --status, --list, --resume, or --resume-all/);
   });
 
   it('should accept all valid output formats', () => {

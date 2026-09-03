@@ -735,7 +735,7 @@ fn test_query_and_control_modes_are_mutually_exclusive() {
         .collect();
     let error = parse_args(&args).unwrap_err();
     assert!(error.contains(
-        "Cannot combine --status, --list, --upload-log, --stop, --terminate, or --cleanup"
+        "Cannot combine --status, --list, --upload-log, --stop, --terminate, --attach, --resume, --resume-all, or --cleanup"
     ));
 }
 
@@ -747,7 +747,7 @@ fn test_upload_log_and_control_modes_are_mutually_exclusive() {
         .collect();
     let error = parse_args(&args).unwrap_err();
     assert!(error.contains(
-        "Cannot combine --status, --list, --upload-log, --stop, --terminate, or --cleanup"
+        "Cannot combine --status, --list, --upload-log, --stop, --terminate, --attach, --resume, --resume-all, or --cleanup"
     ));
 }
 

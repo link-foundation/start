@@ -1,0 +1,5 @@
+Found 1 changeset file(s)
+Validating changeset: js/.changeset/issue-162.md
+✅ Changeset validation passed
+   Type: minor
+   Description: Add `--attach`, `--resume`, `--resume-all` and `--list --running` so a detached isolated session can be re-entered, continued, or repaired after a supervisor restart, and surface an `exitReason` hint when a log shows memory exhaustion.

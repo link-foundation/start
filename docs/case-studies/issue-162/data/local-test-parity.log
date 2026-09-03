@@ -1,0 +1,7 @@
+JavaScript test cases (it() calls): 780
+Rust test cases (#[test] macros): 827
+
+Test count ratio (Rust/JS): 106.0%
+Required minimum: 90%
+
+✅ PASS: Rust test count (827) is within acceptable range of JS count (780).

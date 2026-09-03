@@ -1,6 +1,6 @@
 /** Print usage information */
 function printUsage() {
-  console.log(`Usage: $ [options] [--] <command> | $ --status <uuid> [--output-format <fmt>] | $ --list [--output-format <fmt>] | $ --upload-log <id> | $ --stop <id> | $ --terminate <id>
+  console.log(`Usage: $ [options] [--] <command> | $ --status <uuid> [--output-format <fmt>] | $ --list [--running] [--output-format <fmt>] | $ --upload-log <id> | $ --stop <id> | $ --terminate <id> | $ --attach <id> [--read-only] | $ --resume <id> [-- <command>] | $ --resume-all
 
 Options:
   --isolated, --isolation, -i <env>  Run in isolated environment (screen, tmux, docker, ssh)
@@ -28,9 +28,15 @@ Options:
   --use-command-stream  Use command-stream library for execution (experimental)
   --status <id>         Show status of execution by UUID or session name (--output-format: links-notation|json|text)
   --list                List all tracked executions (--output-format: links-notation|json|text)
+  --running             With --list, only report executions that are still running
   --upload-log <id>     Upload the stored log for an execution UUID or session name
   --stop <id>           Ask a detached isolated execution to stop gracefully
   --terminate <id>      Terminate a detached isolated execution immediately
+  --attach <id>         Attach to a running detached isolated execution
+  --read-only           With --attach, follow output without sending input
+  --resume <id>         Restart a stopped detached execution in the same environment
+                        (append -- <command> to run a different command there)
+  --resume-all          Re-attach or reconcile every execution still marked running
   --cleanup             Clean up stale "executing" records (crashed/killed processes)
   --cleanup-dry-run     Show stale records that would be cleaned up (without cleaning)
   --version, -v         Show version information
@@ -54,6 +60,12 @@ Examples:
   $ --upload-log my-screen-session         # Upload stored execution log
   $ --stop my-screen-session               # Ask detached execution to stop gracefully
   $ --terminate my-screen-session          # Terminate detached execution immediately
+  $ --list --running                       # Only executions that are still running
+  $ --attach my-docker-session             # Re-enter a running detached session
+  $ --attach my-docker-session --read-only # Follow its output without stdin
+  $ --resume my-docker-session             # Restart the stored command in the same container
+  $ --resume my-docker-session -- bash     # Run a different command in the same container
+  $ --resume-all                           # Re-attach every still-running execution
   $ --use-command-stream echo "Hello"      # Use command-stream library`);
   console.log('');
   console.log('Piping with $:');

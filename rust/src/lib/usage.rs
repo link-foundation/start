@@ -4,10 +4,13 @@ pub fn print_usage() {
         r#"Usage: start [options] [--] <command> [args...]
        start <command> [args...]
        start --status <uuid> [--output-format <format>]
-       start --list [--output-format <format>]
+       start --list [--running] [--output-format <format>]
        start --upload-log <uuid-or-session-name>
        start --stop <uuid-or-session-name>
        start --terminate <uuid-or-session-name>
+       start --attach <uuid-or-session-name> [--read-only]
+       start --resume <uuid-or-session-name> [-- <command>]
+       start --resume-all [--output-format <format>]
 
 Options:
   --isolated, --isolation, -i <env>  Run in isolated environment (screen, tmux, docker, ssh)
@@ -35,9 +38,15 @@ Options:
   --use-command-stream  Use command-stream library for execution (experimental)
   --status <id>         Show status of execution by UUID or session name (--output-format: links-notation|json|text)
   --list                List all tracked executions (--output-format: links-notation|json|text)
+  --running             With --list, only report executions that are still running
   --upload-log <id>     Upload the stored log for an execution UUID or session name
   --stop <id>           Ask a detached isolated execution to stop gracefully
   --terminate <id>      Terminate a detached isolated execution immediately
+  --attach <id>         Attach to a running detached isolated execution
+  --read-only           With --attach, follow output without sending input
+  --resume <id>         Restart a stopped detached execution in the same environment
+                        (append -- <command> to run a different command there)
+  --resume-all          Re-attach or reconcile every execution still marked running
   --cleanup             Clean up stale "executing" records (crashed/killed processes)
   --cleanup-dry-run     Show stale records that would be cleaned up (without cleaning)
   --version, -v         Show version information
@@ -59,9 +68,15 @@ Examples:
   start --status a1b2c3d4 --output-format json
   start --list
   start --list --output-format json
+  start --list --running
   start --upload-log my-screen-session
   start --stop my-screen-session
   start --terminate my-screen-session
+  start --attach my-docker-session
+  start --attach my-docker-session --read-only
+  start --resume my-docker-session
+  start --resume my-docker-session -- bash
+  start --resume-all
   start --cleanup-dry-run
   start --cleanup
 

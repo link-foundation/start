@@ -56,7 +56,9 @@ function shouldCleanupDockerContainer(policy, exitCode, oomKilled = false) {
 function getDockerContainerCleanupInstructions(containerName) {
   return [
     `Container kept for investigation: ${containerName}`,
-    `Inspect: docker exec -it ${containerName} sh (if running) or docker start -ai ${containerName}`,
+    `Re-enter while running: $ --attach ${containerName}`,
+    `Continue the stored command: $ --resume ${containerName}`,
+    `Run another command in the same container: $ --resume ${containerName} -- <command>`,
     `Remove when done: docker rm -f ${containerName}`,
   ].join('\n');
 }
@@ -146,10 +148,12 @@ function buildDockerKeptLogSnippet(containerName, quotedLogPath) {
   const quotedName = shellQuote(containerName);
   return (
     `printf '\\nContainer kept for investigation: %s\\nReason: exitCode=%s oomKilled=%s\\n` +
-    `Inspect: docker exec -it %s sh (if running) or docker start -ai %s\\n` +
+    `Re-enter while running: $ --attach %s\\n` +
+    `Continue the stored command: $ --resume %s\\n` +
+    `Run another command in the same container: $ --resume %s -- <command>\\n` +
     `Remove when done: docker rm -f %s\\n' ` +
     `${quotedName} "$__start_command_exit" "$__start_command_oom" ` +
-    `${quotedName} ${quotedName} ${quotedName} >> ${quotedLogPath}`
+    `${quotedName} ${quotedName} ${quotedName} ${quotedName} >> ${quotedLogPath}`
   );
 }
 

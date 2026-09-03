@@ -95,8 +95,8 @@ pub(crate) fn should_cleanup_docker_container(
 
 pub(crate) fn docker_container_cleanup_instructions(container_name: &str) -> String {
     format!(
-        "Container kept for investigation: {}\nInspect: docker exec -it {} sh (if running) or docker start -ai {}\nRemove when done: docker rm -f {}",
-        container_name, container_name, container_name, container_name
+        "Container kept for investigation: {}\nRe-enter while running: $ --attach {}\nContinue the stored command: $ --resume {}\nRun another command in the same container: $ --resume {} -- <command>\nRemove when done: docker rm -f {}",
+        container_name, container_name, container_name, container_name, container_name
     )
 }
 
@@ -236,8 +236,8 @@ pub(crate) fn remove_docker_container(container_name: &str, log_path: Option<&Pa
 fn build_docker_kept_log_snippet(container_name: &str, quoted_log_path: &str) -> String {
     let quoted_name = shell_quote(container_name);
     format!(
-        "printf '\\nContainer kept for investigation: %s\\nReason: exitCode=%s oomKilled=%s\\nInspect: docker exec -it %s sh (if running) or docker start -ai %s\\nRemove when done: docker rm -f %s\\n' {} \"$__start_command_exit\" \"$__start_command_oom\" {} {} {} >> {}",
-        quoted_name, quoted_name, quoted_name, quoted_name, quoted_log_path
+        "printf '\\nContainer kept for investigation: %s\\nReason: exitCode=%s oomKilled=%s\\nRe-enter while running: $ --attach %s\\nContinue the stored command: $ --resume %s\\nRun another command in the same container: $ --resume %s -- <command>\\nRemove when done: docker rm -f %s\\n' {} \"$__start_command_exit\" \"$__start_command_oom\" {} {} {} {} >> {}",
+        quoted_name, quoted_name, quoted_name, quoted_name, quoted_name, quoted_log_path
     )
 }
 
