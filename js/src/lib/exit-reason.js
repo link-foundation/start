@@ -43,9 +43,13 @@ const EXIT_REASON_MARKERS = [
       /Out of memory: Kill(?:ed)? process|oom-kill(?:er)?[: ]|Killed process \d+/i,
   },
   {
+    reason: 'memory-exhaustion (go-runtime)',
+    pattern: /fatal error: runtime: out of memory/i,
+  },
+  {
     reason: 'memory-exhaustion (allocation-failure)',
     pattern:
-      /std::bad_alloc|Cannot allocate memory|memory allocation of \d+ bytes failed|Allocation failed - process out of memory/i,
+      /std::bad_alloc|Cannot allocate memory|memory allocation of \d+ bytes failed|Allocation failed - process out of memory|Array buffer allocation failed/i,
   },
 ];
 

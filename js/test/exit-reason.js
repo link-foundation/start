@@ -46,6 +46,17 @@ describe('detectExitReason', () => {
     );
   });
 
+  it('should detect other runtimes reporting their own exhaustion', () => {
+    assert.strictEqual(
+      detectExitReason('fatal error: runtime: out of memory'),
+      'memory-exhaustion (go-runtime)'
+    );
+    assert.strictEqual(
+      detectExitReason('Array buffer allocation failed'),
+      'memory-exhaustion (allocation-failure)'
+    );
+  });
+
   it('should detect the kernel OOM killer marker', () => {
     assert.strictEqual(
       detectExitReason('Out of memory: Killed process 4242 (bun)\n'),

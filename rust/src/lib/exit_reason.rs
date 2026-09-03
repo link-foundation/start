@@ -18,7 +18,7 @@
 use regex::Regex;
 
 /// Fatal markers, most specific first. The first matching entry wins.
-const EXIT_REASON_MARKERS: [(&str, &str); 4] = [
+const EXIT_REASON_MARKERS: [(&str, &str); 5] = [
     (
         "memory-exhaustion (v8-heap-limit)",
         r"(?i)FATAL ERROR:[^\r\n]*(?:Reached heap limit|JavaScript heap out of memory)",
@@ -32,8 +32,12 @@ const EXIT_REASON_MARKERS: [(&str, &str); 4] = [
         r"(?i)Out of memory: Kill(?:ed)? process|oom-kill(?:er)?[: ]|Killed process \d+",
     ),
     (
+        "memory-exhaustion (go-runtime)",
+        r"(?i)fatal error: runtime: out of memory",
+    ),
+    (
         "memory-exhaustion (allocation-failure)",
-        r"(?i)std::bad_alloc|Cannot allocate memory|memory allocation of \d+ bytes failed|Allocation failed - process out of memory",
+        r"(?i)std::bad_alloc|Cannot allocate memory|memory allocation of \d+ bytes failed|Allocation failed - process out of memory|Array buffer allocation failed",
     ),
 ];
 
@@ -204,6 +208,18 @@ mod tests {
         assert_eq!(
             detect_exit_reason(Some("Out of memory: Killed process 1234 (bun)")),
             Some("memory-exhaustion (kernel-oom-killer)".to_string())
+        );
+    }
+
+    #[test]
+    fn detects_other_runtimes_reporting_their_own_exhaustion() {
+        assert_eq!(
+            detect_exit_reason(Some("fatal error: runtime: out of memory")),
+            Some("memory-exhaustion (go-runtime)".to_string())
+        );
+        assert_eq!(
+            detect_exit_reason(Some("Array buffer allocation failed")),
+            Some("memory-exhaustion (allocation-failure)".to_string())
         );
     }
 
