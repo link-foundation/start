@@ -1,0 +1,273 @@
+# Issue #168 — deep analysis
+
+**Issue:** [link-foundation/start#168](https://github.com/link-foundation/start/issues/168) —
+"Check for all false positives, false negatives, warnings and errors in CI/CD and fix them all"
+**Pull request:** [#169](https://github.com/link-foundation/start/pull/169)
+**Broken commit under investigation:** `23dd3ed3fa27d4723e16ba4e1aa5428d028882d3` on `main`
+
+All evidence referenced below lives in this folder:
+
+| Path | Contents |
+| --- | --- |
+| `ci-logs/rust-33746569750.log` | full log of the failing Rust CI/CD run (9740 lines) |
+| `ci-logs/js-33746569769.log` | full log of the failing JavaScript CI/CD run (8963 lines) |
+| `ci-logs/js-release.log`, `ci-logs/rust-auto-release.log` | isolated logs of the two failing jobs |
+| `ci-logs/run-337346808*.log`, `ci-logs/run-337408153*.log` | the two earlier failing pushes of the same day |
+| `ci-logs/security-33746569727.log`, `ci-logs/links-33746569561.log` | the two *green* runs of the same commit |
+| `ci-logs/*-jobs.json` | per-job status/timing for the two failing runs |
+| `runs-main.json` | every workflow run recorded on `main` |
+| `CI-CD-BEST-PRACTICES.md` | snapshot of the hive-mind best-practices document the issue links to |
+| `templates/{js,rust,python}/.github/**` | snapshot of the three CI/CD templates |
+| `analysis/actionlint-{before,after}.txt` | workflow lint output before/after this PR |
+| `analysis/zizmor-{before,after}.txt` | workflow security audit before/after this PR |
+
+---
+
+## 1. Timeline of events
+
+Reconstructed from `runs-main.json` and the job logs.
+
+| When (UTC) | Commit | Event |
+| --- | --- | --- |
+| 2026-08-10 17:40:12 | `267760ff` | **Last fully green `main`.** JavaScript CI/CD `31415173827`, Rust CI/CD `31415173970`, Security `31415173837`, Links `31415173894` — all `success`. |
+| 2026-08-17 … 08-31 | `013a4c84` | Only the weekly scheduled Security runs execute (`32004480345`, `32700414043`, `33396873879`) — all green. No push to `main`, so the release jobs never run. |
+| 2026-09-02 ~08:30 | — | `use-m` **8.15.1** is published to npm. Every release script resolves `use-m` at run time from `https://unpkg.com/use-m/use.js`, i.e. *unpinned*, so this version is picked up on the next CI run without any repository change. |
+| 2026-09-03 08:41:05 | `7cadb78f` | First push after the gap. JavaScript CI/CD `33734680882` **fails**, Rust CI/CD `33734680890` **fails**. Security and Links stay green. |
+| 2026-09-03 09:47:45 | `4efbc780` | Same two failures (`33740815350`, `33740815303`). |
+| 2026-09-03 10:51:43 | `23dd3ed3` | Same two failures (`33746569769`, `33746569750`) — the runs quoted in the issue. |
+
+The failure is therefore **not** caused by any commit in the repository: the tree
+that failed on 2026-09-03 differs from the tree that passed on 2026-08-10 only in
+documentation and Rust refactoring, and the *same* commit passes the Security and
+Broken Link Checker workflows. The change came from outside the repository.
+
+### The exact failure
+
+`ci-logs/js-33746569769.log:8725`:
+
+```
+Release  2026-09-03T10:53:26.4160871Z Error updating npm: $ is not a function
+Release  2026-09-03T10:53:26.4235695Z ##[error]Process completed with exit code 1.
+```
+
+`ci-logs/rust-33746569750.log:9490`:
+
+```
+Auto Release  2026-09-03T10:55:06.6614698Z Error: $ is not a function
+```
+
+Both are the *first* `$`` `` template literal executed by the release scripts
+(`scripts/setup-npm.mjs` for JS, `scripts/version-and-commit.mjs` for Rust).
+
+---
+
+## 2. Root causes
+
+### RC-1 — `use-m` returns a raw CJS namespace on Node ≥ 22.12 (the run-breaking bug)
+
+Every release script used this pattern:
+
+```js
+const { use } = eval(await (await fetch('https://unpkg.com/use-m/use.js')).text());
+const { $ } = await use('command-stream');   // <- $ is undefined on Node 24
+```
+
+`use-m`'s `baseUse` unwraps the CommonJS default export **only when the
+`import()` namespace has exactly one key, `default`**. Node 22.12 changed
+`cjs-module-lexer` handling: when a CommonJS module's exports cannot be
+statically analysed, Node adds a synthetic `'module.exports'` named export
+alongside `default`. `command-stream`'s `src/$.cjs` assigns its exports
+dynamically, so on Node ≥ 22.12 the namespace is
+`[Module] { default, 'module.exports' }`, `use-m` skips the unwrap, and
+`const { $ } = …` destructures `undefined`.
+
+Reproduced locally, `experiments/issue-168-use-m-cjs-interop.mjs`:
+
+```
+Node v20.20.2 -> keys: [ 'default' ]                       typeof loaded.$ : function
+Node v24.19.0 -> keys: [ 'default', 'module.exports' ]     typeof loaded.$ : undefined
+                                                            typeof resolved.$ : function
+                                                            command output  : issue-168-ok
+```
+
+The release jobs run on Node `24.x`; the last green run predates the `use-m`
+release that made the namespace shape observable. This is a genuine **error**,
+and it is also a **false negative** of the test suite: nothing exercised the
+release scripts' module loading, so CI only discovered the breakage on `main`,
+after merge, in a job that pushes tags.
+
+### RC-2 — the workflows themselves were never linted (false negatives)
+
+There was no workflow-lint job at all. Running the standard tools for the first
+time (`analysis/*-before.txt`):
+
+* **actionlint 1.7.7** — 2 errors: `github.head_ref` interpolated directly into
+  `run:` blocks (`js.yml:146`, `js.yml:202`) — template injection.
+* **zizmor 1.30.0** — **27 high-confidence/high-severity findings**:
+  9 × `template-injection`, unpinned third-party actions
+  (`dtolnay/rust-toolchain@stable`, `oven-sh/setup-bun`,
+  `peter-evans/create-pull-request@v7`), and `artipacked` — 24 checkouts that
+  persisted the `GITHUB_TOKEN` in `.git/config` although the job only reads.
+
+### RC-3 — dependency graphs were never audited (false negatives)
+
+The Security workflow ran CodeQL, dependency-review and secret scanning but
+never `cargo audit` or `npm audit`. Two **high-severity** advisories were sitting
+undetected in `js/package-lock.json`. `cargo audit` on `rust/Cargo.lock` is
+clean (71 crates, 1239 advisories loaded).
+
+### RC-4 — `scripts/` was excluded from ESLint and Prettier (false negative)
+
+`js/eslint.config.mjs` has `js/` as its ESLint base path, and CI ran `eslint .`
+with `working-directory: js`. ESLint 9+ refuses to lint files outside the config
+base path, so **the entire repository-level `scripts/` directory — the release
+automation, i.e. exactly the code that broke — was silently skipped.** Linting it
+for the first time produced 615 issues, three of them real defects:
+
+| File | Defect |
+| --- | --- |
+| `scripts/check-web-archive.mjs:92` | `AbortController is not defined` |
+| `scripts/publish-to-crates.mjs:139` | `setTimeout is not defined` |
+| `scripts/verify-release-badge.mjs:74` | `Unnecessary escape character: \!` in a regex |
+
+### RC-5 — unpinned remote code execution (systemic risk, not yet a failure)
+
+`eval(await (await fetch('https://unpkg.com/use-m/use.js')).text())` executes
+whatever unpkg serves at that moment, on a runner that holds `contents: write`
+and npm/crates publishing credentials. RC-1 is the benign manifestation of this;
+the malicious one is a supply-chain compromise of the `use-m` npm package.
+Out of scope for this PR (the pattern comes from the upstream templates), but
+recorded here as the highest-value follow-up: see §5.
+
+---
+
+## 3. Requirements extracted from the issue
+
+| # | Requirement (verbatim intent) | Status |
+| --- | --- | --- |
+| **R1** | Fix the failing Rust CI/CD run `33746569750` | ✅ RC-1 fixed |
+| **R2** | Fix the failing JavaScript CI/CD run `33746569769` | ✅ RC-1 fixed |
+| **R3** | Find **all** false positives in CI/CD | ✅ none found — see §4 |
+| **R4** | Find **all** false negatives in CI/CD | ✅ RC-2, RC-3, RC-4 |
+| **R5** | Find and fix **all** warnings and errors | ✅ actionlint 0, zizmor 0, eslint/prettier 0, audits 0 |
+| **R6** | Compare the **full file tree** with the three templates and reuse every best practice | ✅ see §4 |
+| **R7** | Report the same issue upstream in the templates when found there | ✅ see §5 |
+| **R8** | Follow `link-assistant/hive-mind` `docs/CI-CD-BEST-PRACTICES.md` | ✅ see §4 |
+| **R9** | Do everything in the single PR #169 | ✅ |
+| **R10** | Add debug output / verbose mode, default off, when data is insufficient | ✅ `scripts/load-command-stream.mjs` uses the existing `START_DEBUG` gate |
+| **R11** | Apply each fix in *every* place it occurs, not just the first | ✅ all 8 affected scripts, all 5 workflows |
+
+---
+
+## 4. What was changed, per requirement
+
+### R1/R2 — `scripts/load-command-stream.mjs`
+
+A single shared loader replaces the fragile destructuring in **all eight**
+scripts that used it (`setup-npm`, `version-and-commit`, `create-manual-changeset`,
+`instant-version-bump`, `publish-to-npm`, `format-github-release`,
+`changeset-version`, `format-release-notes`):
+
+```js
+const { $ } = await loadCommandStream(use);
+```
+
+`resolveNamedExport()` tries, in order, `loaded`, `loaded.default`,
+`loaded['module.exports']` and `loaded.default.default`, returning the first
+candidate that carries a callable member. If none does it throws an *actionable*
+error naming the keys actually observed, instead of the opaque
+`$ is not a function`. Debug output is gated behind the repository's existing
+`START_DEBUG` / `RUNNER_DEBUG` / `ACTIONS_STEP_DEBUG` convention
+(`scripts/debug-print.mjs`) and is **off by default** (R10).
+
+Regression coverage: `js/test/load-command-stream.mjs`, 8 tests, including the
+Node-24 namespace shape that caused the outage and the error-message contract.
+
+### R3 — false positives
+
+None were found. Two candidates were examined and **deliberately left alone**:
+
+* `pipeline-status` uses `if: always()`, not `if: !cancelled()`. Changing it to
+  `!cancelled()` looks like a cleanup but would *hide* failures: a job killed by
+  `timeout-minutes` is reported as `cancelled`, and the gate must still fail the
+  run. The repository's own invariant tests
+  (`js/test/ci-workflow-invariants.js`, `rust/tests/ci_workflow_invariants.rs`)
+  encode this on purpose; an attempted change was reverted.
+* `npm audit` fails locally with `ENOLOCK` when `node_modules` was installed by
+  bun. Verified in a clean copy (`/tmp/auditcheck`) that this is a local-only
+  artefact — the CI job runs on a fresh checkout with no install — so the job is
+  correct.
+
+### R4/R5 — new gates
+
+* **`.github/workflows/workflows.yml`** (from the templates): `actionlint`
+  (`docker://rhysd/actionlint:1.7.7`) + `zizmor`
+  (`zizmorcore/zizmor-action@v0.6.2`), both feeding a `pipeline-status` gate.
+* **`.github/zizmor.yml`**: `hash-pin` blanket policy with `ref-pin` for the
+  trusted first-party namespaces.
+* **`.github/actionlint.yaml`**: declares the `macos-15-intel` /
+  `windows-11-arm` runner labels.
+* 9 template-injection sites moved to `env:` variables (5 in `js.yml`,
+  4 in `rust.yml`).
+* Third-party actions hash-pinned: 6 × `oven-sh/setup-bun`,
+  `peter-evans/create-pull-request` v7 → v8.1.1,
+  6 × `dtolnay/rust-toolchain` (note: the pin targets the `stable` *branch*
+  head, so `toolchain: stable` must be restated explicitly — the branch was
+  what supplied that default).
+* `persist-credentials: false` on all 24 read-only checkouts; the writer
+  checkouts keep credentials and carry a comment explaining why.
+* **`cargo-audit`** and **`npm-audit`** jobs added to `security.yml`.
+* Root `eslint.config.mjs` / `.prettierrc` / `.prettierignore` re-export the
+  `js/` rules with the repository as base path, plus `lint:scripts` and
+  `format:check:scripts` npm scripts wired into `bun run check` and into the
+  `js.yml` lint job — closing RC-4.
+
+**Result:** `analysis/actionlint-after.txt` is empty (exit 0);
+`analysis/zizmor-after.txt` ends with `No findings to report. Good job!`;
+`bun run check` and the full test suite pass; `cargo audit` and
+`npm audit --audit-level=high` report zero vulnerabilities.
+
+### R6/R8 — template and best-practice comparison
+
+Full trees of the three templates are snapshotted under `templates/`. Practices
+adopted here that the repository was missing: the `workflows.yml` lint workflow,
+`.github/zizmor.yml`, `.github/actionlint.yaml`, hash-pinning,
+`persist-credentials: false`, and the dependency-audit jobs. Practices the
+repository already had, matching the hive-mind document: per-job `concurrency`
+(cancellable `check-*` groups vs a non-cancellable
+`main-writer-${{ github.repository }}-main` group for the writers), explicit
+`permissions:` on every job, `timeout-minutes` on every job, and the
+`pipeline-status` aggregate gate.
+
+Gaps in the **templates** relative to this repository (worth upstreaming the
+other way): the templates have no JS↔Rust test-count parity gate, no
+`check-file-size` gate, and no structural workflow-invariant tests.
+
+---
+
+## 5. Upstream reports (R7)
+
+| Project | Problem | Report contains |
+| --- | --- | --- |
+| `link-foundation/use-m` | `baseUse` only unwraps a CJS default when the namespace has exactly `['default']`; Node ≥ 22.12 adds `'module.exports'`, so `await use('command-stream')` returns the raw namespace | reproducible script, the Node 20 vs 24 output above, workaround (`resolveNamedExport`), suggested fix: treat `'module.exports'` as the default and/or unwrap whenever the namespace has no other named exports besides `default`/`module.exports` |
+| `link-foundation/js-ai-driven-development-pipeline-template` | ships the same `const { $ } = await use('command-stream')` pattern in its release scripts — will break identically on Node 24 | same reproduction; suggested fix: vendor a `load-command-stream.mjs` equivalent |
+| `link-foundation/rust-ai-driven-development-pipeline-template` | no zizmor job/config; `dtolnay/rust-toolchain@stable` unpinned | zizmor output; suggested fix: copy `workflows.yml` + `.github/zizmor.yml` from the JS template and hash-pin, restating `toolchain: stable` |
+
+The Rust and Python templates do not use `command-stream`, so RC-1 does not
+affect them.
+
+## 6. Existing components/libraries surveyed
+
+* **actionlint** (`rhysd/actionlint`) — adopted; the de-facto workflow linter,
+  bundles shellcheck/pyflakes for `run:` blocks.
+* **zizmor** (`zizmorcore/zizmor`) — adopted; static security audit for
+  workflows (template injection, credential persistence, unpinned actions).
+* **`cargo-audit`** (RustSec) and **`npm audit`** — adopted for dependency
+  advisories; `cargo-deny` was considered but overlaps `cargo audit` and adds
+  license policy this repository does not need.
+* **`pinact` / `ratchet`** — action hash-pinning automation. Not adopted: with
+  five workflows the pins are maintainable by hand, and zizmor already fails the
+  build if one regresses.
+* **`esm-cjs` interop helpers** — no maintained library does exactly what
+  `resolveNamedExport` does (probing the Node ≥ 22.12 `'module.exports'` key);
+  the ~30-line local helper with a test suite is the smaller dependency.
