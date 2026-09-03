@@ -90,7 +90,8 @@ describe('resolveExitReason', () => {
   it('should prefer the log marker over the signal fallback', () => {
     const reason = resolveExitReason({
       exitCode: 139,
-      logTail: 'FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory',
+      logTail:
+        'FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory',
       oomKilled: false,
     });
     assert.strictEqual(reason, 'memory-exhaustion (v8-heap-limit)');

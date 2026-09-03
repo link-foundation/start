@@ -487,7 +487,8 @@ class ExecutionStore {
 
   /**
    * Get an execution record by UUID or session name
-   * First tries exact UUID match, then falls back to session name lookup
+   * First tries exact UUID match, then the current session name, then any
+   * session name the execution used before it was resumed
    * @param {string} identifier - UUID or session name
    * @returns {ExecutionRecord|null}
    */
@@ -502,7 +503,18 @@ class ExecutionStore {
     const bySessionName = records.find(
       (r) => r.options && r.options.sessionName === identifier
     );
-    return bySessionName || null;
+    if (bySessionName) {
+      return bySessionName;
+    }
+    // Finally, honor session names this record used before it was resumed, so
+    // one logical session stays addressable across restarts (issue #162).
+    const byPreviousSessionName = records.find(
+      (r) =>
+        r.options &&
+        Array.isArray(r.options.sessionNameHistory) &&
+        r.options.sessionNameHistory.includes(identifier)
+    );
+    return byPreviousSessionName || null;
   }
 
   /**

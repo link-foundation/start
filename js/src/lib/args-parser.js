@@ -70,11 +70,6 @@ const VALID_SHELLS = ['auto', 'bash', 'zsh', 'sh'];
  */
 const MAX_ISOLATION_DEPTH = 7;
 
-
-function hasValue(value) {
-  return value !== null && value !== undefined;
-}
-
 /**
  * UUID v4 regex pattern for validation
  */

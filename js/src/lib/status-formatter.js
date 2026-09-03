@@ -413,8 +413,7 @@ function attachExitReason(record, logTail) {
  * @returns {Object} Possibly updated execution record
  */
 function enrichDetachedStatus(record) {
-  const logTail =
-    record && record.logPath ? readLogTail(record.logPath) : null;
+  const logTail = record && record.logPath ? readLogTail(record.logPath) : null;
   return attachExitReason(resolveDetachedStatus(record, logTail), logTail);
 }
 
@@ -729,17 +728,25 @@ function queryStatus(store, identifier, outputFormat) {
  * Handle execution list query and output the result
  * @param {Object} store - ExecutionStore instance
  * @param {string|null} outputFormat - Output format (links-notation, json, text)
+ * @param {Object} [options] - List options
+ * @param {boolean} [options.running] - Only list executions that are still running
  * @returns {{success: boolean, output?: string, error?: string}}
  */
-function listExecutions(store, outputFormat) {
+function listExecutions(store, outputFormat, options = {}) {
   if (!store) {
     return { success: false, error: 'Execution tracking is disabled.' };
   }
 
   try {
-    const records = sortRecordsByStartTimeDesc(
+    const enriched = sortRecordsByStartTimeDesc(
       store.getAll().map(prepareRecordForList)
     );
+    // --running reports the reconciled status, not the stored one: a record
+    // whose session already died is listed as executed even if the store still
+    // says "executing" (issue #162).
+    const records = options.running
+      ? enriched.filter((record) => record.status === 'executing')
+      : enriched;
     return {
       success: true,
       output: formatRecordList(records, outputFormat || 'links-notation'),
