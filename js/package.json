@@ -17,7 +17,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check:file-size": "bun ../scripts/check-file-size.mjs",
-    "check": "bun run lint && bun run format:check && bun run check:file-size",
+    "lint:scripts": "cd .. && eslint .",
+    "format:check:scripts": "cd .. && prettier --check \"scripts/**/*.{js,mjs,cjs}\"",
+    "check": "bun run lint && bun run lint:scripts && bun run format:check && bun run format:check:scripts && bun run check:file-size",
     "prepare": "cd .. && husky .husky || true",
     "changeset": "changeset",
     "changeset:version": "bun ../scripts/changeset-version.mjs",
@@ -70,6 +72,8 @@
     "lino-objects-codec": "^0.4.0"
   },
   "overrides": {
-    "flatted": "^3.4.2"
+    "brace-expansion": "^5.0.9",
+    "flatted": "^3.4.2",
+    "js-yaml": "^4.3.2"
   }
 }
