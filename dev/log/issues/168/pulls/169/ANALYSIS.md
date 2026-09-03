@@ -372,16 +372,26 @@ The issue asks for *all* problems, not only the blocking ones, so the remaining
 Each fix is covered by a regression test that was **mutation-verified**: the
 test was run against the previous implementation and observed to fail.
 
-### 7.3 False positives — `rust/cleartext-logging` (9 alerts)
+### 7.3 `rust/cleartext-logging` (10 alerts: 5 fixed, 5 false positives)
 
 | Alerts | Location | Value |
 | --- | --- | --- |
 | #23, #25 | `rust/src/bin/main.rs:447,658` | `execution_record.uuid` |
 | #24, #28 | `rust/src/bin/main.rs:344,541` | generated isolation `username` |
 | #26 | `rust/src/lib/execution_store.rs:379` | `record.uuid` |
-| #18–#21 | `rust/tests/{user_manager,utils}.rs` | test fixtures printing the same two values |
+| #18–#21, #43 | `rust/tests/{user_manager,utils}.rs` | test assertions interpolating the same two values into their failure messages |
 
-These are **false positives**. The query treats a value derived from a random
+**#18–#21 and #43 are fixed.** Alert #43 (`rust/tests/user_manager.rs:92`,
+high severity) was raised on a line *this* pull request added, so unlike the
+rest of the backlog it gated the `CodeQL` check-run. A test assertion has no
+diagnostic need for the value: every one of these assertions is about the
+*shape* of the generated name or UUID — a prefix, a character class, a
+hyphen-separated part count — so the message now states the expectation and
+omits the value. The four pre-existing sibling alerts in the same two files
+were given the same treatment, per "if an issue exists in multiple places,
+apply it in all of them".
+
+The five remaining alerts, all in `src/`, are **false positives**. The query treats a value derived from a random
 source as credential-like, but a session UUID and an isolation username are the
 handles the user needs in order to `--attach`, `--resume` or `--status` a run;
 printing them is the feature. They are neither secret nor sensitive, and nothing

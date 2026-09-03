@@ -18,12 +18,10 @@ mod generate_uuid_tests {
         let id = generate_uuid();
         // UUID v4: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
         let parts: Vec<&str> = id.split('-').collect();
-        assert_eq!(
-            parts.len(),
-            5,
-            "UUID should have 5 hyphen-separated parts: {}",
-            id
-        );
+        // The identifier itself stays out of the failure message; CodeQL's
+        // rust/cleartext-logging flags an id reaching a panic sink, and the
+        // part count is what this assertion is about (issue #168).
+        assert_eq!(parts.len(), 5, "UUID should have 5 hyphen-separated parts");
         assert_eq!(parts[0].len(), 8);
         assert_eq!(parts[1].len(), 4);
         assert_eq!(parts[2].len(), 4);
@@ -41,7 +39,7 @@ mod generate_uuid_tests {
     #[test]
     fn should_pass_is_valid_uuid_check() {
         let id = generate_uuid();
-        assert!(is_valid_uuid(&id), "Generated UUID should be valid: {}", id);
+        assert!(is_valid_uuid(&id), "Generated UUID should be valid");
     }
 }
 
@@ -81,21 +79,13 @@ mod generate_session_name_tests {
     #[test]
     fn should_use_default_prefix_start() {
         let name = generate_session_name(None);
-        assert!(
-            name.starts_with("start-"),
-            "Should start with 'start-': {}",
-            name
-        );
+        assert!(name.starts_with("start-"), "Should start with 'start-'");
     }
 
     #[test]
     fn should_use_custom_prefix() {
         let name = generate_session_name(Some("myapp"));
-        assert!(
-            name.starts_with("myapp-"),
-            "Should start with 'myapp-': {}",
-            name
-        );
+        assert!(name.starts_with("myapp-"), "Should start with 'myapp-'");
     }
 
     #[test]
