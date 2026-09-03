@@ -6,6 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.20.0] - 2026-09-03
+
+Add `--attach`, `--resume`, `--resume-all` and `--list --running` so a detached isolated session can be re-entered, continued, or repaired after a supervisor restart, and surface an `exitReason` hint when a log shows memory exhaustion.
+
+Keep argument boundaries when rebuilding the command from `argv`: `start node -e "console.log('hi')"` and `start echo "a  b"` now reach the shell with their quoting intact instead of being re-split by the inner `bash -c`. A single argument still runs verbatim as a shell script, so `start 'ls | wc -l'` keeps working; in the multi-argument form a quoted operator such as `start echo a '&&' echo b` is now a literal word.
+
+Surface `memoryExhausted` and `memoryExhaustedReason` in `--status` when the log shows the runtime aborted on its own memory limit: a Node/V8 heap-limit abort dies below the container limit, so `oomKilled` stays `false` and the only evidence is the `FATAL ERROR` line the runtime printed. The log tail is now scanned with a 64 KiB window (V8 prints a long native stack trace after the marker), the observation covers attached sessions too, and the kept-container footer no longer asserts a bare `oomKilled=false` next to a fatal marker for exit codes 134/139.
+
+### Added
+
+- `tests/ci_workflow_invariants.rs`: six new invariants mirroring the JavaScript
+  suite - the workflows are linted and audited by a workflow of their own,
+  untrusted context is never interpolated into a `run:` block, read-only
+  checkouts do not persist credentials, third-party actions are pinned to a
+  commit hash, both dependency graphs are audited for advisories, and the
+  repository-level `scripts/` directory is linted.
+
+### Fixed
+
+- `user_manager`: isolation usernames are drawn from the operating system's
+  CSPRNG (`Uuid::new_v4`, with rejection sampling for a uniform base36 suffix)
+  instead of a time-seeded xorshift generator, which produced identical
+  suffixes for processes started in the same millisecond.
+- `failure_handler::create_issue` no longer escapes quotes and newlines before
+  handing the title and body to `gh`. No shell is involved, so the escaping
+  only put backslashes into the reported issue and flattened its newlines into
+  the two characters `\n`.
+- `failure_handler` no longer gates the npm `bugs.url` fallback on a
+  `contains("github.com")` substring test; `parse_git_url` anchors on the host
+  itself.
+- `scripts/check-file-size.mjs` now normalises paths to forward slashes before
+  matching its exclusion list and reporting violations, so the exclusions apply
+  on Windows as well as on Linux.
+- Tests no longer interpolate generated usernames, session names or UUIDs into
+  their assertion messages. CodeQL's `rust/cleartext-logging` treats such a
+  value reaching a panic (which the harness writes to its log) as a leak, and
+  each assertion is about the shape rather than the value.
+
 ## [0.19.2] - 2026-08-10
 
 Keep Docker multi-network regression coverage hermetic while verifying the default bridge route.
