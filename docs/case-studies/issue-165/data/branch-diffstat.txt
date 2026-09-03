@@ -1,0 +1,18 @@
+ .gitkeep                             |   3 +-
+ README.md                            |  19 ++-
+ experiments/issue-165-kept-footer.sh |  13 ++
+ js/src/lib/docker-cleanup.js         |  75 ++++++++-
+ js/src/lib/execution-store.js        |  21 +++
+ js/src/lib/exit-reason.js            | 124 +++++++++++++-
+ js/src/lib/isolation-log-utils.js    |  58 +++++++
+ js/src/lib/isolation.js              |  12 +-
+ js/src/lib/status-formatter.js       | 112 +++++++------
+ js/test/exit-reason.js               |  92 +++++++++++
+ js/test/regression-165.js            | 310 +++++++++++++++++++++++++++++++++++
+ rust/src/lib/docker_cleanup.rs       |  96 ++++++++++-
+ rust/src/lib/execution_store.rs      |   9 +
+ rust/src/lib/exit_reason.rs          | 173 ++++++++++++++++++-
+ rust/src/lib/isolation_log.rs        |  36 +++-
+ rust/src/lib/status_formatter.rs     |  63 +++----
+ rust/tests/regression_165.rs         | 195 ++++++++++++++++++++++
+ 17 files changed, 1297 insertions(+), 114 deletions(-)
