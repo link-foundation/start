@@ -168,15 +168,15 @@ recorded here as the highest-value follow-up: see §5.
 | --- | --- | --- |
 | **R1** | Fix the failing Rust CI/CD run `33746569750` | ✅ RC-1 fixed |
 | **R2** | Fix the failing JavaScript CI/CD run `33746569769` | ✅ RC-1 fixed |
-| **R3** | Find **all** false positives in CI/CD | ✅ none found — see §4 |
+| **R3** | Find **all** false positives in CI/CD | ✅ see §4 (workflows) and §7 (code scanning: 1 excluded path, 9 documented) |
 | **R4** | Find **all** false negatives in CI/CD | ✅ RC-2, RC-3, RC-4 |
-| **R5** | Find and fix **all** warnings and errors | ✅ actionlint 0, zizmor 0, eslint/prettier 0, audits 0 |
+| **R5** | Find and fix **all** warnings and errors | ✅ actionlint 0, zizmor 0, eslint/prettier 0, audits 0, code-scanning alerts §7 |
 | **R6** | Compare the **full file tree** with the three templates and reuse every best practice | ✅ see §4 |
 | **R7** | Report the same issue upstream in the templates when found there | ✅ see §5 |
 | **R8** | Follow `link-assistant/hive-mind` `docs/CI-CD-BEST-PRACTICES.md` | ✅ see §4 |
 | **R9** | Do everything in the single PR #169 | ✅ |
 | **R10** | Add debug output / verbose mode, default off, when data is insufficient | ✅ `scripts/load-command-stream.mjs` uses the existing `START_DEBUG` gate |
-| **R11** | Apply each fix in *every* place it occurs, not just the first | ✅ all 8 affected scripts, all 5 workflows |
+| **R11** | Apply each fix in *every* place it occurs, not just the first | ✅ all 8 affected scripts, all 5 workflows, and every code-scanning alert in **both** runtimes (§7) |
 
 ---
 
@@ -323,3 +323,75 @@ reproducible otherwise.
 * **`esm-cjs` interop helpers** — no maintained library does exactly what
   `resolveNamedExport` does (probing the Node ≥ 22.12 `'module.exports'` key);
   the ~30-line local helper with a test suite is the smaller dependency.
+
+---
+
+## 7. Code scanning (CodeQL) — every open alert
+
+The check the issue reports as failing is **`CodeQL`** — the aggregate
+`github-advanced-security` check-run, not the per-language workflow jobs (those
+were green throughout). That check-run fails a pull request when code-scanning
+reports a *new* alert in code the pull request changed, which is why it is
+invisible in the workflow logs under `ci-logs/`.
+
+Snapshot of the state before this work: `analysis/codeql-annotations.json` (the
+two alerts that failed the check), `analysis/codeql-alerts-branch.json`, and
+`analysis/codeql-alerts-all-open.{json,tsv}` (all 25 open alerts, so the backlog
+could be triaged rather than only the two blocking ones).
+
+### 7.1 The two alerts that failed the check
+
+| Alert | Rule | Location | Root cause | Fix |
+| --- | --- | --- | --- | --- |
+| — | `js/redos` | `dev/log/.../upstream/use-m-8.15.1-use.js` | `dev/log/` archives **third-party** evidence verbatim; the vendored `use-m` bundle contains a polynomial-backtracking regex. Editing archived evidence would destroy the evidence. | `.github/codeql/codeql-config.yml` with `paths-ignore: dev/log`, wired into `github/codeql-action/init@v4` via `config-file:`. This mirrors the boundary `eslint.config.mjs`, `.prettierignore` and `scripts/check-file-size.mjs` already draw. The finding belongs upstream, in `use-m`. |
+| — | `js/incomplete-url-substring-sanitization` | `scripts/format-release-notes.mjs` | `currentBody.includes('img.shields.io')` — a substring test that also matches `https://example.invalid/img.shields.io` or `?u=img.shields.io`. | `containsPackageVersionBadge()` in `scripts/release-name.mjs` parses every markdown image target with `new URL()` and compares `url.hostname` exactly. 5 unit tests, including the three look-alike URLs. |
+
+An invariant test in **both** runtimes
+(`js/test/ci-workflow-invariants.js`, `rust/tests/ci_workflow_invariants.rs`)
+asserts the `codeql` job still passes `config-file:` and that the file still
+excludes `dev/log`, so the exclusion cannot silently disappear.
+
+### 7.2 The pre-existing backlog
+
+The issue asks for *all* problems, not only the blocking ones, so the remaining
+23 open alerts were triaged. Every alert had a real defect behind it.
+
+| Alerts | Rule | Root cause | Fix |
+| --- | --- | --- | --- |
+| #2, #40 | `js/insecure-randomness` | `generateUUID()` fell back to `Math.random()`, and `generateIsolatedUsername()` built its suffix from `Math.random().toString(36)`. Isolation usernames and session ids are collision- and guess-sensitive. | `crypto.randomUUID` / `crypto.randomBytes(16)` (v4 bits set explicitly) and `crypto.randomInt(36)`. The Rust mirror had the **same defect as a false negative** — a time-seeded xorshift `simple_random()` that no CodeQL query flags — replaced by `Uuid::new_v4()` bytes with rejection sampling for a uniform base36 alphabet. |
+| #3, #4 | `js/shell-command-injection-from-environment` | `failure-handler` ran `which/where`, `npm view`, `npm root -g`, `gh …` and `gh-upload-log "$path"` through a shell with the failing command's own name interpolated into the string. | All spawned with `execFileSync(cmd, [argv…])`. |
+| #6, #7, #9 | `js/shell-command-constructed-from-input` | Sources feeding `execClink`. | Resolved with #8. |
+| #8 | `js/shell-command-constructed-from-input` | `execClink` built `clink '<query>' --db "<path>"`; the query embeds recorded command text, so a single quote in any recorded command escaped the quoting. | `execFileSync('clink', [query, '--db', this.linksDbPath])`, plus a regression test that drives the real code path through a fake `clink` on `PATH` and asserts on the recorded argv. |
+| #15, #16 | `js/incomplete-sanitization` | `createIssue` escaped only `"` before interpolating the title and body into a `gh issue create …` shell string. Two real bugs: a backtick or `$(…)` in the failing command was **executed**, and `body.replace(/\n/g,'\\n')` sent every newline to GitHub as the two characters `\n`. | `execFileSync('gh', ['issue','create',…])`. The Rust mirror never used a shell, so its identical escaping only corrupted the issue text — removed. |
+| #17 | `js/incomplete-sanitization` | `scripts/version-and-commit.mjs` escaped `"` into a command-stream template that already quotes interpolated values. | Escaping removed. |
+| #11 | `js/incomplete-url-substring-sanitization` | `bugsUrl.includes('github.com')` before `parseGitUrl`. | Dropped: `parseGitUrl` / `parse_git_url` anchor on the `github.com` host themselves. Applied in both runtimes. |
+| #12 | `js/incomplete-url-substring-sanitization` | A test asserted `message.includes('https://docs.docker.com/get-docker/')`. | Extract the URL and compare it whole — a strictly stronger assertion. |
+| #10 | `js/unnecessary-use-of-cat` | `execSync(\`cat ${logFile}\`)` in an experiment. | `fs.readFileSync`. |
+| #14 | `js/incomplete-sanitization` | An experiment escaped `"` without escaping `\\` first, so a trailing backslash escapes the quote it just added. | `.replace(/(["\\])/g, '\\$1')`. |
+
+Each fix is covered by a regression test that was **mutation-verified**: the
+test was run against the previous implementation and observed to fail.
+
+### 7.3 False positives — `rust/cleartext-logging` (9 alerts)
+
+| Alerts | Location | Value |
+| --- | --- | --- |
+| #23, #25 | `rust/src/bin/main.rs:447,658` | `execution_record.uuid` |
+| #24, #28 | `rust/src/bin/main.rs:344,541` | generated isolation `username` |
+| #26 | `rust/src/lib/execution_store.rs:379` | `record.uuid` |
+| #18–#21 | `rust/tests/{user_manager,utils}.rs` | test fixtures printing the same two values |
+
+These are **false positives**. The query treats a value derived from a random
+source as credential-like, but a session UUID and an isolation username are the
+handles the user needs in order to `--attach`, `--resume` or `--status` a run;
+printing them is the feature. They are neither secret nor sensitive, and nothing
+authenticates on them.
+
+They are *not* suppressed in code: renaming variables to dodge the query's
+heuristic would be gaming it, and excluding `rust/cleartext-logging` in
+`codeql-config.yml` would suppress the rule repository-wide, including future
+genuine findings. The correct mechanism is a per-alert **"Dismiss → False
+positive"** in the repository's Security tab, which is a change to repository
+state rather than to this pull request, and is left for a maintainer. None of
+these alerts gate the pull request: the `CodeQL` check-run only fails on alerts
+in code the pull request changed.
