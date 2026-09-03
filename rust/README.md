@@ -27,6 +27,9 @@ start ls -la
 start cargo test
 start git status
 start --list
+start --attach <id>
+start --resume <id> -- <command>
+start --resume-all
 ```
 
 See the project-wide [README](../README.md), [docs/USAGE.md](../docs/USAGE.md),

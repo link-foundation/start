@@ -153,6 +153,9 @@ $ --list
 # Machine-readable list output
 $ --list --output-format json
 
+# Only the executions that are still running
+$ --list --running
+
 # Upload the stored log for one execution
 $ --upload-log 29d6c026-b168-44a6-8a3f-c3919c7e5327
 
@@ -161,6 +164,21 @@ $ --stop 29d6c026-b168-44a6-8a3f-c3919c7e5327
 
 # Terminate a detached isolated execution immediately
 $ --terminate 29d6c026-b168-44a6-8a3f-c3919c7e5327
+
+# Re-enter a running detached session
+$ --attach my-docker-session
+
+# Follow its output without sending input
+$ --attach my-docker-session --read-only
+
+# Restart the stored command in the same environment
+$ --resume my-docker-session
+
+# Run a different command in the same container filesystem
+$ --resume my-docker-session -- bash
+
+# Re-attach or reconcile every execution still marked running
+$ --resume-all
 ```
 
 `--status` and `--list` default to Links Notation. Both also support
@@ -184,6 +202,64 @@ uploader is missing, and then streams the uploader output directly.
 session/container name. `--stop` asks the backend to stop gracefully (CTRL+C for
 screen/tmux, `docker stop` for Docker). `--terminate` uses the backend's
 immediate termination command.
+
+#### Re-entering, continuing and repairing sessions
+
+`--attach`, `--resume` and `--resume-all` accept the same identifiers as
+`--status`: an execution UUID or an isolation session name.
+
+`--attach <id>` re-enters a **running** detached session — `docker attach`,
+`screen -r`, or `tmux attach-session`. Add `--read-only` to follow the output
+without sending input (`docker logs -f`, `tmux attach-session -r`, or a log
+tail). If the session is already gone, `--attach` says so and points at
+`--resume` instead of leaving you with a `docker exec` command that cannot work
+on a stopped container.
+
+`--resume <id>` continues a **stopped** detached execution:
+
+| Session state                       | What happens                                                                                              |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Container exists, no new command     | `docker start` re-runs the stored command in the same container.                                          |
+| Container exists, new command given  | The container filesystem is committed to an image and a derived container runs the new command.            |
+| Session is gone                      | The command is launched again through the stored isolation options (same image, volumes, env, networks).   |
+
+`--resume <id> -- <command>` is the form downstream tools need: it runs a
+*different* command against the same container filesystem, instead of
+`docker start -ai`, which would re-run the original entrypoint from scratch.
+
+A resume keeps the original execution UUID, so `--status`, `--list` and
+`--upload-log` keep addressing one logical session across restarts. The previous
+session name is remembered in `sessionNameHistory` and still resolves to the
+same record.
+
+`--resume-all` repairs state after the supervisor host restarts, which kills the
+detached completion watcher while the container keeps running. Each execution
+still marked running is reported with one of four actions:
+
+| Action       | Meaning                                                                     |
+| ------------ | ----------------------------------------------------------------------------- |
+| `reattached` | A live Docker container got a fresh completion watcher.                      |
+| `running`    | A live screen/tmux session needs nothing; its logging is in-session.         |
+| `reconciled` | The session is gone, so the record was finalized from its exit code/footer.  |
+| `unknown`    | The backend cannot be probed locally (ssh); the record is left untouched.    |
+
+`--resume-all` never silently restarts work: continuing a command is always an
+explicit, per-session decision made with `--resume`. Use `--list --running` as
+the machine-readable set that drives it.
+
+#### Exit reason hints
+
+A bare `exitCode 139` with `oomKilled false` hides the real cause. When the
+stored log contains a fatal memory marker such as
+`FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory`,
+`--status` adds a hint:
+
+```
+Exit Reason:       memory-exhaustion (v8-heap-limit)
+```
+
+`exitReason` is only a hint. It never changes `status`, `exitCode` or
+`oomKilled`, which stay observations of what the backend actually reported.
 
 ### Exit Code Display
 

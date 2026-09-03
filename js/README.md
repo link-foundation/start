@@ -24,6 +24,9 @@ $ ls -la
 $ bun test
 $ git status
 $ --list
+$ --attach <id>
+$ --resume <id> -- <command>
+$ --resume-all
 ```
 
 See the project-wide [README](../README.md), [docs/USAGE.md](../docs/USAGE.md),

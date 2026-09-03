@@ -21,15 +21,27 @@ $ bun test
 $ git status
 $ --list
 $ --upload-log <id>
+$ --attach <id>
+$ --resume <id> -- <command>
+$ --resume-all
 ```
 
 Use `--status <id>` to inspect one stored execution, or `--list` to see all
-stored executions. Query output defaults to Links Notation and can be changed
+stored executions. Add `--running` to `--list` to keep only the executions that
+are still running. Query output defaults to Links Notation and can be changed
 with `--output-format json` or `--output-format text`.
 
 Use `--upload-log <id>` to look up a stored execution by UUID or session name
 and run `gh-upload-log` for its saved log file. If `gh-upload-log` is missing,
 the command attempts to install it first with Bun or npm.
+
+Use `--attach <id>` to re-enter a running detached isolated session, and
+`--attach <id> --read-only` to follow its output without sending input. Use
+`--resume <id>` to restart a stopped one in the same environment, or
+`--resume <id> -- <command>` to run a different command against the same
+container filesystem. `--resume-all` re-attaches or reconciles every execution
+still marked running, which is what repairs records after a supervisor restart.
+See [Execution Tracking](../README.md#execution-tracking) for the full behavior.
 
 For examples checked against the real JavaScript and Rust command output, see
 [EXAMPLES.md](EXAMPLES.md).
