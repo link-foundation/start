@@ -8,6 +8,8 @@ pub(crate) mod docker_cleanup;
 mod docker_network_lifecycle;
 pub mod execution_attach;
 pub mod execution_control;
+pub mod execution_resume;
+pub mod execution_resume_all;
 pub mod execution_store;
 pub mod exit_reason;
 pub mod failure_handler;

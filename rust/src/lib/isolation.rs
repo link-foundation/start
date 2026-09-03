@@ -19,7 +19,7 @@ use crate::docker_cleanup::{
 use crate::docker_network_lifecycle::{connect_and_start, create_and_connect};
 
 /// Result of an isolation run
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct IsolationResult {
     /// Whether the run succeeded
     pub success: bool,
