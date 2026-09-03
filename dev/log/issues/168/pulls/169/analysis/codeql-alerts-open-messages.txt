@@ -1,0 +1,88 @@
+#40 js/insecure-randomness js/src/bin/cli.js:230
+    This uses a cryptographically insecure random number generated at Math.random() in a security context.
+
+#28 rust/cleartext-logging rust/src/bin/main.rs:344
+    This operation writes username to a log file.
+This operation writes username to a log file.
+
+#26 rust/cleartext-logging rust/src/lib/execution_store.rs:379
+    This operation writes record.uuid to a log file.
+This operation writes record.uuid to a log file.
+This operation writes record.uuid to a log file.
+
+#25 rust/cleartext-logging rust/src/bin/main.rs:658
+    This operation writes execution_record.uuid to a log file.
+
+#24 rust/cleartext-logging rust/src/bin/main.rs:541
+    This operation writes username to a log file.
+This operation writes username to a log file.
+
+#23 rust/cleartext-logging rust/src/bin/main.rs:447
+    This operation writes execution_record.uuid to a log file.
+
+#21 rust/cleartext-logging rust/tests/utils.rs:24
+    This operation writes generate_uuid(...) to a log file.
+
+#20 rust/cleartext-logging rust/tests/utils.rs:44
+    This operation writes generate_uuid(...) to a log file.
+
+#19 rust/cleartext-logging rust/tests/user_manager.rs:64
+    This operation writes generate_isolated_username(...) to a log file.
+
+#18 rust/cleartext-logging rust/tests/user_manager.rs:44
+    This operation writes generate_isolated_username(...) to a log file.
+
+#17 js/incomplete-sanitization scripts/version-and-commit.mjs:468
+    This does not escape backslash characters in the input.
+
+#16 js/incomplete-sanitization js/src/lib/failure-handler.js:368
+    This does not escape backslash characters in the input.
+
+#15 js/incomplete-sanitization js/src/lib/failure-handler.js:368
+    This does not escape backslash characters in the input.
+
+#14 js/incomplete-sanitization experiments/test-screen-tee-debug.js:164
+    This does not escape backslash characters in the input.
+
+#13 js/incomplete-url-substring-sanitization scripts/format-release-notes.mjs:92
+    'img.shields.io' can be anywhere in the URL, and arbitrary hosts may come before or after it.
+
+#12 js/incomplete-url-substring-sanitization js/test/regression-84.js:254
+    'https://docs.docker.com/get-docker/' can be anywhere in the URL, and arbitrary hosts may come before or after it.
+
+#11 js/incomplete-url-substring-sanitization js/src/lib/failure-handler.js:214
+    'github.com' can be anywhere in the URL, and arbitrary hosts may come before or after it.
+
+#10 js/unnecessary-use-of-cat experiments/test-screen-attached.js:63
+    Unnecessary use of `cat` process. Can be replaced with: fs.readFileSync(logFile, {{ encoding: 'utf8' }})
+
+#9 js/shell-command-constructed-from-input js/src/lib/execution-store.js:463
+    This string concatenation which depends on library input is later used in a shell command.
+This string concatenation which depends on library input is later used in a shell command.
+
+#8 js/shell-command-constructed-from-input js/src/lib/execution-store.js:420
+    This string concatenation which depends on library input is later used in a shell command.
+This string concatenation which depends on library input is later used in a shell command.
+This string concatenation which depends on library input is later used in a shell command.
+This string concatenation which depends on library input is later used in a shell command.
+This string concatenation which depends on library input is later used in a shell command.
+
+#7 js/shell-command-constructed-from-input js/src/lib/execution-store.js:410
+    This string concatenation which depends on library input is later used in a shell command.
+This string concatenation which depends on library input is later used in a shell command.
+This string concatenation which depends on library input is later used in a shell command.
+
+#6 js/shell-command-constructed-from-input js/src/lib/execution-store.js:298
+    This path concatenation which depends on library input is later used in a shell command.
+
+#4 js/shell-command-injection-from-environment js/src/lib/failure-handler.js:209
+    This shell command depends on an uncontrolled file name.
+This shell command depends on an uncontrolled absolute path.
+
+#3 js/shell-command-injection-from-environment js/src/lib/failure-handler.js:189
+    This shell command depends on an uncontrolled file name.
+This shell command depends on an uncontrolled absolute path.
+
+#2 js/insecure-randomness js/src/lib/user-manager.js:189
+    This uses a cryptographically insecure random number generated at Math.random() in a security context.
+

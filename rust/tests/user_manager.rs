@@ -75,6 +75,45 @@ fn generate_isolated_username_returns_unique_names() {
 }
 
 #[test]
+fn generate_isolated_username_draws_the_suffix_from_a_csprng() {
+    // Mirrors the JavaScript test. Rust has no Math.random to pin, so the
+    // guard is twofold: the names minted inside one millisecond - where only
+    // the suffix can differ - must still spread out, and the module must no
+    // longer carry the hand-rolled, time-seeded xorshift that made the suffix
+    // predictable (issue #168).
+    use std::collections::HashSet;
+
+    let mut suffixes = HashSet::new();
+    for _ in 0..500 {
+        let name = generate_isolated_username(None);
+        assert!(
+            name.strip_prefix("start-")
+                .is_some_and(|rest| rest.chars().all(|c| c.is_ascii_alphanumeric())),
+            "unexpected username shape: {name}"
+        );
+        suffixes.insert(name[name.len() - 4..].to_string());
+    }
+    assert!(
+        suffixes.len() > 100,
+        "expected a wide spread of suffixes, got {}",
+        suffixes.len()
+    );
+
+    let source = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib/user_manager.rs"),
+    )
+    .expect("cannot read src/lib/user_manager.rs");
+    assert!(
+        !source.contains("fn simple_random"),
+        "the suffix must come from the OS CSPRNG, not a hand-rolled generator"
+    );
+    assert!(
+        source.contains("Uuid::new_v4"),
+        "random_base36 must draw from uuid::Uuid::new_v4 (getrandom)"
+    );
+}
+
+#[test]
 fn user_exists_returns_false_for_nonexistent_user() {
     assert!(!user_exists(
         "this_user_definitely_does_not_exist_xyzzy_12345"

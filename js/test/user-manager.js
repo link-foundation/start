@@ -125,6 +125,29 @@ describe('user-manager', () => {
       assert.ok(name.length <= 31);
     });
 
+    it('should draw the suffix from a CSPRNG, not Math.random', () => {
+      // The 4-character suffix is the only unguessable part of the account
+      // name; Math.random made it predictable (CodeQL js/insecure-randomness,
+      // issue #168). With Math.random pinned, names minted inside a single
+      // millisecond were byte-identical; a CSPRNG keeps them apart.
+      const originalRandom = Math.random;
+      Math.random = () => 0.5;
+      try {
+        const suffixes = new Set();
+        for (let index = 0; index < 200; index++) {
+          const name = generateIsolatedUsername();
+          assert.match(name, /^start-[0-9a-z]+$/);
+          suffixes.add(name.slice(-4));
+        }
+        assert.ok(
+          suffixes.size > 50,
+          `suffix does not vary while Math.random is pinned (${suffixes.size} distinct)`
+        );
+      } finally {
+        Math.random = originalRandom;
+      }
+    });
+
     it('should handle long prefix by truncating', () => {
       const longPrefix = 'this-is-a-very-long-prefix';
       const name = generateIsolatedUsername(longPrefix);
