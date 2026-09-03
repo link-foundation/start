@@ -217,14 +217,14 @@ on a stopped container.
 
 `--resume <id>` continues a **stopped** detached execution:
 
-| Session state                       | What happens                                                                                              |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Container exists, no new command     | `docker start` re-runs the stored command in the same container.                                          |
-| Container exists, new command given  | The container filesystem is committed to an image and a derived container runs the new command.            |
-| Session is gone                      | The command is launched again through the stored isolation options (same image, volumes, env, networks).   |
+| Session state                       | What happens                                                                                             |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Container exists, no new command    | `docker start` re-runs the stored command in the same container.                                         |
+| Container exists, new command given | The container filesystem is committed to an image and a derived container runs the new command.          |
+| Session is gone                     | The command is launched again through the stored isolation options (same image, volumes, env, networks). |
 
 `--resume <id> -- <command>` is the form downstream tools need: it runs a
-*different* command against the same container filesystem, instead of
+_different_ command against the same container filesystem, instead of
 `docker start -ai`, which would re-run the original entrypoint from scratch.
 
 A resume keeps the original execution UUID, so `--status`, `--list` and
@@ -237,11 +237,11 @@ detached completion watcher while the container keeps running. Each execution
 still marked running is reported with one of four actions:
 
 | Action       | Meaning                                                                     |
-| ------------ | ----------------------------------------------------------------------------- |
-| `reattached` | A live Docker container got a fresh completion watcher.                      |
-| `running`    | A live screen/tmux session needs nothing; its logging is in-session.         |
-| `reconciled` | The session is gone, so the record was finalized from its exit code/footer.  |
-| `unknown`    | The backend cannot be probed locally (ssh); the record is left untouched.    |
+| ------------ | --------------------------------------------------------------------------- |
+| `reattached` | A live Docker container got a fresh completion watcher.                     |
+| `running`    | A live screen/tmux session needs nothing; its logging is in-session.        |
+| `reconciled` | The session is gone, so the record was finalized from its exit code/footer. |
+| `unknown`    | The backend cannot be probed locally (ssh); the record is left untouched.   |
 
 `--resume-all` never silently restarts work: continuing a command is always an
 explicit, per-session decision made with `--resume`. Use `--list --running` as
