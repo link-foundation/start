@@ -5,10 +5,36 @@ use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use crate::exit_reason::resolve_memory_exhaustion;
 use crate::isolation::isolation_log::{
     append_log_file, create_shell_log_footer_snippet, shell_quote,
 };
 use crate::isolation::IsolationOptions;
+use crate::status_formatter::{read_log_tail, FATAL_MARKER_TAIL_BYTES};
+
+/// Exit codes a runtime produces when it aborts itself (SIGABRT / SIGSEGV).
+/// Node/V8 prints `FATAL ERROR: Reached heap limit ...` and aborts long before
+/// the container limit is reached, so the kernel never OOM-kills anything and
+/// `State.OOMKilled` stays `false` (issue #165).
+const SELF_ABORT_EXIT_CODES: [i32; 2] = [134, 139];
+
+/// Appended to the kept-container reason for a self-abort exit code, so the
+/// footer stops asserting the opposite of the `FATAL ERROR` printed a few lines
+/// above it. The footer is the string downstream tooling greps.
+const OOM_FLAG_BLIND_NOTE: &str = "a runtime self-abort on its own memory limit is invisible to this flag - check the log above for a fatal memory marker";
+
+/// Shell fragment computing `$__start_command_reason` for the kept footer.
+pub(crate) fn build_docker_kept_reason_snippet() -> String {
+    let codes: Vec<String> = SELF_ABORT_EXIT_CODES
+        .iter()
+        .map(|code| code.to_string())
+        .collect();
+    format!(
+        "__start_command_reason=\"exitCode=$__start_command_exit oomKilled=$__start_command_oom\"; case \"$__start_command_exit\" in {}) [ \"$__start_command_oom\" = true ] || __start_command_reason=\"$__start_command_reason ({})\";; esac",
+        codes.join("|"),
+        OOM_FLAG_BLIND_NOTE
+    )
+}
 
 /// Build the extra `docker run` arguments contributed by runtime options
 /// (--privileged, --env/-e, --volume/-v, --mount, --network,
@@ -202,6 +228,20 @@ pub(crate) fn append_attached_docker_cleanup_message(
         } else {
             message.push_str("\nContainer kept because the command failed.");
         }
+        // A runtime that aborts on its own memory limit never trips the
+        // container flag, so `oomKilled false` alone would contradict the
+        // `FATAL ERROR` the runtime just printed into this very log (issue
+        // #165). Best effort: the tail is read right after the child exits.
+        let tail = log_path
+            .and_then(|path| read_log_tail(&path.to_string_lossy(), FATAL_MARKER_TAIL_BYTES));
+        if let Some(memory) =
+            resolve_memory_exhaustion(Some(exit_code), tail.as_deref(), Some(oom_killed))
+        {
+            message.push_str(&format!(
+                "\nMemory exhaustion detected in the log: {}",
+                memory.memory_exhausted_reason
+            ));
+        }
         message.push_str(&format!(
             "\nRemove when done: docker rm -f {container_name}"
         ));
@@ -236,7 +276,8 @@ pub(crate) fn remove_docker_container(container_name: &str, log_path: Option<&Pa
 fn build_docker_kept_log_snippet(container_name: &str, quoted_log_path: &str) -> String {
     let quoted_name = shell_quote(container_name);
     format!(
-        "printf '\\nContainer kept for investigation: %s\\nReason: exitCode=%s oomKilled=%s\\nRe-enter while running: $ --attach %s\\nContinue the stored command: $ --resume %s\\nRun another command in the same container: $ --resume %s -- <command>\\nRemove when done: docker rm -f %s\\n' {} \"$__start_command_exit\" \"$__start_command_oom\" {} {} {} {} >> {}",
+        "{}; printf '\\nContainer kept for investigation: %s\\nReason: %s\\nRe-enter while running: $ --attach %s\\nContinue the stored command: $ --resume %s\\nRun another command in the same container: $ --resume %s -- <command>\\nRemove when done: docker rm -f %s\\n' {} \"$__start_command_reason\" {} {} {} {} >> {}",
+        build_docker_kept_reason_snippet(),
         quoted_name, quoted_name, quoted_name, quoted_name, quoted_name, quoted_log_path
     )
 }
@@ -487,5 +528,56 @@ mod tests {
         assert!(script.contains("Container kept for investigation"));
         assert!(script.contains("docker rm -f"));
         assert!(script.contains("issue144-container"));
+    }
+
+    /// Evaluate the reason snippet the way the watcher does, in a real shell.
+    #[cfg(unix)]
+    fn evaluate_reason(exit_code: &str, oom_killed: &str) -> String {
+        let output = Command::new("sh")
+            .arg("-c")
+            .arg(format!(
+                "__start_command_exit={}; __start_command_oom={}; {}; printf '%s' \"$__start_command_reason\"",
+                exit_code,
+                oom_killed,
+                build_docker_kept_reason_snippet()
+            ))
+            .output()
+            .expect("sh");
+        assert!(output.status.success());
+        String::from_utf8_lossy(&output.stdout).into_owned()
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn kept_footer_does_not_assert_a_bare_oom_false_for_self_aborts() {
+        // The footer is printed a few lines below the runtime's own
+        // `FATAL ERROR: Reached heap limit ...`; it must not contradict it.
+        for exit_code in SELF_ABORT_EXIT_CODES {
+            let reason = evaluate_reason(&exit_code.to_string(), "false");
+            assert!(reason.contains(&format!("exitCode={} oomKilled=false", exit_code)));
+            assert!(reason.contains("invisible to this flag"));
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn kept_footer_stays_plain_for_other_exits_and_real_oom_kills() {
+        assert_eq!(evaluate_reason("1", "false"), "exitCode=1 oomKilled=false");
+        assert_eq!(
+            evaluate_reason("137", "true"),
+            "exitCode=137 oomKilled=true"
+        );
+    }
+
+    #[test]
+    fn detached_watcher_computes_the_kept_reason() {
+        let log_path = PathBuf::from("/tmp/issue165.log");
+        let script = build_detached_docker_completion_script(
+            "issue165-container",
+            DockerContainerCleanupPolicy::Default,
+            Some(&log_path),
+        );
+        assert!(script.contains("__start_command_reason="));
+        assert!(script.contains("Reason: %s"));
     }
 }

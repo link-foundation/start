@@ -8,7 +8,7 @@
 use crate::docker_cleanup::docker_command;
 use crate::execution_control::collect_process_ids;
 use crate::execution_store::{ExecutionRecord, ExecutionStatus, ExecutionStore};
-use crate::exit_reason::resolve_exit_reason;
+use crate::exit_reason::{resolve_exit_reason, resolve_memory_exhaustion};
 use crate::output_blocks::{escape_for_links_notation, format_value_for_links_notation};
 use serde_json::Value;
 use std::fs;
@@ -179,12 +179,19 @@ pub fn is_detached_session_alive(record: &ExecutionRecord) -> Option<bool> {
 /// (potentially megabytes of) command output on every `--status` call.
 const LOG_TAIL_BYTES: u64 = 16 * 1024;
 
+/// Number of trailing bytes scanned for a fatal marker. Wider than the footer
+/// window: V8 prints a long native stack trace after `FATAL ERROR: Reached heap
+/// limit ...`, which can push the marker well past 16 KiB from the end of the
+/// log (issue #165). The footer matcher stays anchored, so a wider window is
+/// safe for it too.
+pub(crate) const FATAL_MARKER_TAIL_BYTES: u64 = 64 * 1024;
+
 /// Read the last `bytes` bytes of a file as (lossy) UTF-8 text.
 ///
 /// A partial first line is dropped: the slice can start in the middle of a
 /// line, and that fragment must not be treated as the beginning of a line by
 /// the anchored footer matcher.
-fn read_log_tail(log_path: &str, bytes: u64) -> Option<String> {
+pub(crate) fn read_log_tail(log_path: &str, bytes: u64) -> Option<String> {
     let mut file = fs::File::open(log_path).ok()?;
     let size = file.metadata().ok()?.len();
     let length = size.min(bytes);
@@ -248,15 +255,26 @@ pub fn read_exit_code_from_log(log_path: &str) -> Option<i32> {
 /// The hint explains an otherwise opaque exit code (`139` with `oomKilled
 /// false` is the motivating case from issue #162) and is derived from the same
 /// log tail the footer scan already reads. It is purely additive: `status`,
-/// `exitCode` and `oomKilled` are never changed by it.
+/// `exitCode` and `oomKilled` are never changed by it. The same tail also
+/// yields the `memoryExhausted` observation for consumers that key off
+/// `oomKilled` (issue #165).
 pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
     let mut enriched = resolve_detached_status(record);
-    if enriched.status == ExecutionStatus::Executed && enriched.exit_reason.is_none() {
-        enriched.exit_reason = resolve_exit_reason(
-            enriched.exit_code,
-            read_log_tail(&enriched.log_path, LOG_TAIL_BYTES).as_deref(),
-            enriched.oom_killed,
-        );
+    if enriched.status != ExecutionStatus::Executed {
+        return enriched;
+    }
+    let tail = read_log_tail(&enriched.log_path, FATAL_MARKER_TAIL_BYTES);
+    if enriched.exit_reason.is_none() {
+        enriched.exit_reason =
+            resolve_exit_reason(enriched.exit_code, tail.as_deref(), enriched.oom_killed);
+    }
+    if enriched.memory_exhausted.is_none() {
+        if let Some(memory) =
+            resolve_memory_exhaustion(enriched.exit_code, tail.as_deref(), enriched.oom_killed)
+        {
+            enriched.memory_exhausted = Some(memory.memory_exhausted);
+            enriched.memory_exhausted_reason = Some(memory.memory_exhausted_reason);
+        }
     }
     enriched
 }
@@ -590,6 +608,12 @@ fn format_record_as_text_with_enrichments(
     }
     if let Some(ref exit_reason) = record.exit_reason {
         lines.push(format!("Exit Reason:       {}", exit_reason));
+    }
+    if let Some(memory_exhausted) = record.memory_exhausted {
+        lines.push(format!("Memory Exhausted:  {}", memory_exhausted));
+    }
+    if let Some(ref reason) = record.memory_exhausted_reason {
+        lines.push(format!("Memory Evidence:   {}", reason));
     }
     lines.push(format!("PID:               {}", pid_str));
     if let Some(process_ids) = process_ids {
