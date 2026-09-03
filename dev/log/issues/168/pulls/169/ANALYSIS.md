@@ -72,14 +72,28 @@ const { use } = eval(await (await fetch('https://unpkg.com/use-m/use.js')).text(
 const { $ } = await use('command-stream');   // <- $ is undefined on Node 24
 ```
 
-`use-m`'s `baseUse` unwraps the CommonJS default export **only when the
-`import()` namespace has exactly one key, `default`**. Node 22.12 changed
-`cjs-module-lexer` handling: when a CommonJS module's exports cannot be
-statically analysed, Node adds a synthetic `'module.exports'` named export
-alongside `default`. `command-stream`'s `src/$.cjs` assigns its exports
-dynamically, so on Node ≥ 22.12 the namespace is
-`[Module] { default, 'module.exports' }`, `use-m` skips the unwrap, and
-`const { $ } = …` destructures `undefined`.
+`use-m`'s `baseUse` unwraps the CommonJS default export only when the
+`import()` namespace has no *meaningful* named exports — either exactly one key
+`default`, or no key outside a hard-coded `metadataKeys` allow-list
+(`upstream/use-m-8.15.1-use.js:1367`):
+
+```js
+const metadataKeys = new Set([
+  'default', '__esModule', 'Symbol(Symbol.toStringTag)',
+  'length', 'name', 'prototype', 'constructor',
+  'toString', 'valueOf', 'hasOwnProperty', 'isPrototypeOf', 'propertyIsEnumerable'
+]);
+const nonMetadataKeys = keys.filter(key => !metadataKeys.has(key));
+if (nonMetadataKeys.length === 0) { return module.default; }
+```
+
+Node ≥ 22.12 adds a synthetic `'module.exports'` named export to a CommonJS
+namespace whose exports `cjs-module-lexer` cannot statically analyse.
+`command-stream`'s `src/$.cjs` assigns its exports dynamically, so the namespace
+becomes `[Module] { default, 'module.exports' }`. `'module.exports'` is not in
+`metadataKeys`, so `nonMetadataKeys.length === 1`, `use-m` returns the raw
+namespace, and `const { $ } = …` destructures `undefined`. The upstream fix is a
+single added entry in that set — see §5.
 
 Reproduced locally, `experiments/issue-168-use-m-cjs-interop.mjs`:
 
@@ -247,14 +261,24 @@ other way): the templates have no JS↔Rust test-count parity gate, no
 
 ## 5. Upstream reports (R7)
 
-| Project | Problem | Report contains |
-| --- | --- | --- |
-| `link-foundation/use-m` | `baseUse` only unwraps a CJS default when the namespace has exactly `['default']`; Node ≥ 22.12 adds `'module.exports'`, so `await use('command-stream')` returns the raw namespace | reproducible script, the Node 20 vs 24 output above, workaround (`resolveNamedExport`), suggested fix: treat `'module.exports'` as the default and/or unwrap whenever the namespace has no other named exports besides `default`/`module.exports` |
-| `link-foundation/js-ai-driven-development-pipeline-template` | ships the same `const { $ } = await use('command-stream')` pattern in its release scripts — will break identically on Node 24 | same reproduction; suggested fix: vendor a `load-command-stream.mjs` equivalent |
-| `link-foundation/rust-ai-driven-development-pipeline-template` | no zizmor job/config; `dtolnay/rust-toolchain@stable` unpinned | zizmor output; suggested fix: copy `workflows.yml` + `.github/zizmor.yml` from the JS template and hash-pin, restating `toolchain: stable` |
+All three template repositories and the root-cause library were checked; in two
+cases a report already existed, so the finding was added there rather than
+duplicated.
 
-The Rust and Python templates do not use `command-stream`, so RC-1 does not
-affect them.
+| Project | Finding | Report |
+| --- | --- | --- |
+| `link-foundation/use-m` | `baseUse`'s `metadataKeys` set omits Node's synthetic `'module.exports'` CommonJS-namespace marker, so the callable default is never unwrapped on Node ≥ 22.12 | issue [#72](https://github.com/link-foundation/use-m/issues/72) already existed (opened 2026-08-11, still open). Added [comment 5530591308](https://github.com/link-foundation/use-m/issues/72#issuecomment-5530591308) with this incident, the Node 20 vs 24 reproduction, the exact source location (`use.js:1367`), a one-line diff adding `'module.exports'` to `metadataKeys`, and the workaround. |
+| `link-foundation/js-ai-driven-development-pipeline-template` | ships the same `const { $ } = await use('command-stream')` in **8** scripts | issue [#151](https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/151) had been **closed as completed on 2026-09-02 by PR #152, which changed only `.gitkeep`** — a false fix; the 8 call sites are untouched in `main`. Added [comment 5530595214](https://github.com/link-foundation/js-ai-driven-development-pipeline-template/issues/151#issuecomment-5530595214) with that evidence and **reopened the issue**, including a suggested acceptance criterion (a test that loads `command-stream` through `use-m` on Node 24) so it cannot be closed again without a fix. |
+| `link-foundation/rust-ai-driven-development-pipeline-template` | `workflows.yml` runs `actionlint` but not `zizmor`; no `.github/zizmor.yml`; **10** unpinned `dtolnay/rust-toolchain@stable`; no `persist-credentials: false` | new issue [#147](https://github.com/link-foundation/rust-ai-driven-development-pipeline-template/issues/147) |
+| `link-foundation/python-ai-driven-development-pipeline-template` | same missing `zizmor` gate; **17** checkouts and **zero** `persist-credentials`; `pypa/gh-action-pypi-publish@release/v1` pinned to a mutable branch in the PyPI publish job | new issue [#64](https://github.com/link-foundation/python-ai-driven-development-pipeline-template/issues/64) |
+
+Each report contains a runnable reproduction, the workaround shipped here, and a
+concrete code-level fix. The Rust and Python templates do not use
+`command-stream`, so RC-1 does not affect them.
+
+A snapshot of the published `use-m` bundle the failing runs executed is kept at
+`upstream/use-m-8.15.1-use.js` — the CDN URL is unpinned, so it will not stay
+reproducible otherwise.
 
 ## 6. Existing components/libraries surveyed
 
