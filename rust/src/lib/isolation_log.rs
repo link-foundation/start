@@ -2,7 +2,7 @@
 
 use std::env;
 use std::fs::{self, File, OpenOptions};
-use std::io::Write;
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 
 /// Generate timestamp for logging
@@ -263,4 +263,38 @@ pub fn get_default_docker_image() -> String {
     {
         "alpine:latest".to_string()
     }
+}
+
+/// Number of trailing bytes scanned for the terminal log footer. The footer is
+/// always appended at the very end of the log, so there is no reason to read
+/// (potentially megabytes of) command output on every `--status` call.
+pub const LOG_TAIL_BYTES: u64 = 16 * 1024;
+
+/// Number of trailing bytes scanned for a fatal marker. Wider than the footer
+/// window: V8 prints a long native stack trace after `FATAL ERROR: Reached heap
+/// limit ...`, which can push the marker well past 16 KiB from the end of the
+/// log (issue #165). The footer matcher stays anchored, so a wider window is
+/// safe for it too.
+pub const FATAL_MARKER_TAIL_BYTES: u64 = 64 * 1024;
+
+/// Read the last `bytes` bytes of a file as (lossy) UTF-8 text.
+///
+/// A partial first line is dropped: the slice can start in the middle of a
+/// line, and that fragment must not be treated as the beginning of a line by
+/// the anchored footer matcher.
+pub fn read_log_tail(log_path: &str, bytes: u64) -> Option<String> {
+    let mut file = fs::File::open(log_path).ok()?;
+    let size = file.metadata().ok()?.len();
+    let length = size.min(bytes);
+    file.seek(SeekFrom::Start(size - length)).ok()?;
+    let mut buffer = Vec::with_capacity(length as usize);
+    file.take(length).read_to_end(&mut buffer).ok()?;
+    let tail = String::from_utf8_lossy(&buffer).into_owned();
+    if size <= bytes {
+        return Some(tail);
+    }
+    Some(match tail.find('\n') {
+        Some(index) => tail[index + 1..].to_string(),
+        None => String::new(),
+    })
 }

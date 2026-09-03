@@ -261,10 +261,25 @@ stored log contains a fatal memory marker such as
 
 ```
 Exit Reason:       memory-exhaustion (v8-heap-limit)
+Memory Exhausted:  true
+Memory Evidence:   FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory
 ```
 
-`exitReason` is only a hint. It never changes `status`, `exitCode` or
-`oomKilled`, which stay observations of what the backend actually reported.
+`memoryExhausted` answers the narrower question consumers of `oomKilled` are
+really asking - did this run die of memory exhaustion? - and
+`memoryExhaustedReason` carries the log line that proves it. A runtime that
+aborts on its own heap limit dies *below* the container limit, so the kernel
+never OOM-kills anything and `State.OOMKilled` stays `false`; the only evidence
+is what the dying runtime printed into the log. Both fields appear only for a
+non-zero exit code, so a command that merely *prints* such a marker and then
+succeeds is never reported as a memory failure.
+
+The same tail is scanned for attached and detached sessions alike, with a 64 KiB
+window, because V8 prints a long native stack trace after the marker.
+
+`exitReason`, `memoryExhausted` and `memoryExhaustedReason` are only hints. They
+never change `status`, `exitCode` or `oomKilled`, which stay observations of what
+the backend actually reported.
 
 ### Exit Code Display
 

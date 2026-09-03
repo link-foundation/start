@@ -70,6 +70,13 @@ pub struct ExecutionRecord {
     /// Derived from the log tail on read; never a stored verdict.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exit_reason: Option<String>,
+    /// Memory-exhaustion observation derived from the log tail (issue #165).
+    /// A runtime that aborts on its own heap limit never trips `oom_killed`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_exhausted: Option<bool>,
+    /// The log line that carried the memory-exhaustion evidence (issue #165).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_exhausted_reason: Option<String>,
     pub working_directory: String,
     pub shell: String,
     pub platform: String,
@@ -92,6 +99,8 @@ impl ExecutionRecord {
             end_time: None,
             oom_killed: None,
             exit_reason: None,
+            memory_exhausted: None,
+            memory_exhausted_reason: None,
             working_directory: env::current_dir()
                 .map(|p| p.to_string_lossy().to_string())
                 .unwrap_or_default(),
