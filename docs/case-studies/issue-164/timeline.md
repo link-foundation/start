@@ -59,6 +59,18 @@ in `data/` and from the branch commit history.
     assert both dialects explicitly. The gates run green again: 871 JavaScript
     cases, every Rust test binary, parity at 106.5%.
 
+13. **2026-09-03 09:23 — Windows CI fails a second time.** Three Rust cases and
+    five JavaScript cases fail, all on `windows-latest`
+    (`data/ci/windows-js-33738421723.log`,
+    `data/ci/windows-rust-33738421661.log`): the display round-trip, the
+    `splitShellWords` round-trip, the `--pretty=%s` expectation, and two
+    end-to-end cases whose output differed only by a trailing blank line.
+14. **Third fix** — The splitters take the same dialect parameter as the quoting
+    functions, so quoting and splitting stay inverse operations on every
+    platform; the affected assertions cover both dialects explicitly and the
+    output helpers normalise PowerShell's carriage returns and trailing blank
+    line.
+
 One derived fact is worth keeping. Step 2 is the reason this defect stayed open
 for so long: repairing the symptom on one path made the remaining cases quieter,
 not rarer. After #91, `bash -c "echo hello world"` on the direct path exited `0`

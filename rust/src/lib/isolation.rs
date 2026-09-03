@@ -978,7 +978,7 @@ pub use isolation_shell::{
     build_command_string, build_command_string_with, build_display_command,
     build_shell_with_args_cmd_args, command_name, is_interactive_shell_command,
     is_shell_invocation_with_args, quote_shell_arg, quote_shell_arg_with, split_shell_words,
-    to_shell_words, ShellQuotingStyle,
+    split_shell_words_with, to_shell_words, ShellQuotingStyle,
 };
 
 fn is_debug() -> bool {

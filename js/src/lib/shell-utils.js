@@ -57,11 +57,15 @@ function buildCommandString(argv, style = defaultShellQuotingStyle()) {
 }
 
 /**
- * Split a command line into shell words, honouring quotes and backslash escapes.
+ * Split a command line into shell words, reversing quoteShellArg for the same
+ * dialect: a POSIX shell escapes with a backslash, PowerShell has no backslash
+ * escape (it is a path separator) and writes a literal quote as a doubled one.
  * @param {string} command - Command line
+ * @param {'posix'|'powershell'} [style] - Quoting dialect; defaults to the host shell
  * @returns {string[]|null} Words, or null when quoting is unbalanced
  */
-function splitShellWords(command) {
+function splitShellWords(command, style = defaultShellQuotingStyle()) {
+  const isPowerShell = style === 'powershell';
   const words = [];
   let current = '';
   let started = false;
@@ -78,7 +82,7 @@ function splitShellWords(command) {
       continue;
     }
     started = true;
-    if (char === '\\' && quote !== "'") {
+    if (!isPowerShell && char === '\\' && quote !== "'") {
       if (i + 1 >= command.length) {
         return null;
       }
@@ -90,6 +94,11 @@ function splitShellWords(command) {
       continue;
     }
     if (char === quote) {
+      if (isPowerShell && command[i + 1] === quote) {
+        current += quote;
+        i++;
+        continue;
+      }
       quote = null;
       continue;
     }

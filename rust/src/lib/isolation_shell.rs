@@ -75,10 +75,14 @@ pub fn build_command_string(argv: &[String]) -> String {
     build_command_string_with(argv, ShellQuotingStyle::host())
 }
 
-/// Split a command line into shell words, honouring quotes and backslash escapes.
+/// Split a command line into shell words, reversing `quote_shell_arg_with` for
+/// the same dialect: a POSIX shell escapes with a backslash, PowerShell has no
+/// backslash escape (it is a path separator) and writes a literal quote as a
+/// doubled one.
 ///
 /// Returns `None` when quoting is unbalanced.
-pub fn split_shell_words(command: &str) -> Option<Vec<String>> {
+pub fn split_shell_words_with(command: &str, style: ShellQuotingStyle) -> Option<Vec<String>> {
+    let is_powershell = style == ShellQuotingStyle::PowerShell;
     let mut words: Vec<String> = Vec::new();
     let mut current = String::new();
     let mut started = false;
@@ -94,7 +98,7 @@ pub fn split_shell_words(command: &str) -> Option<Vec<String>> {
             continue;
         }
         started = true;
-        if c == '\\' && quote != Some('\'') {
+        if !is_powershell && c == '\\' && quote != Some('\'') {
             let escaped = chars.next()?;
             current.push(escaped);
             continue;
@@ -104,6 +108,11 @@ pub fn split_shell_words(command: &str) -> Option<Vec<String>> {
             continue;
         }
         if Some(c) == quote {
+            if is_powershell && chars.peek() == Some(&c) {
+                chars.next();
+                current.push(c);
+                continue;
+            }
             quote = None;
             continue;
         }
@@ -117,6 +126,11 @@ pub fn split_shell_words(command: &str) -> Option<Vec<String>> {
         words.push(current);
     }
     Some(words)
+}
+
+/// Split a command line into shell words for the host shell dialect.
+pub fn split_shell_words(command: &str) -> Option<Vec<String>> {
+    split_shell_words_with(command, ShellQuotingStyle::host())
 }
 
 /// Split a command into words, falling back to whitespace splitting when quoting is unbalanced.

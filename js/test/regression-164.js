@@ -68,11 +68,19 @@ function runCli(argv) {
 
 /** The command output sits between the start block and the finish block. */
 function commandOutput(stdout) {
-  // PowerShell prefixes its output with a UTF-8 BOM on Windows.
-  const lines = stdout.replace(/\uFEFF/g, '').split('\n');
+  // PowerShell prefixes its output with a UTF-8 BOM and ends its lines with a
+  // carriage return on Windows, and the finish block is preceded by one more
+  // blank line there, so trailing blank lines are trimmed (issue #164).
+  const lines = stdout
+    .replace(/\uFEFF/g, '')
+    .replace(/\r/g, '')
+    .split('\n');
   const start = lines.findIndex((line) => line.startsWith('$ '));
   const finish = lines.findIndex((line) => line === '✓' || line === '✗');
-  return lines.slice(start + 2, finish - 1).join('\n');
+  return lines
+    .slice(start + 2, finish - 1)
+    .join('\n')
+    .replace(/\n+$/, '');
 }
 
 function displayedCommand(stdout) {
@@ -105,8 +113,10 @@ describe('parseArgs keeps argv boundaries (issue #164)', () => {
   });
 
   it('leaves ordinary arguments unquoted', () => {
+    // `%` is an alias for ForEach-Object in PowerShell, so it has to be quoted
+    // there while a POSIX shell leaves it alone.
     expect(parseArgs(['git', 'log', '-1', '--pretty=%s']).command).toBe(
-      'git log -1 --pretty=%s'
+      IS_POWERSHELL ? "git log -1 '--pretty=%s'" : 'git log -1 --pretty=%s'
     );
   });
 
@@ -156,9 +166,13 @@ describe('buildCommandString and quoteShellArg (issue #164)', () => {
     expect(buildCommandString(['echo', ''])).toBe("echo ''");
   });
 
-  it('round-trips through splitShellWords', () => {
+  it('round-trips through splitShellWords in both dialects', () => {
     const argv = ['node', '-e', "console.log('a  b')", 'x$y', ''];
-    expect(splitShellWords(buildCommandString(argv))).toEqual(argv);
+    for (const style of ['posix', 'powershell']) {
+      expect(splitShellWords(buildCommandString(argv, style), style)).toEqual(
+        argv
+      );
+    }
   });
 });
 
@@ -175,8 +189,22 @@ describe('splitShellWords (issue #164)', () => {
     expect(splitShellWords("echo 'a  b'")).toEqual(['echo', 'a  b']);
   });
 
-  it('honours backslash escapes', () => {
-    expect(splitShellWords('echo a\\ b')).toEqual(['echo', 'a b']);
+  it('honours backslash escapes in a POSIX shell', () => {
+    expect(splitShellWords('echo a\\ b', 'posix')).toEqual(['echo', 'a b']);
+  });
+
+  it('keeps backslashes literal for PowerShell, where they are separators', () => {
+    expect(splitShellWords('echo C:\\tmp', 'powershell')).toEqual([
+      'echo',
+      'C:\\tmp',
+    ]);
+  });
+
+  it('reads a doubled quote inside a PowerShell string as one quote', () => {
+    expect(splitShellWords("echo 'it''s'", 'powershell')).toEqual([
+      'echo',
+      "it's",
+    ]);
   });
 
   it('returns null when quoting is unbalanced', () => {

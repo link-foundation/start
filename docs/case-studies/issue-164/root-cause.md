@@ -135,3 +135,30 @@ Two secondary facts came out of the same logs:
   echoed back as a literal string and the loose `includes('hi')` assertion
   passed by accident. Those tests now pass argv directly, which is what they
   meant to test all along.
+
+## 6. The third round: parsing has a dialect too
+
+The dialect fix made *building* a command string shell-specific but left
+`splitShellWords` / `split_shell_words` POSIX-only, so the second Windows run
+failed again (`data/ci/windows-js-33738421723.log`,
+`data/ci/windows-rust-33738421661.log`):
+
+```
+(fail) buildDisplayCommand (issue #164) > re-quotes an argument containing shell metacharacters
+Expected: "node -e \"console.log('hi')\""
+Received: "node -e 'console.log(''hi'')'"
+```
+
+`buildDisplayCommand` re-quotes only when the command round-trips through the
+splitter, and a PowerShell-quoted string (`''` for a literal quote, no backslash
+escape) is not parseable by a POSIX splitter, so the round-trip failed and the
+raw string was shown verbatim. Quoting and splitting are inverse operations:
+whenever one takes a dialect, the other has to take the same one. Both splitters
+now accept the style parameter and default to the host shell.
+
+The remaining two failures were assertion artefacts rather than behaviour: the
+commands ran correctly, but PowerShell terminates lines with `\r` and leaves one
+extra blank line before the finish block, so the helper that slices the command
+output now strips carriage returns and trailing blank lines. `--pretty=%s` is
+likewise expected to be quoted on Windows, because `%` is an alias for
+`ForEach-Object` there.

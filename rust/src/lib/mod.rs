@@ -68,8 +68,8 @@ pub use isolation::{
     create_log_path, create_log_path_for_execution, docker_image_exists, docker_pull_image,
     get_default_docker_image, get_timestamp, is_command_available, is_interactive_shell_command,
     is_shell_invocation_with_args, quote_shell_arg, quote_shell_arg_with, run_as_isolated_user,
-    run_isolated, split_shell_words, to_shell_words, write_log_file, IsolationOptions,
-    IsolationResult, LogHeaderParams, ShellQuotingStyle,
+    run_isolated, split_shell_words, split_shell_words_with, to_shell_words, write_log_file,
+    IsolationOptions, IsolationResult, LogHeaderParams, ShellQuotingStyle,
 };
 pub use isolation_metadata::{
     build_isolation_options_map, docker_runtime_metadata, docker_runtime_status_lines,

@@ -15,9 +15,10 @@
 
 use start_command::args_parser::parse_args;
 use start_command::{
-    build_command_string, build_display_command, build_shell_with_args_cmd_args, command_name,
-    is_interactive_shell_command, is_shell_invocation_with_args, quote_shell_arg,
-    quote_shell_arg_with, split_shell_words, ShellQuotingStyle,
+    build_command_string, build_command_string_with, build_display_command,
+    build_shell_with_args_cmd_args, command_name, is_interactive_shell_command,
+    is_shell_invocation_with_args, quote_shell_arg, quote_shell_arg_with, split_shell_words,
+    split_shell_words_with, ShellQuotingStyle,
 };
 use std::process::Command;
 
@@ -46,15 +47,20 @@ fn run_cli(args: &[&str]) -> (i32, String) {
 
 /// The command output sits between the start block and the finish block.
 fn command_output(stdout: &str) -> String {
-    // PowerShell prefixes its output with a UTF-8 BOM on Windows.
-    let cleaned = stdout.replace('\u{feff}', "");
+    // PowerShell prefixes its output with a UTF-8 BOM and ends its lines with a
+    // carriage return on Windows, and the finish block is preceded by one more
+    // blank line there, so trailing blank lines are trimmed (issue #164).
+    let cleaned = stdout.replace('\u{feff}', "").replace('\r', "");
     let lines: Vec<&str> = cleaned.split('\n').collect();
     let start = lines.iter().position(|l| l.starts_with("$ ")).unwrap_or(0);
     let finish = lines
         .iter()
         .position(|l| *l == "✓" || *l == "✗")
         .unwrap_or(lines.len());
-    lines[(start + 2).min(finish)..finish.saturating_sub(1)].join("\n")
+    lines[(start + 2).min(finish)..finish.saturating_sub(1)]
+        .join("\n")
+        .trim_end_matches('\n')
+        .to_string()
 }
 
 fn displayed_command(stdout: &str) -> String {
@@ -94,9 +100,16 @@ mod parse_args_keeps_argv_boundaries {
 
     #[test]
     fn leaves_ordinary_arguments_unquoted() {
+        // `%` is an alias for ForEach-Object in PowerShell, so it has to be
+        // quoted there while a POSIX shell leaves it alone.
+        let expected = if cfg!(windows) {
+            "git log -1 '--pretty=%s'"
+        } else {
+            "git log -1 --pretty=%s"
+        };
         assert_eq!(
             parse_command(&["git", "log", "-1", "--pretty=%s"]),
-            "git log -1 --pretty=%s"
+            expected
         );
     }
 
@@ -169,9 +182,14 @@ mod build_command_string_tests {
     }
 
     #[test]
-    fn round_trips_through_split_shell_words() {
+    fn round_trips_through_split_shell_words_in_both_dialects() {
         let argv = strings(&["node", "-e", "console.log('a  b')", "x$y", ""]);
-        assert_eq!(split_shell_words(&build_command_string(&argv)), Some(argv));
+        for style in [ShellQuotingStyle::Posix, ShellQuotingStyle::PowerShell] {
+            assert_eq!(
+                split_shell_words_with(&build_command_string_with(&argv, style), style),
+                Some(argv.clone())
+            );
+        }
     }
 }
 
@@ -203,10 +221,26 @@ mod split_shell_words_tests {
     }
 
     #[test]
-    fn honours_backslash_escapes() {
+    fn honours_backslash_escapes_in_posix_shell() {
         assert_eq!(
-            split_shell_words("echo a\\ b"),
+            split_shell_words_with("echo a\\ b", ShellQuotingStyle::Posix),
             Some(strings(&["echo", "a b"]))
+        );
+    }
+
+    #[test]
+    fn keeps_backslashes_literal_for_powershell() {
+        assert_eq!(
+            split_shell_words_with("echo C:\\tmp", ShellQuotingStyle::PowerShell),
+            Some(strings(&["echo", "C:\\tmp"]))
+        );
+    }
+
+    #[test]
+    fn reads_doubled_quote_inside_powershell_string_as_one_quote() {
+        assert_eq!(
+            split_shell_words_with("echo 'it''s'", ShellQuotingStyle::PowerShell),
+            Some(strings(&["echo", "it's"]))
         );
     }
 
