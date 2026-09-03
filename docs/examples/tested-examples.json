@@ -34,7 +34,7 @@
           "argv": ["echo", "Hello World"]
         }
       },
-      "expectedNormalizedStdout": "│ session   <uuid>\n│ start     <timestamp>\n│\n$ echo Hello World\n\nHello World\n\n✓\n│ finish    <timestamp>\n│ duration  <duration>\n│ exit      0\n│\n│ log       <log-path>\n│ session   <uuid>\n"
+      "expectedNormalizedStdout": "│ session   <uuid>\n│ start     <timestamp>\n│\n$ echo \"Hello World\"\n\nHello World\n\n✓\n│ finish    <timestamp>\n│ duration  <duration>\n│ exit      0\n│\n│ log       <log-path>\n│ session   <uuid>\n"
     },
     {
       "id": "docker-box-js",
@@ -88,7 +88,7 @@
         "argv": ["--isolated", "docker", "--", "echo", "hello from docker"],
         "expected": {
           "isolated": "docker",
-          "command": "echo hello from docker"
+          "command": "echo 'hello from docker'"
         },
         "requiresImage": true,
         "reason": "The default image depends on the host OS; parser validation checks that an image is assigned."

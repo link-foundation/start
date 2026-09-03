@@ -40,6 +40,11 @@ $ bun test
 $ git status
 ```
 
+Quoted arguments keep their boundaries, so `$ node -e "console.log('hi')"` and
+`$ git commit -m "msg with spaces"` reach the command exactly as typed. A single
+quoted argument is still run as a shell script (`$ 'cat file.txt | grep x'`).
+See [docs/USAGE.md](docs/USAGE.md#argument-boundaries) for details.
+
 ### Piping with `$`
 
 When piping data to a command wrapped with `$`, **put `$` on the receiving command**:

@@ -44,6 +44,7 @@
 const { getDefaultDockerImage } = require('./docker-utils');
 const dockerNetworkOptions = require('./docker-network-options');
 const { parseSequence, isSequence } = require('./sequence-parser');
+const { buildCommandString } = require('./shell-utils');
 const {
   VALID_OUTPUT_FORMATS,
   createQueryOptionDefaults,
@@ -165,6 +166,8 @@ function parseEndpointValue(value, options) {
  * Parse command line arguments into wrapper options and command
  * @param {string[]} args - Array of command line arguments
  * @returns {{wrapperOptions: object, command: string, rawCommand: string[]}}
+ *   `command` re-quotes each argv element so the inner shell sees the argument
+ *   boundaries the user typed (issue #164); `rawCommand` keeps the raw argv.
  */
 function parseArgs(args) {
   const wrapperOptions = {
@@ -235,7 +238,7 @@ function parseArgs(args) {
 
   return {
     wrapperOptions,
-    command: commandArgs.join(' '),
+    command: buildCommandString(commandArgs),
     rawCommand: commandArgs,
   };
 }

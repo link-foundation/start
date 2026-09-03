@@ -154,7 +154,7 @@ pub fn run_screen_with_log_capture(
             "-c".to_string(),
             screenrc_path.to_string_lossy().to_string(),
         ];
-        args.extend(command.split_whitespace().map(String::from));
+        args.extend(super::to_shell_words(command));
         args
     } else {
         vec![

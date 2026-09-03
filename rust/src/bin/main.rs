@@ -16,9 +16,9 @@ use start_command::{
     args_parser::{
         generate_session_name, generate_uuid, get_effective_mode, has_isolation, parse_args,
     },
-    build_isolation_options_map, clear_current_execution, create_finish_block, create_log_footer,
-    create_log_header, create_log_path_for_execution, create_start_block,
-    docker_runtime_status_lines_for_options,
+    build_display_command, build_isolation_options_map, clear_current_execution, command_name,
+    create_finish_block, create_log_footer, create_log_header, create_log_path_for_execution,
+    create_start_block, docker_runtime_status_lines_for_options,
     execution_store::{
         ExecutionRecord, ExecutionRecordOptions, ExecutionStore, ExecutionStoreOptions,
     },
@@ -389,7 +389,7 @@ fn run_with_isolation(
         create_start_block(&StartBlockOptions {
             session_id,
             timestamp: &start_time,
-            command,
+            command: &build_display_command(command),
             extra_lines: if extra_lines.is_empty() {
                 None
             } else {
@@ -588,12 +588,16 @@ fn run_direct(
     // Determine display command (show substitution if applied)
     let display_command = if let Some(sub) = substitution_result {
         if sub.matched {
-            format!("{} -> {}", parsed_command, command)
+            format!(
+                "{} -> {}",
+                build_display_command(parsed_command),
+                build_display_command(command)
+            )
         } else {
-            command.to_string()
+            build_display_command(command)
         }
     } else {
-        command.to_string()
+        build_display_command(command)
     };
 
     // Print start block with session ID (no extra lines for direct execution)
@@ -610,7 +614,8 @@ fn run_direct(
         })
     );
     println!();
-    let command_name = command.split_whitespace().next().unwrap_or(command);
+    let command_name = command_name(command);
+    let command_name = command_name.as_str();
 
     // Determine shell
     let is_windows = cfg!(windows);

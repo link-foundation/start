@@ -193,7 +193,8 @@ impl Default for WrapperOptions {
 pub struct ParsedArgs {
     /// Wrapper options
     pub wrapper_options: WrapperOptions,
-    /// The command to execute (joined with spaces)
+    /// The command to execute: argv re-quoted so the inner shell keeps the
+    /// argument boundaries the user typed (issue #164)
     pub command: String,
     /// Raw command arguments
     pub raw_command: Vec<String>,
@@ -239,7 +240,7 @@ pub fn parse_args(args: &[String]) -> Result<ParsedArgs, String> {
 
     Ok(ParsedArgs {
         wrapper_options,
-        command: command_args.join(" "),
+        command: crate::isolation::build_command_string(&command_args),
         raw_command: command_args,
     })
 }
