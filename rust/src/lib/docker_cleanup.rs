@@ -7,10 +7,10 @@ use std::thread;
 
 use crate::exit_reason::resolve_memory_exhaustion;
 use crate::isolation::isolation_log::{
-    append_log_file, create_shell_log_footer_snippet, shell_quote,
+    append_log_file, create_shell_log_footer_snippet, read_log_tail, shell_quote,
+    FATAL_MARKER_TAIL_BYTES,
 };
 use crate::isolation::IsolationOptions;
-use crate::status_formatter::{read_log_tail, FATAL_MARKER_TAIL_BYTES};
 
 /// Exit codes a runtime produces when it aborts itself (SIGABRT / SIGSEGV).
 /// Node/V8 prints `FATAL ERROR: Reached heap limit ...` and aborts long before
