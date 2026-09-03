@@ -21,57 +21,59 @@
  * Why this script exists: see docs/case-studies/issue-118/root-cause.md (RC-4).
  */
 
-import { execFileSync } from "node:child_process";
+import { execFileSync } from 'node:child_process';
 
-import { debug, dumpEnv } from "./debug-print.mjs";
+import { debug, dumpEnv } from './debug-print.mjs';
 
 const args = process.argv.slice(2);
 const requiredChecks = [];
 for (let index = 0; index < args.length; index += 1) {
   const arg = args[index];
-  if (arg === "--require" && args[index + 1]) {
+  if (arg === '--require' && args[index + 1]) {
     requiredChecks.push(args[index + 1]);
     index += 1;
   }
 }
 
 if (requiredChecks.length === 0) {
-  console.error("Error: at least one --require <check> argument is required");
-  console.error("Available checks: gh-token, npm-oidc, crates-io, crates-token");
+  console.error('Error: at least one --require <check> argument is required');
+  console.error(
+    'Available checks: gh-token, npm-oidc, crates-io, crates-token'
+  );
   process.exit(1);
 }
 
-debug("preflight-credentials checks:", requiredChecks);
+debug('preflight-credentials checks:', requiredChecks);
 dumpEnv([
-  "GH_TOKEN",
-  "GITHUB_TOKEN",
-  "GITHUB_REPOSITORY",
-  "ACTIONS_ID_TOKEN_REQUEST_URL",
-  "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
-  "CARGO_REGISTRY_TOKEN",
-  "CARGO_TOKEN",
-  "PREFLIGHT_PACKAGE_NAME",
+  'GH_TOKEN',
+  'GITHUB_TOKEN',
+  'GITHUB_REPOSITORY',
+  'ACTIONS_ID_TOKEN_REQUEST_URL',
+  'ACTIONS_ID_TOKEN_REQUEST_TOKEN',
+  'CARGO_REGISTRY_TOKEN',
+  'CARGO_TOKEN',
+  'PREFLIGHT_PACKAGE_NAME',
 ]);
 
 const failures = [];
 
-function logCheck(label, status, detail = "") {
-  const prefix = status === "ok" ? "✅" : "❌";
-  console.log(`${prefix} ${label}${detail ? `: ${detail}` : ""}`);
+function logCheck(label, status, detail = '') {
+  const prefix = status === 'ok' ? '✅' : '❌';
+  console.log(`${prefix} ${label}${detail ? `: ${detail}` : ''}`);
 }
 
 function fail(label, message) {
   failures.push({ label, message });
   console.log(`::error::Preflight check failed (${label}): ${message}`);
-  logCheck(label, "fail", message);
+  logCheck(label, 'fail', message);
 }
 
 function checkGhToken() {
-  const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || "";
+  const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || '';
   if (!token) {
     fail(
-      "gh-token",
-      "Neither GH_TOKEN nor GITHUB_TOKEN is set. Add `env: { GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} }` to the step.",
+      'gh-token',
+      'Neither GH_TOKEN nor GITHUB_TOKEN is set. Add `env: { GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} }` to the step.'
     );
     return;
   }
@@ -83,24 +85,26 @@ function checkGhToken() {
   // installation tokens — see docs/case-studies/issue-120/root-cause.md.
   const repository = process.env.GITHUB_REPOSITORY;
   const probeArgs = repository
-    ? ["api", `repos/${repository}`, "--jq", ".full_name"]
-    : ["auth", "status"];
+    ? ['api', `repos/${repository}`, '--jq', '.full_name']
+    : ['auth', 'status'];
 
   try {
-    execFileSync("gh", probeArgs, {
-      stdio: ["ignore", "pipe", "pipe"],
+    execFileSync('gh', probeArgs, {
+      stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, GH_TOKEN: token, GITHUB_TOKEN: token },
     });
     logCheck(
-      "gh-token",
-      "ok",
-      repository ? `authenticated for ${repository}` : "authenticated (gh auth status)",
+      'gh-token',
+      'ok',
+      repository
+        ? `authenticated for ${repository}`
+        : 'authenticated (gh auth status)'
     );
   } catch (error) {
-    const command = `gh ${probeArgs.join(" ")}`;
+    const command = `gh ${probeArgs.join(' ')}`;
     fail(
-      "gh-token",
-      `\`${command}\` rejected the token (HTTP error or expired). Underlying: ${error.message.split("\n")[0]}`,
+      'gh-token',
+      `\`${command}\` rejected the token (HTTP error or expired). Underlying: ${error.message.split('\n')[0]}`
     );
   }
 }
@@ -111,46 +115,52 @@ async function checkNpmOidc() {
 
   if (!requestUrl || !requestToken) {
     fail(
-      "npm-oidc",
-      "ACTIONS_ID_TOKEN_REQUEST_URL/TOKEN is missing. The workflow / job needs `permissions: id-token: write`.",
+      'npm-oidc',
+      'ACTIONS_ID_TOKEN_REQUEST_URL/TOKEN is missing. The workflow / job needs `permissions: id-token: write`.'
     );
     return;
   }
 
   try {
-    const response = await fetch(`${requestUrl}&audience=npm:registry.npmjs.org`, {
-      headers: { Authorization: `bearer ${requestToken}` },
-    });
+    const response = await fetch(
+      `${requestUrl}&audience=npm:registry.npmjs.org`,
+      {
+        headers: { Authorization: `bearer ${requestToken}` },
+      }
+    );
     if (!response.ok) {
       fail(
-        "npm-oidc",
-        `OIDC token mint returned HTTP ${response.status}. Trusted publishing may be misconfigured for this workflow.`,
+        'npm-oidc',
+        `OIDC token mint returned HTTP ${response.status}. Trusted publishing may be misconfigured for this workflow.`
       );
       return;
     }
     const body = await response.json();
     if (!body.value) {
-      fail("npm-oidc", "OIDC token mint succeeded but the response had no `value`.");
+      fail(
+        'npm-oidc',
+        'OIDC token mint succeeded but the response had no `value`.'
+      );
       return;
     }
-    logCheck("npm-oidc", "ok", "test token minted");
+    logCheck('npm-oidc', 'ok', 'test token minted');
   } catch (error) {
-    fail("npm-oidc", `OIDC token mint threw: ${error.message}`);
+    fail('npm-oidc', `OIDC token mint threw: ${error.message}`);
   }
 }
 
 async function checkCratesIo() {
-  const packageName = process.env.PREFLIGHT_PACKAGE_NAME || "";
+  const packageName = process.env.PREFLIGHT_PACKAGE_NAME || '';
   const probeUrl = packageName
     ? `https://crates.io/api/v1/crates/${encodeURIComponent(packageName)}`
-    : "https://crates.io/api/v1/summary";
+    : 'https://crates.io/api/v1/summary';
 
   try {
     const response = await fetch(probeUrl, {
-      headers: { "User-Agent": "link-foundation/start preflight" },
+      headers: { 'User-Agent': 'link-foundation/start preflight' },
     });
     if (response.status >= 500) {
-      fail("crates-io", `crates.io returned HTTP ${response.status}.`);
+      fail('crates-io', `crates.io returned HTTP ${response.status}.`);
       return;
     }
     // 404 is expected for a not-yet-published package; it still proves the
@@ -160,30 +170,31 @@ async function checkCratesIo() {
       response.status === 404 && packageName
         ? `${probeUrl} → HTTP 404 (package not yet published — fine for first release)`
         : `${probeUrl} → HTTP ${response.status}`;
-    logCheck("crates-io", "ok", detail);
+    logCheck('crates-io', 'ok', detail);
   } catch (error) {
-    fail("crates-io", `crates.io is unreachable: ${error.message}`);
+    fail('crates-io', `crates.io is unreachable: ${error.message}`);
   }
 }
 
 function checkCratesToken() {
-  const token = process.env.CARGO_REGISTRY_TOKEN || process.env.CARGO_TOKEN || "";
+  const token =
+    process.env.CARGO_REGISTRY_TOKEN || process.env.CARGO_TOKEN || '';
   if (!token) {
     fail(
-      "crates-token",
-      "Neither CARGO_REGISTRY_TOKEN nor CARGO_TOKEN is set. Add a crates.io API token to repository secrets.",
+      'crates-token',
+      'Neither CARGO_REGISTRY_TOKEN nor CARGO_TOKEN is set. Add a crates.io API token to repository secrets.'
     );
     return;
   }
 
-  logCheck("crates-token", "ok", `${token.length} characters configured`);
+  logCheck('crates-token', 'ok', `${token.length} characters configured`);
 }
 
 const checkers = {
-  "gh-token": checkGhToken,
-  "npm-oidc": checkNpmOidc,
-  "crates-io": checkCratesIo,
-  "crates-token": checkCratesToken,
+  'gh-token': checkGhToken,
+  'npm-oidc': checkNpmOidc,
+  'crates-io': checkCratesIo,
+  'crates-token': checkCratesToken,
 };
 
 for (const name of requiredChecks) {
@@ -192,15 +203,15 @@ for (const name of requiredChecks) {
     console.error(`::error::Unknown preflight check: ${name}`);
     process.exit(1);
   }
-  // eslint-disable-next-line no-await-in-loop
+
   await check();
 }
 
 if (failures.length > 0) {
-  console.error("");
+  console.error('');
   console.error(`Preflight failed: ${failures.length} check(s) did not pass.`);
   process.exit(1);
 }
 
-console.log("");
+console.log('');
 console.log(`Preflight passed: ${requiredChecks.length} check(s).`);

@@ -9,20 +9,20 @@
  */
 
 export const LANGUAGE_TITLES = Object.freeze({
-  "js-": "JavaScript",
-  "rust-": "Rust",
+  'js-': 'JavaScript',
+  'rust-': 'Rust',
 });
 
 const PACKAGE_BADGES = Object.freeze({
   npm: {
-    label: "npm",
-    color: "blue",
+    label: 'npm',
+    color: 'blue',
     url: (packageName, version) =>
       `https://www.npmjs.com/package/${encodeURIComponent(packageName)}/v/${encodeURIComponent(version)}`,
   },
   crates: {
-    label: "crates.io",
-    color: "orange",
+    label: 'crates.io',
+    color: 'orange',
     url: (packageName, version) =>
       `https://crates.io/crates/${encodeURIComponent(packageName)}/${encodeURIComponent(version)}`,
   },
@@ -34,7 +34,7 @@ const PACKAGE_BADGES = Object.freeze({
  * @param {string} [prefix] Optional language/package prefix (e.g., "rust-").
  * @returns {string} Tag of the form "${prefix}v${version}".
  */
-export function releaseTag(version, prefix = "") {
+export function releaseTag(version, prefix = '') {
   return `${prefix}v${version}`;
 }
 
@@ -48,10 +48,14 @@ export function releaseTag(version, prefix = "") {
  *   - "<prefix><version>"       for any other non-empty prefix
  *   - "<version>"               for empty prefix (pre-prefix behaviour)
  */
-export function releaseName(version, prefix = "") {
+export function releaseName(version, prefix = '') {
   const languageTitle = LANGUAGE_TITLES[prefix];
-  if (languageTitle) return `[${languageTitle}] ${version}`;
-  if (prefix) return `${prefix}${version}`;
+  if (languageTitle) {
+    return `[${languageTitle}] ${version}`;
+  }
+  if (prefix) {
+    return `${prefix}${version}`;
+  }
   return version;
 }
 
@@ -64,7 +68,7 @@ export function releaseName(version, prefix = "") {
 export function normalizeReleaseVersionForBadge(releaseVersion) {
   const trimmedVersion = String(releaseVersion).trim();
   const semverTagMatch = trimmedVersion.match(
-    /(?:^|-)v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$/i,
+    /(?:^|-)v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$/i
   );
 
   if (semverTagMatch) {
@@ -72,8 +76,8 @@ export function normalizeReleaseVersionForBadge(releaseVersion) {
   }
 
   return trimmedVersion
-    .replace(/^[A-Za-z][A-Za-z0-9]*-/, "")
-    .replace(/^v/i, "");
+    .replace(/^[A-Za-z][A-Za-z0-9]*-/, '')
+    .replace(/^v/i, '');
 }
 
 /**
@@ -83,7 +87,7 @@ export function normalizeReleaseVersionForBadge(releaseVersion) {
  * @returns {string}
  */
 export function encodeShieldsStaticBadgeSegment(value) {
-  return encodeURIComponent(value).replace(/-/g, "--").replace(/_/g, "__");
+  return encodeURIComponent(value).replace(/-/g, '--').replace(/_/g, '__');
 }
 
 /**
@@ -117,9 +121,9 @@ export function packageVersionBadge({
  */
 export function extractChangelogEntry(changelog, releaseVersion) {
   const version = normalizeReleaseVersionForBadge(releaseVersion);
-  const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const versionHeading = new RegExp(
-    `^##\\s+(?:\\[?v?${escapedVersion}\\]?)(?:\\s|$)`,
+    `^##\\s+(?:\\[?v?${escapedVersion}\\]?)(?:\\s|$)`
   );
   const nextHeading = /^##\s+/;
   const lines = String(changelog).split(/\r?\n/);
@@ -133,7 +137,7 @@ export function extractChangelogEntry(changelog, releaseVersion) {
   }
 
   if (startIndex === -1) {
-    return "";
+    return '';
   }
 
   let endIndex = lines.length;
@@ -144,5 +148,5 @@ export function extractChangelogEntry(changelog, releaseVersion) {
     }
   }
 
-  return lines.slice(startIndex, endIndex).join("\n").trim();
+  return lines.slice(startIndex, endIndex).join('\n').trim();
 }

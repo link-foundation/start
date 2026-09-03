@@ -256,9 +256,20 @@ jobs:
         working-directory: js
         run: bun run lint
 
+      # The js/ config has js/ as its base path, so the repository-level
+      # scripts/ directory - the release automation - was never linted
+      # (issue #168). eslint.config.mjs at the root closes that gap.
+      - name: Run ESLint on repository scripts
+        working-directory: js
+        run: bun run lint:scripts
+
       - name: Check formatting
         working-directory: js
         run: bun run format:check
+
+      - name: Check formatting of repository scripts
+        working-directory: js
+        run: bun run format:check:scripts
 
       - name: Check file size limit
         run: node scripts/check-file-size.mjs

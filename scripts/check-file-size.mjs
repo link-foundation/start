@@ -82,9 +82,21 @@ async function countLines(filePath) {
  * Main function
  */
 async function main() {
-  const excludePatterns = ['node_modules', 'coverage', 'dist', '.git', 'build', 'target'];
+  const excludePatterns = [
+    'node_modules',
+    'coverage',
+    'dist',
+    '.git',
+    'build',
+    'target',
+  ];
 
-  const fileTypesStr = checkType === 'all' ? 'JavaScript and Rust' : checkType === 'js' ? 'JavaScript' : 'Rust';
+  const fileTypesStr =
+    checkType === 'all'
+      ? 'JavaScript and Rust'
+      : checkType === 'js'
+        ? 'JavaScript'
+        : 'Rust';
   console.log(
     `\nChecking ${fileTypesStr} files for maximum ${MAX_LINES} lines...\n`
   );

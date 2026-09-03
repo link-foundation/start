@@ -18,10 +18,13 @@ const root = resolve(__dirname, '..');
 function countWithGrepOrFallback(pattern, path, isFile = false) {
   try {
     const flag = isFile ? '' : '-r';
-    const result = execSync(`grep -c "${pattern}" ${flag} ${path} 2>/dev/null || echo 0`, {
-      cwd: root,
-      encoding: 'utf8',
-    }).trim();
+    const result = execSync(
+      `grep -c "${pattern}" ${flag} ${path} 2>/dev/null || echo 0`,
+      {
+        cwd: root,
+        encoding: 'utf8',
+      }
+    ).trim();
     // When using -r, grep -c outputs file:count lines, sum them
     if (result.includes(':')) {
       return result
@@ -47,7 +50,9 @@ const rustTestAttrs = countWithGrepOrFallback('#\\[test\\]', 'rust');
 console.log(`Rust test cases (#[test] macros): ${rustTestAttrs}`);
 
 if (jsCount === 0) {
-  console.error('ERROR: Could not count JavaScript tests. Check js/test/ directory.');
+  console.error(
+    'ERROR: Could not count JavaScript tests. Check js/test/ directory.'
+  );
   process.exit(1);
 }
 
@@ -65,15 +70,21 @@ console.log(`Required minimum: ${(threshold * 100).toFixed(0)}%`);
 
 if (ratio < threshold) {
   const deficit = Math.ceil(jsCount * threshold) - rustTestAttrs;
-  console.error(`\n❌ FAIL: Rust has ${(ratio * 100).toFixed(1)}% of JavaScript test count.`);
+  console.error(
+    `\n❌ FAIL: Rust has ${(ratio * 100).toFixed(1)}% of JavaScript test count.`
+  );
   console.error(
     `   Rust needs at least ${Math.ceil(jsCount * threshold)} tests to reach ${(threshold * 100).toFixed(0)}% of JS count (${jsCount}).`
   );
-  console.error(`   Add approximately ${deficit} more Rust tests to pass this check.`);
+  console.error(
+    `   Add approximately ${deficit} more Rust tests to pass this check.`
+  );
   console.error(
     `\n   See issue #93: https://github.com/link-foundation/start/issues/93`
   );
   process.exit(1);
 } else {
-  console.log(`\n✅ PASS: Rust test count (${rustTestAttrs}) is within acceptable range of JS count (${jsCount}).`);
+  console.log(
+    `\n✅ PASS: Rust test count (${rustTestAttrs}) is within acceptable range of JS count (${jsCount}).`
+  );
 }

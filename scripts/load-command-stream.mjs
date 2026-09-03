@@ -30,7 +30,7 @@
  * shape that was actually resolved. The default state is off.
  */
 
-import { debug } from "./debug-print.mjs";
+import { debug } from './debug-print.mjs';
 
 /**
  * Candidate containers for the real module object, in resolution order.
@@ -40,7 +40,7 @@ function candidates(loaded) {
   return [
     loaded,
     loaded?.default,
-    loaded?.["module.exports"],
+    loaded?.['module.exports'],
     loaded?.default?.default,
   ];
 }
@@ -50,7 +50,7 @@ function describe(loaded) {
     return String(loaded);
   }
   const keys = Object.keys(loaded);
-  return `${typeof loaded} with keys [${keys.join(", ")}]`;
+  return `${typeof loaded} with keys [${keys.join(', ')}]`;
 }
 
 /**
@@ -64,10 +64,10 @@ function describe(loaded) {
  */
 export function resolveNamedExport(loaded, exportName, moduleName) {
   for (const candidate of candidates(loaded)) {
-    if (candidate && typeof candidate[exportName] === "function") {
+    if (candidate && typeof candidate[exportName] === 'function') {
       debug(`resolved ${moduleName}.${exportName}`, {
         received: describe(loaded),
-        via: candidate === loaded ? "namespace" : "unwrapped",
+        via: candidate === loaded ? 'namespace' : 'unwrapped',
       });
       return candidate;
     }
@@ -87,6 +87,6 @@ export function resolveNamedExport(loaded, exportName, moduleName) {
  * @returns {Promise<Record<string, unknown>>} command-stream exports
  */
 export async function loadCommandStream(use) {
-  const loaded = await use("command-stream");
-  return resolveNamedExport(loaded, "$", "command-stream");
+  const loaded = await use('command-stream');
+  return resolveNamedExport(loaded, '$', 'command-stream');
 }

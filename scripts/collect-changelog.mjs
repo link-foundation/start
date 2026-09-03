@@ -44,7 +44,9 @@ function getVersionFromCargo() {
  * @returns {string} - Content without frontmatter
  */
 function stripFrontmatter(content) {
-  const frontmatterMatch = content.match(/^---\s*\n[\s\S]*?\n---\s*\n([\s\S]*)$/);
+  const frontmatterMatch = content.match(
+    /^---\s*\n[\s\S]*?\n---\s*\n([\s\S]*)$/
+  );
   if (frontmatterMatch) {
     return frontmatterMatch[1].trim();
   }

@@ -99,7 +99,9 @@ function parseArgs(argv) {
 function main() {
   const { file, threshold } = parseArgs(process.argv.slice(2));
   if (!file) {
-    console.error('Usage: node scripts/check-js-coverage.mjs <coverage.txt> [--threshold 45]');
+    console.error(
+      'Usage: node scripts/check-js-coverage.mjs <coverage.txt> [--threshold 45]'
+    );
     process.exit(2);
   }
   if (!Number.isFinite(threshold)) {
@@ -111,7 +113,9 @@ function main() {
   try {
     report = readFileSync(file, 'utf8');
   } catch (error) {
-    console.error(`❌ Could not read coverage report ${file}: ${error.message}`);
+    console.error(
+      `❌ Could not read coverage report ${file}: ${error.message}`
+    );
     process.exit(1);
   }
 
@@ -121,8 +125,7 @@ function main() {
 }
 
 const invokedDirectly =
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (invokedDirectly) {
   main();
 }

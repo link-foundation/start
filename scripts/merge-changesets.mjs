@@ -162,10 +162,7 @@ function generateChangesetName() {
  */
 function buildVersionTypeRegex(packageName) {
   const escapedName = packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(
-    `^['"]?${escapedName}['"]?:\\s+(major|minor|patch)`,
-    'm'
-  );
+  return new RegExp(`^['"]?${escapedName}['"]?:\\s+(major|minor|patch)`, 'm');
 }
 
 /**
