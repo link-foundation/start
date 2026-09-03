@@ -94,3 +94,44 @@ change.
    visibility of the defect without removing it.
 6. The fix belongs at step 2: rebuild the string so that re-tokenising it yields
    the original argv.
+
+## 5. A second root cause the fix exposed: the shell dialect
+
+The first push turned both Windows CI jobs red while Linux and macOS stayed
+green (`data/ci/windows-js-33737072005.log`,
+`data/ci/windows-rust-33737071866.log`). The failure is not a flake and not a
+narrow escaping slip; it is the same class of mistake as the original bug, one
+level down.
+
+`start` does not run commands with `sh -c` on Windows. Both implementations pick
+`powershell.exe -Command <string>` there (`rust/src/bin/main.rs`, the shell
+selection in `js/src/lib/isolation.js`). PowerShell does not accept the POSIX
+way of escaping a quote — closing the string, escaping, reopening — so the
+rebuilt line `node -e 'console.log('\''hi'\'')'` is a parser error:
+
+```
+At line:1 char:3
++ ''''echo' 'hi''''
++   ~~~~~~~~~~~~~~~~
+Unexpected token ''''echo' 'hi'''' in expression or statement.
+```
+
+Building a command string is therefore only well defined *relative to a shell*.
+The quoting function had silently assumed one shell for every platform, exactly
+as the parser had silently assumed one word for every argument. The fix makes
+the dialect an explicit parameter that defaults to the host shell, with a
+narrower safe-character set for PowerShell (`,` builds an array, `@` splats and
+`%` is an alias for `ForEach-Object`).
+
+Two secondary facts came out of the same logs:
+
+- PowerShell prefixes its output with a UTF-8 BOM, so
+  `assertion failed: left: "\u{feff}ONE", right: "ONE"`. The BOM is real
+  program output on that platform, not a defect in the fix; the assertions strip
+  it.
+- The pre-existing `echo-integration` tests passed a *shell command string* to
+  `execSync`, which `cmd.exe` splits differently from a POSIX shell. Before the
+  fix `join(' ')` reassembled whatever `cmd.exe` produced, so `'echo hi'` was
+  echoed back as a literal string and the loose `includes('hi')` assertion
+  passed by accident. Those tests now pass argv directly, which is what they
+  meant to test all along.

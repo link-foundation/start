@@ -23,6 +23,12 @@ second source of truth: one argument is still a verbatim shell script, several
 arguments are shell-quoted element by element, so the inner shell reproduces
 exactly the argv the user typed.
 
+Windows exposed a second, related assumption: the rebuilt string is only well
+defined relative to a shell. `start` runs commands with `powershell.exe -Command`
+there, and PowerShell rejects the POSIX `'\''` escape, so the first push turned
+both Windows CI jobs red (`data/ci/windows-*.log`). The quoting dialect is now an
+explicit parameter defaulting to the host shell.
+
 The same one-line defect existed in both implementations
 (`js/src/lib/args-parser.js`, `rust/src/lib/args_parser.rs`) and is fixed in
 both, so every downstream consumer — direct execution, Docker, screen, tmux,
@@ -47,9 +53,13 @@ SSH and the command-stream path — inherits the repair from one place.
   (`experiments/issue-164-repro.mjs`) run against the unmodified tree and the
   fixed tree.
 - `data/js-focused-test.log` and `data/rust-focused-test.log` record the two new
-  regression suites (28 cases each), which drive the real CLI end to end for the
-  reported failures and for the single-argument script form that must keep
+  regression suites (33 and 31 cases), which drive the real CLI end to end for
+  the reported failures and for the single-argument script form that must keep
   working.
+- `data/ci/windows-js-33737072005.log` and
+  `data/ci/windows-rust-33737071866.log` are the downloaded Windows CI failures
+  that revealed the PowerShell quoting dialect, the UTF-8 BOM in its output, and
+  two `echo-integration` cases that had been passing by accident.
 - `data/local-js-full.log` and `data/local-rust-full.log` record the full local
   suites; `data/local-test-parity.log` shows the Rust-to-JavaScript case ratio
   against the required 90% minimum.

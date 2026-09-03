@@ -47,6 +47,18 @@ in `data/` and from the branch commit history.
     size for both languages, Clippy, `cargo fmt`, both doc-example checks, test
     parity at 105.8%, and changeset validation over the PR diff range.
 
+11. **2026-09-03 09:08 — Windows CI turns red.** Both workflow runs fail only on
+    `windows-latest`; every other platform is green. The logs
+    (`data/ci/windows-*.log`) show `powershell.exe` rejecting the POSIX `'\''`
+    escape, a UTF-8 BOM in PowerShell's output, and two pre-existing
+    `echo-integration` cases that had been passing by accident.
+12. **Second fix** — The quoting dialect becomes an explicit parameter that
+    defaults to the host shell (PowerShell on Windows, POSIX elsewhere), display
+    quoting stays POSIX so the `$ …` line is platform-independent, the screen
+    backend splits bare-shell argv with `to_shell_words`, and the affected tests
+    assert both dialects explicitly. The gates run green again: 871 JavaScript
+    cases, every Rust test binary, parity at 106.5%.
+
 One derived fact is worth keeping. Step 2 is the reason this defect stayed open
 for so long: repairing the symptom on one path made the remaining cases quieter,
 not rarer. After #91, `bash -c "echo hello world"` on the direct path exited `0`
