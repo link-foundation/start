@@ -747,7 +747,7 @@ function runInDocker(command, options = {}) {
         containerName,
         cleanupPolicy
       );
-      message += `\nAttach with: docker attach ${containerName}`;
+      message += `\nAttach with: $ --attach ${containerName} (or docker attach ${containerName})`;
       message += `\nView logs: docker logs ${containerName}`;
       if (options.logPath) {
         message += `\nLive log: ${options.logPath}`;
