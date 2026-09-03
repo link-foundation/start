@@ -259,6 +259,11 @@ destroying the evidence it preserves, so `dev/log` joins `node_modules`,
 `eslint.config.mjs` and `.prettierignore` already draw. Covered by
 `js/test/check-file-size.js` and `rust/tests/check_file_size.rs`.
 
+The first version of that exemption was itself platform-dependent: the checker
+matched and reported `relative()` output verbatim, which is `dev\log` on
+Windows, so the Bun-on-`windows-latest` matrix leg failed while Linux passed.
+Paths are now normalised to forward slashes before both matching and reporting.
+
 **Result:** `analysis/actionlint-after.txt` is empty (exit 0);
 `analysis/zizmor-after.txt` ends with `No findings to report. Good job!`;
 `bun run check` and the full test suite pass; `cargo audit` and

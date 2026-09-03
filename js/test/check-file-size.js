@@ -8,6 +8,10 @@
  * both the JavaScript and the Rust pipeline. That is a false positive: the
  * archive cannot be refactored without destroying the evidence it preserves.
  *
+ * The paths are compared with forward slashes: the checker normalises them so
+ * the exclusion list matches on Windows too, where `relative()` would otherwise
+ * yield `dev\\log`.
+ *
  * The Rust suite mirrors these checks in `rust/tests/check_file_size.rs`.
  */
 
@@ -70,6 +74,13 @@ describe('check-file-size', () => {
     });
     assert.strictEqual(result.code, 0);
     assert.ok(!result.output.includes('vendored.js'));
+  });
+
+  it('reports paths with forward slashes on every platform', () => {
+    const result = runChecker({ 'scripts/nested/huge.mjs': 1500 });
+    assert.strictEqual(result.code, 1);
+    assert.ok(result.output.includes('scripts/nested/huge.mjs'));
+    assert.ok(!result.output.includes('scripts\\nested'));
   });
 
   it('still checks Rust sources outside the archive', () => {

@@ -6,6 +6,9 @@
 //! both the JavaScript and the Rust pipeline. That is a false positive: the
 //! archive cannot be refactored without destroying the evidence it preserves.
 //!
+//! The paths are compared with forward slashes: the checker normalises them so
+//! the exclusion list matches on Windows too.
+//!
 //! This mirrors `js/test/check-file-size.js`.
 
 use std::fs;
@@ -66,6 +69,14 @@ fn ignores_archived_evidence_under_dev_log() {
     );
     assert_eq!(code, 0, "{output}");
     assert!(!output.contains("vendored.js"), "{output}");
+}
+
+#[test]
+fn reports_paths_with_forward_slashes_on_every_platform() {
+    let (code, output) = run_checker("slashes", &[("scripts/nested/huge.mjs", 1500)]);
+    assert_eq!(code, 1, "{output}");
+    assert!(output.contains("scripts/nested/huge.mjs"), "{output}");
+    assert!(!output.contains("scripts\\nested"), "{output}");
 }
 
 #[test]

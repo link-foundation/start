@@ -8,7 +8,7 @@
  */
 
 import { readdir, readFile } from 'fs/promises';
-import { join, relative } from 'path';
+import { join, relative, sep } from 'path';
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -36,6 +36,17 @@ if (checkType === 'js') {
 }
 
 /**
+ * Repository-relative path with forward slashes on every platform, so both the
+ * exclusion patterns below and the reported violations read the same on
+ * Windows as on Linux.
+ * @param {string} fullPath
+ * @returns {string}
+ */
+function toRepoRelative(fullPath) {
+  return relative(process.cwd(), fullPath).split(sep).join('/');
+}
+
+/**
  * Recursively find all JavaScript files in a directory
  * @param {string} dir - Directory to search
  * @param {string[]} filesToExclude - Patterns to exclude
@@ -47,7 +58,7 @@ async function findJavaScriptFiles(dir, filesToExclude = []) {
 
   for (const entry of entries) {
     const fullPath = join(dir, entry.name);
-    const relativePath = relative(process.cwd(), fullPath);
+    const relativePath = toRepoRelative(fullPath);
 
     // Skip excluded directories and files
     if (
@@ -113,7 +124,7 @@ async function main() {
     const lineCount = await countLines(file);
     if (lineCount > MAX_LINES) {
       violations.push({
-        file: relative(process.cwd(), file),
+        file: toRepoRelative(file),
         lines: lineCount,
       });
     }
