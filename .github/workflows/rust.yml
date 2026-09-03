@@ -193,11 +193,11 @@ jobs:
           CHANGED_FILES=$(git diff --name-only "origin/$GITHUB_BASE_REF...HEAD")
 
           # Check if any Rust source files changed
-          SOURCE_CHANGED=$(echo "$CHANGED_FILES" | grep -E "^rust/(src/|tests/|Cargo\.toml)" | wc -l)
+          SOURCE_CHANGED=$(echo "$CHANGED_FILES" | grep -cE "^rust/(src/|tests/|Cargo\.toml)" || true)
 
           # Check if a changelog fragment was ADDED in this PR (not just existing)
           # We need to check the diff, not just the directory contents
-          FRAGMENT_ADDED=$(echo "$CHANGED_FILES" | grep -E "^rust/changelog\.d/.*\.md$" | grep -v "README.md" | wc -l)
+          FRAGMENT_ADDED=$(echo "$CHANGED_FILES" | grep -E "^rust/changelog\.d/.*\.md$" | grep -cv "README.md" || true)
 
           echo "Source files changed: $SOURCE_CHANGED"
           echo "Changelog fragments added in PR: $FRAGMENT_ADDED"
@@ -434,7 +434,7 @@ jobs:
           # tarpaulin outputs: "50.73% coverage, 908/1790 lines covered"
           COVERAGE=$(grep -oP '^\d+\.\d+(?=% coverage)' coverage/tarpaulin.log | tail -1)
           echo "Coverage: ${COVERAGE}%"
-          echo "coverage=${COVERAGE}" >> $GITHUB_OUTPUT
+          echo "coverage=${COVERAGE}" >> "$GITHUB_OUTPUT"
           # Fail if coverage is below 50% (lib code only; main.rs excluded via tarpaulin.toml)
           if python3 -c "import sys; c=float('${COVERAGE}') if '${COVERAGE}' else 0; sys.exit(0 if c >= 50.0 else 1)"; then
             echo "✅ Coverage ${COVERAGE}% meets the 50% threshold"
@@ -564,7 +564,7 @@ jobs:
         working-directory: rust
         run: |
           CURRENT_VERSION=$(grep -Po '(?<=^version = ")[^"]*' Cargo.toml)
-          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build release
         if: steps.check.outputs.should_release == 'true'

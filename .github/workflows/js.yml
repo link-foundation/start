@@ -328,7 +328,7 @@ jobs:
 
       - name: Add .NET tools to PATH
         if: runner.os != 'Windows'
-        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+        run: echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Install dependencies
         working-directory: js
@@ -529,8 +529,8 @@ jobs:
         run: |
           CHANGESET_COUNT=$(find js/.changeset -name "*.md" ! -name "README.md" | wc -l)
           echo "Found $CHANGESET_COUNT changeset file(s)"
-          echo "has_changesets=$([[ $CHANGESET_COUNT -gt 0 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
-          echo "changeset_count=$CHANGESET_COUNT" >> $GITHUB_OUTPUT
+          echo "has_changesets=$([[ $CHANGESET_COUNT -gt 0 ]] && echo 'true' || echo 'false')" >> "$GITHUB_OUTPUT"
+          echo "changeset_count=$CHANGESET_COUNT" >> "$GITHUB_OUTPUT"
 
       - name: Check if a release is needed (self-healing vs. npm registry)
         id: release_needed

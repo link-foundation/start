@@ -116,7 +116,14 @@ There was no workflow-lint job at all. Running the standard tools for the first
 time (`analysis/*-before.txt`):
 
 * **actionlint 1.7.7** — 2 errors: `github.head_ref` interpolated directly into
-  `run:` blocks (`js.yml:146`, `js.yml:202`) — template injection.
+  `run:` blocks (`js.yml:146`, `js.yml:202`) — template injection. A further
+  **7 shellcheck findings** surfaced only in CI: the `rhysd/actionlint` Docker
+  image bundles shellcheck, a bare local binary does not, so the first local
+  run reported 0 — a false negative in the verification itself. They were
+  reproduced locally by putting shellcheck on `PATH` and fixed:
+  4 × SC2086 (unquoted `$GITHUB_PATH` / `$GITHUB_OUTPUT` redirections in
+  `js.yml:331,529` and `rust.yml:430,565`) and 2 × SC2126
+  (`grep … | wc -l` → `grep -c`, `rust.yml:191`).
 * **zizmor 1.30.0** — **27 high-confidence/high-severity findings**:
   9 × `template-injection`, unpinned third-party actions
   (`dtolnay/rust-toolchain@stable`, `oven-sh/setup-bun`,
@@ -235,6 +242,12 @@ None were found. Two candidates were examined and **deliberately left alone**:
   `js/` rules with the repository as base path, plus `lint:scripts` and
   `format:check:scripts` npm scripts wired into `bun run check` and into the
   `js.yml` lint job — closing RC-4.
+
+One further false negative appeared on the first CI run of the new job: the
+`zizmor-action` defaults to `inputs: .`, so it audited the **template snapshots
+archived under `dev/log/`** — other projects' workflows — and failed the build
+on their findings. The job now passes `inputs: .github/workflows`; those
+findings are reported in the templates' own repositories instead (§5).
 
 **Result:** `analysis/actionlint-after.txt` is empty (exit 0);
 `analysis/zizmor-after.txt` ends with `No findings to report. Good job!`;

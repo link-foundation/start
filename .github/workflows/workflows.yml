@@ -69,6 +69,11 @@ jobs:
           advanced-security: false
           annotations: true
           config: .github/zizmor.yml
+          # Audit this repository's own workflows only. The action's default
+          # input is `.`, which also picks up the template snapshots archived
+          # under dev/log/ - other projects' workflows, whose findings belong
+          # in their own repositories (issue #168).
+          inputs: .github/workflows
           min-confidence: medium
 
   # === PIPELINE STATUS ===
