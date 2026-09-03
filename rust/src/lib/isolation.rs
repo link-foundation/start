@@ -708,7 +708,10 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
     let shell_interactive_flag = get_shell_interactive_flag(&shell_to_use);
 
     // Print the user command (this appears after any virtual commands like docker pull)
-    println!("{}", crate::output_blocks::create_command_line(command));
+    println!(
+        "{}",
+        crate::output_blocks::create_command_line(&build_display_command(command))
+    );
     println!();
 
     let needs_network_setup = docker_networks(options).len() > 1;
@@ -972,7 +975,9 @@ pub use self::isolation_log::{
     get_temp_dir, get_temp_root, get_timestamp, write_log_file, LogHeaderParams,
 };
 pub use isolation_shell::{
-    build_shell_with_args_cmd_args, is_interactive_shell_command, is_shell_invocation_with_args,
+    build_command_string, build_display_command, build_shell_with_args_cmd_args, command_name,
+    is_interactive_shell_command, is_shell_invocation_with_args, quote_shell_arg,
+    split_shell_words,
 };
 
 fn is_debug() -> bool {

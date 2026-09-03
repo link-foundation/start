@@ -63,11 +63,12 @@ pub use execution_store::{
 pub use exit_reason::{detect_exit_reason, resolve_exit_reason, signal_name_for_exit_code};
 pub use failure_handler::{handle_failure, Config as FailureConfig};
 pub use isolation::{
-    append_log_file, build_shell_with_args_cmd_args, create_log_footer, create_log_header,
-    create_log_path, create_log_path_for_execution, docker_image_exists, docker_pull_image,
+    append_log_file, build_command_string, build_display_command, build_shell_with_args_cmd_args,
+    command_name, create_log_footer, create_log_header, create_log_path,
+    create_log_path_for_execution, docker_image_exists, docker_pull_image,
     get_default_docker_image, get_timestamp, is_command_available, is_interactive_shell_command,
-    is_shell_invocation_with_args, run_as_isolated_user, run_isolated, write_log_file,
-    IsolationOptions, IsolationResult, LogHeaderParams,
+    is_shell_invocation_with_args, quote_shell_arg, run_as_isolated_user, run_isolated,
+    split_shell_words, write_log_file, IsolationOptions, IsolationResult, LogHeaderParams,
 };
 pub use isolation_metadata::{
     build_isolation_options_map, docker_runtime_metadata, docker_runtime_status_lines,

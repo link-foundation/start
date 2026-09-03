@@ -24,7 +24,7 @@ Normalized output for both implementations:
 │ session   <uuid>
 │ start     <timestamp>
 │
-$ echo Hello World
+$ echo "Hello World"
 
 Hello World
 

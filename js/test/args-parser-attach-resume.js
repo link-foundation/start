@@ -70,7 +70,9 @@ describe('--resume', () => {
       'hello world',
     ]);
     assert.strictEqual(wrapperOptions.resume, 'my-session');
-    assert.strictEqual(command, 'echo hello world');
+    // Quoted argv elements stay quoted so the inner shell keeps the
+    // boundaries the user typed (issue #164).
+    assert.strictEqual(command, "echo 'hello world'");
     assert.deepStrictEqual(rawCommand, ['echo', 'hello world']);
   });
 

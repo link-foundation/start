@@ -38,6 +38,7 @@ const { printVersion } = require('../lib/version');
 const { createStartBlock, createFinishBlock } = require('../lib/output-blocks');
 const { runWithBunSpawn, runWithNodeSpawn } = require('../lib/spawn-helpers');
 const { printUsage } = require('../lib/usage');
+const { buildDisplayCommand, getCommandName } = require('../lib/shell-utils');
 
 // Configuration from environment variables
 const config = {
@@ -403,7 +404,7 @@ async function runWithIsolation(
     createStartBlock({
       sessionId,
       timestamp: startTime,
-      command: cmd,
+      command: buildDisplayCommand(cmd),
       extraLines,
       deferCommand,
     })
@@ -564,7 +565,7 @@ async function runWithIsolation(
  */
 async function runDirect(cmd, sessionId) {
   // Get the command name (first word of the actual command to execute)
-  const commandName = cmd.split(' ')[0];
+  const commandName = getCommandName(cmd);
 
   // Determine the shell based on the platform
   const isWindows = process.platform === 'win32';
@@ -624,8 +625,8 @@ async function runDirect(cmd, sessionId) {
   // Print start block with session ID
   const displayCommand =
     substitutionResult && substitutionResult.matched
-      ? `${parsedCommand} -> ${cmd}`
-      : cmd;
+      ? `${buildDisplayCommand(parsedCommand)} -> ${buildDisplayCommand(cmd)}`
+      : buildDisplayCommand(cmd);
   console.log(
     createStartBlock({
       sessionId,
@@ -714,7 +715,7 @@ async function runDirectWithCommandStream(
   const { $, raw } = await getCommandStream();
 
   // Get the command name (first word of the actual command to execute)
-  const commandName = cmd.split(' ')[0];
+  const commandName = getCommandName(cmd);
 
   // Determine the shell based on the platform
   const isWindows = process.platform === 'win32';
@@ -774,7 +775,9 @@ async function runDirectWithCommandStream(
 
   // Print start block with session ID
   const displayCmd =
-    subResult && subResult.matched ? `${parsedCmd} -> ${cmd}` : cmd;
+    subResult && subResult.matched
+      ? `${buildDisplayCommand(parsedCmd)} -> ${buildDisplayCommand(cmd)}`
+      : buildDisplayCommand(cmd);
   console.log(
     createStartBlock({
       sessionId,
