@@ -89,6 +89,11 @@ async function main() {
     '.git',
     'build',
     'target',
+    // Archived investigation evidence: third-party sources and workflow
+    // snapshots copied verbatim from other repositories. They are not this
+    // repository's source, so the refactoring limit does not apply to them
+    // (the same reason eslint.config.mjs and .prettierignore skip dev/).
+    'dev/log',
   ];
 
   const fileTypesStr =

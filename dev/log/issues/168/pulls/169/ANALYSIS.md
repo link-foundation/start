@@ -249,6 +249,16 @@ archived under `dev/log/`** — other projects' workflows — and failed the bui
 on their findings. The job now passes `inputs: .github/workflows`; those
 findings are reported in the templates' own repositories instead (§5).
 
+A third false positive came from this repository's own tooling:
+`scripts/check-file-size.mjs` enforces a 1000-line refactoring limit over the
+whole tree, so the archived third-party snapshot
+`dev/log/.../upstream/use-m-8.15.1-use.js` (1575 lines) failed both the
+JavaScript and the Rust `lint` job. The archive cannot be refactored without
+destroying the evidence it preserves, so `dev/log` joins `node_modules`,
+`target` and friends in the checker's exclusion list - the same boundary
+`eslint.config.mjs` and `.prettierignore` already draw. Covered by
+`js/test/check-file-size.js` and `rust/tests/check_file_size.rs`.
+
 **Result:** `analysis/actionlint-after.txt` is empty (exit 0);
 `analysis/zizmor-after.txt` ends with `No findings to report. Good job!`;
 `bun run check` and the full test suite pass; `cargo audit` and
