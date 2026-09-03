@@ -19,16 +19,20 @@
  * Exits non-zero with a `::error::` line if the badge is missing.
  */
 
-import { execSync } from "node:child_process";
+import { execSync } from 'node:child_process';
 
-import { debug, dumpEnv } from "./debug-print.mjs";
-import { packageVersionBadge } from "./release-name.mjs";
+import { debug, dumpEnv } from './debug-print.mjs';
+import { packageVersionBadge } from './release-name.mjs';
 
 function parseArgs(argv) {
   const result = {};
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg.startsWith("--") && argv[index + 1] && !argv[index + 1].startsWith("--")) {
+    if (
+      arg.startsWith('--') &&
+      argv[index + 1] &&
+      !argv[index + 1].startsWith('--')
+    ) {
       result[arg.slice(2)] = argv[index + 1];
       index += 1;
     }
@@ -39,20 +43,26 @@ function parseArgs(argv) {
 const {
   repository,
   tag,
-  "badge-type": badgeType,
-  "package-name": packageName,
-  "release-version": releaseVersion,
+  'badge-type': badgeType,
+  'package-name': packageName,
+  'release-version': releaseVersion,
 } = parseArgs(process.argv.slice(2));
 
 if (!repository || !tag || !badgeType || !packageName || !releaseVersion) {
   console.error(
-    "Usage: node scripts/verify-release-badge.mjs --repository <owner/repo> --tag <tag> --badge-type <npm|crates> --package-name <name> --release-version <version>",
+    'Usage: node scripts/verify-release-badge.mjs --repository <owner/repo> --tag <tag> --badge-type <npm|crates> --package-name <name> --release-version <version>'
   );
   process.exit(1);
 }
 
-debug("verify-release-badge args:", { repository, tag, badgeType, packageName, releaseVersion });
-dumpEnv(["GH_TOKEN", "GITHUB_TOKEN"]);
+debug('verify-release-badge args:', {
+  repository,
+  tag,
+  badgeType,
+  packageName,
+  releaseVersion,
+});
+dumpEnv(['GH_TOKEN', 'GITHUB_TOKEN']);
 
 const expectedBadge = packageVersionBadge({
   packageType: badgeType,
@@ -61,10 +71,12 @@ const expectedBadge = packageVersionBadge({
 });
 
 const expectedBadgeUrl = expectedBadge.match(/\((https:[^)]+)\)$/);
-const expectedBadgeImage = expectedBadge.match(/\!\[[^\]]*\]\((https:[^)]+)\)/);
+const expectedBadgeImage = expectedBadge.match(/!\[[^\]]*\]\((https:[^)]+)\)/);
 
 if (!expectedBadgeUrl || !expectedBadgeImage) {
-  console.error(`::error::Could not parse expected badge for ${badgeType}/${packageName}/${releaseVersion}`);
+  console.error(
+    `::error::Could not parse expected badge for ${badgeType}/${packageName}/${releaseVersion}`
+  );
   process.exit(1);
 }
 
@@ -72,10 +84,12 @@ let body;
 try {
   body = execSync(
     `gh api "repos/${repository}/releases/tags/${tag}" --jq .body`,
-    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }
   );
 } catch (error) {
-  console.error(`::error::Could not fetch release ${tag} from ${repository}: ${error.message.split("\n")[0]}`);
+  console.error(
+    `::error::Could not fetch release ${tag} from ${repository}: ${error.message.split('\n')[0]}`
+  );
   process.exit(1);
 }
 
@@ -87,9 +101,11 @@ if (hasBadgeUrl && hasBadgeImage) {
   process.exit(0);
 }
 
-console.error(`::error::Release ${tag} is missing the expected ${badgeType} badge.`);
+console.error(
+  `::error::Release ${tag} is missing the expected ${badgeType} badge.`
+);
 console.error(`  Expected image URL: ${expectedBadgeImage[1]}`);
 console.error(`  Expected link URL:  ${expectedBadgeUrl[1]}`);
-console.error("  Actual release body:");
+console.error('  Actual release body:');
 console.error(body);
 process.exit(1);

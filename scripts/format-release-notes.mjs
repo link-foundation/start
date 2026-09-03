@@ -24,46 +24,48 @@
  */
 
 import {
+  containsPackageVersionBadge,
   normalizeReleaseVersionForBadge,
   packageVersionBadge,
-} from "./release-name.mjs";
+} from './release-name.mjs';
+import { loadCommandStream } from './load-command-stream.mjs';
 
 // TODO: Update this to match your package name in package.json
-const PACKAGE_NAME = "start-command";
+const PACKAGE_NAME = 'start-command';
 
 // Load use-m dynamically
 const { use } = eval(
-  await (await fetch("https://unpkg.com/use-m/use.js")).text(),
+  await (await fetch('https://unpkg.com/use-m/use.js')).text()
 );
 
 // Import link-foundation libraries
-const { $ } = await use("command-stream");
-const { makeConfig } = await use("lino-arguments");
+const { $ } = await loadCommandStream(use);
+const { makeConfig } = await use('lino-arguments');
 
 // Parse CLI arguments using lino-arguments
 // Note: Using --release-version instead of --version to avoid conflict with yargs' built-in --version flag
 const config = makeConfig({
   yargs: ({ yargs, getenv }) =>
     yargs
-      .option("release-version", {
-        type: "string",
-        default: getenv("VERSION", ""),
-        describe: "Version number (e.g., v0.8.36)",
+      .option('release-version', {
+        type: 'string',
+        default: getenv('VERSION', ''),
+        describe: 'Version number (e.g., v0.8.36)',
       })
-      .option("release-id", {
-        type: "string",
-        default: getenv("RELEASE_ID", ""),
-        describe: "GitHub release ID",
+      .option('release-id', {
+        type: 'string',
+        default: getenv('RELEASE_ID', ''),
+        describe: 'GitHub release ID',
       })
-      .option("repository", {
-        type: "string",
-        default: getenv("REPOSITORY", ""),
-        describe: "GitHub repository (e.g., owner/repo)",
+      .option('repository', {
+        type: 'string',
+        default: getenv('REPOSITORY', ''),
+        describe: 'GitHub repository (e.g., owner/repo)',
       })
-      .option("commit-sha", {
-        type: "string",
-        default: getenv("COMMIT_SHA", ""),
-        describe: "Commit SHA for PR detection",
+      .option('commit-sha', {
+        type: 'string',
+        default: getenv('COMMIT_SHA', ''),
+        describe: 'Commit SHA for PR detection',
       }),
 });
 
@@ -74,7 +76,7 @@ const passedCommitSha = config.commitSha;
 
 if (!releaseId || !version || !repository) {
   console.error(
-    "Usage: format-release-notes.mjs --release-id <releaseId> --release-version <version> --repository <repository> [--commit-sha <sha>]",
+    'Usage: format-release-notes.mjs --release-id <releaseId> --release-version <version> --repository <repository> [--commit-sha <sha>]'
   );
   process.exit(1);
 }
@@ -86,11 +88,11 @@ try {
   });
   const releaseData = JSON.parse(result.stdout);
 
-  const currentBody = releaseData.body || "";
+  const currentBody = releaseData.body || '';
 
-  // Skip if already formatted (has shields.io badge image)
-  if (currentBody.includes("img.shields.io")) {
-    console.log("ℹ️ Release notes already formatted");
+  // Skip if already formatted (the notes already embed a badge image)
+  if (containsPackageVersionBadge(currentBody)) {
+    console.log('ℹ️ Release notes already formatted');
     process.exit(0);
   }
 
@@ -121,8 +123,8 @@ try {
       }
     }
   } else {
-    console.log("⚠️ Could not parse changes from release notes");
-    console.log("   Looking for pattern: ### [Major|Minor|Patch] Changes");
+    console.log('⚠️ Could not parse changes from release notes');
+    console.log('   Looking for pattern: ### [Major|Minor|Patch] Changes');
     process.exit(0);
   }
 
@@ -132,17 +134,17 @@ try {
   // 3. Remove any trailing npm package links or markdown that might be there
   // 4. Normalize whitespace while preserving line breaks
   const cleanDescription = rawDescription
-    .replace(/\\n/g, "\n") // Convert escaped \n to actual newlines
-    .replace(/^(\\['"])+/g, "") // Remove leading escaped quotes (e.g., \', \", \'', \'')
-    .replace(/(['"])+$/g, "") // Remove trailing unescaped quotes (e.g., ', ", '', '')
-    .replace(/^(['"])+/g, "") // Remove leading unescaped quotes
-    .replace(/📦.*$/s, "") // Remove any existing npm package info
-    .replace(/---.*$/s, "") // Remove any existing separators and everything after
+    .replace(/\\n/g, '\n') // Convert escaped \n to actual newlines
+    .replace(/^(\\['"])+/g, '') // Remove leading escaped quotes (e.g., \', \", \'', \'')
+    .replace(/(['"])+$/g, '') // Remove trailing unescaped quotes (e.g., ', ", '', '')
+    .replace(/^(['"])+/g, '') // Remove leading unescaped quotes
+    .replace(/📦.*$/s, '') // Remove any existing npm package info
+    .replace(/---.*$/s, '') // Remove any existing separators and everything after
     .trim()
-    .split("\n") // Split by lines
+    .split('\n') // Split by lines
     .map((line) => line.trim()) // Trim whitespace from each line
-    .join("\n") // Rejoin with newlines
-    .replace(/\n{3,}/g, "\n\n"); // Normalize excessive blank lines (3+ becomes 2)
+    .join('\n') // Rejoin with newlines
+    .replace(/\n{3,}/g, '\n\n'); // Normalize excessive blank lines (3+ becomes 2)
 
   // Find the PR that contains the release commit
   // Uses commit hash from changelog or passed commit SHA from workflow
@@ -152,21 +154,21 @@ try {
   const commitShaToLookup = commitHash || passedCommitSha;
 
   if (commitShaToLookup) {
-    const source = commitHash ? "changelog" : "workflow";
+    const source = commitHash ? 'changelog' : 'workflow';
     console.log(
-      `ℹ️ Looking up PR for commit ${commitShaToLookup} (from ${source})`,
+      `ℹ️ Looking up PR for commit ${commitShaToLookup} (from ${source})`
     );
 
     try {
       const prResult =
         await $`gh api "repos/${repository}/commits/${commitShaToLookup}/pulls"`.run(
-          { capture: true },
+          { capture: true }
         );
       const prsData = JSON.parse(prResult.stdout);
 
       // Find the PR that's not the version bump PR (not "chore: version packages")
       const relevantPr = prsData.find(
-        (pr) => !pr.title.includes("version packages"),
+        (pr) => !pr.title.includes('version packages')
       );
 
       if (relevantPr) {
@@ -174,29 +176,29 @@ try {
         console.log(`✅ Found PR #${prNumber} containing commit`);
       } else if (prsData.length > 0) {
         console.log(
-          "⚠️ Found PRs but all are version bump PRs, not linking any",
+          '⚠️ Found PRs but all are version bump PRs, not linking any'
         );
       } else {
         console.log(
-          "ℹ️ No PR found containing this commit - not adding PR link",
+          'ℹ️ No PR found containing this commit - not adding PR link'
         );
       }
     } catch (error) {
-      console.log("⚠️ Could not find PR for commit", commitShaToLookup);
-      console.log("   Error:", error.message);
+      console.log('⚠️ Could not find PR for commit', commitShaToLookup);
+      console.log('   Error:', error.message);
       if (process.env.DEBUG) {
         console.error(error);
       }
     }
   } else {
     // No commit hash available from any source
-    console.log("ℹ️ No commit SHA available - not adding PR link");
+    console.log('ℹ️ No commit SHA available - not adding PR link');
   }
 
   // Build formatted release notes
   const versionWithoutV = normalizeReleaseVersionForBadge(version);
   const npmBadge = packageVersionBadge({
-    packageType: "npm",
+    packageType: 'npm',
     packageName: PACKAGE_NAME,
     releaseVersion: version,
   });
@@ -213,16 +215,16 @@ try {
   // Update the release using JSON input to properly handle special characters
   const updatePayload = JSON.stringify({ body: formattedBody });
   await $`gh api repos/${repository}/releases/${releaseId} -X PATCH --input -`.run(
-    { stdin: updatePayload },
+    { stdin: updatePayload }
   );
 
   console.log(`✅ Formatted release notes for v${versionWithoutV}`);
   if (prNumber) {
     console.log(`   - Added link to PR #${prNumber}`);
   }
-  console.log("   - Added shields.io npm badge");
-  console.log("   - Cleaned up formatting");
+  console.log('   - Added shields.io npm badge');
+  console.log('   - Cleaned up formatting');
 } catch (error) {
-  console.error("❌ Error formatting release notes:", error.message);
+  console.error('❌ Error formatting release notes:', error.message);
   process.exit(1);
 }

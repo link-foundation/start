@@ -5,6 +5,7 @@
  */
 
 const { spawn, spawnSync, execSync } = require('child_process');
+const fs = require('fs');
 
 async function testApproaches() {
   console.log('=== Testing Attached Mode Approaches ===\n');
@@ -60,13 +61,13 @@ async function testApproaches() {
     await new Promise((r) => setTimeout(r, 500));
 
     // Read log
-    const output = execSync(`cat ${logFile}`, { encoding: 'utf8' });
+    const output = fs.readFileSync(logFile, 'utf8');
     console.log(`   Output: "${output.trim()}"`);
     console.log(`   Status: SUCCESS`);
 
     // Cleanup
     try {
-      execSync(`rm ${logFile} 2>/dev/null`);
+      fs.rmSync(logFile, { force: true });
     } catch {}
     try {
       execSync(`screen -S ${sessionName} -X quit 2>/dev/null`);

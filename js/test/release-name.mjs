@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import {
+  containsPackageVersionBadge,
   encodeShieldsStaticBadgeSegment,
   extractChangelogEntry,
   normalizeReleaseVersionForBadge,
@@ -113,5 +114,61 @@ describe('extractChangelogEntry', () => {
     expect(extractChangelogEntry(changelog, 'rust-v0.14.1')).toBe(
       '- Fix Rust release automation.'
     );
+  });
+});
+
+describe('containsPackageVersionBadge', () => {
+  it('detects the badge this repository generates', () => {
+    const badge = packageVersionBadge({
+      packageType: 'npm',
+      packageName: 'start-command',
+      releaseVersion: 'js-v1.2.3',
+    });
+
+    expect(containsPackageVersionBadge(`Notes\n\n---\n\n${badge}`)).toBe(true);
+  });
+
+  it('reports unformatted release notes', () => {
+    expect(containsPackageVersionBadge('### Patch Changes\n\n- Fix.')).toBe(
+      false
+    );
+    expect(containsPackageVersionBadge('')).toBe(false);
+    expect(containsPackageVersionBadge(undefined)).toBe(false);
+  });
+
+  it('does not treat a foreign host that merely mentions the badge host as a badge', () => {
+    // CodeQL js/incomplete-url-substring-sanitization (issue #168): the former
+    // `body.includes('img.shields.io')` matched all of these.
+    expect(
+      containsPackageVersionBadge(
+        '![x](https://example.invalid/img.shields.io)'
+      )
+    ).toBe(false);
+    expect(
+      containsPackageVersionBadge(
+        '![x](https://example.invalid/?u=img.shields.io)'
+      )
+    ).toBe(false);
+    expect(
+      containsPackageVersionBadge(
+        '![x](https://img.shields.io.example.invalid/b.svg)'
+      )
+    ).toBe(false);
+    expect(containsPackageVersionBadge('see https://img.shields.io')).toBe(
+      false
+    );
+  });
+
+  it('ignores relative and malformed image targets', () => {
+    expect(containsPackageVersionBadge('![x](./local/badge.svg)')).toBe(false);
+    expect(containsPackageVersionBadge('![x]()')).toBe(false);
+  });
+
+  it('accepts a badge carrying a markdown title', () => {
+    expect(
+      containsPackageVersionBadge(
+        '![npm version](https://img.shields.io/badge/npm-1.2.3-blue.svg "npm")'
+      )
+    ).toBe(true);
   });
 });

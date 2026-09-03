@@ -76,6 +76,14 @@ export default [
         __filename: 'readonly',
         fetch: 'readonly',
         Bun: 'readonly',
+        // Web-standard globals Node exposes; used by the repository-level
+        // scripts/ directory, which the root config lints (issue #168).
+        AbortController: 'readonly',
+        URL: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
       },
     },
     rules: {

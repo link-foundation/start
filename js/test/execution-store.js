@@ -601,4 +601,56 @@ describe('ExecutionStore cleanupStale', () => {
   });
 });
 
+describe('ExecutionStore.execClink', () => {
+  // Regression for issue #168: the query was interpolated into a shell string
+  // as `clink '<query>' --db "<path>"`, so a single quote in any recorded
+  // value (a command such as `echo it's fine`) broke out of the quoting.
+  it('passes the query to clink as a single argument, quotes included', () => {
+    if (process.platform === 'win32') {
+      return; // /bin/sh stub is POSIX-only
+    }
+
+    const { execFileSync } = require('child_process');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fake-clink-'));
+    try {
+      const argvFile = path.join(dir, 'argv');
+      const clinkPath = path.join(dir, 'clink');
+      fs.writeFileSync(
+        clinkPath,
+        [
+          '#!/bin/sh',
+          `printf '%s\\0' "$@" > "${argvFile}"`,
+          'echo ok',
+          '',
+        ].join('\n')
+      );
+      fs.chmodSync(clinkPath, 0o755);
+
+      const query = `() (("x.command: command it's fine"))`;
+      const modulePath = require.resolve('../src/lib/execution-store');
+      // A child process is required: the runtime resolves PATH at startup, so
+      // mutating process.env.PATH in-process does not affect command lookup.
+      const script = `
+        const { ExecutionStore } = require(${JSON.stringify(modulePath)});
+        const store = new ExecutionStore({ appFolder: ${JSON.stringify(dir)} });
+        const result = store.execClink(${JSON.stringify(query)});
+        process.stdout.write(JSON.stringify(result));
+      `;
+      const stdout = execFileSync(process.execPath, ['-e', script], {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PATH: `${dir}${path.delimiter}${process.env.PATH}`,
+        },
+      });
+
+      expect(JSON.parse(stdout).success).toBe(true);
+      const argv = fs.readFileSync(argvFile, 'utf8').split('\0').slice(0, -1);
+      expect(argv).toEqual([query, '--db', path.join(dir, LINKS_DB_FILE)]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 console.log('=== Execution Store Unit Tests ===');

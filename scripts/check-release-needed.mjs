@@ -28,25 +28,25 @@
  * See docs/case-studies/issue-118/comparison-with-templates.md.
  */
 
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { appendFileSync, existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
-import { debug, dumpEnv } from "./debug-print.mjs";
+import { debug, dumpEnv } from './debug-print.mjs';
 
 function parseArgs(argv) {
-  const out = { workingDir: ".", registry: "" };
+  const out = { workingDir: '.', registry: '' };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--working-dir" && argv[index + 1]) {
+    if (arg === '--working-dir' && argv[index + 1]) {
       out.workingDir = argv[index + 1];
       index += 1;
-    } else if (arg.startsWith("--working-dir=")) {
-      out.workingDir = arg.slice("--working-dir=".length);
-    } else if (arg === "--registry" && argv[index + 1]) {
+    } else if (arg.startsWith('--working-dir=')) {
+      out.workingDir = arg.slice('--working-dir='.length);
+    } else if (arg === '--registry' && argv[index + 1]) {
       out.registry = argv[index + 1];
       index += 1;
-    } else if (arg.startsWith("--registry=")) {
-      out.registry = arg.slice("--registry=".length);
+    } else if (arg.startsWith('--registry=')) {
+      out.registry = arg.slice('--registry='.length);
     }
   }
   return out;
@@ -54,16 +54,18 @@ function parseArgs(argv) {
 
 function setOutput(name, value) {
   const file = process.env.GITHUB_OUTPUT;
-  if (file) appendFileSync(file, `${name}=${value}\n`);
+  if (file) {
+    appendFileSync(file, `${name}=${value}\n`);
+  }
   console.log(`Output: ${name}=${value}`);
 }
 
 function readPackageJson(workingDir) {
-  const file = join(workingDir, "package.json");
+  const file = join(workingDir, 'package.json');
   if (!existsSync(file)) {
     throw new Error(`package.json not found at ${file}`);
   }
-  const data = JSON.parse(readFileSync(file, "utf8"));
+  const data = JSON.parse(readFileSync(file, 'utf8'));
   if (!data.name || !data.version) {
     throw new Error(`package.json at ${file} is missing name or version`);
   }
@@ -71,17 +73,19 @@ function readPackageJson(workingDir) {
 }
 
 function readCargoToml(workingDir) {
-  const file = join(workingDir, "Cargo.toml");
+  const file = join(workingDir, 'Cargo.toml');
   if (!existsSync(file)) {
     throw new Error(`Cargo.toml not found at ${file}`);
   }
-  const content = readFileSync(file, "utf8");
+  const content = readFileSync(file, 'utf8');
 
   const nameMatch = content.match(/^\s*name\s*=\s*"([^"]+)"/m);
   const versionMatch = content.match(/^\s*version\s*=\s*"([^"]+)"/m);
 
   if (!nameMatch || !versionMatch) {
-    throw new Error(`Cargo.toml at ${file} is missing name or version in the [package] table`);
+    throw new Error(
+      `Cargo.toml at ${file} is missing name or version in the [package] table`
+    );
   }
   return { name: nameMatch[1], version: versionMatch[1] };
 }
@@ -90,14 +94,22 @@ async function checkNpm(name, version) {
   const url = `https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(version)}`;
   try {
     const response = await fetch(url, {
-      headers: { "User-Agent": "link-foundation/start check-release-needed" },
+      headers: { 'User-Agent': 'link-foundation/start check-release-needed' },
     });
-    if (response.status === 200) return true;
-    if (response.status === 404) return false;
-    console.warn(`Warning: npm registry returned HTTP ${response.status} for ${url}; treating as not-published.`);
+    if (response.status === 200) {
+      return true;
+    }
+    if (response.status === 404) {
+      return false;
+    }
+    console.warn(
+      `Warning: npm registry returned HTTP ${response.status} for ${url}; treating as not-published.`
+    );
     return false;
   } catch (error) {
-    console.warn(`Warning: npm registry unreachable: ${error.message}; treating as not-published.`);
+    console.warn(
+      `Warning: npm registry unreachable: ${error.message}; treating as not-published.`
+    );
     return false;
   }
 }
@@ -106,14 +118,22 @@ async function checkCrates(name, version) {
   const url = `https://crates.io/api/v1/crates/${encodeURIComponent(name)}/${encodeURIComponent(version)}`;
   try {
     const response = await fetch(url, {
-      headers: { "User-Agent": "link-foundation/start check-release-needed" },
+      headers: { 'User-Agent': 'link-foundation/start check-release-needed' },
     });
-    if (response.status === 200) return true;
-    if (response.status === 404) return false;
-    console.warn(`Warning: crates.io returned HTTP ${response.status} for ${url}; treating as not-published.`);
+    if (response.status === 200) {
+      return true;
+    }
+    if (response.status === 404) {
+      return false;
+    }
+    console.warn(
+      `Warning: crates.io returned HTTP ${response.status} for ${url}; treating as not-published.`
+    );
     return false;
   } catch (error) {
-    console.warn(`Warning: crates.io unreachable: ${error.message}; treating as not-published.`);
+    console.warn(
+      `Warning: crates.io unreachable: ${error.message}; treating as not-published.`
+    );
     return false;
   }
 }
@@ -121,27 +141,29 @@ async function checkCrates(name, version) {
 const { workingDir, registry } = parseArgs(process.argv.slice(2));
 const resolvedDir = resolve(workingDir);
 
-debug("check-release-needed args:", { workingDir: resolvedDir, registry });
-dumpEnv(["GITHUB_OUTPUT", "HAS_FRAGMENTS"]);
+debug('check-release-needed args:', { workingDir: resolvedDir, registry });
+dumpEnv(['GITHUB_OUTPUT', 'HAS_FRAGMENTS']);
 
 if (!registry) {
-  console.error("Error: --registry <npm|crates.io> is required");
+  console.error('Error: --registry <npm|crates.io> is required');
   process.exit(1);
 }
 
-const hasFragments = process.env.HAS_FRAGMENTS === "true";
+const hasFragments = process.env.HAS_FRAGMENTS === 'true';
 
 let pkg;
 let isPublished;
 
-if (registry === "npm") {
+if (registry === 'npm') {
   pkg = readPackageJson(resolvedDir);
   isPublished = await checkNpm(pkg.name, pkg.version);
-} else if (registry === "crates.io" || registry === "crates") {
+} else if (registry === 'crates.io' || registry === 'crates') {
   pkg = readCargoToml(resolvedDir);
   isPublished = await checkCrates(pkg.name, pkg.version);
 } else {
-  console.error(`Error: unsupported registry "${registry}". Use "npm" or "crates.io".`);
+  console.error(
+    `Error: unsupported registry "${registry}". Use "npm" or "crates.io".`
+  );
   process.exit(1);
 }
 
@@ -153,13 +175,13 @@ console.log(`Has fragments/changesets: ${hasFragments}`);
 console.log(`Already published: ${isPublished}`);
 
 if (hasFragments) {
-  setOutput("should_release", "true");
-  setOutput("skip_bump", "false");
+  setOutput('should_release', 'true');
+  setOutput('skip_bump', 'false');
 } else if (isPublished) {
-  setOutput("should_release", "false");
-  setOutput("skip_bump", "false");
+  setOutput('should_release', 'false');
+  setOutput('skip_bump', 'false');
 } else {
   // Self-healing: version present locally but not on the registry → publish without bumping
-  setOutput("should_release", "true");
-  setOutput("skip_bump", "true");
+  setOutput('should_release', 'true');
+  setOutput('skip_bump', 'true');
 }

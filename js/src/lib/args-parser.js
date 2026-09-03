@@ -91,18 +91,25 @@ function isValidUUID(str) {
  * @returns {string} A new UUID v4 string
  */
 function generateUUID() {
-  // Try to use Node.js/Bun crypto module
-  try {
-    const crypto = require('crypto');
+  const crypto = require('crypto');
+  if (typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
-  } catch {
-    // Fallback for environments without crypto.randomUUID
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
   }
+
+  // Fallback for runtimes without crypto.randomUUID (Node < 14.17). Still a
+  // CSPRNG: session ids name isolation sessions and users, so a predictable
+  // generator is a security bug, not a cosmetic one (CodeQL js/insecure-randomness).
+  const bytes = crypto.randomBytes(16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 1
+  const hex = bytes.toString('hex');
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    hex.slice(12, 16),
+    hex.slice(16, 20),
+    hex.slice(20),
+  ].join('-');
 }
 
 /**

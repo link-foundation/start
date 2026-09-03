@@ -160,8 +160,10 @@ async function testDebug() {
 
   try {
     const command = 'echo "hello from attached mode"';
-    // Escape the inner quotes
-    const escapedCommand = command.replace(/"/g, '\\"');
+    // Escape the inner quotes - and the backslashes first, otherwise a
+    // trailing backslash escapes the quote we just added
+    // (CodeQL js/incomplete-sanitization).
+    const escapedCommand = command.replace(/(["\\])/g, '\\$1');
     const effectiveCommand = `(${escapedCommand}) 2>&1 | tee "${logFile5}"`;
     console.log(`  effectiveCommand: ${effectiveCommand}`);
 

@@ -23,23 +23,27 @@
  *   --dry-run                    Print the body that would be PATCHed and exit.
  */
 
-import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { execSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 
-import { debug, dumpEnv } from "./debug-print.mjs";
+import { debug, dumpEnv } from './debug-print.mjs';
 import {
   extractChangelogEntry,
   normalizeReleaseVersionForBadge,
   packageVersionBadge,
-} from "./release-name.mjs";
+} from './release-name.mjs';
 
 function parseArgs(argv) {
   const out = { dryRun: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--dry-run") {
+    if (arg === '--dry-run') {
       out.dryRun = true;
-    } else if (arg.startsWith("--") && argv[index + 1] && !argv[index + 1].startsWith("--")) {
+    } else if (
+      arg.startsWith('--') &&
+      argv[index + 1] &&
+      !argv[index + 1].startsWith('--')
+    ) {
       out[arg.slice(2)] = argv[index + 1];
       index += 1;
     }
@@ -50,18 +54,26 @@ function parseArgs(argv) {
 const args = parseArgs(process.argv.slice(2));
 const repository = args.repository;
 const tag = args.tag;
-const changelogFile = args["changelog-file"];
-const badgeType = args["badge-type"];
-const packageName = args["package-name"];
+const changelogFile = args['changelog-file'];
+const badgeType = args['badge-type'];
+const packageName = args['package-name'];
 const releaseVersion =
-  args["release-version"] || normalizeReleaseVersionForBadge(tag || "");
+  args['release-version'] || normalizeReleaseVersionForBadge(tag || '');
 
-debug("backfill-release-notes args:", { repository, tag, changelogFile, badgeType, packageName, releaseVersion, dryRun: args.dryRun });
-dumpEnv(["GH_TOKEN", "GITHUB_TOKEN"]);
+debug('backfill-release-notes args:', {
+  repository,
+  tag,
+  changelogFile,
+  badgeType,
+  packageName,
+  releaseVersion,
+  dryRun: args.dryRun,
+});
+dumpEnv(['GH_TOKEN', 'GITHUB_TOKEN']);
 
 if (!repository || !tag || !changelogFile || !badgeType || !packageName) {
   console.error(
-    "Usage: GH_TOKEN=… node scripts/backfill-release-notes.mjs --repository <owner/repo> --tag <tag> --changelog-file <path> --badge-type <npm|crates> --package-name <name> [--release-version <version>] [--dry-run]",
+    'Usage: GH_TOKEN=… node scripts/backfill-release-notes.mjs --repository <owner/repo> --tag <tag> --changelog-file <path> --badge-type <npm|crates> --package-name <name> [--release-version <version>] [--dry-run]'
   );
   process.exit(1);
 }
@@ -71,7 +83,7 @@ if (!existsSync(changelogFile)) {
   process.exit(1);
 }
 
-const changelog = readFileSync(changelogFile, "utf8");
+const changelog = readFileSync(changelogFile, 'utf8');
 let notes = extractChangelogEntry(changelog, releaseVersion);
 if (!notes) {
   notes = `Release ${releaseVersion}`;
@@ -86,7 +98,7 @@ const badge = packageVersionBadge({
 const body = `${notes}\n\n---\n\n${badge}\n`;
 
 if (args.dryRun) {
-  console.log("--- dry run: body that would be PATCHed ---");
+  console.log('--- dry run: body that would be PATCHed ---');
   console.log(body);
   process.exit(0);
 }
@@ -95,10 +107,12 @@ let releaseId;
 try {
   releaseId = execSync(
     `gh api "repos/${repository}/releases/tags/${tag}" --jq .id`,
-    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }
   ).trim();
 } catch (error) {
-  console.error(`::error::Could not find release ${tag} in ${repository}: ${error.message.split("\n")[0]}`);
+  console.error(
+    `::error::Could not find release ${tag} in ${repository}: ${error.message.split('\n')[0]}`
+  );
   process.exit(1);
 }
 
@@ -110,13 +124,20 @@ if (!releaseId) {
 const payload = JSON.stringify({ body });
 
 try {
-  execSync(`gh api "repos/${repository}/releases/${releaseId}" -X PATCH --input -`, {
-    stdio: ["pipe", "inherit", "inherit"],
-    input: payload,
-  });
+  execSync(
+    `gh api "repos/${repository}/releases/${releaseId}" -X PATCH --input -`,
+    {
+      stdio: ['pipe', 'inherit', 'inherit'],
+      input: payload,
+    }
+  );
 } catch (error) {
-  console.error(`::error::Could not PATCH release ${tag}: ${error.message.split("\n")[0]}`);
+  console.error(
+    `::error::Could not PATCH release ${tag}: ${error.message.split('\n')[0]}`
+  );
   process.exit(1);
 }
 
-console.log(`✅ Back-filled release ${tag} (${releaseId}) with ${body.length} chars of body.`);
+console.log(
+  `✅ Back-filled release ${tag} (${releaseId}) with ${body.length} chars of body.`
+);

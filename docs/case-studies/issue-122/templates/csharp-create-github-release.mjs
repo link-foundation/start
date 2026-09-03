@@ -12,7 +12,9 @@ import { execSync } from 'child_process';
 const args = process.argv.slice(2);
 const getArg = (name) => {
   const index = args.indexOf(`--${name}`);
-  if (index === -1) return null;
+  if (index === -1) {
+    return null;
+  }
   return args[index + 1];
 };
 

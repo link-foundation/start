@@ -1,0 +1,288 @@
+ INFO zizmor: 🌈 zizmor v1.30.0
+ WARN audit: zizmor: zizmor is running in offline mode by default; some audits and auto-fixes will not be available. see https://docs.zizmor.sh/usage/#operating-modes for details
+ INFO audit: zizmor: 🌈 completed .github/workflows/js.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/links.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/rust.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/security.yml
+error[template-injection]: code injection via template expansion
+  --> .github/workflows/js.yml:94:73
+   |
+94 |         run: bash scripts/simulate-fresh-merge.sh --base-ref origin/${{ github.base_ref }}
+   |         --- this run block                                              ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+   = help: audit documentation → https://docs.zizmor.sh/audits/#template-injection
+
+error[template-injection]: code injection via template expansion
+   --> .github/workflows/js.yml:148:22
+    |
+146 |         run: |
+    |         --- this run block
+147 |           # Skip check for automated release PRs
+148 |           if [[ "${{ github.head_ref }}" == "changeset-release/"* ]] || [[ "${{ github.head_ref }}" == "changeset-js-"* ]]; then
+    |                      ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+    = help: audit documentation → https://docs.zizmor.sh/audits/#template-injection
+
+error[template-injection]: code injection via template expansion
+   --> .github/workflows/js.yml:148:81
+    |
+146 |         run: |
+    |         --- this run block
+147 |           # Skip check for automated release PRs
+148 |           if [[ "${{ github.head_ref }}" == "changeset-release/"* ]] || [[ "${{ github.head_ref }}" == "changeset-js-"* ]]; then
+    |                                                                                 ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+    = help: audit documentation → https://docs.zizmor.sh/audits/#template-injection
+
+error[template-injection]: code injection via template expansion
+   --> .github/workflows/js.yml:154:46
+    |
+146 |         run: |
+    |         --- this run block
+...
+154 |           VERSION_DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- js/package.json | grep -E '^\+.*"version"' || true)
+    |                                              ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+    = help: audit documentation → https://docs.zizmor.sh/audits/#template-injection
+
+error[template-injection]: code injection via template expansion
+   --> .github/workflows/js.yml:204:22
+    |
+202 |         run: |
+    |         --- this run block
+203 |           # Skip changeset check for automated version PRs
+204 |           if [[ "${{ github.head_ref }}" == "changeset-release/"* ]]; then
+    |                      ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+    = help: audit documentation → https://docs.zizmor.sh/audits/#template-injection
+
+error[template-injection]: code injection via template expansion
+   --> .github/workflows/js.yml:597:82
+    |
+597 |         run: node scripts/version-and-commit.mjs --mode instant --bump-type "${{ github.event.inputs.bump_type }}" --description "$...
+    |         --- this run block                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+    = help: audit documentation → https://docs.zizmor.sh/audits/#template-injection
+
+error[template-injection]: code injection via template expansion
+   --> .github/workflows/js.yml:597:135
+    |
+597 | ...   run: node scripts/version-and-commit.mjs --mode instant --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}...
+    |       --- this run block                                                                                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+    = help: audit documentation → https://docs.zizmor.sh/audits/#template-injection
+
+error[template-injection]: code injection via template expansion
+   --> .github/workflows/js.yml:653:72
+    |
+653 |         run: node scripts/create-manual-changeset.mjs --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github....
+    |         --- this run block                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+    = help: audit documentation → https://docs.zizmor.sh/audits/#template-injection
+
+error[template-injection]: code injection via template expansion
+   --> .github/workflows/js.yml:653:125
+    |
+653 | ...   run: node scripts/create-manual-changeset.mjs --bump-type "${{ github.event.inputs.bump_type }}" --description "${{ github.event.inputs.description }}...
+    |       --- this run block                                                                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+    = help: audit documentation → https://docs.zizmor.sh/audits/#template-injection
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/js.yml:189:15
+    |
+189 |         uses: oven-sh/setup-bun@v2
+    |               ^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+    = help: audit documentation → https://docs.zizmor.sh/audits/#unpinned-uses
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/js.yml:235:15
+    |
+235 |         uses: oven-sh/setup-bun@v2
+    |               ^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+    = help: audit documentation → https://docs.zizmor.sh/audits/#unpinned-uses
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/js.yml:272:15
+    |
+272 |         uses: oven-sh/setup-bun@v2
+    |               ^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+    = help: audit documentation → https://docs.zizmor.sh/audits/#unpinned-uses
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/js.yml:427:15
+    |
+427 |         uses: oven-sh/setup-bun@v2
+    |               ^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+    = help: audit documentation → https://docs.zizmor.sh/audits/#unpinned-uses
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/js.yml:472:15
+    |
+472 |         uses: oven-sh/setup-bun@v2
+    |               ^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+    = help: audit documentation → https://docs.zizmor.sh/audits/#unpinned-uses
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/js.yml:570:15
+    |
+570 |         uses: oven-sh/setup-bun@v2
+    |               ^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+    = help: audit documentation → https://docs.zizmor.sh/audits/#unpinned-uses
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/js.yml:656:15
+    |
+656 |         uses: peter-evans/create-pull-request@v7
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+    = help: audit documentation → https://docs.zizmor.sh/audits/#unpinned-uses
+
+error[template-injection]: code injection via template expansion
+  --> .github/workflows/rust.yml:92:73
+   |
+92 |         run: bash scripts/simulate-fresh-merge.sh --base-ref origin/${{ github.base_ref }}
+   |         --- this run block                                              ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+   |
+   = note: audit confidence → High
+   = note: this finding has an auto-fix
+   = help: audit documentation → https://docs.zizmor.sh/audits/#template-injection
+
+error[template-injection]: code injection via template expansion
+   --> .github/workflows/rust.yml:146:46
+    |
+144 |         run: |
+    |         --- this run block
+145 |           # Get the diff for Cargo.toml
+146 |           VERSION_DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- rust/Cargo.toml | grep -E '^\+version\s*=' || true)
+    |                                              ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+    = help: audit documentation → https://docs.zizmor.sh/audits/#template-injection
+
+error[template-injection]: code injection via template expansion
+   --> .github/workflows/rust.yml:183:59
+    |
+181 |         run: |
+    |         --- this run block
+182 |           # Get changed files in PR
+183 |           CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+    |                                                           ^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+    = help: audit documentation → https://docs.zizmor.sh/audits/#template-injection
+
+error[template-injection]: code injection via template expansion
+   --> .github/workflows/rust.yml:633:30
+    |
+631 |         run: |
+    |         --- this run block
+632 |           node scripts/version-and-commit.mjs \
+633 |             --bump-type "${{ github.event.inputs.bump_type }}" \
+    |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+    = help: audit documentation → https://docs.zizmor.sh/audits/#template-injection
+
+error[template-injection]: code injection via template expansion
+   --> .github/workflows/rust.yml:634:32
+    |
+631 |         run: |
+    |         --- this run block
+...
+634 |             --description "${{ github.event.inputs.description }}" \
+    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ may expand into attacker-controllable code
+    |
+    = note: audit confidence → High
+    = note: this finding has an auto-fix
+    = help: audit documentation → https://docs.zizmor.sh/audits/#template-injection
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/rust.yml:231:15
+    |
+231 |         uses: dtolnay/rust-toolchain@stable
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+    = help: audit documentation → https://docs.zizmor.sh/audits/#unpinned-uses
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/rust.yml:280:15
+    |
+280 |         uses: dtolnay/rust-toolchain@stable
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+    = help: audit documentation → https://docs.zizmor.sh/audits/#unpinned-uses
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/rust.yml:378:15
+    |
+378 |         uses: dtolnay/rust-toolchain@stable
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+    = help: audit documentation → https://docs.zizmor.sh/audits/#unpinned-uses
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/rust.yml:438:15
+    |
+438 |         uses: dtolnay/rust-toolchain@stable
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+    = help: audit documentation → https://docs.zizmor.sh/audits/#unpinned-uses
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/rust.yml:489:15
+    |
+489 |         uses: dtolnay/rust-toolchain@stable
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+    = help: audit documentation → https://docs.zizmor.sh/audits/#unpinned-uses
+
+error[unpinned-uses]: unpinned action reference
+   --> .github/workflows/rust.yml:608:15
+    |
+608 |         uses: dtolnay/rust-toolchain@stable
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ action is not pinned to a hash (required by blanket policy)
+    |
+    = note: audit confidence → High
+    = help: audit documentation → https://docs.zizmor.sh/audits/#unpinned-uses
+
+117 findings (44 ignored, 46 suppressed, 14 unsafe fixes): 0 informational, 0 low, 0 medium, 27 high

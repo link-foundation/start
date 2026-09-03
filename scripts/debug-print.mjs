@@ -27,15 +27,17 @@
 
 export function isDebugEnabled() {
   return (
-    process.env.START_DEBUG === "1" ||
-    process.env.START_DEBUG === "true" ||
-    process.env.RUNNER_DEBUG === "1" ||
-    process.env.ACTIONS_STEP_DEBUG === "true"
+    process.env.START_DEBUG === '1' ||
+    process.env.START_DEBUG === 'true' ||
+    process.env.RUNNER_DEBUG === '1' ||
+    process.env.ACTIONS_STEP_DEBUG === 'true'
   );
 }
 
 function format(value) {
-  if (typeof value === "string") return value;
+  if (typeof value === 'string') {
+    return value;
+  }
   try {
     return JSON.stringify(value, null, 2);
   } catch {
@@ -44,21 +46,25 @@ function format(value) {
 }
 
 export function debug(...parts) {
-  if (!isDebugEnabled()) return;
-  const line = parts.map(format).join(" ");
-  for (const chunk of line.split("\n")) {
+  if (!isDebugEnabled()) {
+    return;
+  }
+  const line = parts.map(format).join(' ');
+  for (const chunk of line.split('\n')) {
     console.log(`::debug::${chunk}`);
   }
 }
 
 export function dumpEnv(keys) {
-  if (!isDebugEnabled()) return;
+  if (!isDebugEnabled()) {
+    return;
+  }
   const present = {};
   for (const key of keys) {
     const value = process.env[key];
     present[key] = value
       ? `${value.length} chars (${value.slice(0, 4)}…)`
-      : "<unset>";
+      : '<unset>';
   }
-  debug("env snapshot:", present);
+  debug('env snapshot:', present);
 }

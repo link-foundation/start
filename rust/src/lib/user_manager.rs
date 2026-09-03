@@ -125,16 +125,7 @@ pub fn generate_isolated_username(prefix: Option<&str>) -> String {
         .unwrap()
         .as_millis();
     let timestamp_base36 = format!("{:x}", timestamp);
-    let random: String = (0..4)
-        .map(|_| {
-            let idx = simple_random() % 36;
-            if idx < 10 {
-                (b'0' + idx as u8) as char
-            } else {
-                (b'a' + (idx - 10) as u8) as char
-            }
-        })
-        .collect();
+    let random = random_base36(4);
     // Keep username short (max 31 chars)
     format!("{}-{}{}", prefix, timestamp_base36, random)
         .chars()
@@ -142,27 +133,39 @@ pub fn generate_isolated_username(prefix: Option<&str>) -> String {
         .collect()
 }
 
-/// Simple random number generator
-fn simple_random() -> usize {
-    use std::cell::RefCell;
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    thread_local! {
-        static STATE: RefCell<u64> = RefCell::new(
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos() as u64
-        );
+/// Generate `length` cryptographically random base36 characters.
+///
+/// `uuid::Uuid::new_v4` draws from the operating-system CSPRNG through
+/// `getrandom`. The time-seeded xorshift generator this replaced made the only
+/// unguessable part of an isolation account name predictable - the same defect
+/// CodeQL reports as `js/insecure-randomness` on the JavaScript side, which no
+/// Rust query covers (issue #168). Mirrors `randomBase36` in
+/// `js/src/lib/user-manager.js`.
+fn random_base36(length: usize) -> String {
+    let mut out = String::with_capacity(length);
+    while out.len() < length {
+        let uuid = uuid::Uuid::new_v4();
+        for (index, byte) in uuid.as_bytes().iter().enumerate() {
+            if out.len() == length {
+                break;
+            }
+            // Bytes 6 and 8 carry the fixed version and variant nibbles.
+            if index == 6 || index == 8 {
+                continue;
+            }
+            // Rejection sampling: 252 = 36 * 7, so the remainder stays uniform.
+            if *byte >= 252 {
+                continue;
+            }
+            let idx = byte % 36;
+            out.push(if idx < 10 {
+                (b'0' + idx) as char
+            } else {
+                (b'a' + idx - 10) as char
+            });
+        }
     }
-
-    STATE.with(|state| {
-        let mut s = state.borrow_mut();
-        *s ^= *s << 13;
-        *s ^= *s >> 7;
-        *s ^= *s << 17;
-        (*s % 1000) as usize
-    })
+    out
 }
 
 /// Options for creating a user

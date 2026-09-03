@@ -15,14 +15,14 @@
  *                    original behaviour ("v${version}" tag, "${version}" title).
  */
 
-import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 import {
   extractChangelogEntry,
   packageVersionBadge,
   releaseName,
   releaseTag,
-} from "./release-name.mjs";
+} from './release-name.mjs';
 
 function toCamelCase(name) {
   return name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
@@ -33,14 +33,16 @@ function parseArgs(argv) {
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (!arg.startsWith("--")) continue;
+    if (!arg.startsWith('--')) {
+      continue;
+    }
 
     const [rawName, inlineValue] = arg.slice(2).split(/=(.*)/s, 2);
     const name = toCamelCase(rawName);
 
     if (inlineValue !== undefined) {
       args[name] = inlineValue;
-    } else if (argv[index + 1] && !argv[index + 1].startsWith("--")) {
+    } else if (argv[index + 1] && !argv[index + 1].startsWith('--')) {
       args[name] = argv[index + 1];
       index += 1;
     } else {
@@ -52,9 +54,9 @@ function parseArgs(argv) {
 }
 
 function usageAndExit() {
-  console.error("Error: Missing required arguments");
+  console.error('Error: Missing required arguments');
   console.error(
-    "Usage: node scripts/create-github-release.mjs --release-version <version> --repository <repository> [--prefix <prefix>] [--changelog-file <path>] [--badge-type <npm|crates> --package-name <name>]",
+    'Usage: node scripts/create-github-release.mjs --release-version <version> --repository <repository> [--prefix <prefix>] [--changelog-file <path>] [--badge-type <npm|crates> --package-name <name>]'
   );
   process.exit(1);
 }
@@ -62,10 +64,10 @@ function usageAndExit() {
 function isAlreadyExistsError(output) {
   const normalizedOutput = output.toLowerCase();
   return (
-    normalizedOutput.includes("already_exists") ||
-    normalizedOutput.includes("already exists") ||
-    (normalizedOutput.includes("validation failed") &&
-      normalizedOutput.includes("tag_name"))
+    normalizedOutput.includes('already_exists') ||
+    normalizedOutput.includes('already exists') ||
+    (normalizedOutput.includes('validation failed') &&
+      normalizedOutput.includes('tag_name'))
   );
 }
 
@@ -79,7 +81,7 @@ function parseCommandArgsEnv(name) {
     const parsed = JSON.parse(value);
     if (
       Array.isArray(parsed) &&
-      parsed.every((arg) => typeof arg === "string")
+      parsed.every((arg) => typeof arg === 'string')
     ) {
       return parsed;
     }
@@ -92,31 +94,31 @@ function parseCommandArgsEnv(name) {
 }
 
 function createRelease(repository, payload) {
-  const ghCommand = process.env.START_GH_COMMAND || "gh";
-  const ghArgsPrefix = parseCommandArgsEnv("START_GH_COMMAND_ARGS");
+  const ghCommand = process.env.START_GH_COMMAND || 'gh';
+  const ghArgsPrefix = parseCommandArgsEnv('START_GH_COMMAND_ARGS');
   const result = spawnSync(
     ghCommand,
     [
       ...ghArgsPrefix,
-      "api",
+      'api',
       `repos/${repository}/releases`,
-      "-X",
-      "POST",
-      "--input",
-      "-",
+      '-X',
+      'POST',
+      '--input',
+      '-',
     ],
     {
-      encoding: "utf8",
+      encoding: 'utf8',
       input: payload,
-    },
+    }
   );
 
   if (result.error) {
     throw result.error;
   }
 
-  const stdout = result.stdout || "";
-  const stderr = result.stderr || "";
+  const stdout = result.stdout || '';
+  const stderr = result.stderr || '';
 
   if (result.status === 0) {
     return { created: true, stdout, stderr };
@@ -136,25 +138,25 @@ function createRelease(repository, payload) {
 }
 
 const cliArgs = parseArgs(process.argv.slice(2));
-const version = cliArgs.releaseVersion || process.env.VERSION || "";
-const repository = cliArgs.repository || process.env.REPOSITORY || "";
-const prefix = cliArgs.prefix || process.env.PREFIX || "";
+const version = cliArgs.releaseVersion || process.env.VERSION || '';
+const repository = cliArgs.repository || process.env.REPOSITORY || '';
+const prefix = cliArgs.prefix || process.env.PREFIX || '';
 const changelogFile =
-  cliArgs.changelogFile || process.env.CHANGELOG_FILE || "CHANGELOG.md";
-const badgeType = cliArgs.badgeType || process.env.BADGE_TYPE || "";
-const packageName = cliArgs.packageName || process.env.PACKAGE_NAME || "";
+  cliArgs.changelogFile || process.env.CHANGELOG_FILE || 'CHANGELOG.md';
+const badgeType = cliArgs.badgeType || process.env.BADGE_TYPE || '';
+const packageName = cliArgs.packageName || process.env.PACKAGE_NAME || '';
 
 if (!version || !repository) {
   usageAndExit();
 }
 
-if (badgeType && !["npm", "crates"].includes(badgeType)) {
-  console.error("Error: --badge-type must be npm or crates");
+if (badgeType && !['npm', 'crates'].includes(badgeType)) {
+  console.error('Error: --badge-type must be npm or crates');
   process.exit(1);
 }
 
 if (badgeType && !packageName) {
-  console.error("Error: --package-name is required when --badge-type is set");
+  console.error('Error: --package-name is required when --badge-type is set');
   process.exit(1);
 }
 
@@ -162,14 +164,14 @@ const tag = releaseTag(version, prefix);
 const name = releaseName(version, prefix);
 
 console.log(
-  `Creating GitHub release: tag=${tag}, name=${name}, prefix=${prefix || "(none)"}`,
+  `Creating GitHub release: tag=${tag}, name=${name}, prefix=${prefix || '(none)'}`
 );
 
 try {
-  let releaseNotes = "";
+  let releaseNotes = '';
 
   if (existsSync(changelogFile)) {
-    const changelog = readFileSync(changelogFile, "utf8");
+    const changelog = readFileSync(changelogFile, 'utf8');
     releaseNotes = extractChangelogEntry(changelog, version);
   } else {
     console.log(`Changelog file not found: ${changelogFile}`);
@@ -203,6 +205,6 @@ try {
     console.log(`Created GitHub release: ${tag} (${name})`);
   }
 } catch (error) {
-  console.error("Error creating release:", error.message);
+  console.error('Error creating release:', error.message);
   process.exit(1);
 }

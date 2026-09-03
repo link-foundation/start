@@ -21,6 +21,57 @@ env:
   GIT_CONFIG_VALUE_0: main
 
 jobs:
+  # === DEPENDENCY AUDITS ===
+  # CodeQL and dependency-review only see *changed* dependencies on a pull
+  # request; neither reports an advisory published against a lockfile entry
+  # that nobody touched. These two jobs audit the committed lockfiles on every
+  # push, pull request and weekly schedule (issue #168).
+  cargo-audit:
+    name: Cargo Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-cargo-audit
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4
+        with:
+          tool: cargo-audit@0.22.2
+
+      - name: Audit committed Cargo.lock
+        working-directory: rust
+        run: cargo audit --file Cargo.lock
+
+  npm-audit:
+    name: NPM Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-npm-audit
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+
+      # --package-lock-only audits the committed tree without installing it, so
+      # this stays fast and cannot be influenced by install scripts.
+      - name: Audit committed package-lock.json
+        working-directory: js
+        run: npm audit --package-lock-only --audit-level=high
+
   codeql:
     name: CodeQL (${{ matrix.language }})
     runs-on: ubuntu-latest
@@ -38,11 +89,16 @@ jobs:
         language: [javascript-typescript, actions, rust]
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
+          # Keeps archived third-party evidence under dev/log/ out of the
+          # analysis; see the file for why (issue #168).
+          config-file: .github/codeql/codeql-config.yml
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v4
@@ -63,6 +119,8 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       # The dependency graph is an owner-level setting. When it is off, the
       # review action fails with "Dependency review is not supported on this
@@ -108,6 +166,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Run secretlint
         run: npx --yes -p secretlint -p @secretlint/secretlint-rule-preset-recommend secretlint --secretlintignore .gitignore "**/*"
@@ -115,12 +175,14 @@ jobs:
   # === PIPELINE STATUS ===
   pipeline-status:
     name: Pipeline Status
-    needs: [codeql, dependency-review, secrets-scan]
+    needs: [cargo-audit, npm-audit, codeql, dependency-review, secrets-scan]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Check aggregate pipeline status
         env:

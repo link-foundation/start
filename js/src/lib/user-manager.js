@@ -8,6 +8,7 @@
  */
 
 const { execSync, spawnSync } = require('child_process');
+const { randomInt } = require('crypto');
 
 // Debug mode from environment
 const DEBUG =
@@ -74,13 +75,29 @@ function groupExists(groupname) {
 }
 
 /**
+ * Generate `length` cryptographically random base36 characters.
+ * @param {number} length
+ * @returns {string}
+ */
+function randomBase36(length) {
+  let value = '';
+  while (value.length < length) {
+    value += randomInt(36).toString(36);
+  }
+  return value;
+}
+
+/**
  * Generate a unique username for isolation
  * @param {string} [prefix='start'] - Prefix for the username
  * @returns {string} Generated username
  */
 function generateIsolatedUsername(prefix = 'start') {
   const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 6);
+  // A CSPRNG, not Math.random: this suffix is the only unguessable part of the
+  // name of a user account that other processes may race to create
+  // (CodeQL js/insecure-randomness).
+  const random = randomBase36(4);
   // Keep username short (max 32 chars on most systems)
   // and valid (only alphanumeric, hyphen, underscore)
   return `${prefix}-${timestamp}${random}`.substring(0, 31);

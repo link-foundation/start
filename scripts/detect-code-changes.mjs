@@ -174,8 +174,7 @@ function detectChanges() {
   // Detect .js file changes (JS source in js/ folder)
   const jsChanged = changedFiles.some(
     (file) =>
-      (file.endsWith('.js') || file.endsWith('.cjs')) &&
-      file.startsWith('js/')
+      (file.endsWith('.js') || file.endsWith('.cjs')) && file.startsWith('js/')
   );
   setOutput('js-changed', jsChanged ? 'true' : 'false');
 
@@ -227,7 +226,8 @@ function detectChanges() {
   setOutput('any-js-code-changed', anyJsCodeChanged ? 'true' : 'false');
 
   // Check if any code files changed (.rs, .toml, .mjs, .js, .yml, .yaml, or workflow files)
-  const codePattern = /\.(rs|toml|mjs|js|cjs|json|yml|yaml)$|\.github\/workflows\//;
+  const codePattern =
+    /\.(rs|toml|mjs|js|cjs|json|yml|yaml)$|\.github\/workflows\//;
   const codeChanged = codeChangedFiles.some((file) => codePattern.test(file));
   setOutput('any-code-changed', codeChanged ? 'true' : 'false');
 

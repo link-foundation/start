@@ -430,3 +430,246 @@ fn link_workflow_checks_links_and_falls_back_to_the_web_archive() {
         "missing .lycheeignore"
     );
 }
+
+// --- issue #168: false negatives the pipeline could not see -----------------
+
+/// Split a job body into individual `- ...` step blocks.
+fn parse_steps(body: &str) -> Vec<String> {
+    let mut steps: Vec<String> = Vec::new();
+    let mut current: Option<Vec<&str>> = None;
+    let mut indent = 0usize;
+    for line in body.lines() {
+        let line_indent = line.len() - line.trim_start().len();
+        let starts_step = line.trim_start().starts_with("- ");
+        if starts_step && (current.is_none() || line_indent == indent) {
+            if let Some(step) = current.take() {
+                steps.push(step.join("\n"));
+            }
+            indent = line_indent;
+            current = Some(vec![line]);
+            continue;
+        }
+        if let Some(step) = current.as_mut() {
+            step.push(line);
+        }
+    }
+    if let Some(step) = current {
+        steps.push(step.join("\n"));
+    }
+    steps
+}
+
+/// True when line `index` of `workflow` sits inside a `run:` block.
+fn in_run_block(lines: &[&str], index: usize) -> bool {
+    let line = lines[index];
+    let trimmed = line.trim_start();
+    if trimmed.starts_with("run:") || trimmed.starts_with("- run:") {
+        return true;
+    }
+    if trimmed.is_empty() {
+        return false;
+    }
+    let indent = line.len() - trimmed.len();
+    for previous in lines[..index].iter().rev() {
+        let previous_trimmed = previous.trim_start();
+        if previous_trimmed.is_empty() {
+            continue;
+        }
+        let previous_indent = previous.len() - previous_trimmed.len();
+        if previous_indent >= indent {
+            continue;
+        }
+        return (previous_trimmed.starts_with("run:") || previous_trimmed.starts_with("- run:"))
+            && (previous_trimmed.ends_with('|') || previous_trimmed.ends_with('>'));
+    }
+    false
+}
+
+/// `${{ github.<context> }}` references that a fork pull request controls.
+fn untrusted_interpolation(line: &str) -> bool {
+    for start in line.match_indices("${{").map(|(index, _)| index) {
+        let rest = line[start + 3..].trim_start();
+        let Some(context) = rest.strip_prefix("github.") else {
+            continue;
+        };
+        if context.starts_with("head_ref") || context.starts_with("base_ref") {
+            return true;
+        }
+        if let Some(event) = context.strip_prefix("event.") {
+            let name = event
+                .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '.'))
+                .next()
+                .unwrap_or("");
+            if ["title", "body", "name", "label", "ref"]
+                .iter()
+                .any(|field| name.ends_with(field))
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+#[test]
+fn lints_and_audits_the_workflows_themselves() {
+    let workflows = list_workflows();
+    assert!(
+        workflows.iter().any(|name| name == "workflows.yml"),
+        "no workflows.yml: nothing ran actionlint or zizmor over .github/workflows"
+    );
+    let meta = read_workflow("workflows.yml");
+    assert!(
+        meta.contains("rhysd/actionlint"),
+        "workflows.yml must run actionlint"
+    );
+    assert!(meta.contains("zizmor"), "workflows.yml must run zizmor");
+    for config in ["zizmor.yml", "actionlint.yaml"] {
+        assert!(
+            repo_root().join(".github").join(config).exists(),
+            "missing .github/{config}"
+        );
+    }
+}
+
+#[test]
+fn never_interpolates_untrusted_context_into_a_run_block() {
+    for name in list_workflows() {
+        let workflow = read_workflow(&name);
+        let lines: Vec<&str> = workflow.split('\n').collect();
+        for index in 0..lines.len() {
+            let line = lines[index];
+            if line.trim_start().starts_with('#') {
+                continue;
+            }
+            assert!(
+                !(in_run_block(&lines, index) && untrusted_interpolation(line)),
+                "{name}:{}: interpolates untrusted context into run:; pass it through env: instead - {}",
+                index + 1,
+                line.trim()
+            );
+        }
+    }
+}
+
+#[test]
+fn does_not_persist_credentials_on_read_only_checkouts() {
+    for name in list_workflows() {
+        for job in parse_jobs(&read_workflow(&name)) {
+            if WRITER_JOBS.contains(&job.name.as_str()) {
+                continue;
+            }
+            for step in parse_steps(&job.body) {
+                if !step.contains("uses: actions/checkout") {
+                    continue;
+                }
+                assert!(
+                    step.contains("persist-credentials: false"),
+                    "{name}: read-only job \"{}\" checks out with the token left in .git/config",
+                    job.name
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn pins_third_party_actions_to_a_commit_hash() {
+    // Trusted first-party namespaces may use a moving tag; anything else is a
+    // mutable ref in a job that can hold write credentials.
+    const TRUSTED: [&str; 7] = [
+        "actions/",
+        "github/",
+        "docker/",
+        "astral-sh/",
+        "lycheeverse/",
+        "zizmorcore/",
+        "changesets/",
+    ];
+    for name in list_workflows() {
+        let workflow = read_workflow(&name);
+        for line in workflow.lines() {
+            let trimmed = line.trim_start().trim_start_matches("- ");
+            let Some(reference) = trimmed.strip_prefix("uses:") else {
+                continue;
+            };
+            let reference = reference.split_whitespace().next().unwrap_or("");
+            if reference.starts_with("docker://")
+                || reference.starts_with("./")
+                || TRUSTED.iter().any(|prefix| reference.starts_with(prefix))
+            {
+                continue;
+            }
+            let sha = reference.rsplit('@').next().unwrap_or("");
+            assert!(
+                sha.len() == 40
+                    && sha
+                        .chars()
+                        .all(|c| c.is_ascii_hexdigit() && !c.is_uppercase()),
+                "{name}: third-party action {reference} must be pinned to a commit hash"
+            );
+        }
+    }
+}
+
+#[test]
+fn audits_both_dependency_graphs_for_advisories() {
+    let security = read_workflow("security.yml");
+    let jobs: Vec<String> = parse_jobs(&security).into_iter().map(|j| j.name).collect();
+    for job in ["cargo-audit", "npm-audit"] {
+        assert!(
+            jobs.iter().any(|name| name == job),
+            "security.yml has no {job} job"
+        );
+    }
+    assert!(
+        security.contains("cargo audit"),
+        "cargo-audit job must run cargo audit"
+    );
+    assert!(
+        security.contains("npm audit"),
+        "npm-audit job must run npm audit"
+    );
+}
+
+#[test]
+fn lints_the_repository_level_scripts_directory() {
+    // js/eslint.config.mjs has js/ as its base path, so `eslint .` run from js/
+    // silently skipped scripts/ - the release automation (issue #168).
+    assert!(
+        repo_root().join("eslint.config.mjs").exists(),
+        "no repository-level eslint.config.mjs: scripts/ would go unlinted"
+    );
+    let js = read_workflow("js.yml");
+    assert!(js.contains("lint:scripts"), "js.yml must lint scripts/");
+    assert!(
+        js.contains("format:check:scripts"),
+        "js.yml must format-check scripts/"
+    );
+}
+
+#[test]
+fn scopes_codeql_to_this_projects_own_code() {
+    // Without this, CodeQL extracts the third-party bundles archived under
+    // dev/log/ as evidence and fails pull requests on other projects'
+    // findings (issue #168: js/redos in the vendored use-m snapshot).
+    let security = read_workflow("security.yml");
+    let codeql = parse_jobs(&security)
+        .into_iter()
+        .find(|job| job.name == "codeql")
+        .expect("security.yml has no codeql job");
+    let config_path = job_key_at(&codeql.body, "config-file", 10)
+        .expect("the CodeQL init step must pass config-file, or archived evidence is analysed");
+    let config = fs::read_to_string(repo_root().join(&config_path))
+        .unwrap_or_else(|error| panic!("cannot read {config_path}: {error}"));
+    assert!(
+        config.lines().any(|line| line == "paths-ignore:"),
+        "{config_path} has no paths-ignore"
+    );
+    assert!(
+        config
+            .lines()
+            .any(|line| line.trim_end() == "  - dev/log" || line.trim_end() == "- dev/log"),
+        "{config_path} must exclude dev/log"
+    );
+}
