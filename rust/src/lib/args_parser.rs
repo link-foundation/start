@@ -30,9 +30,15 @@
 //! --upload-log <uuid-or-session>   Upload the stored log for a tracked execution
 //! --stop <uuid-or-session-name>    Ask a detached execution to stop gracefully
 //! --terminate <uuid-or-session-name> Terminate a detached execution immediately
+//! --list [--running]               Optionally restrict the listing to running executions
+//! --attach <uuid-or-session-name>  Attach to a running detached execution
+//! --read-only                      With --attach, follow output without sending input
+//! --resume <uuid-or-session-name>  Restart a stopped detached execution (optionally `-- <command>`)
+//! --resume-all                     Re-attach or reconcile every execution still marked running
 
 use std::env;
 
+use crate::args_parser_queries::{parse_query_option, validate_query_options};
 use crate::isolation::get_default_docker_image;
 
 /// Valid isolation backends
@@ -114,6 +120,8 @@ pub struct WrapperOptions {
     pub status: Option<String>,
     /// List all tracked execution records
     pub list: bool,
+    /// With --list, only report executions that are still running
+    pub running: bool,
     /// UUID/session name whose stored log should be uploaded
     pub upload_log: Option<String>,
     /// Output format for status/list (links-notation, json, text)
@@ -122,6 +130,14 @@ pub struct WrapperOptions {
     pub stop: Option<String>,
     /// UUID/session name to terminate immediately
     pub terminate: Option<String>,
+    /// UUID/session name to attach to
+    pub attach: Option<String>,
+    /// With --attach, follow output without forwarding stdin
+    pub read_only: bool,
+    /// UUID/session name to resume
+    pub resume: Option<String>,
+    /// Resume every execution still marked running
+    pub resume_all: bool,
     /// Clean up stale "executing" records
     pub cleanup: bool,
     /// Show what would be cleaned without actually cleaning
@@ -157,10 +173,15 @@ impl Default for WrapperOptions {
             use_command_stream: false,
             status: None,
             list: false,
+            running: false,
             upload_log: None,
             output_format: None,
             stop: None,
             terminate: None,
+            attach: None,
+            read_only: false,
+            resume: None,
+            resume_all: false,
             cleanup: false,
             cleanup_dry_run: false,
         }
@@ -532,127 +553,10 @@ fn parse_option(
         return Ok(1);
     }
 
-    // --status <uuid-or-session-name>
-    if arg == "--status" {
-        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
-            options.status = Some(args[index + 1].clone());
-            return Ok(2);
-        } else {
-            return Err(format!(
-                "Option {} requires a UUID or session name argument",
-                arg
-            ));
-        }
-    }
-
-    // --status=<value>
-    if let Some(value) = arg.strip_prefix("--status=") {
-        if value.is_empty() {
-            return Err("Option --status requires a UUID or session name argument".to_string());
-        }
-        options.status = Some(value.to_string());
-        return Ok(1);
-    }
-
-    // --upload-log <uuid-or-session-name>
-    if arg == "--upload-log" {
-        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
-            options.upload_log = Some(args[index + 1].clone());
-            return Ok(2);
-        } else {
-            return Err(format!(
-                "Option {} requires a UUID or session name argument",
-                arg
-            ));
-        }
-    }
-
-    // --upload-log=<value>
-    if let Some(value) = arg.strip_prefix("--upload-log=") {
-        if value.is_empty() {
-            return Err("Option --upload-log requires a UUID or session name argument".to_string());
-        }
-        options.upload_log = Some(value.to_string());
-        return Ok(1);
-    }
-
-    // --stop <uuid-or-session-name>
-    if arg == "--stop" {
-        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
-            options.stop = Some(args[index + 1].clone());
-            return Ok(2);
-        } else {
-            return Err(format!(
-                "Option {} requires a UUID or session name argument",
-                arg
-            ));
-        }
-    }
-
-    // --stop=<value>
-    if let Some(value) = arg.strip_prefix("--stop=") {
-        if value.is_empty() {
-            return Err("Option --stop requires a UUID or session name argument".to_string());
-        }
-        options.stop = Some(value.to_string());
-        return Ok(1);
-    }
-
-    // --terminate <uuid-or-session-name>
-    if arg == "--terminate" {
-        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
-            options.terminate = Some(args[index + 1].clone());
-            return Ok(2);
-        } else {
-            return Err(format!(
-                "Option {} requires a UUID or session name argument",
-                arg
-            ));
-        }
-    }
-
-    // --terminate=<value>
-    if let Some(value) = arg.strip_prefix("--terminate=") {
-        if value.is_empty() {
-            return Err("Option --terminate requires a UUID or session name argument".to_string());
-        }
-        options.terminate = Some(value.to_string());
-        return Ok(1);
-    }
-
-    // --list
-    if arg == "--list" {
-        options.list = true;
-        return Ok(1);
-    }
-
-    // --output-format <format>
-    if arg == "--output-format" {
-        if index + 1 < args.len() && !args[index + 1].starts_with('-') {
-            options.output_format = Some(args[index + 1].to_lowercase());
-            return Ok(2);
-        } else {
-            return Err(format!("Option {} requires a format argument", arg));
-        }
-    }
-
-    // --output-format=<value>
-    if arg.starts_with("--output-format=") {
-        options.output_format = Some(arg.split('=').nth(1).unwrap_or("").to_lowercase());
-        return Ok(1);
-    }
-
-    // --cleanup
-    if arg == "--cleanup" {
-        options.cleanup = true;
-        return Ok(1);
-    }
-
-    // --cleanup-dry-run
-    if arg == "--cleanup-dry-run" {
-        options.cleanup = true;
-        options.cleanup_dry_run = true;
-        return Ok(1);
+    // Query/control options (--status, --list, --attach, --resume, ...)
+    let query_consumed = parse_query_option(args, index, options)?;
+    if query_consumed > 0 {
+        return Ok(query_consumed);
     }
 
     // Not a recognized wrapper option
@@ -803,41 +707,8 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
         return Err("--keep-user option is only valid with --isolated-user".to_string());
     }
 
-    // Validate output format
-    if let Some(ref format) = options.output_format {
-        if !VALID_OUTPUT_FORMATS.contains(&format.as_str()) {
-            return Err(format!(
-                "Invalid output format: \"{}\". Valid options are: {}",
-                format,
-                VALID_OUTPUT_FORMATS.join(", ")
-            ));
-        }
-    }
-
-    // Query/control modes are mutually exclusive
-    let query_modes = [
-        options.status.is_some(),
-        options.list,
-        options.upload_log.is_some(),
-        options.stop.is_some(),
-        options.terminate.is_some(),
-        options.cleanup,
-    ]
-    .into_iter()
-    .filter(|enabled| *enabled)
-    .count();
-
-    if query_modes > 1 {
-        return Err(
-            "Cannot combine --status, --list, --upload-log, --stop, --terminate, or --cleanup in the same invocation"
-                .to_string(),
-        );
-    }
-
-    // Output format is only valid with read-only query modes
-    if options.output_format.is_some() && options.status.is_none() && !options.list {
-        return Err("--output-format option is only valid with --status or --list".to_string());
-    }
+    // Query/control option combinations (--status, --attach, --resume, ...)
+    validate_query_options(options)?;
 
     // Validate shell option
     if !VALID_SHELLS.contains(&options.shell.as_str()) {

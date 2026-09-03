@@ -747,7 +747,7 @@ mod status_tests {
         let result = parse_args(&args(&["--status", "uuid-here", "--stop", "my-session"]));
         assert!(result.is_err());
         assert!(result.unwrap_err().contains(
-            "Cannot combine --status, --list, --upload-log, --stop, --terminate, or --cleanup"
+            "Cannot combine --status, --list, --upload-log, --stop, --terminate, --attach, --resume, --resume-all, or --cleanup"
         ));
     }
 

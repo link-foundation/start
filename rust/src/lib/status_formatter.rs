@@ -8,6 +8,7 @@
 use crate::docker_cleanup::docker_command;
 use crate::execution_control::collect_process_ids;
 use crate::execution_store::{ExecutionRecord, ExecutionStatus, ExecutionStore};
+use crate::exit_reason::resolve_exit_reason;
 use crate::output_blocks::{escape_for_links_notation, format_value_for_links_notation};
 use serde_json::Value;
 use std::fs;
@@ -242,11 +243,29 @@ pub fn read_exit_code_from_log(log_path: &str) -> Option<i32> {
     None
 }
 
-/// Enrich execution record with live session status for detached executions.
+/// Enrich execution record with live session status and an exit reason hint.
+///
+/// The hint explains an otherwise opaque exit code (`139` with `oomKilled
+/// false` is the motivating case from issue #162) and is derived from the same
+/// log tail the footer scan already reads. It is purely additive: `status`,
+/// `exitCode` and `oomKilled` are never changed by it.
+pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
+    let mut enriched = resolve_detached_status(record);
+    if enriched.status == ExecutionStatus::Executed && enriched.exit_reason.is_none() {
+        enriched.exit_reason = resolve_exit_reason(
+            enriched.exit_code,
+            read_log_tail(&enriched.log_path, LOG_TAIL_BYTES).as_deref(),
+            enriched.oom_killed,
+        );
+    }
+    enriched
+}
+
+/// Reconcile the stored status of a detached execution with its live session.
 /// If a record shows "executing" but the detached session has actually ended,
 /// returns an updated copy with status "executed". If it shows "executed" but
 /// the session is still running, returns a copy with status "executing".
-pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
+fn resolve_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
     let footer_exit = read_exit_code_from_log(&record.log_path);
     let is_detached_docker = is_detached_docker_record(record);
     let docker_state = if is_detached_docker {
@@ -569,6 +588,9 @@ fn format_record_as_text_with_enrichments(
     if let Some(oom_killed) = record.oom_killed {
         lines.push(format!("OOM Killed:        {}", oom_killed));
     }
+    if let Some(ref exit_reason) = record.exit_reason {
+        lines.push(format!("Exit Reason:       {}", exit_reason));
+    }
     lines.push(format!("PID:               {}", pid_str));
     if let Some(process_ids) = process_ids {
         append_text_process_ids(&mut lines, process_ids);
@@ -815,6 +837,19 @@ pub fn list_executions(
     store: Option<&ExecutionStore>,
     output_format: Option<&str>,
 ) -> StatusQueryResult {
+    list_executions_filtered(store, output_format, false)
+}
+
+/// Handle execution list query, optionally keeping only running executions.
+///
+/// `--list --running` reports the reconciled status, not the stored one: a
+/// record whose session already died is dropped even if the store still says
+/// "executing" (issue #162).
+pub fn list_executions_filtered(
+    store: Option<&ExecutionStore>,
+    output_format: Option<&str>,
+    running_only: bool,
+) -> StatusQueryResult {
     let store = match store {
         Some(s) => s,
         None => {
@@ -828,6 +863,9 @@ pub fn list_executions(
 
     let mut records: Vec<ExecutionRecord> =
         store.get_all().iter().map(enrich_detached_status).collect();
+    if running_only {
+        records.retain(|record| record.status == ExecutionStatus::Executing);
+    }
     sort_records_by_start_time_desc(&mut records);
     let current_times: Vec<Option<String>> = records.iter().map(attach_current_time).collect();
     let process_ids: Vec<Option<Value>> = records.iter().map(collect_process_ids).collect();

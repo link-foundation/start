@@ -66,6 +66,10 @@ pub struct ExecutionRecord {
     pub end_time: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub oom_killed: Option<bool>,
+    /// Hint explaining an otherwise opaque exit code (issue #162).
+    /// Derived from the log tail on read; never a stored verdict.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_reason: Option<String>,
     pub working_directory: String,
     pub shell: String,
     pub platform: String,
@@ -87,6 +91,7 @@ impl ExecutionRecord {
             start_time: now.to_rfc3339(),
             end_time: None,
             oom_killed: None,
+            exit_reason: None,
             working_directory: env::current_dir()
                 .map(|p| p.to_string_lossy().to_string())
                 .unwrap_or_default(),

@@ -3,10 +3,12 @@
 //! Provides command execution with isolation, substitution, and failure handling.
 
 pub mod args_parser;
+pub mod args_parser_queries;
 pub(crate) mod docker_cleanup;
 mod docker_network_lifecycle;
 pub mod execution_control;
 pub mod execution_store;
+pub mod exit_reason;
 pub mod failure_handler;
 pub mod isolation;
 pub mod isolation_metadata;
