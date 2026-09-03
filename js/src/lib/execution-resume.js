@@ -27,6 +27,7 @@ const {
 const { escapeForLinksNotation } = require('./output-blocks');
 const { runCommand } = require('./execution-control');
 const { SessionState, probeSession } = require('./session-probe');
+const { getDockerNetworks } = require('./docker-network-lifecycle');
 const {
   ResumeAllAction,
   resumeAllExecutions,
@@ -97,6 +98,53 @@ function buildLaunchOptions(record) {
     // Append to the same log so one logical session keeps one gap-free record.
     logPath: record.logPath || null,
   };
+}
+
+/**
+ * Build the steps that start a snapshot-derived container.
+ *
+ * `docker run` can only join one network, so a session that was launched on
+ * several networks is rebuilt the same way `runIsolated` builds it: create the
+ * container, connect the additional networks, then start it. Dropping to a
+ * single `docker run` when there is nothing extra to connect keeps the common
+ * case to one command.
+ *
+ * @param {object} params - {containerArgs, extraNetworks, newSessionName, snapshotImage}
+ * @returns {object[]} Resume steps
+ */
+function buildSnapshotStartSteps({
+  containerArgs,
+  extraNetworks,
+  newSessionName,
+  snapshotImage,
+}) {
+  if (extraNetworks.length === 0) {
+    return [
+      {
+        command: getDockerCommand(),
+        args: ['run', '-d', ...containerArgs],
+        description: `Run the new command in ${newSessionName}`,
+      },
+    ];
+  }
+
+  return [
+    {
+      command: getDockerCommand(),
+      args: ['create', ...containerArgs],
+      description: `Create ${newSessionName} from ${snapshotImage}`,
+    },
+    ...extraNetworks.map((network) => ({
+      command: getDockerCommand(),
+      args: ['network', 'connect', network, newSessionName],
+      description: `Connect ${newSessionName} to network ${network}`,
+    })),
+    {
+      command: getDockerCommand(),
+      args: ['start', newSessionName],
+      description: `Run the new command in ${newSessionName}`,
+    },
+  ];
 }
 
 /**
@@ -176,11 +224,8 @@ function buildResumePlan(record, newCommand, probe = {}) {
           args: ['commit', sessionName, snapshotImage],
           description: `Snapshot container ${sessionName} as ${snapshotImage}`,
         },
-        {
-          command: getDockerCommand(),
-          args: [
-            'run',
-            '-d',
+        ...buildSnapshotStartSteps({
+          containerArgs: [
             '--name',
             newSessionName,
             ...(opts.user ? ['--user', opts.user] : []),
@@ -190,8 +235,10 @@ function buildResumePlan(record, newCommand, probe = {}) {
             '-c',
             command,
           ],
-          description: `Run the new command in ${newSessionName}`,
-        },
+          extraNetworks: getDockerNetworks(opts).slice(1),
+          newSessionName,
+          snapshotImage,
+        }),
       ],
       message: `Resumed session in new container ${newSessionName} from snapshot of ${sessionName}`,
     };

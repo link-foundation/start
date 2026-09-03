@@ -41,9 +41,9 @@ start -ai <name>`. `docker exec` fails because the container is stopped, and
     per-implementation READMEs gain the new verbs; the npm changeset and the
     Rust changelog fragment declare a minor bump for each package.
 11. **PR #163, verification** — The full local gate set runs green and is
-    retained in `data/`: 837 JavaScript cases, 244 Rust library cases plus every
+    retained in `data/`: 838 JavaScript cases, 245 Rust library cases plus every
     integration binary, lint, format, Clippy, file-size, both doc-example
-    checks, test parity at 105.9%, and changeset validation.
+    checks, test parity at 106.0%, and changeset validation.
 
 Two derived facts are worth keeping. First, the six-hour silence in step 3 is
 the direct motivation for `--resume-all`: the work was recoverable the entire

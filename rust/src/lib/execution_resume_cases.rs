@@ -126,6 +126,36 @@ fn carries_stored_docker_runtime_options_into_the_snapshot_run() {
 }
 
 #[test]
+fn rebuilds_a_multi_network_snapshot_with_create_connect_start() {
+    // `docker run` joins one network only, so extra networks must be connected
+    // between create and start, exactly as the original launch does.
+    let mut record = make_record();
+    record.options.insert(
+        "networks".to_string(),
+        json!(["frontend", "backend", "metrics"]),
+    );
+    let plan = build_resume_plan(
+        &record,
+        Some("echo hi"),
+        &probe_with(SessionState::Stopped, Some("exited")),
+    )
+    .unwrap();
+
+    let steps: Vec<&[String]> = plan.steps.iter().map(|step| step.args.as_slice()).collect();
+    assert_eq!(steps.len(), 5);
+    assert_eq!(steps[0][0], "commit");
+    assert_eq!(steps[1][0..3], ["create", "--name", "box-resume-1"]);
+    assert!(
+        steps[1].iter().any(|arg| arg == "frontend"),
+        "the first network still goes to --network: {:?}",
+        steps[1]
+    );
+    assert_eq!(steps[2], ["network", "connect", "backend", "box-resume-1"]);
+    assert_eq!(steps[3], ["network", "connect", "metrics", "box-resume-1"]);
+    assert_eq!(steps[4], ["start", "box-resume-1"]);
+}
+
+#[test]
 fn increments_the_counter_across_repeated_resumes() {
     let mut record = make_record();
     record.options.insert("resumeCount".to_string(), json!(2));

@@ -59,10 +59,10 @@ is an observation and never a verdict.
 - `data/js-focused-test.log` and `data/rust-focused-test.log` record the two
   end-to-end regression suites (13 JavaScript cases, 14 Rust cases) driving the
   real CLI against a temporary `START_APP_FOLDER`.
-- `data/local-js-full.log` (837 pass / 0 fail) and `data/local-rust-full.log`
-  (28 green test binaries, 244 library cases) record the full local suites.
-- `data/local-test-parity.log` shows 826 Rust cases against 780 JavaScript
-  cases, a 105.9% ratio against the required 90% minimum.
+- `data/local-js-full.log` (838 pass / 0 fail) and `data/local-rust-full.log`
+  (28 green test binaries, 245 library cases) record the full local suites.
+- `data/local-test-parity.log` shows 827 Rust cases against 780 JavaScript
+  cases, a 106.0% ratio against the required 90% minimum.
 
 No upstream defect was filed. Docker behaves as documented: `exec` requires a
 running container, `start -ai` restarts the entrypoint, and the kernel OOM

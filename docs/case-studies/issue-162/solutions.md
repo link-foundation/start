@@ -34,6 +34,17 @@ and derive a new container from it. The snapshot carries the original runtime
 configuration forward — `--privileged`, volumes, environment, networks — so the
 resumed command sees the same environment, not just the same files.
 
+Carrying networks forward needed one extra step. `docker run` can join exactly
+one network, which is why the original launch path builds a multi-network
+container as `docker create` → `docker network connect` (for networks 2..n) →
+`docker start`. The first snapshot implementation used a single `docker run -d`
+and therefore silently dropped every network after the first; a review of the
+branch diff caught it before merge. `buildSnapshotStartSteps` /
+`build_snapshot_start_steps` now mirror the launch path exactly, collapsing back
+to one `docker run -d` when there is nothing extra to connect, and both
+implementations assert the five-step `commit`/`create`/`connect`/`connect`/`start`
+plan in `rebuilds a multi-network snapshot with create/connect/start`.
+
 Session identity is preserved deliberately: the execution UUID never changes,
 the new container name is derived (`<name>-resume-<n>`), and the previous name
 is appended to `sessionNameHistory` so it still resolves. `--status`,
@@ -104,12 +115,12 @@ half of the need and is exposed separately for exactly that reason.
 | --------------------------------------------------- | ----------------------------------------------------------------------- |
 | JavaScript end-to-end regression (`regression-162`) | 13 pass (`data/js-focused-test.log`).                                   |
 | Rust end-to-end regression (`regression_162`)       | 14 pass (`data/rust-focused-test.log`).                                 |
-| JavaScript full suite                               | 837 pass / 0 fail across 47 files (`data/local-js-full.log`).           |
-| Rust full suite                                     | 28 green test binaries, 244 library cases (`data/local-rust-full.log`). |
+| JavaScript full suite                               | 838 pass / 0 fail across 47 files (`data/local-js-full.log`).           |
+| Rust full suite                                     | 28 green test binaries, 245 library cases (`data/local-rust-full.log`). |
 | JavaScript lint, format, file size                  | Pass (`data/local-js-lint.log`, `-format.log`, `-filesize.log`).        |
 | Rust `cargo fmt`, Clippy, file size                 | Pass, zero warnings (`data/local-rust-*.log`).                          |
 | Documented example checks, both implementations     | 4 examples each (`data/local-doc-js.log`, `-rust.log`).                 |
-| Test-count parity                                   | 826 Rust vs 780 JavaScript, 105.9% (`data/local-test-parity.log`).      |
+| Test-count parity                                   | 827 Rust vs 780 JavaScript, 106.0% (`data/local-test-parity.log`).      |
 | Changeset validation                                | Minor bump validated (`data/local-changeset-validation.log`).           |
 
 Both regression suites are hermetic: they spawn the real CLI against a temporary

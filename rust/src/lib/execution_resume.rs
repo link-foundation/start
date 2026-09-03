@@ -21,8 +21,8 @@ use chrono::Utc;
 use serde_json::{json, Value};
 
 use crate::docker_cleanup::{
-    build_docker_runtime_args, docker_command, get_docker_container_cleanup_policy,
-    start_detached_docker_completion_watcher,
+    build_docker_runtime_args, docker_command, docker_networks,
+    get_docker_container_cleanup_policy, start_detached_docker_completion_watcher,
 };
 use crate::execution_control::{CommandRunner, SystemCommandRunner};
 use crate::execution_store::{ExecutionRecord, ExecutionStatus, ExecutionStore};
@@ -211,6 +211,57 @@ pub fn build_launch_options(record: &ExecutionRecord) -> IsolationOptions {
     }
 }
 
+/// Build the steps that start a snapshot-derived container.
+///
+/// `docker run` can only join one network, so a session that was launched on
+/// several networks is rebuilt the same way `run_isolated` builds it: create
+/// the container, connect the additional networks, then start it. Dropping to a
+/// single `docker run` when there is nothing extra to connect keeps the common
+/// case to one command.
+fn build_snapshot_start_steps(
+    docker: &str,
+    container_args: Vec<String>,
+    extra_networks: &[String],
+    new_session_name: &str,
+    snapshot_image: &str,
+) -> Vec<ResumeStep> {
+    if extra_networks.is_empty() {
+        let mut args = vec!["run".to_string(), "-d".to_string()];
+        args.extend(container_args);
+        return vec![ResumeStep {
+            command: docker.to_string(),
+            args,
+            description: format!("Run the new command in {}", new_session_name),
+        }];
+    }
+
+    let mut create_args = vec!["create".to_string()];
+    create_args.extend(container_args);
+    let mut steps = vec![ResumeStep {
+        command: docker.to_string(),
+        args: create_args,
+        description: format!("Create {} from {}", new_session_name, snapshot_image),
+    }];
+    for network in extra_networks {
+        steps.push(ResumeStep {
+            command: docker.to_string(),
+            args: vec![
+                "network".to_string(),
+                "connect".to_string(),
+                network.clone(),
+                new_session_name.to_string(),
+            ],
+            description: format!("Connect {} to network {}", new_session_name, network),
+        });
+    }
+    steps.push(ResumeStep {
+        command: docker.to_string(),
+        args: vec!["start".to_string(), new_session_name.to_string()],
+        description: format!("Run the new command in {}", new_session_name),
+    });
+    steps
+}
+
 fn docker_snapshot_plan(
     record: &ExecutionRecord,
     backend: &str,
@@ -223,25 +274,41 @@ fn docker_snapshot_plan(
     let docker = docker_command().to_string_lossy().to_string();
 
     let launch_options = build_launch_options(record);
-    let mut run_args = vec![
-        "run".to_string(),
-        "-d".to_string(),
-        "--name".to_string(),
-        new_session_name.clone(),
-    ];
+    let mut container_args = vec!["--name".to_string(), new_session_name.clone()];
     if let Some(user) = record_option(record, "user") {
-        run_args.push("--user".to_string());
-        run_args.push(user.to_string());
+        container_args.push("--user".to_string());
+        container_args.push(user.to_string());
     }
-    run_args.extend(
+    container_args.extend(
         build_docker_runtime_args(&launch_options)
             .into_iter()
             .map(str::to_string),
     );
-    run_args.push(snapshot_image.clone());
-    run_args.push("sh".to_string());
-    run_args.push("-c".to_string());
-    run_args.push(command.to_string());
+    container_args.push(snapshot_image.clone());
+    container_args.push("sh".to_string());
+    container_args.push("-c".to_string());
+    container_args.push(command.to_string());
+
+    let mut steps = vec![ResumeStep {
+        command: docker.clone(),
+        args: vec![
+            "commit".to_string(),
+            session_name.to_string(),
+            snapshot_image.clone(),
+        ],
+        description: format!("Snapshot container {} as {}", session_name, snapshot_image),
+    }];
+    steps.extend(build_snapshot_start_steps(
+        &docker,
+        container_args,
+        &docker_networks(&launch_options)
+            .into_iter()
+            .skip(1)
+            .map(str::to_string)
+            .collect::<Vec<_>>(),
+        &new_session_name,
+        &snapshot_image,
+    ));
 
     ResumePlan {
         mode: ResumeMode::DockerSnapshot,
@@ -251,22 +318,7 @@ fn docker_snapshot_plan(
         snapshot_image: Some(snapshot_image.clone()),
         command: command.to_string(),
         attempt,
-        steps: vec![
-            ResumeStep {
-                command: docker.clone(),
-                args: vec![
-                    "commit".to_string(),
-                    session_name.to_string(),
-                    snapshot_image.clone(),
-                ],
-                description: format!("Snapshot container {} as {}", session_name, snapshot_image),
-            },
-            ResumeStep {
-                command: docker,
-                args: run_args,
-                description: format!("Run the new command in {}", new_session_name),
-            },
-        ],
+        steps,
         launch_options: None,
         message: format!(
             "Resumed session in new container {} from snapshot of {}",

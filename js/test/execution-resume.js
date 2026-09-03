@@ -128,6 +128,44 @@ describe('buildResumePlan', () => {
     assert.ok(runArgs.includes('testnet'));
   });
 
+  test('rebuilds a multi-network snapshot with create/connect/start', () => {
+    // `docker run` joins one network only, so extra networks must be connected
+    // between create and start, exactly as the original launch does.
+    const record = makeRecord({
+      networks: ['frontend', 'backend', 'metrics'],
+    });
+    const plan = buildResumePlan(
+      record,
+      'echo hi',
+      probeWith(SessionState.STOPPED, 'exited')
+    );
+    const steps = plan.steps.map((step) => step.args);
+    assert.strictEqual(steps.length, 5);
+    assert.strictEqual(steps[0][0], 'commit');
+    assert.deepStrictEqual(steps[1].slice(0, 3), [
+      'create',
+      '--name',
+      'box-resume-1',
+    ]);
+    assert.ok(
+      steps[1].includes('frontend'),
+      'the first network still goes to --network'
+    );
+    assert.deepStrictEqual(steps[2], [
+      'network',
+      'connect',
+      'backend',
+      'box-resume-1',
+    ]);
+    assert.deepStrictEqual(steps[3], [
+      'network',
+      'connect',
+      'metrics',
+      'box-resume-1',
+    ]);
+    assert.deepStrictEqual(steps[4], ['start', 'box-resume-1']);
+  });
+
   test('increments the counter across repeated resumes', () => {
     const record = makeRecord({ resumeCount: 2 });
     const plan = buildResumePlan(
