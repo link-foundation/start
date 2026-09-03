@@ -250,9 +250,14 @@ describe('Docker not installed check (issue #84)', () => {
       message.toLowerCase().includes('not installed'),
       'Message must indicate Docker is not installed'
     );
-    assert.ok(
-      message.includes('https://docs.docker.com/get-docker/'),
-      'Message must include an installation URL'
+    // Compare the whole URL, not a substring of the message: a substring test
+    // also passes for a look-alike such as https://evil.invalid/docs.docker.com
+    // (CodeQL js/incomplete-url-substring-sanitization, issue #168).
+    const [installUrl] = message.match(/https?:\/\/\S+/) ?? [];
+    assert.equal(
+      installUrl,
+      'https://docs.docker.com/get-docker/',
+      'Message must include the Docker installation URL'
     );
   });
 

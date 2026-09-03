@@ -185,10 +185,10 @@ pub fn detect_repository(cmd_name: &str) -> Option<RepoInfo> {
     {
         if output.status.success() {
             let bugs_url = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if bugs_url.contains("github.com") {
-                if let Some(info) = parse_git_url(&bugs_url) {
-                    return Some(info);
-                }
+            // parse_git_url anchors on the github.com host itself, so no
+            // separate (and substring-only) host check is needed here.
+            if let Some(info) = parse_git_url(&bugs_url) {
+                return Some(info);
             }
         }
     }
@@ -392,10 +392,9 @@ pub fn create_issue(
     body.push_str("---\n");
     body.push_str("*This issue was automatically created by [start-command](https://github.com/link-foundation/start)*\n");
 
-    // Escape quotes in title and body for shell
-    let title_escaped = title.replace('"', "\\\"");
-    let body_escaped = body.replace('"', "\\\"").replace('\n', "\\n");
-
+    // No shell is involved: `Command` passes each argument through verbatim, so
+    // escaping quotes here would only put backslashes into the issue text and
+    // flatten its newlines into the two characters "\n" (issue #168).
     let output = Command::new("gh")
         .args([
             "issue",
@@ -403,9 +402,9 @@ pub fn create_issue(
             "--repo",
             &format!("{}/{}", repo_info.owner, repo_info.repo),
             "--title",
-            &title_escaped,
+            &title,
             "--body",
-            &body_escaped,
+            &body,
         ])
         .output()
         .ok()?;

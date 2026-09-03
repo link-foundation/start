@@ -4,7 +4,7 @@
  * Handles command failures - detects repository, uploads logs, creates issues
  */
 
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
@@ -97,7 +97,7 @@ function detectRepository(cmdName) {
     let cmdPath;
 
     try {
-      cmdPath = execSync(`${whichCmd} ${cmdName}`, {
+      cmdPath = execFileSync(whichCmd, [cmdName], {
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe'],
       }).trim();
@@ -117,7 +117,7 @@ function detectRepository(cmdName) {
     // Check if it's in npm global modules
     let npmGlobalPath;
     try {
-      npmGlobalPath = execSync('npm root -g', {
+      npmGlobalPath = execFileSync('npm', ['root', '-g'], {
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe'],
       }).trim();
@@ -183,42 +183,28 @@ function detectRepository(cmdName) {
       packageName = cmdName;
     }
 
-    // Try to get repository URL from npm
-    try {
-      const npmInfo = execSync(
-        `npm view ${packageName} repository.url 2>/dev/null`,
-        {
+    // Try the repository URL, then the bugs URL, from the npm registry.
+    // execFileSync, not execSync: packageName comes from a path or from the
+    // failing command's own name, and a shell would run anything it carries
+    // (CodeQL js/shell-command-injection-from-environment).
+    for (const field of ['repository.url', 'bugs.url']) {
+      let url;
+      try {
+        url = execFileSync('npm', ['view', packageName, field], {
           encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe'],
-        }
-      ).trim();
-
-      if (npmInfo) {
-        // Parse git URL to extract owner and repo
-        const parsed = parseGitUrl(npmInfo);
-        if (parsed) {
-          return parsed;
-        }
+          stdio: ['pipe', 'pipe', 'ignore'],
+        }).trim();
+      } catch {
+        // npm view failed: package might not exist or have no such field.
+        continue;
       }
-    } catch {
-      // npm view failed, package might not exist or have no repository
-    }
 
-    // Try to get homepage or bugs URL as fallback
-    try {
-      const bugsUrl = execSync(`npm view ${packageName} bugs.url 2>/dev/null`, {
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-      }).trim();
-
-      if (bugsUrl && bugsUrl.includes('github.com')) {
-        const parsed = parseGitUrl(bugsUrl);
-        if (parsed) {
-          return parsed;
-        }
+      // parseGitUrl anchors on the github.com host itself, so no separate
+      // (and substring-only) host check is needed here.
+      const parsed = parseGitUrl(url);
+      if (parsed) {
+        return parsed;
       }
-    } catch {
-      // Fallback also failed
     }
 
     return null;
@@ -258,7 +244,7 @@ function parseGitUrl(url) {
  */
 function isGhAuthenticated() {
   try {
-    execSync('gh auth status', { stdio: ['pipe', 'pipe', 'pipe'] });
+    execFileSync('gh', ['auth', 'status'], { stdio: ['pipe', 'pipe', 'pipe'] });
     return true;
   } catch {
     return false;
@@ -273,7 +259,9 @@ function isGhUploadLogAvailable() {
   const isWindows = process.platform === 'win32';
   try {
     const whichCmd = isWindows ? 'where' : 'which';
-    execSync(`${whichCmd} gh-upload-log`, { stdio: ['pipe', 'pipe', 'pipe'] });
+    execFileSync(whichCmd, ['gh-upload-log'], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
     return true;
   } catch {
     return false;
@@ -287,7 +275,7 @@ function isGhUploadLogAvailable() {
  */
 function uploadLog(logPath) {
   try {
-    const result = execSync(`gh-upload-log "${logPath}" --public`, {
+    const result = execFileSync('gh-upload-log', [logPath, '--public'], {
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -320,7 +308,7 @@ function uploadLog(logPath) {
 function canCreateIssue(owner, repo) {
   try {
     // Check if the repository exists and we have access
-    execSync(`gh repo view ${owner}/${repo} --json name`, {
+    execFileSync('gh', ['repo', 'view', `${owner}/${repo}`, '--json', 'name'], {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     return true;
@@ -364,8 +352,22 @@ function createIssue(repoInfo, fullCommand, exitCode, logUrl) {
     body += `---\n`;
     body += `*This issue was automatically created by [start-command](https://github.com/link-foundation/start)*\n`;
 
-    const result = execSync(
-      `gh issue create --repo ${repoInfo.owner}/${repoInfo.repo} --title "${title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`,
+    // execFileSync passes the title and body as argv entries, so no quoting is
+    // involved: the failing command they quote reached the shell verbatim
+    // before, and its newlines survived only as the two characters "\n"
+    // (CodeQL js/incomplete-sanitization, issue #168).
+    const result = execFileSync(
+      'gh',
+      [
+        'issue',
+        'create',
+        '--repo',
+        `${repoInfo.owner}/${repoInfo.repo}`,
+        '--title',
+        title,
+        '--body',
+        body,
+      ],
       {
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe'],

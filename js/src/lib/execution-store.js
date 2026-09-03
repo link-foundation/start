@@ -22,7 +22,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { execSync, spawnSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 const crypto = require('crypto');
 
 // Synchronous wrapper using Bun's native ESM support
@@ -417,7 +417,10 @@ class ExecutionStore {
    */
   execClink(query) {
     try {
-      const result = execSync(`clink '${query}' --db "${this.linksDbPath}"`, {
+      // The query embeds record values verbatim; a shell string would let a
+      // single quote in any of them break out of the argument
+      // (CodeQL js/shell-command-constructed-from-input, issue #168).
+      const result = execFileSync('clink', [query, '--db', this.linksDbPath], {
         encoding: 'utf8',
         timeout: 10000,
         stdio: ['pipe', 'pipe', 'pipe'],

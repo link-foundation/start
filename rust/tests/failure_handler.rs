@@ -3,8 +3,8 @@
 //! Mirrors failure_handler test coverage from the JS test suite.
 
 use start_command::failure_handler::{
-    can_create_issue, handle_failure, is_gh_authenticated, is_gh_upload_log_available,
-    parse_git_url, Config,
+    can_create_issue, create_issue, handle_failure, is_gh_authenticated,
+    is_gh_upload_log_available, parse_git_url, Config, RepoInfo,
 };
 
 mod parse_git_url_tests {
@@ -184,5 +184,111 @@ mod can_create_issue_tests {
     fn should_return_bool() {
         let result: bool = can_create_issue("some-owner", "some-repo");
         let _ = result;
+    }
+}
+
+/// Mirrors the JS `createIssue` regression tests for issue #168: the title and
+/// body must reach `gh` verbatim, with real newlines and without shell escaping.
+#[cfg(unix)]
+mod create_issue_tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+    use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
+    use std::sync::{Mutex, OnceLock};
+    use tempfile::TempDir;
+
+    const FAILING_COMMAND: &str = "echo \"quoted\" $(id) `hostname`";
+
+    /// Run `create_issue` with a fake `gh` first on PATH that records its argv,
+    /// NUL-separated, and returns the recorded arguments.
+    fn create_issue_with_fake_gh() -> (Option<String>, Vec<String>) {
+        static PATH_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        let _guard = PATH_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+
+        let dir = TempDir::new().unwrap();
+        let argv_file = dir.path().join("argv");
+        let gh_path = dir.path().join("gh");
+        std::fs::write(
+            &gh_path,
+            format!(
+                "#!/bin/sh\nprintf '%s\\0' \"$@\" > \"{}\"\necho https://github.com/owner/repo/issues/1\n",
+                argv_file.display()
+            ),
+        )
+        .unwrap();
+        let mut permissions = std::fs::metadata(&gh_path).unwrap().permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(&gh_path, permissions).unwrap();
+
+        let original_path = std::env::var_os("PATH");
+        let mut paths = vec![dir.path().to_path_buf()];
+        if let Some(existing) = original_path.as_ref() {
+            paths.extend(std::env::split_paths(existing));
+        }
+        std::env::set_var("PATH", std::env::join_paths(paths).unwrap());
+
+        let repo_info = RepoInfo {
+            owner: "owner".to_string(),
+            repo: "repo".to_string(),
+            url: "https://github.com/owner/repo".to_string(),
+        };
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            create_issue(&repo_info, FAILING_COMMAND, 1, None)
+        }));
+
+        if let Some(path) = original_path {
+            std::env::set_var("PATH", path);
+        } else {
+            std::env::remove_var("PATH");
+        }
+
+        let url = match result {
+            Ok(url) => url,
+            Err(payload) => resume_unwind(payload),
+        };
+        let recorded = std::fs::read_to_string(&argv_file).unwrap();
+        // `printf '%s\0'` writes a trailing NUL, so the final split part is empty.
+        let mut argv = recorded.split('\0').map(str::to_string).collect::<Vec<_>>();
+        argv.pop();
+        (url, argv)
+    }
+
+    #[test]
+    fn passes_the_title_and_body_as_separate_arguments() {
+        let (url, argv) = create_issue_with_fake_gh();
+        assert_eq!(
+            url.as_deref(),
+            Some("https://github.com/owner/repo/issues/1")
+        );
+        assert_eq!(argv[0..4], ["issue", "create", "--repo", "owner/repo"]);
+        assert_eq!(argv[4], "--title");
+        assert_eq!(argv[6], "--body");
+        assert_eq!(argv.len(), 8);
+    }
+
+    #[test]
+    fn keeps_the_failing_command_verbatim_and_writes_real_newlines() {
+        let (_, argv) = create_issue_with_fake_gh();
+        let title = &argv[5];
+        let body = &argv[7];
+        assert!(
+            title.contains(FAILING_COMMAND),
+            "title must quote the command verbatim, got: {}",
+            title
+        );
+        assert!(
+            body.contains(FAILING_COMMAND),
+            "body must quote the command verbatim"
+        );
+        assert!(!title.contains("\\\""), "title must not escape quotes");
+        assert!(!body.contains("\\\""), "body must not escape quotes");
+        assert!(body.contains('\n'), "body must contain real newlines");
+        assert!(
+            !body.contains("\\n"),
+            "body must not contain literal backslash-n sequences"
+        );
     }
 }

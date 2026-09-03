@@ -466,8 +466,9 @@ async function main() {
 
       const commitMessage =
         packageKind === 'rust' ? `rust-v${newVersion}` : newVersion;
-      const escapedMessage = commitMessage.replace(/"/g, '\\"');
-      await $`git commit -m "${escapedMessage}"`;
+      // command-stream quotes interpolated values itself; escaping here (and
+      // the surrounding quotes) would end up in the commit message verbatim.
+      await $`git commit -m ${commitMessage}`;
 
       // Push directly to main
       await $`git push origin main`;
