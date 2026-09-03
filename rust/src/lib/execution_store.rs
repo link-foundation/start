@@ -546,8 +546,24 @@ impl ExecutionStore {
             .find(|r| r.uuid == identifier)
             .cloned()
             .or_else(|| {
+                records
+                    .iter()
+                    .find(|r| {
+                        r.options.get("sessionName").and_then(|v| v.as_str()) == Some(identifier)
+                    })
+                    .cloned()
+            })
+            .or_else(|| {
+                // Finally, honor session names this record used before it was
+                // resumed, so one logical session stays addressable across
+                // restarts (issue #162).
                 records.into_iter().find(|r| {
-                    r.options.get("sessionName").and_then(|v| v.as_str()) == Some(identifier)
+                    r.options
+                        .get("sessionNameHistory")
+                        .and_then(|v| v.as_array())
+                        .is_some_and(|history| {
+                            history.iter().any(|name| name.as_str() == Some(identifier))
+                        })
                 })
             })
     }
