@@ -1,0 +1,20 @@
+ .gitkeep                             |   3 +-
+ README.md                            |   5 +
+ docs/EXAMPLES.md                     |   2 +-
+ docs/USAGE.md                        |  26 ++++
+ docs/examples/tested-examples.json   |   4 +-
+ experiments/issue-164-repro.mjs      |  20 +++
+ js/.changeset/issue-164.md           |   5 +
+ js/src/bin/cli.js                    |  15 +-
+ js/src/lib/args-parser.js            |   5 +-
+ js/src/lib/shell-utils.js            | 137 +++++++++++++++--
+ js/test/args-parser-attach-resume.js |   4 +-
+ js/test/regression-164.js            | 241 +++++++++++++++++++++++++++++
+ rust/changelog.d/164.md              |   5 +
+ rust/src/bin/main.rs                 |  21 ++-
+ rust/src/lib/args_parser.rs          |   5 +-
+ rust/src/lib/isolation.rs            |   9 +-
+ rust/src/lib/isolation_shell.rs      | 171 ++++++++++++++++++---
+ rust/src/lib/mod.rs                  |   9 +-
+ rust/tests/regression_164.rs         | 283 +++++++++++++++++++++++++++++++++++
+ 19 files changed, 912 insertions(+), 58 deletions(-)
