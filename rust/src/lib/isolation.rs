@@ -793,7 +793,10 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                     &container_name,
                     cleanup_policy,
                 );
-                message.push_str(&format!("\nAttach with: docker attach {}", container_name));
+                message.push_str(&format!(
+                    "\nAttach with: $ --attach {} (or docker attach {})",
+                    container_name, container_name
+                ));
                 message.push_str(&format!("\nView logs: docker logs {}", container_name));
                 if let Some(log_path) = options.log_path.as_ref() {
                     message.push_str(&format!("\nLive log: {}", log_path.display()));
