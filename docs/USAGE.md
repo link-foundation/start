@@ -6,6 +6,7 @@ This document provides detailed guidance on using the `$` command effectively, i
 
 - [Quick Start](#quick-start)
 - [Using Pipes](#using-pipes)
+- [Argument Boundaries](#argument-boundaries)
 - [Shell Metacharacters](#shell-metacharacters)
 - [Quoting Reference](#quoting-reference)
 - [Command Examples](#command-examples)
@@ -72,6 +73,31 @@ cat file.txt | $ processor
 # Chain commands, wrap the final one
 git diff | $ reviewer
 ```
+
+## Argument Boundaries
+
+`$` reads the arguments your shell already split for it, and passes them on with
+the boundaries intact. Anything you quoted stays one argument, so quotes and
+metacharacters inside it are never re-interpreted:
+
+```bash
+$ node -e "console.log('hi')"   # runs node with one -e argument
+$ echo "a  b"                   # prints a  b, with both spaces
+$ git commit -m "msg with spaces"
+$ bash -c "echo $((1+1))"       # prints 2
+```
+
+A **single** argument is treated as a shell script and runs verbatim, which is
+how pipelines, redirection and operators are passed through:
+
+```bash
+$ 'cat file.txt | grep pattern'
+$ "npm install && npm test"
+```
+
+The two forms do not mix: in the multi-argument form an operator you quoted is
+just a literal word (`$ echo a '&&' echo b` prints `a && echo b`). Quote the
+whole pipeline instead when you want the inner shell to run it.
 
 ## Shell Metacharacters
 
