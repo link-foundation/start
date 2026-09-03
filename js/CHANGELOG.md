@@ -1,5 +1,26 @@
 # start-command
 
+## 0.33.0
+
+### Minor Changes
+
+- Add `--attach`, `--resume`, `--resume-all` and `--list --running` so a detached isolated session can be re-entered, continued, or repaired after a supervisor restart, and surface an `exitReason` hint when a log shows memory exhaustion.
+
+  Keep argument boundaries when rebuilding the command from `argv`: `start node -e "console.log('hi')"` and `start echo "a  b"` now reach the shell with their quoting intact instead of being re-split by the inner `bash -c`. A single argument still runs verbatim as a shell script, so `start 'ls | wc -l'` keeps working; in the multi-argument form a quoted operator such as `start echo a '&&' echo b` is now a literal word.
+
+  Surface `memoryExhausted` and `memoryExhaustedReason` in `--status` when the log shows the runtime aborted on its own memory limit: a Node/V8 heap-limit abort dies below the container limit, so `oomKilled` stays `false` and the only evidence is the `FATAL ERROR` line the runtime printed. The log tail is now scanned with a 64 KiB window (V8 prints a long native stack trace after the marker), the observation covers attached sessions too, and the kept-container footer no longer asserts a bare `oomKilled=false` next to a fatal marker for exit codes 134/139.
+
+  Fix the release automation breaking on Node 24 with `$ is not a function`. `use-m` returns the raw CommonJS namespace `{ default, 'module.exports' }` instead of the callable default, so `const { $ } = await use('command-stream')` destructured `undefined` and every release job died at its first shell command. All eight affected scripts now go through the shared `scripts/load-command-stream.mjs` loader, which resolves either namespace shape and, when it cannot, throws an error naming the keys it actually saw.
+
+  Also hardens every external command the package spawns. `failure-handler` and
+  `ExecutionStore.execClink` interpolated data - the failing command's own name,
+  the log path, recorded command text - into shell strings; they now pass an
+  argument vector, so a backtick, `$(...)` or `'` in a command is no longer
+  executed by a shell. As part of that, `gh issue create` receives the report
+  body verbatim: its newlines previously reached GitHub as the two characters
+  `\n`. Session ids and isolation usernames are now drawn from `crypto` rather
+  than `Math.random()`.
+
 ## 0.32.1
 
 ### Patch Changes
