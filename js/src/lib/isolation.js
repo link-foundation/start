@@ -27,6 +27,7 @@ const {
   wrapCommandWithLogFooter,
 } = require('./isolation-log-utils');
 const {
+  buildAttachedDockerKeptMessage,
   DOCKER_CONTAINER_CLEANUP_POLICY,
   getDockerContainerCleanupPolicy,
   shouldCleanupDockerContainer,
@@ -854,11 +855,12 @@ function runInDocker(command, options = {}) {
             cleanupPolicy === DOCKER_CONTAINER_CLEANUP_POLICY.KEEP_ON_FAIL ||
             cleanupPolicy === DOCKER_CONTAINER_CLEANUP_POLICY.DEFAULT
           ) {
-            message +=
-              oomKilled === true
-                ? `\nContainer kept because Docker reports it was OOM-killed.`
-                : `\nContainer kept because the command failed.`;
-            message += `\nRemove when done: docker rm -f ${containerName}`;
+            message += buildAttachedDockerKeptMessage({
+              containerName,
+              exitCode,
+              oomKilled,
+              logPath: options.logPath,
+            });
           }
 
           resolve({

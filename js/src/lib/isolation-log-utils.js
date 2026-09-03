@@ -204,7 +204,65 @@ function runAsIsolatedUser(cmd, username) {
   });
 }
 
+/**
+ * Number of trailing bytes scanned for the terminal log footer. The footer is
+ * always appended at the very end of the log, so there is no reason to read
+ * (potentially megabytes of) command output on every `--status` call.
+ */
+const LOG_TAIL_BYTES = 16 * 1024;
+
+/**
+ * Number of trailing bytes scanned for a fatal marker (issue #165).
+ *
+ * Wider than the footer window because a dying runtime keeps printing after the
+ * marker: V8 emits a full native stack trace between `FATAL ERROR: Reached heap
+ * limit ...` and the end of the log, which can push the marker several tens of
+ * kilobytes away from EOF.
+ */
+const FATAL_MARKER_TAIL_BYTES = 64 * 1024;
+
+/**
+ * Read the last `bytes` bytes of a file as UTF-8 text.
+ *
+ * A partial first line is dropped: the slice can start in the middle of a line,
+ * and that fragment must not be treated as the beginning of a line by the
+ * anchored footer pattern.
+ *
+ * @param {string} logPath - Path to the log file
+ * @param {number} [bytes] - Maximum number of trailing bytes to read
+ * @returns {string|null} Tail content, or null when the file cannot be read
+ */
+function readLogTail(logPath, bytes = LOG_TAIL_BYTES) {
+  let fd;
+  try {
+    fd = fs.openSync(logPath, 'r');
+    const size = fs.fstatSync(fd).size;
+    const length = Math.min(size, bytes);
+    const buffer = Buffer.alloc(length);
+    fs.readSync(fd, buffer, 0, length, size - length);
+    const tail = buffer.toString('utf8');
+    if (size <= bytes) {
+      return tail;
+    }
+    const firstNewline = tail.indexOf('\n');
+    return firstNewline === -1 ? '' : tail.slice(firstNewline + 1);
+  } catch {
+    return null;
+  } finally {
+    if (fd !== undefined) {
+      try {
+        fs.closeSync(fd);
+      } catch {
+        // ignore
+      }
+    }
+  }
+}
+
 module.exports = {
+  LOG_TAIL_BYTES,
+  FATAL_MARKER_TAIL_BYTES,
+  readLogTail,
   getTempRoot,
   ensureDirectory,
   ensureParentDirectory,

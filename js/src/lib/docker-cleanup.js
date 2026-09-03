@@ -2,8 +2,11 @@ const { spawn, spawnSync } = require('child_process');
 const {
   appendLogFile,
   createShellLogFooterSnippet,
+  FATAL_MARKER_TAIL_BYTES,
+  readLogTail,
   shellQuote,
 } = require('./isolation-log-utils');
+const { resolveMemoryExhaustion } = require('./exit-reason');
 
 const DOCKER_CONTAINER_CLEANUP_POLICY = {
   DEFAULT: 'default',
@@ -144,15 +147,79 @@ function removeDockerContainer(containerName, logPath = null) {
   return !result.error && result.status === 0;
 }
 
+/**
+ * Exit codes of a process that aborted itself: SIGABRT (134) and SIGSEGV (139).
+ * These are exactly the codes a runtime produces when it dies on its own memory
+ * limit — Node/V8 prints `FATAL ERROR: Reached heap limit ...` and aborts — long
+ * before the container limit is reached, so the kernel never OOM-kills anything
+ * and `State.OOMKilled` stays `false` (issue #165).
+ */
+const SELF_ABORT_EXIT_CODES = [134, 139];
+
+/**
+ * Appended to the kept-container reason for a self-abort exit code, so the
+ * footer stops asserting the opposite of the `FATAL ERROR` printed a few lines
+ * above it. The footer is the string downstream tooling greps.
+ */
+const OOM_FLAG_BLIND_NOTE =
+  'a runtime self-abort on its own memory limit is invisible to this flag - ' +
+  'check the log above for a fatal memory marker';
+
+/**
+ * Shell fragment computing `$__start_command_reason` for the kept footer.
+ * @returns {string} Shell command
+ */
+function buildDockerKeptReasonSnippet() {
+  return (
+    '__start_command_reason="exitCode=$__start_command_exit oomKilled=$__start_command_oom"; ' +
+    `case "$__start_command_exit" in ${SELF_ABORT_EXIT_CODES.join('|')}) ` +
+    '[ "$__start_command_oom" = true ] || ' +
+    `__start_command_reason="$__start_command_reason (${OOM_FLAG_BLIND_NOTE})";; ` +
+    'esac'
+  );
+}
+
+/**
+ * Lines appended to an attached session's message when the container is kept
+ * because the command failed. A runtime that aborts on its own memory limit
+ * never trips `State.OOMKilled`, so a bare `oomKilled false` would contradict
+ * the `FATAL ERROR` the runtime just printed into this very log (issue #165).
+ * Best effort: the tail is read right after the child exits.
+ *
+ * @param {object} params - Container name, exit code, OOM flag and log path
+ * @returns {string} Message lines to append
+ */
+function buildAttachedDockerKeptMessage({
+  containerName,
+  exitCode,
+  oomKilled,
+  logPath,
+}) {
+  let message =
+    oomKilled === true
+      ? `\nContainer kept because Docker reports it was OOM-killed.`
+      : `\nContainer kept because the command failed.`;
+  const memory = resolveMemoryExhaustion({
+    exitCode,
+    logTail: logPath ? readLogTail(logPath, FATAL_MARKER_TAIL_BYTES) : null,
+    oomKilled,
+  });
+  if (memory) {
+    message += `\nMemory exhaustion detected in the log: ${memory.memoryExhaustedReason}`;
+  }
+  return `${message}\nRemove when done: docker rm -f ${containerName}`;
+}
+
 function buildDockerKeptLogSnippet(containerName, quotedLogPath) {
   const quotedName = shellQuote(containerName);
   return (
-    `printf '\\nContainer kept for investigation: %s\\nReason: exitCode=%s oomKilled=%s\\n` +
+    `${buildDockerKeptReasonSnippet()}; ` +
+    `printf '\\nContainer kept for investigation: %s\\nReason: %s\\n` +
     `Re-enter while running: $ --attach %s\\n` +
     `Continue the stored command: $ --resume %s\\n` +
     `Run another command in the same container: $ --resume %s -- <command>\\n` +
     `Remove when done: docker rm -f %s\\n' ` +
-    `${quotedName} "$__start_command_exit" "$__start_command_oom" ` +
+    `${quotedName} "$__start_command_reason" ` +
     `${quotedName} ${quotedName} ${quotedName} ${quotedName} >> ${quotedLogPath}`
   );
 }
@@ -248,7 +315,11 @@ function spawnAttachedDocker(dockerArgs, logPath) {
 }
 
 module.exports = {
+  buildAttachedDockerKeptMessage,
   DOCKER_CONTAINER_CLEANUP_POLICY,
+  SELF_ABORT_EXIT_CODES,
+  OOM_FLAG_BLIND_NOTE,
+  buildDockerKeptReasonSnippet,
   getDockerCommand,
   getDockerSpawnOptions,
   getDockerContainerCleanupPolicy,

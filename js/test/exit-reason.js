@@ -13,7 +13,9 @@ const assert = require('assert');
 
 const {
   detectExitReason,
+  detectMemoryMarker,
   resolveExitReason,
+  resolveMemoryExhaustion,
   signalNameForExitCode,
 } = require('../src/lib/exit-reason');
 
@@ -113,5 +115,84 @@ describe('resolveExitReason', () => {
     assert.strictEqual(resolveExitReason({ exitCode: 0 }), null);
     assert.strictEqual(resolveExitReason({}), null);
     assert.strictEqual(resolveExitReason(null), null);
+  });
+});
+
+describe('detectMemoryMarker', () => {
+  it('should return the whole line carrying the marker', () => {
+    const tail = [
+      '<--- Last few GCs --->',
+      'FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory',
+      '----- Native stack trace -----',
+    ].join('\n');
+
+    assert.deepStrictEqual(detectMemoryMarker(tail), {
+      reason: 'memory-exhaustion (v8-heap-limit)',
+      line: 'FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory',
+    });
+  });
+
+  it('should bound an absurdly long line', () => {
+    const marker = detectMemoryMarker(
+      `${'x'.repeat(5000)} JavaScript heap out of memory`
+    );
+
+    assert.ok(marker.line.length <= 304);
+    assert.ok(marker.line.endsWith('...'));
+  });
+});
+
+describe('resolveMemoryExhaustion', () => {
+  const marker =
+    'FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory';
+
+  it('should report the evidence for an abnormal exit', () => {
+    assert.deepStrictEqual(
+      resolveMemoryExhaustion({
+        exitCode: 139,
+        logTail: `working\n${marker}\n`,
+        oomKilled: false,
+      }),
+      { memoryExhausted: true, memoryExhaustedReason: marker }
+    );
+  });
+
+  it('should fall back to the container flag when the log says nothing', () => {
+    assert.deepStrictEqual(
+      resolveMemoryExhaustion({
+        exitCode: 137,
+        logTail: 'killed\n',
+        oomKilled: true,
+      }),
+      {
+        memoryExhausted: true,
+        memoryExhaustedReason: 'Docker reported State.OOMKilled=true',
+      }
+    );
+  });
+
+  it('should stay silent for a clean or unfinished run', () => {
+    // An observation, never a verdict (#151): a log that merely quotes the
+    // marker cannot turn a successful run into a memory failure.
+    assert.strictEqual(
+      resolveMemoryExhaustion({ exitCode: 0, logTail: marker }),
+      null
+    );
+    assert.strictEqual(
+      resolveMemoryExhaustion({ exitCode: null, logTail: marker }),
+      null
+    );
+  });
+
+  it('should stay silent for an ordinary failure', () => {
+    assert.strictEqual(
+      resolveMemoryExhaustion({
+        exitCode: 1,
+        logTail: 'error: file not found\n',
+        oomKilled: false,
+      }),
+      null
+    );
+    assert.strictEqual(resolveMemoryExhaustion(null), null);
   });
 });

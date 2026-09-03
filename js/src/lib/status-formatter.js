@@ -8,14 +8,17 @@
  */
 
 const { execSync, spawnSync } = require('child_process');
-const fs = require('fs');
 const {
   escapeForLinksNotation,
   formatAsNestedLinksNotation,
 } = require('./output-blocks');
 const { collectProcessIds } = require('./execution-control');
 const { getDockerCommand, getDockerSpawnOptions } = require('./docker-cleanup');
-const { resolveExitReason } = require('./exit-reason');
+const { resolveExitReason, resolveMemoryExhaustion } = require('./exit-reason');
+const {
+  FATAL_MARKER_TAIL_BYTES,
+  readLogTail,
+} = require('./isolation-log-utils');
 
 /**
  * Inspect the live state of a detached docker container by name.
@@ -177,13 +180,6 @@ function isDetachedSessionAlive(record) {
 }
 
 /**
- * Number of trailing bytes scanned for the terminal log footer. The footer is
- * always appended at the very end of the log, so there is no reason to read
- * (potentially megabytes of) command output on every `--status` call.
- */
-const LOG_TAIL_BYTES = 16 * 1024;
-
-/**
  * The three-line terminal footer that `start` itself writes (see
  * `createLogFooter()` and `createShellLogFooterSnippet()`):
  *
@@ -198,44 +194,6 @@ const LOG_TAIL_BYTES = 16 * 1024;
  */
 const LOG_FOOTER_PATTERN =
   /^={10,}[ \t]*\r?\n^Finished:[^\r\n]*\r?\n^Exit Code:[ \t]*(-?\d+)[ \t]*(?![^\r\n])/gm;
-
-/**
- * Read the last `bytes` bytes of a file as UTF-8 text.
- *
- * A partial first line is dropped: the slice can start in the middle of a line,
- * and that fragment must not be treated as the beginning of a line by the
- * anchored footer pattern.
- *
- * @param {string} logPath - Path to the log file
- * @param {number} [bytes] - Maximum number of trailing bytes to read
- * @returns {string|null} Tail content, or null when the file cannot be read
- */
-function readLogTail(logPath, bytes = LOG_TAIL_BYTES) {
-  let fd;
-  try {
-    fd = fs.openSync(logPath, 'r');
-    const size = fs.fstatSync(fd).size;
-    const length = Math.min(size, bytes);
-    const buffer = Buffer.alloc(length);
-    fs.readSync(fd, buffer, 0, length, size - length);
-    const tail = buffer.toString('utf8');
-    if (size <= bytes) {
-      return tail;
-    }
-    const firstNewline = tail.indexOf('\n');
-    return firstNewline === -1 ? '' : tail.slice(firstNewline + 1);
-  } catch {
-    return null;
-  } finally {
-    if (fd !== undefined) {
-      try {
-        fs.closeSync(fd);
-      } catch {
-        // ignore
-      }
-    }
-  }
-}
 
 /**
  * Read the terminal exit code from the anchored footer at the end of a log.
@@ -408,13 +366,60 @@ function attachExitReason(record, logTail) {
 }
 
 /**
- * Enrich execution record with live session status and an exit reason hint.
+ * Attach the memory-exhaustion observation to a finished record (issue #165).
+ *
+ * A runtime that aborts on its own heap limit (`FATAL ERROR: Reached heap limit
+ * ...`) never trips a container signal, so `oomKilled false` next to `exitCode
+ * 139` is a false negative for "out of memory" every single time. The evidence
+ * is in the log tail this scan already holds, so it is surfaced explicitly
+ * instead of leaving every consumer to re-derive it.
+ *
+ * Like `exitReason`, this is purely additive: `status`, `exitCode` and
+ * `oomKilled` are never changed by it.
+ *
+ * @param {Object} record - Execution record
+ * @param {string|null} logTail - Tail of the execution log
+ * @returns {Object} Record, or a copy carrying the memory fields
+ */
+function attachMemoryExhaustion(record, logTail) {
+  if (!record || record.status !== 'executed') {
+    return record;
+  }
+
+  const memory = resolveMemoryExhaustion({
+    exitCode: record.exitCode,
+    logTail,
+    oomKilled: record.oomKilled,
+  });
+
+  if (!memory) {
+    return record;
+  }
+
+  const enriched = Object.create(Object.getPrototypeOf(record));
+  Object.assign(enriched, record);
+  enriched.memoryExhausted = memory.memoryExhausted;
+  enriched.memoryExhaustedReason = memory.memoryExhaustedReason;
+  return enriched;
+}
+
+/**
+ * Enrich execution record with live session status and exit diagnostics.
+ *
+ * The tail is read once, with the wider fatal-marker window: a dying runtime
+ * prints a native stack trace *after* its `FATAL ERROR` line, which can push
+ * the marker out of the narrower footer window (issue #165).
+ *
  * @param {Object} record - Execution record
  * @returns {Object} Possibly updated execution record
  */
 function enrichDetachedStatus(record) {
-  const logTail = record && record.logPath ? readLogTail(record.logPath) : null;
-  return attachExitReason(resolveDetachedStatus(record, logTail), logTail);
+  const logTail =
+    record && record.logPath
+      ? readLogTail(record.logPath, FATAL_MARKER_TAIL_BYTES)
+      : null;
+  const resolved = resolveDetachedStatus(record, logTail);
+  return attachMemoryExhaustion(attachExitReason(resolved, logTail), logTail);
 }
 
 /**
@@ -563,6 +568,12 @@ function formatRecordAsText(record) {
       : []),
     ...(obj.exitReason !== undefined
       ? [`Exit Reason:       ${obj.exitReason}`]
+      : []),
+    ...(obj.memoryExhausted !== undefined
+      ? [`Memory Exhausted:  ${obj.memoryExhausted}`]
+      : []),
+    ...(obj.memoryExhaustedReason !== undefined
+      ? [`Memory Evidence:   ${obj.memoryExhaustedReason}`]
       : []),
     `PID:               ${obj.pid !== null ? obj.pid : 'N/A'}`,
     `Working Directory: ${obj.workingDirectory}`,
@@ -770,6 +781,7 @@ module.exports = {
   readExitCodeFromLog,
   readLogTail,
   attachExitReason,
+  attachMemoryExhaustion,
   resolveDetachedStatus,
   attachCurrentTime,
   attachProcessIds,

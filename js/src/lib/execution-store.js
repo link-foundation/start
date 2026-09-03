@@ -15,6 +15,7 @@
  * - startTime: Timestamp when execution started
  * - endTime: Timestamp when execution completed (null while executing)
  * - oomKilled: Docker resource-exhaustion signal when available
+ * - memoryExhausted: memory-exhaustion observation derived from the log tail
  * - options: Execution options (isolation mode, etc.)
  */
 
@@ -80,6 +81,17 @@ class ExecutionRecord {
     // the log tail by the status formatter; never persisted as a verdict.
     this.exitReason =
       options.exitReason !== undefined ? options.exitReason : undefined;
+    // Query-time memory-exhaustion observation (issue #165). A runtime that
+    // aborts on its own heap limit is invisible to `oomKilled`, so the evidence
+    // the runtime printed into the log is surfaced separately.
+    this.memoryExhausted =
+      options.memoryExhausted !== undefined
+        ? options.memoryExhausted
+        : undefined;
+    this.memoryExhaustedReason =
+      options.memoryExhaustedReason !== undefined
+        ? options.memoryExhaustedReason
+        : undefined;
     this.workingDirectory = options.workingDirectory || process.cwd();
     this.shell = options.shell || process.env.SHELL || '/bin/sh';
     this.platform = options.platform || process.platform;
@@ -115,6 +127,15 @@ class ExecutionRecord {
     }
     if (this.exitReason !== undefined && this.exitReason !== null) {
       obj.exitReason = this.exitReason;
+    }
+    if (this.memoryExhausted !== undefined && this.memoryExhausted !== null) {
+      obj.memoryExhausted = this.memoryExhausted;
+    }
+    if (
+      this.memoryExhaustedReason !== undefined &&
+      this.memoryExhaustedReason !== null
+    ) {
+      obj.memoryExhaustedReason = this.memoryExhaustedReason;
     }
     Object.assign(obj, {
       workingDirectory: this.workingDirectory,
