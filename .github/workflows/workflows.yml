@@ -1,0 +1,94 @@
+name: Workflows
+
+# GitHub Actions ignores unknown workflow keys instead of rejecting them, so a
+# typo such as `queue: max` inside a `concurrency:` block silently does nothing.
+# actionlint validates the schema and, through shellcheck, every `run:` block;
+# zizmor catches template injection and unpinned action references. Without
+# this workflow both classes of defect are false negatives of the pipeline
+# (issue #168).
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/**'
+  workflow_dispatch:
+
+# Least-privilege default; these jobs only need to read the checked-out tree.
+permissions:
+  contents: read
+
+# Provide Git config to actions/checkout itself; checkout runs git init before
+# any workflow step can configure Git.
+env:
+  GIT_CONFIG_COUNT: '1'
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: main
+
+jobs:
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-actionlint
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # The Docker image bundles shellcheck and pyflakes, so this also lints
+      # every `run:` block. A native actionlint binary without shellcheck on
+      # PATH silently skips the shell checks and exits 0 - worth knowing when
+      # reproducing a failure locally:
+      #   docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
+      - uses: docker://rhysd/actionlint:1.7.7
+        with:
+          args: -color
+
+  zizmor:
+    name: Zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: check-${{ github.workflow }}-${{ github.ref }}-zizmor
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # Annotations instead of SARIF: code scanning is not guaranteed to be
+      # enabled on forks, and the job should fail loudly either way.
+      - uses: zizmorcore/zizmor-action@v0.6.2
+        with:
+          advanced-security: false
+          annotations: true
+          config: .github/zizmor.yml
+          min-confidence: medium
+
+  # === PIPELINE STATUS ===
+  pipeline-status:
+    # `always()` (not `!cancelled()`) is deliberate here and in every other
+    # pipeline-status job: a job killed by `timeout-minutes` is reported as
+    # cancelled, and this gate must still run so check-pipeline-status.sh can
+    # fail the run on main instead of leaving the failure hidden.
+    name: Pipeline Status
+    needs: [actionlint, zizmor]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Check aggregate pipeline status
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+        run: bash scripts/check-pipeline-status.sh

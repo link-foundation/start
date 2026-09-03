@@ -77,6 +77,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -89,7 +90,9 @@ jobs:
 
       - name: Simulate merge with main (PRs only)
         if: github.event_name == 'pull_request'
-        run: bash scripts/simulate-fresh-merge.sh --base-ref origin/${{ github.base_ref }}
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+        run: bash scripts/simulate-fresh-merge.sh --base-ref "origin/$GITHUB_BASE_REF"
 
   # === DETECT CHANGES ===
   detect-changes:
@@ -110,6 +113,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -138,12 +142,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Check for version changes in Cargo.toml
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
         run: |
           # Get the diff for Cargo.toml
-          VERSION_DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- rust/Cargo.toml | grep -E '^\+version\s*=' || true)
+          VERSION_DIFF=$(git diff "origin/$GITHUB_BASE_REF...HEAD" -- rust/Cargo.toml | grep -E '^\+version\s*=' || true)
 
           if [ -n "$VERSION_DIFF" ]; then
             echo "::error::Manual version change detected in rust/Cargo.toml"
@@ -175,12 +182,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Check for changelog fragments
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
         run: |
           # Get changed files in PR
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          CHANGED_FILES=$(git diff --name-only "origin/$GITHUB_BASE_REF...HEAD")
 
           # Check if any Rust source files changed
           SOURCE_CHANGED=$(echo "$CHANGED_FILES" | grep -E "^rust/(src/|tests/|Cargo\.toml)" | wc -l)
@@ -226,10 +236,13 @@ jobs:
       )
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
         with:
+          toolchain: stable
           components: rustfmt, clippy
 
       - name: Setup Node.js
@@ -275,9 +288,13 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        with:
+          toolchain: stable
 
       - name: Setup Node.js (Linux doc examples)
         if: runner.os == 'Linux'
@@ -351,6 +368,8 @@ jobs:
     if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.any-rust-code-changed == 'true') }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -373,9 +392,13 @@ jobs:
     if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success' || needs.changelog.result == 'skipped') }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        with:
+          toolchain: stable
 
       - name: Cache cargo registry
         uses: actions/cache@v5
@@ -433,9 +456,13 @@ jobs:
     if: ${{ !cancelled() && github.event_name == 'push' && needs.lint.result == 'success' && needs.test.result == 'success' }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        with:
+          toolchain: stable
 
       - name: Cache cargo registry
         uses: actions/cache@v5
@@ -480,13 +507,18 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Writer job: the checkout credentials are what pushes the version
+      # commit/tag back to main, so `persist-credentials: false` (applied to
+      # every read-only checkout in this file) must not be set here.
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        with:
+          toolchain: stable
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -599,13 +631,18 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Writer job: the checkout credentials are what pushes the version
+      # commit/tag back to main, so `persist-credentials: false` (applied to
+      # every read-only checkout in this file) must not be set here.
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable branch @ 2026-09-03
+        with:
+          toolchain: stable
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -628,10 +665,13 @@ jobs:
 
       - name: Version and commit
         id: version
+        env:
+          BUMP_TYPE: ${{ github.event.inputs.bump_type }}
+          DESCRIPTION: ${{ github.event.inputs.description }}
         run: |
           node scripts/version-and-commit.mjs \
-            --bump-type "${{ github.event.inputs.bump_type }}" \
-            --description "${{ github.event.inputs.description }}" \
+            --bump-type "$BUMP_TYPE" \
+            --description "$DESCRIPTION" \
             --working-dir rust \
             --mode manual
 
@@ -703,6 +743,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Check aggregate pipeline status
         env:

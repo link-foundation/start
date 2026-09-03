@@ -41,6 +41,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Check links with lychee
         id: lychee
@@ -107,6 +109,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Check aggregate pipeline status
         env:
