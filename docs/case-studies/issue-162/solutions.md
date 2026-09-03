@@ -129,6 +129,49 @@ unit-level Rust tests inject `CommandRunner`, `InteractiveRunner` and
 `ResumeHooks` fakes so that plan building, snapshotting and reconciliation are
 verified without a daemon.
 
+## Static-analysis triage
+
+The `Security / CodeQL` gate reported 11 new high-severity
+`rust/cleartext-logging` alerts (numbers 29–39) against this branch, every one
+of the form "This operation writes `record.uuid` to a log file"
+(`data/codeql-alerts-pr-163.json`, `ci-logs/security-33732133662.log`).
+
+The flagged value is the execution UUID. It comes from `generate_uuid()` and is
+the documented public handle every recovery verb takes — `--status <uuid>`,
+`--attach <uuid>`, `--resume <uuid>`, `--upload-log <uuid>` — so printing it is
+the feature, not a leak. One alert is `println!("  UUID: {}", record.uuid)` at
+`query_commands.rs:144`, which is the `--cleanup` report this branch moved out
+of `main.rs:416`, where the identical line is already alert 22 on `main`. The
+other ten are `assert!(..., "{}", error)` in the new `execution_attach_cases.rs`
+and `execution_resume_cases.rs` modules, where `error` is the user-facing hint
+"Use `$ --resume <uuid>` to continue it in the same container".
+
+The rule fires on a name, not on the data. `SensitiveFieldAccess` in
+[`rust/ql/lib/codeql/rust/security/SensitiveData.qll`](https://github.com/github/codeql/blob/main/rust/ql/lib/codeql/rust/security/SensitiveData.qll)
+classifies any field access whose identifier matches
+`HeuristicNames::maybeAccountInfo()`, whose second alternative is
+`(?s).*([uU]|^|_|[a-z](?=U))([uU][iI][dD]).*` — the `uid` of a user identifier,
+which `uuid` contains. `CleartextLoggingExtensions.qll` then takes every
+`SensitiveData` node as a source regardless of classification, so any field,
+variable or function whose name contains `uid` is a source. `main` already
+carries the same rule against `username` (alerts 18, 19, 24, 28),
+`generate_uuid()` (20, 21) and `record.uuid` (22, 23, 25, 26, 27). None of the
+22 alerts describes a credential; all 22 describe an identifier.
+
+Alerts 29–39 were dismissed in code scanning as false positives, with the reason
+recorded on each alert. Two alternatives were rejected:
+
+- **Exclude `rust/cleartext-logging` through a CodeQL configuration file.** A
+  `query-filters` entry matches query metadata and cannot be scoped to a path or
+  a field, and `paths-ignore` does not apply to compiled languages. The rule
+  would be off for the whole Rust codebase, so a later commit that really did
+  log a password would pass the gate silently.
+- **Rename the field so the heuristic stops matching.** `uuid` is the key
+  written into the execution records on disk, the key in the JSON `--status` and
+  `--list` output, and the name used by the JavaScript implementation. Renaming
+  it would break stored records, the documented output contract and
+  cross-implementation parity, to buy nothing but a quieter heuristic.
+
 ## Operational follow-up
 
 `exitReason` currently recognises V8 heap limits, kernel OOM-killer messages and

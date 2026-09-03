@@ -44,6 +44,12 @@ start -ai <name>`. `docker exec` fails because the container is stopped, and
     retained in `data/`: 838 JavaScript cases, 245 Rust library cases plus every
     integration binary, lint, format, Clippy, file-size, both doc-example
     checks, test parity at 106.0%, and changeset validation.
+12. **2026-09-03 08:14** — Every branch workflow passes except the aggregate
+    `CodeQL` check, which reports 11 new high-severity `rust/cleartext-logging`
+    alerts. All 11 flag the execution UUID being printed or formatted into an
+    error hint; the rule matches the field name, not the data, and `main`
+    already carries 11 alerts of the same rule. They are dismissed as false
+    positives and the reasoning is recorded in `solutions.md`.
 
 Two derived facts are worth keeping. First, the six-hour silence in step 3 is
 the direct motivation for `--resume-all`: the work was recoverable the entire

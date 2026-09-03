@@ -44,7 +44,7 @@ is an observation and never a verdict.
 | `root-cause.md`   | Why each capability was missing, and why `exitCode 139` misled consumers. |
 | `solutions.md`    | Alternatives considered, the selected design, and the verification plan.  |
 | `data/`           | Issue, PR, diff, and local verification evidence.                         |
-| `ci-logs/`        | Workflow logs retained for the branch.                                    |
+| `ci-logs/`        | Branch workflow logs, including the CodeQL run behind the triage.         |
 
 ## Evidence highlights
 
@@ -63,6 +63,11 @@ is an observation and never a verdict.
   (28 green test binaries, 245 library cases) record the full local suites.
 - `data/local-test-parity.log` shows 827 Rust cases against 780 JavaScript
   cases, a 106.0% ratio against the required 90% minimum.
+- `data/codeql-alerts-pr-163.json` holds the 11 `rust/cleartext-logging` alerts
+  the CodeQL gate raised on the branch and the reason each was dismissed. All 11
+  flag the execution UUID, which CodeQL's account-information heuristic matches
+  because `uuid` contains `uid`; `solutions.md` traces the heuristic and records
+  why the rule was left enabled rather than filtered away.
 
 No upstream defect was filed. Docker behaves as documented: `exec` requires a
 running container, `start -ai` restarts the entrypoint, and the kernel OOM
