@@ -18,6 +18,7 @@
  */
 
 import { releaseTag } from './release-name.mjs';
+import { loadCommandStream } from './load-command-stream.mjs';
 
 // Load use-m dynamically
 const { use } = eval(
@@ -25,7 +26,7 @@ const { use } = eval(
 );
 
 // Import link-foundation libraries
-const { $ } = await use('command-stream');
+const { $ } = await loadCommandStream(use);
 const { makeConfig } = await use('lino-arguments');
 
 // Parse CLI arguments using lino-arguments

@@ -24,6 +24,7 @@ import {
   writeFileSync,
 } from "fs";
 import path from "path";
+import { loadCommandStream } from "./load-command-stream.mjs";
 
 const repoRoot = process.cwd();
 
@@ -33,7 +34,7 @@ const { use } = eval(
 );
 
 // Import link-foundation libraries
-const { $ } = await use("command-stream");
+const { $ } = await loadCommandStream(use);
 const { makeConfig } = await use("lino-arguments");
 
 // Parse CLI arguments using lino-arguments

@@ -27,6 +27,7 @@ import {
   normalizeReleaseVersionForBadge,
   packageVersionBadge,
 } from "./release-name.mjs";
+import { loadCommandStream } from "./load-command-stream.mjs";
 
 // TODO: Update this to match your package name in package.json
 const PACKAGE_NAME = "start-command";
@@ -37,7 +38,7 @@ const { use } = eval(
 );
 
 // Import link-foundation libraries
-const { $ } = await use("command-stream");
+const { $ } = await loadCommandStream(use);
 const { makeConfig } = await use("lino-arguments");
 
 // Parse CLI arguments using lino-arguments
