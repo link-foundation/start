@@ -198,14 +198,24 @@ mod shell {
     }
 
     /// A `date` shaped like BSD's: it rejects GNU's `-d` and `%N` and only
-    /// parses through `-j -f`. macOS CI runs the real thing; this stub makes the
-    /// fallback branch reachable on Linux, where it would otherwise never run.
+    /// parses through `-j -f`. That makes the fallback branch reachable on
+    /// Linux, where it would otherwise never run.
+    ///
+    /// On macOS `/bin/date` is already BSD, so it understands the flags as they
+    /// stand; on Linux it is GNU and rejects them, so the stub translates.
     fn write_bsd_date(bin_dir: &Path) {
         std::fs::create_dir_all(bin_dir).unwrap();
         let date_path = bin_dir.join("date");
         std::fs::write(
             &date_path,
-            "#!/bin/sh\nif [ \"$1\" = \"-u\" ] && [ \"$2\" = \"-j\" ] && [ \"$3\" = \"-f\" ]; then\n  exec /bin/date -u -d \"$(echo \"$5\" | tr 'T' ' ')\" \"$6\"\nfi\nexit 1\n",
+            concat!(
+                "#!/bin/sh\n",
+                "if [ \"$1\" = \"-u\" ] && [ \"$2\" = \"-j\" ] && [ \"$3\" = \"-f\" ]; then\n",
+                "  /bin/date \"$@\" 2>/dev/null && exit 0\n",
+                "  exec /bin/date -u -d \"$(echo \"$5\" | tr 'T' ' ')\" \"$6\"\n",
+                "fi\n",
+                "exit 1\n"
+            ),
         )
         .unwrap();
         let mut permissions = std::fs::metadata(&date_path).unwrap().permissions();

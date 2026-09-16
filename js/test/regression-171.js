@@ -255,11 +255,14 @@ describe('issue #171: the generated watcher shell writes the facts', () => {
   });
 
   // A `date` shaped like BSD's: it rejects GNU's `-d` and `%N` and only parses
-  // through `-j -f`. macOS CI runs the real thing; this stub makes the fallback
-  // branch reachable on Linux, where it would otherwise never execute.
+  // through `-j -f`. That makes the fallback branch reachable on Linux, where
+  // it would otherwise never execute.
   const BSD_DATE_STUB = [
     '#!/bin/sh',
     'if [ "$1" = "-u" ] && [ "$2" = "-j" ] && [ "$3" = "-f" ]; then',
+    // On macOS /bin/date is already BSD, so it understands these flags as they
+    // stand; on Linux it is GNU and rejects them, so translate instead.
+    '  /bin/date "$@" 2>/dev/null && exit 0',
     '  exec /bin/date -u -d "$(echo "$5" | tr \'T\' \' \')" "$6"',
     'fi',
     'exit 1',

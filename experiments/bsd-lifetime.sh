@@ -10,6 +10,9 @@ cat > "$BIN/date" <<'FAKE'
 #!/bin/sh
 # Minimal BSD `date`: rejects GNU's -d and %N, understands -j -f FMT STR +%s.
 if [ "$1" = "-u" ] && [ "$2" = "-j" ] && [ "$3" = "-f" ]; then
+  # On macOS /bin/date is already BSD and takes these flags as they stand; on
+  # Linux it is GNU and rejects them, so translate to GNU's syntax instead.
+  /bin/date "$@" 2>/dev/null && exit 0
   exec /bin/date -u -d "$(echo "$5" | tr 'T' ' ')" "$6"
 fi
 exit 1

@@ -64,6 +64,7 @@ fn write_log_with_footer(dir: &Path, finished: &str, exit_code: i32) -> PathBuf 
 
 /// A fake `docker` that answers every `inspect` with a fixed state line,
 /// whatever the `-f` template asks for.
+#[cfg(not(windows))]
 fn write_fake_docker(fake_dir: &Path, state_line: &str) -> PathBuf {
     write_docker_script(
         fake_dir,
@@ -77,9 +78,33 @@ fn write_fake_docker(fake_dir: &Path, state_line: &str) -> PathBuf {
     )
 }
 
+/// The same fake, as a batch stub: Windows cannot execute an extensionless
+/// `#!/bin/sh` file, so a POSIX body would leave every `inspect` failing and
+/// silently turn this into the "container is gone" test.
+#[cfg(windows)]
+fn write_fake_docker(fake_dir: &Path, state_line: &str) -> PathBuf {
+    write_docker_script(
+        fake_dir,
+        &[
+            "@echo off".to_string(),
+            "if not \"%1\"==\"inspect\" exit /b 1".to_string(),
+            format!("echo {}", state_line),
+            "exit /b 0".to_string(),
+            String::new(),
+        ]
+        .join("\r\n"),
+    )
+}
+
 /// A fake `docker` whose every `inspect` fails: the container is gone.
+#[cfg(not(windows))]
 fn write_missing_container_docker(fake_dir: &Path) -> PathBuf {
     write_docker_script(fake_dir, "#!/bin/sh\nexit 1\n")
+}
+
+#[cfg(windows)]
+fn write_missing_container_docker(fake_dir: &Path) -> PathBuf {
+    write_docker_script(fake_dir, "@echo off\r\nexit /b 1\r\n")
 }
 
 #[cfg(not(windows))]
@@ -96,12 +121,8 @@ fn write_docker_script(fake_dir: &Path, script: &str) -> PathBuf {
 
 #[cfg(windows)]
 fn write_docker_script(fake_dir: &Path, script: &str) -> PathBuf {
-    // The POSIX bodies above are only ever used on unix hosts; on Windows the
-    // shipped watcher shell does not run either, so a stub that always fails is
-    // enough to keep the "container is gone" tests meaningful.
-    let _ = script;
     let docker_path = fake_dir.join("docker.cmd");
-    std::fs::write(&docker_path, "@echo off\r\nexit /b 1\r\n").unwrap();
+    std::fs::write(&docker_path, script).unwrap();
     docker_path
 }
 
