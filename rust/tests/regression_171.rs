@@ -8,11 +8,12 @@
 //!   171.4 signal decoding (`128+n` -> name) lives in one shared helper used by
 //!         both the watcher (completion time) and the status formatter.
 
+// The shell-snippet builders are only referenced by the `#[cfg(unix)]` module
+// below; importing them here would be an unused import (and `-D warnings`, a
+// build failure) on Windows.
 use start_command::{
-    build_docker_post_mortem_snippet, build_docker_removal_note_snippet,
-    build_docker_state_snippet, describe_exit_code, format_container_post_mortem,
-    format_container_removal_note, format_lifetime, normalize_docker_timestamp,
-    ContainerPostMortem, DOCKER_STATE_INSPECT_FORMAT,
+    describe_exit_code, format_container_post_mortem, format_container_removal_note,
+    format_lifetime, normalize_docker_timestamp, ContainerPostMortem, DOCKER_STATE_INSPECT_FORMAT,
 };
 
 const STARTED_AT: &str = "2026-09-15T22:21:40.942007645Z";
@@ -165,6 +166,10 @@ fn asks_docker_for_exit_code_oom_flag_and_both_timestamps() {
 #[cfg(unix)]
 mod shell {
     use super::*;
+    use start_command::{
+        build_docker_post_mortem_snippet, build_docker_removal_note_snippet,
+        build_docker_state_snippet,
+    };
     use std::os::unix::fs::PermissionsExt;
     use std::path::Path;
     use std::process::Command;
@@ -190,6 +195,22 @@ mod shell {
         let mut permissions = std::fs::metadata(&docker_path).unwrap().permissions();
         permissions.set_mode(0o755);
         std::fs::set_permissions(&docker_path, permissions).unwrap();
+    }
+
+    /// A `date` shaped like BSD's: it rejects GNU's `-d` and `%N` and only
+    /// parses through `-j -f`. macOS CI runs the real thing; this stub makes the
+    /// fallback branch reachable on Linux, where it would otherwise never run.
+    fn write_bsd_date(bin_dir: &Path) {
+        std::fs::create_dir_all(bin_dir).unwrap();
+        let date_path = bin_dir.join("date");
+        std::fs::write(
+            &date_path,
+            "#!/bin/sh\nif [ \"$1\" = \"-u\" ] && [ \"$2\" = \"-j\" ] && [ \"$3\" = \"-f\" ]; then\n  exec /bin/date -u -d \"$(echo \"$5\" | tr 'T' ' ')\" \"$6\"\nfi\nexit 1\n",
+        )
+        .unwrap();
+        let mut permissions = std::fs::metadata(&date_path).unwrap().permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(&date_path, permissions).unwrap();
     }
 
     fn run_snippet(bin_dir: &Path, snippet: &str) -> std::process::Output {
@@ -251,6 +272,58 @@ mod shell {
         let output = run_snippet(&bin_dir, &snippet);
         assert!(output.status.success());
         let log = std::fs::read_to_string(&log_path).unwrap();
+        assert!(
+            log.contains("Container removed: demo (exit 0, lifetime 1.500s, oomKilled=false)"),
+            "log was: {}",
+            log
+        );
+    }
+
+    #[test]
+    fn keeps_the_lifetime_exact_on_a_host_whose_date_is_bsd() {
+        let temp = TempDir::new().unwrap();
+        let bin_dir = temp.path().join("bin");
+        write_fake_docker(
+            &bin_dir,
+            &format!("137 false {} {}", STARTED_AT, FINISHED_AT),
+            "",
+        );
+        write_bsd_date(&bin_dir);
+        let log_path = temp.path().join("run.log");
+        let quoted = format!("'{}'", log_path.display());
+        let snippet = format!(
+            "{}; {}",
+            build_docker_state_snippet("demo"),
+            build_docker_post_mortem_snippet("demo", &quoted)
+        );
+
+        run_snippet(&bin_dir, &snippet);
+        let log = std::fs::read_to_string(&log_path).unwrap();
+        // Truncating both timestamps to whole seconds would report 6.000s here.
+        assert!(log.contains("Lifetime:   5.798s"), "log was: {}", log);
+    }
+
+    #[test]
+    fn keeps_sub_second_lifetimes_exact_on_a_bsd_date_host() {
+        let temp = TempDir::new().unwrap();
+        let bin_dir = temp.path().join("bin");
+        write_fake_docker(
+            &bin_dir,
+            "0 false 2026-09-15T22:21:40.000000000Z 2026-09-15T22:21:41.500000000Z",
+            "",
+        );
+        write_bsd_date(&bin_dir);
+        let log_path = temp.path().join("run.log");
+        let quoted = format!("'{}'", log_path.display());
+        let snippet = format!(
+            "{}; {}",
+            build_docker_state_snippet("demo"),
+            build_docker_removal_note_snippet("demo", &quoted)
+        );
+
+        run_snippet(&bin_dir, &snippet);
+        let log = std::fs::read_to_string(&log_path).unwrap();
+        // Truncating would collapse this to 1.000s.
         assert!(
             log.contains("Container removed: demo (exit 0, lifetime 1.500s, oomKilled=false)"),
             "log was: {}",

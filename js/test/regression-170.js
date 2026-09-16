@@ -45,18 +45,31 @@ function createExecutable(filePath, content) {
  * A fake `docker` that answers `inspect` with a fixed state line, whatever the
  * `-f` template asks for. The template is echoed verbatim by the caller, so the
  * test controls exactly how many fields the formatter has to cope with.
+ *
+ * Windows gets a `.cmd` batch stub: `spawnSync()` there cannot execute an
+ * extensionless `#!/bin/sh` script, and `--status` resolves the docker facts
+ * with a plain `spawnSync()` on every platform.
  */
 function withFakeDockerInspect(stateLine, fn) {
   const fakeBin = makeTempDir('fake-docker-170-');
-  const dockerPath = path.join(fakeBin, 'docker');
+  const isWindows = process.platform === 'win32';
+  const dockerPath = path.join(fakeBin, isWindows ? 'docker.cmd' : 'docker');
   createExecutable(
     dockerPath,
-    [
-      '#!/bin/sh',
-      '[ "$1" = "inspect" ] || exit 1',
-      `echo "${stateLine}"`,
-      '',
-    ].join('\n')
+    isWindows
+      ? [
+          '@echo off',
+          'if not "%1"=="inspect" exit /b 1',
+          `echo ${stateLine}`,
+          'exit /b 0',
+          '',
+        ].join('\r\n')
+      : [
+          '#!/bin/sh',
+          '[ "$1" = "inspect" ] || exit 1',
+          `echo "${stateLine}"`,
+          '',
+        ].join('\n')
   );
   const originalPath = process.env.PATH;
   const originalDockerBin = process.env.START_DOCKER_BIN;

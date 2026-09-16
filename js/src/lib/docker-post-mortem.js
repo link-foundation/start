@@ -199,20 +199,29 @@ function buildSignalDecodeSnippet() {
  * Shell fragment computing how long the container was alive.
  *
  * Best effort by design: `date -d` is GNU, `date -j -f` is BSD, and a host that
- * offers neither leaves the lifetime `unknown` rather than guessing. The two
- * timestamps get identical treatment, so even the BSD branch — which drops the
- * fractional part and the zone suffix — yields a correct difference.
+ * offers neither leaves the lifetime `unknown` rather than guessing.
+ *
+ * BSD `date` cannot parse the fractional seconds docker reports, so the
+ * fallback strips them before parsing and adds them back afterwards. Truncating
+ * both timestamps to whole seconds instead would *not* cancel out: a container
+ * alive from `.942` to `.740` of the next-but-five second measures 5.798s but
+ * truncates to 6.000s, and the error can reach a full second either way.
  *
  * @returns {string} Shell command
  */
 function buildLifetimeSnippet() {
   const v = SHELL_VARS;
   return [
+    '__start_command_millis() { ' +
+      'case "$1" in *.*) __start_command_frac=${1#*.};; ' +
+      "*) printf '000'; return;; esac; " +
+      '__start_command_frac=${__start_command_frac%%[!0-9]*}; ' +
+      'printf \'%.3s\' "${__start_command_frac}000"; }',
     '__start_command_epoch_ms() { ' +
       '__start_command_ts=$(date -u -d "$1" +%s%3N 2>/dev/null); ' +
       'case "$__start_command_ts" in \'\'|*[!0-9]*) ' +
       '__start_command_ts=$(date -u -j -f \'%Y-%m-%dT%H:%M:%S\' "${1%.*}" +%s 2>/dev/null) && ' +
-      '__start_command_ts="${__start_command_ts}000";; esac; ' +
+      '__start_command_ts="${__start_command_ts}$(__start_command_millis "$1")";; esac; ' +
       "case \"$__start_command_ts\" in ''|*[!0-9]*) __start_command_ts='';; esac; " +
       'printf \'%s\' "$__start_command_ts"; }',
     `${v.lifetime}=${UNKNOWN}`,

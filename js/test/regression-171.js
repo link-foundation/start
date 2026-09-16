@@ -165,12 +165,28 @@ describe('issue #171.1: the watcher collects the full state in one inspect', () 
 });
 
 describe('issue #171: the generated watcher shell writes the facts', () => {
-  function runWatcherBody(snippetFactory, dockerState, dockerError) {
+  // The watcher body is a POSIX `sh` fragment that docker-cleanup.js runs with
+  // `sh -c`. Windows has no `/bin/sh`, so there is nothing to assert there; the
+  // pure formatters above cover the same rendering on every platform.
+  const needsPosixShell = () => {
+    if (process.platform !== 'win32') {
+      return false;
+    }
+    console.log('  Skipping: the watcher body needs a POSIX /bin/sh');
+    return true;
+  };
+
+  function runWatcherBody(snippetFactory, dockerState, dockerError, dateStub) {
     const dir = makeTempDir('watcher-171-');
     const logPath = path.join(dir, 'run.log');
     const snippet = snippetFactory(logPath);
     const binDir = path.join(dir, 'bin');
     fs.mkdirSync(binDir);
+    if (dateStub) {
+      const datePath = path.join(binDir, 'date');
+      fs.writeFileSync(datePath, dateStub, 'utf8');
+      fs.chmodSync(datePath, 0o755);
+    }
     const dockerPath = path.join(binDir, 'docker');
     fs.writeFileSync(
       dockerPath,
@@ -199,6 +215,9 @@ describe('issue #171: the generated watcher shell writes the facts', () => {
   }
 
   it('appends the post-mortem block for a kept container', () => {
+    if (needsPosixShell()) {
+      return;
+    }
     const log = runWatcherBody(
       (logPath) =>
         `${buildDockerStateSnippet('demo')}; ${buildDockerPostMortemSnippet(
@@ -218,6 +237,9 @@ describe('issue #171: the generated watcher shell writes the facts', () => {
   });
 
   it('appends a one line note for a removed container', () => {
+    if (needsPosixShell()) {
+      return;
+    }
     const log = runWatcherBody(
       (logPath) =>
         `${buildDockerStateSnippet('demo')}; ${buildDockerRemovalNoteSnippet(
@@ -232,7 +254,62 @@ describe('issue #171: the generated watcher shell writes the facts', () => {
     );
   });
 
+  // A `date` shaped like BSD's: it rejects GNU's `-d` and `%N` and only parses
+  // through `-j -f`. macOS CI runs the real thing; this stub makes the fallback
+  // branch reachable on Linux, where it would otherwise never execute.
+  const BSD_DATE_STUB = [
+    '#!/bin/sh',
+    'if [ "$1" = "-u" ] && [ "$2" = "-j" ] && [ "$3" = "-f" ]; then',
+    '  exec /bin/date -u -d "$(echo "$5" | tr \'T\' \' \')" "$6"',
+    'fi',
+    'exit 1',
+    '',
+  ].join('\n');
+
+  it('keeps the lifetime exact on a host whose date is BSD', () => {
+    if (needsPosixShell()) {
+      return;
+    }
+    const log = runWatcherBody(
+      (logPath) =>
+        `${buildDockerStateSnippet('demo')}; ${buildDockerPostMortemSnippet(
+          'demo',
+          `'${logPath}'`
+        )}`,
+      '137 false 2026-09-15T22:21:40.942007645Z 2026-09-15T22:21:46.740817278Z',
+      '',
+      BSD_DATE_STUB
+    );
+
+    // Truncating both timestamps to whole seconds would report 6.000s here.
+    expect(log).toContain('Lifetime:   5.798s');
+  });
+
+  it('keeps sub-second lifetimes exact on a BSD date host', () => {
+    if (needsPosixShell()) {
+      return;
+    }
+    const log = runWatcherBody(
+      (logPath) =>
+        `${buildDockerStateSnippet('demo')}; ${buildDockerRemovalNoteSnippet(
+          'demo',
+          `'${logPath}'`
+        )}`,
+      '0 false 2026-09-15T22:21:40.000000000Z 2026-09-15T22:21:41.500000000Z',
+      '',
+      BSD_DATE_STUB
+    );
+
+    // Truncating would collapse this to 1.000s.
+    expect(log).toContain(
+      'Container removed: demo (exit 0, lifetime 1.500s, oomKilled=false)'
+    );
+  });
+
   it('survives an inspect failure without writing garbage', () => {
+    if (needsPosixShell()) {
+      return;
+    }
     const dir = makeTempDir('watcher-171-fail-');
     const logPath = path.join(dir, 'run.log');
     const binDir = path.join(dir, 'bin');
@@ -307,21 +384,44 @@ describe('issue #171: the completion script wires the facts into every path', ()
  * A fake `docker` that answers the two `inspect` templates
  * `readDockerContainerState()` issues: the whitespace-separated state line and
  * the free-form `State.Error`.
+ *
+ * Windows gets a `.cmd` batch stub: `spawnSync()` there cannot execute an
+ * extensionless `#!/bin/sh` script, and the attached reader is a plain
+ * `spawnSync()` that must keep working on every platform.
  */
 function withFakeDockerState({ state, error = '' }, fn) {
   const fakeBin = makeTempDir('fake-docker-171-');
-  const dockerPath = path.join(fakeBin, 'docker');
+  const isWindows = process.platform === 'win32';
+  const dockerPath = path.join(fakeBin, isWindows ? 'docker.cmd' : 'docker');
   fs.writeFileSync(
     dockerPath,
-    [
-      '#!/bin/sh',
-      '[ "$1" = "inspect" ] || exit 1',
-      'case "$3" in',
-      `  *State.Error*) printf '%s\\n' ${JSON.stringify(error)} ;;`,
-      `  *) printf '%s\\n' ${JSON.stringify(state)} ;;`,
-      'esac',
-      '',
-    ].join('\n'),
+    isWindows
+      ? [
+          '@echo off',
+          'if not "%1"=="inspect" exit /b 1',
+          // `%*`, not `%3`: `shell: true` on Windows passes the argument
+          // vector verbatim, so a template containing spaces lands in several
+          // positional parameters.
+          'echo %* | findstr /C:"State.Error" >nul',
+          'if %errorlevel%==0 (',
+          // `echo` with nothing after it prints "ECHO is on."; `echo.` is the
+          // batch idiom for an empty line, which is what an empty State.Error is.
+          `  echo${error ? ` ${error}` : '.'}`,
+          ') else (',
+          `  echo ${state}`,
+          ')',
+          'exit /b 0',
+          '',
+        ].join('\r\n')
+      : [
+          '#!/bin/sh',
+          '[ "$1" = "inspect" ] || exit 1',
+          'case "$3" in',
+          `  *State.Error*) printf '%s\\n' ${JSON.stringify(error)} ;;`,
+          `  *) printf '%s\\n' ${JSON.stringify(state)} ;;`,
+          'esac',
+          '',
+        ].join('\n'),
     'utf8'
   );
   fs.chmodSync(dockerPath, 0o755);
