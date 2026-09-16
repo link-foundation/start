@@ -28,12 +28,13 @@ const {
 } = require('./isolation-log-utils');
 const {
   buildAttachedDockerKeptMessage,
+  readDockerContainerState,
+  recordAttachedDockerPostMortem,
   DOCKER_CONTAINER_CLEANUP_POLICY,
   getDockerContainerCleanupPolicy,
   shouldCleanupDockerContainer,
   getDockerContainerCleanupInstructions,
   appendDockerContainerCleanupPolicyMessage,
-  readDockerContainerOomKilled,
   readDockerContainerStatus,
   removeDockerContainer,
   startDetachedDockerCompletionWatcher,
@@ -830,7 +831,15 @@ function runInDocker(command, options = {}) {
             message += `\n${hint}`;
           }
 
-          const oomKilled = readDockerContainerOomKilled(containerName);
+          const dockerState = readDockerContainerState(containerName);
+          const oomKilled = dockerState ? dockerState.oomKilled : null;
+          const postMortem = (removed) =>
+            recordAttachedDockerPostMortem({
+              containerName,
+              state: dockerState,
+              logPath: options.logPath,
+              removed,
+            });
           const launchFailed =
             !containerExistedBeforeLaunch &&
             readDockerContainerStatus(containerName) === 'created';
@@ -845,23 +854,23 @@ function runInDocker(command, options = {}) {
             shouldCleanupDockerContainer(cleanupPolicy, exitCode, oomKilled)
           ) {
             if (removeDockerContainer(containerName, options.logPath)) {
-              message += `\nContainer removed after completion.`;
+              message += `\nContainer removed after completion.${postMortem(true)}`;
             } else {
               message += `\nWarning: failed to remove container automatically.`;
               message += `\nRemove when done: docker rm -f ${containerName}`;
             }
           } else if (cleanupPolicy === DOCKER_CONTAINER_CLEANUP_POLICY.KEEP) {
-            message += `\n${getDockerContainerCleanupInstructions(containerName)}`;
+            message += `\n${getDockerContainerCleanupInstructions(containerName)}${postMortem(false)}`;
           } else if (
             cleanupPolicy === DOCKER_CONTAINER_CLEANUP_POLICY.KEEP_ON_FAIL ||
             cleanupPolicy === DOCKER_CONTAINER_CLEANUP_POLICY.DEFAULT
           ) {
-            message += buildAttachedDockerKeptMessage({
+            message += `${buildAttachedDockerKeptMessage({
               containerName,
               exitCode,
               oomKilled,
               logPath: options.logPath,
-            });
+            })}${postMortem(false)}`;
           }
 
           resolve({

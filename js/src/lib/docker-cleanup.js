@@ -11,6 +11,10 @@ const {
   buildDockerPostMortemSnippet,
   buildDockerRemovalNoteSnippet,
   buildDockerStateSnippet,
+  DOCKER_STATE_INSPECT_FORMAT,
+  formatContainerPostMortem,
+  formatContainerRemovalNote,
+  normalizeDockerTimestamp,
 } = require('./docker-post-mortem');
 const { buildDetachedFinalizeSnippet } = require('./detached-finalize');
 
@@ -97,27 +101,85 @@ function appendDockerContainerCleanupPolicyMessage(
   return `${message}\nContainer will be removed after command completes.`;
 }
 
-function readDockerContainerOomKilled(containerName) {
-  const result = spawnSync(
-    getDockerCommand(),
-    ['inspect', '-f', '{{.State.OOMKilled}}', containerName],
-    getDockerSpawnOptions({
-      encoding: 'utf8',
-      env: process.env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    })
-  );
-  if (result.error || result.status !== 0) {
+/**
+ * Read a finished container's post-mortem facts in a single `docker inspect`.
+ *
+ * The attached path only ever inspected `State.OOMKilled`, which left its
+ * "Container kept for investigation" message unable to say *why* the container
+ * died — the same gap the detached watcher had (issue #171.1). Reading the
+ * facts once, before any `docker rm`, also makes them available to the removal
+ * path, where the container is about to stop existing (issue #171.3).
+ *
+ * @param {string} containerName - Container to inspect
+ * @returns {object|null} Facts accepted by the `docker-post-mortem` formatters,
+ *   or null when the container could not be inspected at all
+ */
+function readDockerContainerState(containerName) {
+  const inspect = (format) => {
+    const result = spawnSync(
+      getDockerCommand(),
+      ['inspect', '-f', format, containerName],
+      getDockerSpawnOptions({
+        encoding: 'utf8',
+        env: process.env,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+    );
+    if (result.error || result.status !== 0) {
+      return null;
+    }
+    return String(result.stdout || '').trim();
+  };
+  const state = inspect(DOCKER_STATE_INSPECT_FORMAT);
+  if (state === null) {
     return null;
   }
-  const value = String(result.stdout || '').trim();
-  if (value === 'true') {
-    return true;
+  const [exitCode, oomKilled, startedAt, finishedAt] = state.split(/\s+/);
+  // `State.Error` is free-form text that may contain spaces, so it cannot ride
+  // along in the whitespace-separated template above.
+  const error = inspect('{{.State.Error}}');
+  const parsedExit = Number.parseInt(exitCode, 10);
+  return {
+    containerName,
+    exitCode: Number.isFinite(parsedExit) ? parsedExit : null,
+    oomKilled:
+      oomKilled === 'true' ? true : oomKilled === 'false' ? false : null,
+    startedAt: normalizeDockerTimestamp(startedAt),
+    finishedAt: normalizeDockerTimestamp(finishedAt),
+    error: error || null,
+  };
+}
+
+/**
+ * Write the post-mortem for an attached run into its log and return the same
+ * text for the console message.
+ *
+ * Kept and removed containers both get their facts recorded — a kept container
+ * gets the full block, a removed one the single line — so the log of an
+ * attached run carries exactly what the detached watcher writes (issues #171.2
+ * and #171.3).
+ *
+ * @param {object} params - Container name, inspected state, log path, and
+ *   whether the container was removed
+ * @returns {string} Message lines to append, or '' when nothing is known
+ */
+function recordAttachedDockerPostMortem({
+  containerName,
+  state,
+  logPath = null,
+  removed = false,
+}) {
+  if (!state) {
+    return '';
   }
-  if (value === 'false') {
-    return false;
+  const facts = { ...state, containerName };
+  const text = removed
+    ? formatContainerRemovalNote(facts)
+    : formatContainerPostMortem(facts);
+  if (logPath) {
+    appendLogFile(logPath, `\n${text}`);
   }
-  return null;
+  return `\n${text.trimEnd()}`;
 }
 
 function readDockerContainerStatus(containerName) {
@@ -390,8 +452,9 @@ module.exports = {
   shouldCleanupDockerContainer,
   getDockerContainerCleanupInstructions,
   appendDockerContainerCleanupPolicyMessage,
-  readDockerContainerOomKilled,
+  readDockerContainerState,
   readDockerContainerStatus,
+  recordAttachedDockerPostMortem,
   removeDockerContainer,
   buildDetachedDockerCompletionScript,
   startDetachedDockerCompletionWatcher,

@@ -7,7 +7,9 @@ use std::thread;
 
 use crate::detached_finalize::build_detached_finalize_snippet;
 use crate::docker_post_mortem::{
-    build_docker_post_mortem_snippet, build_docker_removal_note_snippet, build_docker_state_snippet,
+    build_docker_post_mortem_snippet, build_docker_removal_note_snippet,
+    build_docker_state_snippet, format_container_post_mortem, format_container_removal_note,
+    normalize_docker_timestamp, ContainerPostMortem, DOCKER_STATE_INSPECT_FORMAT,
 };
 use crate::exit_reason::resolve_memory_exhaustion;
 use crate::isolation::isolation_log::{
@@ -166,19 +168,91 @@ pub(crate) fn append_docker_container_cleanup_policy_message(
     }
 }
 
-pub(crate) fn read_docker_container_oom_killed(container_name: &str) -> Option<bool> {
-    let output = Command::new(docker_command())
-        .args(["inspect", "-f", "{{.State.OOMKilled}}", container_name])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    match String::from_utf8_lossy(&output.stdout).trim() {
-        "true" => Some(true),
-        "false" => Some(false),
+/// Read a finished container's post-mortem facts in a single `docker inspect`.
+///
+/// The attached path only ever inspected `State.OOMKilled`, which left its
+/// "Container kept for investigation" message unable to say *why* the container
+/// died — the same gap the detached watcher had (issue #171.1). Reading the
+/// facts once, before any `docker rm`, also makes them available to the removal
+/// path, where the container is about to stop existing (issue #171.3).
+pub(crate) fn read_docker_container_state(container_name: &str) -> Option<ContainerPostMortem> {
+    let inspect = |format: &str| -> Option<String> {
+        let output = Command::new(docker_command())
+            .args(["inspect", "-f", format, container_name])
+            .output()
+            .ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    };
+    let state = inspect(DOCKER_STATE_INSPECT_FORMAT)?;
+    // `State.Error` is free-form text that may contain spaces, so it cannot
+    // ride along in the whitespace-separated template above.
+    let error = inspect("{{.State.Error}}");
+    Some(parse_docker_container_state(
+        container_name,
+        &state,
+        error.as_deref(),
+    ))
+}
+
+/// Turn the raw output of [`DOCKER_STATE_INSPECT_FORMAT`] into facts.
+///
+/// Split from the `docker inspect` call so the mapping — including the
+/// rejection of docker's zero time — is testable without a docker daemon or a
+/// process-wide `START_DOCKER_BIN` override.
+pub(crate) fn parse_docker_container_state(
+    container_name: &str,
+    state: &str,
+    error: Option<&str>,
+) -> ContainerPostMortem {
+    let mut parts = state.split_whitespace();
+    let exit_code = parts.next().and_then(|value| value.parse::<i32>().ok());
+    let oom_killed = match parts.next() {
+        Some("true") => Some(true),
+        Some("false") => Some(false),
         _ => None,
+    };
+    let started_at = normalize_docker_timestamp(parts.next());
+    let finished_at = normalize_docker_timestamp(parts.next());
+    ContainerPostMortem {
+        container_name: container_name.to_string(),
+        exit_code,
+        oom_killed,
+        started_at,
+        finished_at,
+        error: error
+            .map(str::trim)
+            .filter(|text| !text.is_empty())
+            .map(str::to_string),
     }
+}
+
+/// Write the post-mortem for an attached run into its log and return the same
+/// text for the console message.
+///
+/// Kept and removed containers both get their facts recorded — a kept container
+/// gets the full block, a removed one the single line — so the log of an
+/// attached run carries exactly what the detached watcher writes (issues
+/// #171.2 and #171.3).
+pub(crate) fn record_attached_docker_post_mortem(
+    facts: Option<&ContainerPostMortem>,
+    log_path: Option<&PathBuf>,
+    removed: bool,
+) -> String {
+    let Some(facts) = facts else {
+        return String::new();
+    };
+    let text = if removed {
+        format_container_removal_note(facts)
+    } else {
+        format_container_post_mortem(facts)
+    };
+    if let Some(path) = log_path {
+        append_log_file(path, &format!("\n{}", text));
+    }
+    format!("\n{}", text.trim_end())
 }
 
 pub(crate) fn read_docker_container_status(container_name: &str) -> Option<String> {
@@ -205,7 +279,13 @@ pub(crate) fn append_attached_docker_cleanup_message(
     log_path: Option<&PathBuf>,
     container_existed_before_launch: bool,
 ) {
-    let oom_killed = read_docker_container_oom_killed(container_name).unwrap_or(false);
+    let state = read_docker_container_state(container_name);
+    let oom_killed = state
+        .as_ref()
+        .and_then(|facts| facts.oom_killed)
+        .unwrap_or(false);
+    let post_mortem =
+        |removed: bool| record_attached_docker_post_mortem(state.as_ref(), log_path, removed);
     if !container_existed_before_launch
         && read_docker_container_status(container_name).as_deref() == Some("created")
     {
@@ -217,6 +297,7 @@ pub(crate) fn append_attached_docker_cleanup_message(
     } else if should_cleanup_docker_container(policy, exit_code, oom_killed) {
         if remove_docker_container(container_name, log_path) {
             message.push_str("\nContainer removed after completion.");
+            message.push_str(&post_mortem(true));
         } else {
             message.push_str("\nWarning: failed to remove container automatically.");
             message.push_str(&format!(
@@ -226,6 +307,7 @@ pub(crate) fn append_attached_docker_cleanup_message(
     } else if policy == DockerContainerCleanupPolicy::Keep {
         message.push('\n');
         message.push_str(&docker_container_cleanup_instructions(container_name));
+        message.push_str(&post_mortem(false));
     } else {
         if oom_killed {
             message.push_str("\nContainer kept because Docker reports it was OOM-killed.");
@@ -249,6 +331,7 @@ pub(crate) fn append_attached_docker_cleanup_message(
         message.push_str(&format!(
             "\nRemove when done: docker rm -f {container_name}"
         ));
+        message.push_str(&post_mortem(false));
     }
 }
 
@@ -491,6 +574,7 @@ pub(crate) fn spawn_attached_docker(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::docker_post_mortem::POST_MORTEM_HEADER;
 
     #[test]
     fn default_policy_keeps_abnormal_containers() {
@@ -678,5 +762,120 @@ mod tests {
         );
         assert!(script.contains("Container removed:"));
         assert!(script.contains("docker rm -f 'issue171-container' >>"));
+    }
+
+    #[test]
+    fn attached_runs_read_every_documented_fact_in_one_inspect() {
+        let facts = parse_docker_container_state(
+            "demo",
+            "137 false 2026-09-15T22:21:40.942007645Z 2026-09-15T22:21:46.740817278Z",
+            Some(""),
+        );
+
+        assert_eq!(facts.container_name, "demo");
+        assert_eq!(facts.exit_code, Some(137));
+        assert_eq!(facts.oom_killed, Some(false));
+        assert_eq!(
+            facts.started_at.as_deref(),
+            Some("2026-09-15T22:21:40.942007645Z")
+        );
+        assert_eq!(
+            facts.finished_at.as_deref(),
+            Some("2026-09-15T22:21:46.740817278Z")
+        );
+        assert_eq!(facts.error, None);
+    }
+
+    #[test]
+    fn attached_runs_reject_the_zero_time_of_a_container_that_never_started() {
+        let facts = parse_docker_container_state(
+            "demo",
+            "125 false 0001-01-01T00:00:00Z 0001-01-01T00:00:00Z",
+            Some("no such file or directory"),
+        );
+
+        assert_eq!(facts.started_at, None);
+        assert_eq!(facts.finished_at, None);
+        assert_eq!(facts.error.as_deref(), Some("no such file or directory"));
+    }
+
+    #[test]
+    fn attached_runs_survive_an_inspect_that_answered_nothing_useful() {
+        let facts = parse_docker_container_state("demo", "", None);
+
+        assert_eq!(facts.exit_code, None);
+        assert_eq!(facts.oom_killed, None);
+        assert_eq!(facts.started_at, None);
+        assert_eq!(facts.error, None);
+    }
+
+    #[test]
+    fn attached_kept_containers_get_the_post_mortem_block_in_their_log() {
+        let dir =
+            std::env::temp_dir().join(format!("start-attached-kept-171-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let log_path = dir.join("run.log");
+        std::fs::write(&log_path, "output\n").unwrap();
+
+        let facts = ContainerPostMortem {
+            container_name: "demo".to_string(),
+            exit_code: Some(137),
+            oom_killed: Some(false),
+            started_at: Some("2026-09-15T22:21:40.942007645Z".to_string()),
+            finished_at: Some("2026-09-15T22:21:46.740817278Z".to_string()),
+            error: None,
+        };
+        let message = record_attached_docker_post_mortem(Some(&facts), Some(&log_path), false);
+
+        let log = std::fs::read_to_string(&log_path).unwrap();
+        assert!(log.contains(POST_MORTEM_HEADER));
+        assert!(log.contains("Exit Code:  137 (SIGKILL - 128+9)"));
+        assert!(log.contains("Lifetime:   5.798s"));
+        assert!(message.contains(POST_MORTEM_HEADER));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn attached_removed_containers_get_the_one_line_note() {
+        let dir =
+            std::env::temp_dir().join(format!("start-attached-removed-171-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let log_path = dir.join("run.log");
+        std::fs::write(&log_path, "output\n").unwrap();
+
+        let facts = ContainerPostMortem {
+            container_name: "demo".to_string(),
+            exit_code: Some(0),
+            oom_killed: Some(false),
+            started_at: Some("2026-09-15T22:21:40.942007645Z".to_string()),
+            finished_at: Some("2026-09-15T22:21:46.740817278Z".to_string()),
+            error: None,
+        };
+        let message = record_attached_docker_post_mortem(Some(&facts), Some(&log_path), true);
+
+        assert!(std::fs::read_to_string(&log_path)
+            .unwrap()
+            .contains("Container removed: demo (exit 0, lifetime 5.798s, oomKilled=false)"));
+        assert_eq!(
+            message,
+            "\nContainer removed: demo (exit 0, lifetime 5.798s, oomKilled=false)"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn attached_runs_stay_silent_when_docker_could_not_be_inspected() {
+        let dir =
+            std::env::temp_dir().join(format!("start-attached-silent-171-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let log_path = dir.join("run.log");
+        std::fs::write(&log_path, "output\n").unwrap();
+
+        assert_eq!(
+            record_attached_docker_post_mortem(None, Some(&log_path), false),
+            ""
+        );
+        assert_eq!(std::fs::read_to_string(&log_path).unwrap(), "output\n");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
