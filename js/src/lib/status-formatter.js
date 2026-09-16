@@ -14,11 +14,17 @@ const {
 } = require('./output-blocks');
 const { collectProcessIds } = require('./execution-control');
 const { getDockerCommand, getDockerSpawnOptions } = require('./docker-cleanup');
-const { resolveExitReason, resolveMemoryExhaustion } = require('./exit-reason');
+const {
+  describeExitCode,
+  resolveExitReason,
+  resolveMemoryExhaustion,
+} = require('./exit-reason');
 const {
   FATAL_MARKER_TAIL_BYTES,
   readLogTail,
 } = require('./isolation-log-utils');
+const { normalizeDockerTimestamp } = require('./docker-post-mortem');
+const { END_TIME_SOURCE } = require('./detached-finalize');
 
 /**
  * Inspect the live state of a detached docker container by name.
@@ -44,7 +50,8 @@ function inspectDockerState(sessionName) {
     [
       'inspect',
       '-f',
-      '{{.State.Running}} {{.State.ExitCode}} {{.State.OOMKilled}}',
+      '{{.State.Running}} {{.State.ExitCode}} {{.State.OOMKilled}} ' +
+        '{{.State.StartedAt}} {{.State.FinishedAt}}',
       sessionName,
     ],
     getDockerSpawnOptions({
@@ -56,13 +63,18 @@ function inspectDockerState(sessionName) {
   if (result.error || result.status !== 0 || !result.stdout) {
     return null;
   }
-  const [runningRaw, exitRaw, oomKilledRaw] = result.stdout.trim().split(/\s+/);
+  // Parsed positionally and defensively: an older docker (or a stubbed one)
+  // may answer with fewer fields than the template asks for.
+  const [runningRaw, exitRaw, oomKilledRaw, startedRaw, finishedRaw] =
+    result.stdout.trim().split(/\s+/);
   const exitCode = Number.parseInt(exitRaw, 10);
   return {
     running: runningRaw === 'true',
     exitCode: Number.isFinite(exitCode) ? exitCode : null,
     oomKilled:
       oomKilledRaw === 'true' ? true : oomKilledRaw === 'false' ? false : null,
+    startedAt: normalizeDockerTimestamp(startedRaw),
+    finishedAt: normalizeDockerTimestamp(finishedRaw),
   };
 }
 
@@ -193,7 +205,50 @@ function isDetachedSessionAlive(record) {
  * `start` appends itself (issue #150).
  */
 const LOG_FOOTER_PATTERN =
-  /^={10,}[ \t]*\r?\n^Finished:[^\r\n]*\r?\n^Exit Code:[ \t]*(-?\d+)[ \t]*(?![^\r\n])/gm;
+  /^={10,}[ \t]*\r?\n^Finished:[ \t]*([^\r\n]*)\r?\n^Exit Code:[ \t]*(-?\d+)[ \t]*(?![^\r\n])/gm;
+
+/**
+ * Parse the `Finished:` line of the footer into an ISO timestamp.
+ *
+ * `start` writes it as `YYYY-MM-DD HH:MM:SS[.mmm]` in UTC (both from JS and
+ * from the shell snippet). Anything else — a truncated log, a test fixture, a
+ * future format — yields null so the caller falls back instead of inventing a
+ * timestamp out of an unparseable string.
+ *
+ * @param {string|null|undefined} value - Raw text after `Finished:`
+ * @returns {string|null} ISO timestamp, or null
+ */
+function parseFooterTimestamp(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?Z?$/.test(trimmed)) {
+    return null;
+  }
+  const parsed = Date.parse(`${trimmed.replace(' ', 'T').replace(/Z$/, '')}Z`);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
+}
+
+/**
+ * Read the terminal footer written at the very end of a log.
+ * @param {string|null} tail - Tail of the execution log
+ * @returns {{exitCode: number|null, finishedAt: string|null}} Footer facts
+ */
+function parseFooterFromTail(tail) {
+  if (tail === null || tail === undefined) {
+    return { exitCode: null, finishedAt: null };
+  }
+  const matches = [...tail.matchAll(LOG_FOOTER_PATTERN)];
+  if (matches.length === 0) {
+    return { exitCode: null, finishedAt: null };
+  }
+  const last = matches[matches.length - 1];
+  return {
+    exitCode: parseInt(last[2], 10),
+    finishedAt: parseFooterTimestamp(last[1]),
+  };
+}
 
 /**
  * Read the terminal exit code from the anchored footer at the end of a log.
@@ -207,11 +262,7 @@ function parseExitCodeFromTail(tail) {
   if (tail === null || tail === undefined) {
     return null;
   }
-  const matches = [...tail.matchAll(LOG_FOOTER_PATTERN)];
-  if (matches.length === 0) {
-    return null;
-  }
-  return parseInt(matches[matches.length - 1][1], 10);
+  return parseFooterFromTail(tail).exitCode;
 }
 
 function readExitCodeFromLog(logPath) {
@@ -230,8 +281,43 @@ function readExitCodeFromLog(logPath) {
  * @param {string|null} logTail - Tail of the execution log (already read once)
  * @returns {Object} Possibly updated execution record
  */
+/**
+ * Decide the moment a finished execution ended, and say where that moment came
+ * from (issue #170.2).
+ *
+ * Precedence: the container's own `State.FinishedAt`, then the `Finished:` line
+ * of the footer `start` wrote itself, and only then the time the end was
+ * observed — which is explicitly marked as such, so a consumer can tell a real
+ * finish time from a query-time observation.
+ *
+ * @param {Object} enriched - Record copy being enriched (mutated)
+ * @param {Object|null} dockerState - Inspected docker state, when available
+ * @param {string|null} footerFinishedAt - Footer timestamp, when parseable
+ * @returns {void}
+ */
+function applyEndTime(enriched, dockerState, footerFinishedAt) {
+  if (enriched.endTime) {
+    return;
+  }
+  const dockerFinishedAt = dockerState ? dockerState.finishedAt : null;
+  if (dockerFinishedAt) {
+    enriched.endTime = new Date(dockerFinishedAt).toISOString();
+    enriched.endTimeSource = END_TIME_SOURCE.DOCKER_FINISHED_AT;
+    return;
+  }
+  if (footerFinishedAt) {
+    enriched.endTime = footerFinishedAt;
+    enriched.endTimeSource = END_TIME_SOURCE.LOG_FOOTER;
+    return;
+  }
+  enriched.endTime = new Date().toISOString();
+  enriched.endTimeSource = END_TIME_SOURCE.OBSERVED_AT;
+  enriched.observedAt = enriched.endTime;
+}
+
 function resolveDetachedStatus(record, logTail) {
-  const footerExit = parseExitCodeFromTail(logTail);
+  const footer = parseFooterFromTail(logTail);
+  const footerExit = footer.exitCode;
   const dockerState = isDetachedDockerRecord(record)
     ? readDockerState(record)
     : null;
@@ -268,9 +354,7 @@ function resolveDetachedStatus(record, logTail) {
         const enriched = cloneRecord();
         enriched.status = 'executed';
         enriched.exitCode = footerExit;
-        if (!enriched.endTime) {
-          enriched.endTime = new Date().toISOString();
-        }
+        applyEndTime(enriched, dockerState, footer.finishedAt);
         return enriched;
       }
       if (oomKilled === true) {
@@ -282,9 +366,7 @@ function resolveDetachedStatus(record, logTail) {
         const enriched = cloneRecord();
         enriched.status = 'executed';
         enriched.exitCode = 137;
-        if (!enriched.endTime) {
-          enriched.endTime = new Date().toISOString();
-        }
+        applyEndTime(enriched, dockerState, footer.finishedAt);
         return enriched;
       }
     }
@@ -324,9 +406,7 @@ function resolveDetachedStatus(record, logTail) {
         footerExit ??
         (oomKilled === true ? 137 : -1);
     }
-    if (!enriched.endTime) {
-      enriched.endTime = new Date().toISOString();
-    }
+    applyEndTime(enriched, dockerState, footer.finishedAt);
   }
 
   return enriched;
@@ -562,7 +642,7 @@ function formatRecordAsText(record) {
     `UUID:              ${obj.uuid}`,
     `Status:            ${obj.status}`,
     `Command:           ${obj.command}`,
-    `Exit Code:         ${obj.exitCode !== null ? obj.exitCode : 'N/A'}`,
+    `Exit Code:         ${obj.exitCode !== null ? describeExitCode(obj.exitCode).text : 'N/A'}`,
     ...(obj.oomKilled !== undefined
       ? [`OOM Killed:        ${obj.oomKilled}`]
       : []),
@@ -584,10 +664,19 @@ function formatRecordAsText(record) {
   if (obj.currentTime) {
     lines.push(`Current Time:      ${obj.currentTime}`);
   }
-  lines.push(
-    `End Time:          ${obj.endTime || 'N/A'}`,
-    `Log Path:          ${obj.logPath}`
-  );
+  lines.push(`End Time:          ${obj.endTime || 'N/A'}`);
+  if (obj.endTimeSource) {
+    // Where `End Time` came from: a real finish time, or merely when `start`
+    // noticed the execution was over (issue #170.2).
+    lines.push(`End Time Source:   ${obj.endTimeSource}`);
+  }
+  if (obj.containerStartedAt) {
+    lines.push(`Container Started: ${obj.containerStartedAt}`);
+  }
+  if (obj.staleDetectedAt) {
+    lines.push(`Stale Detected At: ${obj.staleDetectedAt}`);
+  }
+  lines.push(`Log Path:          ${obj.logPath}`);
 
   // Format options as nested list instead of JSON
   const optionEntries = Object.entries(obj.options || {}).filter(
@@ -778,6 +867,8 @@ module.exports = {
   listExecutions,
   isDetachedSessionAlive,
   enrichDetachedStatus,
+  parseFooterFromTail,
+  parseFooterTimestamp,
   readExitCodeFromLog,
   readLogTail,
   attachExitReason,

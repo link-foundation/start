@@ -130,7 +130,8 @@ function resumeAllExecutions(store, deps = {}) {
       startWatcher(
         sessionName,
         getDockerContainerCleanupPolicy(record.options || {}),
-        record.logPath || null
+        record.logPath || null,
+        record.uuid || null
       );
       executions.push(
         describeRecord(

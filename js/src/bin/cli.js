@@ -33,6 +33,7 @@ const {
 } = require('../lib/user-manager');
 const { handleFailure } = require('../lib/failure-handler');
 const { ExecutionStore, ExecutionRecord } = require('../lib/execution-store');
+const { reconcileFinalizedRecord } = require('../lib/detached-finalize');
 const { dispatchQueryCommand, hasQueryMode } = require('../lib/query-commands');
 const { printVersion } = require('../lib/version');
 const { createStartBlock, createFinishBlock } = require('../lib/output-blocks');
@@ -469,6 +470,9 @@ async function runWithIsolation(
       ...buildDockerRuntimeMetadata(options),
       shell: options.shell,
       logPath: logFilePath,
+      // Lets the detached completion watcher write the terminal state back
+      // into this record once the container is gone (issue #170.1).
+      executionId: executionRecord ? executionRecord.uuid : null,
     });
   } else if (createdUser) {
     // Run directly as the created user (no isolation environment)
@@ -504,7 +508,11 @@ async function runWithIsolation(
       executionRecord.complete(exitCode);
     }
     try {
-      store.save(executionRecord);
+      store.save(
+        mode === 'detached'
+          ? reconcileFinalizedRecord(store, executionRecord)
+          : executionRecord
+      );
     } catch (err) {
       if (config.verbose) {
         console.error(

@@ -734,7 +734,8 @@ function runInDocker(command, options = {}) {
       startDetachedDockerCompletionWatcher(
         containerName,
         cleanupPolicy,
-        options.logPath
+        options.logPath,
+        options.executionId || null
       );
 
       let message = `Command started in detached docker container: ${containerName}`;

@@ -4,6 +4,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { describeExitCode } = require('./exit-reason');
 
 function getTempRoot() {
   return process.env.START_TEMP_ROOT || path.join(os.tmpdir(), 'start-command');
@@ -158,8 +159,11 @@ function shellQuote(value) {
 }
 
 function createShellLogFooterSnippet() {
+  // UTC, to match `createLogFooter()` (which formats an ISO timestamp). Two
+  // writers of the same `Finished:` line disagreeing on the timezone makes the
+  // footer useless as a source for `endTime` (issue #170.2).
   const dateCommand =
-    "date '+%Y-%m-%d %H:%M:%S.%3N' 2>/dev/null || date '+%Y-%m-%d %H:%M:%S'";
+    "date -u '+%Y-%m-%d %H:%M:%S.%3N' 2>/dev/null || date -u '+%Y-%m-%d %H:%M:%S'";
   return `printf '\\n==================================================\\nFinished: %s\\nExit Code: %s\\n' "$(${dateCommand})" "$__start_command_exit"`;
 }
 
@@ -260,6 +264,9 @@ function readLogTail(logPath, bytes = LOG_TAIL_BYTES) {
 }
 
 module.exports = {
+  // Re-exported so the log writers and the status formatter share one decoder
+  // for the `128 + n` signal convention (issue #171.4).
+  describeExitCode,
   LOG_TAIL_BYTES,
   FATAL_MARKER_TAIL_BYTES,
   readLogTail,
