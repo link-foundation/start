@@ -1,5 +1,9 @@
 //! Shell command classification and argv rebuilding shared by isolation backends.
 
+use std::process::{Command, Stdio};
+
+use super::{is_debug, IsolationOptions};
+
 const SHELL_NAMES: [&str; 8] = ["bash", "zsh", "sh", "fish", "ksh", "csh", "tcsh", "dash"];
 
 /// Quoting dialect of the shell that will run a rebuilt command line.
@@ -220,4 +224,112 @@ pub fn command_name(command: &str) -> String {
         .into_iter()
         .next()
         .unwrap_or_default()
+}
+
+/// Detect the best available shell in an isolation environment (docker/ssh)
+/// Tries shells in order: bash, zsh, sh
+/// Returns the shell path to use
+pub fn detect_shell_in_environment(environment: &str, options: &IsolationOptions) -> String {
+    let shell_preference = &options.shell;
+
+    // If a specific shell is requested (not auto), use it directly
+    if !shell_preference.is_empty() && shell_preference != "auto" {
+        if is_debug() {
+            eprintln!("[DEBUG] Using forced shell: {}", shell_preference);
+        }
+        return shell_preference.clone();
+    }
+
+    // In auto mode, try shells in order of preference
+    let shells_to_try = ["bash", "zsh", "sh"];
+
+    if environment == "docker" {
+        let image = match &options.image {
+            Some(i) => i.clone(),
+            None => return "sh".to_string(),
+        };
+
+        for shell in &shells_to_try {
+            let result = Command::new("docker")
+                .args([
+                    "run",
+                    "--rm",
+                    &image,
+                    "sh",
+                    "-c",
+                    &format!("command -v {}", shell),
+                ])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .output();
+
+            if let Ok(output) = result {
+                if output.status.success() {
+                    let detected = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if !detected.is_empty() {
+                        if is_debug() {
+                            eprintln!(
+                                "[DEBUG] Detected shell in docker image {}: {}",
+                                image, detected
+                            );
+                        }
+                        return detected;
+                    }
+                }
+            }
+        }
+
+        if is_debug() {
+            eprintln!(
+                "[DEBUG] Could not detect shell in docker image {}, falling back to sh",
+                image
+            );
+        }
+        return "sh".to_string();
+    }
+
+    if environment == "ssh" {
+        let endpoint = match &options.endpoint {
+            Some(e) => e.clone(),
+            None => return "sh".to_string(),
+        };
+
+        // Run a single SSH command to check for available shells in order
+        let check_cmd: Vec<String> = shells_to_try
+            .iter()
+            .map(|s| format!("command -v {}", s))
+            .collect();
+        let check_cmd_str = check_cmd.join(" || ");
+
+        let result = Command::new("ssh")
+            .args([&endpoint, &check_cmd_str])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .output();
+
+        if let Ok(output) = result {
+            if output.status.success() {
+                let detected = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !detected.is_empty() {
+                    if is_debug() {
+                        eprintln!(
+                            "[DEBUG] Detected shell on SSH host {}: {}",
+                            endpoint, detected
+                        );
+                    }
+                    return detected;
+                }
+            }
+        }
+
+        if is_debug() {
+            eprintln!(
+                "[DEBUG] Could not detect shell on SSH host {}, falling back to sh",
+                endpoint
+            );
+        }
+        return "sh".to_string();
+    }
+
+    "sh".to_string()
 }

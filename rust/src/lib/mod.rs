@@ -4,8 +4,10 @@
 
 pub mod args_parser;
 pub mod args_parser_queries;
+pub mod detached_finalize;
 pub(crate) mod docker_cleanup;
 mod docker_network_lifecycle;
+pub mod docker_post_mortem;
 pub mod execution_attach;
 pub mod execution_control;
 pub mod execution_resume;
@@ -21,7 +23,9 @@ pub mod query_commands;
 pub mod sequence_parser;
 pub mod session_probe;
 pub mod signal_handler;
+pub mod status_footer;
 pub mod status_formatter;
+pub mod status_probe;
 pub mod substitution;
 pub mod usage;
 pub mod user_manager;
@@ -34,6 +38,18 @@ pub use args_parser::{
     generate_session_name, generate_uuid, get_effective_mode, has_isolation, is_valid_uuid,
     parse_args, validate_options, ParsedArgs, WrapperOptions, VALID_BACKENDS, VALID_OUTPUT_FORMATS,
     VALID_SHELLS,
+};
+pub use detached_finalize::{
+    build_detached_finalize_snippet, finalize_detached_execution, reconcile_finalized_record,
+    run_internal_finalize, DetachedFinalizeFacts, FinalizeOutcome,
+    END_TIME_SOURCE_DOCKER_FINISHED_AT, END_TIME_SOURCE_LOG_FOOTER, END_TIME_SOURCE_OBSERVED_AT,
+    INTERNAL_FINALIZE_FLAG,
+};
+pub use docker_post_mortem::{
+    build_docker_post_mortem_snippet, build_docker_removal_note_snippet,
+    build_docker_state_snippet, format_container_post_mortem, format_container_removal_note,
+    format_lifetime, normalize_docker_timestamp, ContainerPostMortem, DOCKER_STATE_INSPECT_FORMAT,
+    DOCKER_ZERO_TIME, POST_MORTEM_HEADER,
 };
 pub use execution_attach::{
     attach_execution, attach_execution_with_runners, build_attach_plan,
@@ -60,7 +76,10 @@ pub use execution_store::{
     is_clink_installed, CleanupOptions, CleanupResult, ExecutionRecord, ExecutionRecordOptions,
     ExecutionStats, ExecutionStatus, ExecutionStore, ExecutionStoreOptions,
 };
-pub use exit_reason::{detect_exit_reason, resolve_exit_reason, signal_name_for_exit_code};
+pub use exit_reason::{
+    describe_exit_code, describe_exit_code_str, detect_exit_reason, resolve_exit_reason,
+    signal_name_for_exit_code, ExitCodeDescription,
+};
 pub use failure_handler::{handle_failure, Config as FailureConfig};
 pub use isolation::{
     append_log_file, build_command_string, build_command_string_with, build_display_command,
@@ -109,14 +128,18 @@ pub use signal_handler::{
     clear_current_execution, get_signal_exit_code, set_current_execution, setup_signal_handlers,
     was_signal_received,
 };
+pub use status_footer::{
+    parse_footer_from_tail, parse_footer_timestamp, read_footer_from_log, LogFooter,
+};
 pub use status_formatter::{
     attach_current_time, enrich_detached_status, format_record, format_record_as_links_notation,
     format_record_as_links_notation_with_current_time, format_record_as_text,
     format_record_as_text_with_current_time, format_record_list,
     format_record_list_as_links_notation, format_record_list_as_text,
-    format_record_with_current_time, is_detached_session_alive, list_executions,
-    list_executions_filtered, query_status, read_exit_code_from_log, StatusQueryResult,
+    format_record_with_current_time, list_executions, list_executions_filtered, query_status,
+    read_exit_code_from_log, StatusQueryResult,
 };
+pub use status_probe::is_detached_session_alive;
 pub use substitution::{process_command, ProcessOptions, SubstitutionResult};
 pub use usage::print_usage;
 pub use user_manager::{

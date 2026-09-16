@@ -18,7 +18,11 @@ use start_command::{
     },
     build_display_command, build_isolation_options_map, clear_current_execution, command_name,
     create_finish_block, create_log_footer, create_log_header, create_log_path_for_execution,
-    create_start_block, docker_runtime_status_lines_for_options,
+    create_start_block,
+    detached_finalize::{
+        reconcile_finalized_record, run_internal_finalize, INTERNAL_FINALIZE_FLAG,
+    },
+    docker_runtime_status_lines_for_options,
     execution_store::{
         ExecutionRecord, ExecutionRecordOptions, ExecutionStore, ExecutionStoreOptions,
     },
@@ -101,6 +105,15 @@ fn main() {
 
     let config = Config::from_env();
     let args: Vec<String> = env::args().skip(1).collect();
+
+    // The detached docker completion watcher re-invokes this binary to write
+    // the terminal state back into the store once the container is gone (issue
+    // #170.1). Handled before `parse_args` because it is an internal protocol,
+    // not part of the CLI surface, and it must never print anything.
+    if args.first().map(String::as_str) == Some(INTERNAL_FINALIZE_FLAG) {
+        run_internal_finalize(&args[1..]);
+        return;
+    }
 
     // Handle --version flag
     let has_version_flag = !args.is_empty() && (args[0] == "--version" || args[0] == "-v");
@@ -483,6 +496,10 @@ fn run_with_isolation(
             keep_container_on_fail: wrapper_options.keep_container_on_fail,
             shell: wrapper_options.shell.clone(),
             log_path: Some(log_file_path.clone()),
+            // A detached backend outlives this process, so its completion
+            // watcher is the only thing that can mark the record terminal
+            // (issue #170.1).
+            execution_id: Some(execution_record.uuid.clone()),
         };
         run_isolated(env, command, &options)
     } else if let Some(ref user) = created_user {
@@ -521,7 +538,15 @@ fn run_with_isolation(
         if mode != "detached" {
             execution_record.complete(exit_code);
         }
-        if let Err(e) = store.save(&execution_record) {
+        // A container that exits immediately can be finalized by the detached
+        // watcher before this save runs; the terminal record must win over the
+        // in-memory `executing` copy (issue #170.1).
+        let record_to_save = if mode == "detached" {
+            reconcile_finalized_record(store, &execution_record)
+        } else {
+            execution_record.clone()
+        };
+        if let Err(e) = store.save(&record_to_save) {
             if config.verbose {
                 eprintln!("[ExecutionStore] Warning: Failed to update record: {}", e);
             }

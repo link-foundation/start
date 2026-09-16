@@ -64,6 +64,23 @@ pub struct ExecutionRecord {
     pub log_path: String,
     pub start_time: String,
     pub end_time: Option<String>,
+    /// Where `end_time` came from (issue #170.2): `docker-finished-at`,
+    /// `log-footer` or `observed-at`. Without it a real finish time and a
+    /// timestamp taken when someone happened to run `--status` are
+    /// indistinguishable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end_time_source: Option<String>,
+    /// When the end of the execution was *observed*, for the cases where no
+    /// real finish time exists (issue #170.2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observed_at: Option<String>,
+    /// When `cleanup_stale()` gave up on a record. Deliberately not an
+    /// `end_time`: cleanup time is not a finish time (issue #170.3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stale_detected_at: Option<String>,
+    /// `docker inspect .State.StartedAt` of the container that ran the command.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub container_started_at: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub oom_killed: Option<bool>,
     /// Hint explaining an otherwise opaque exit code (issue #162).
@@ -97,6 +114,10 @@ impl ExecutionRecord {
             log_path: String::new(),
             start_time: now.to_rfc3339(),
             end_time: None,
+            end_time_source: None,
+            observed_at: None,
+            stale_detected_at: None,
+            container_started_at: None,
             oom_killed: None,
             exit_reason: None,
             memory_exhausted: None,
@@ -664,7 +685,11 @@ impl ExecutionStore {
                 if let Some(i) = current.iter().position(|r| r.uuid == stale.uuid) {
                     current[i].status = ExecutionStatus::Executed;
                     current[i].exit_code = Some(-1);
-                    current[i].end_time = Some(chrono::Utc::now().to_rfc3339());
+                    // Cleanup time is not a finish time: the execution ended at
+                    // an unknown moment before this one. Record when it was
+                    // detected and leave `end_time` empty (issue #170.3).
+                    current[i].end_time = None;
+                    current[i].stale_detected_at = Some(chrono::Utc::now().to_rfc3339());
                     result.cleaned += 1;
                 }
             }

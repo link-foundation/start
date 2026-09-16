@@ -5,6 +5,10 @@ use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use crate::detached_finalize::build_detached_finalize_snippet;
+use crate::docker_post_mortem::{
+    build_docker_post_mortem_snippet, build_docker_removal_note_snippet, build_docker_state_snippet,
+};
 use crate::exit_reason::resolve_memory_exhaustion;
 use crate::isolation::isolation_log::{
     append_log_file, create_shell_log_footer_snippet, read_log_tail, shell_quote,
@@ -286,10 +290,18 @@ fn successful_non_oom_condition() -> &'static str {
     "[ \"$__start_command_exit\" -eq 0 ] 2>/dev/null && [ \"$__start_command_oom\" != true ]"
 }
 
+/// Build the shell the detached completion watcher runs after the container is
+/// gone.
+///
+/// Order matters. The post-mortem block and the removal note go in *before* the
+/// footer, so the `Finished:`/`Exit Code:` pair stays the last thing in the log
+/// (issue #171.2); the store is finalized *after* the footer, so a record only
+/// becomes terminal once its log is complete (issue #170.1).
 fn build_detached_docker_completion_script(
     container_name: &str,
     policy: DockerContainerCleanupPolicy,
     log_path: Option<&PathBuf>,
+    execution_id: Option<&str>,
 ) -> String {
     let quoted_name = shell_quote(container_name);
     let mut parts = Vec::new();
@@ -301,32 +313,34 @@ fn build_detached_docker_completion_script(
             "docker logs -f {} >> {} 2>&1",
             quoted_name, quoted_log_path
         ));
-        parts.push(format!(
-            "__start_command_state=$(docker inspect -f '{{{{.State.ExitCode}}}} {{{{.State.OOMKilled}}}}' {} 2>/dev/null || printf '%s' '-1 false')",
-            quoted_name
-        ));
-        parts.push("__start_command_exit=${__start_command_state%% *}".to_string());
-        parts.push("__start_command_oom=${__start_command_state##* }".to_string());
+        parts.push(build_docker_state_snippet(container_name));
+
+        let remove = format!(
+            "docker rm -f {} >> {} 2>&1 || true; {}",
+            quoted_name,
+            quoted_log_path,
+            build_docker_removal_note_snippet(container_name, &quoted_log_path)
+        );
+        // A kept container is exactly the case the user will investigate, so it
+        // gets the full post-mortem before the copy-paste instructions.
+        let keep = format!(
+            "{}; {}",
+            build_docker_post_mortem_snippet(container_name, &quoted_log_path),
+            build_docker_kept_log_snippet(container_name, &quoted_log_path)
+        );
         match policy {
-            DockerContainerCleanupPolicy::Always => parts.push(format!(
-                "docker rm -f {} >> {} 2>&1 || true",
-                quoted_name, quoted_log_path
-            )),
-            DockerContainerCleanupPolicy::Default => parts.push(format!(
-                "if {}; then docker rm -f {} >> {} 2>&1 || true; else {}; fi",
-                successful_non_oom_condition(),
-                quoted_name,
-                quoted_log_path,
-                build_docker_kept_log_snippet(container_name, &quoted_log_path)
-            )),
-            DockerContainerCleanupPolicy::KeepOnFail => parts.push(format!(
-                "if {}; then docker rm -f {} >> {} 2>&1 || true; else {}; fi",
-                successful_non_oom_condition(),
-                quoted_name,
-                quoted_log_path,
-                build_docker_kept_log_snippet(container_name, &quoted_log_path)
-            )),
-            DockerContainerCleanupPolicy::Keep => {}
+            DockerContainerCleanupPolicy::Always => parts.push(remove),
+            DockerContainerCleanupPolicy::Default | DockerContainerCleanupPolicy::KeepOnFail => {
+                parts.push(format!(
+                    "if {}; then {}; else {}; fi",
+                    successful_non_oom_condition(),
+                    remove,
+                    keep
+                ))
+            }
+            // Previously wrote nothing at all: the container is always kept, so
+            // the log said nothing about why it stopped (issue #171.2).
+            DockerContainerCleanupPolicy::Keep => parts.push(keep),
         }
         parts.push(format!(
             "{} >> {}",
@@ -335,29 +349,25 @@ fn build_detached_docker_completion_script(
         ));
     } else {
         parts.push(format!("docker wait {} >/dev/null 2>&1", quoted_name));
-        parts.push(format!(
-            "__start_command_state=$(docker inspect -f '{{{{.State.ExitCode}}}} {{{{.State.OOMKilled}}}}' {} 2>/dev/null || printf '%s' '-1 false')",
-            quoted_name
-        ));
-        parts.push("__start_command_exit=${__start_command_state%% *}".to_string());
-        parts.push("__start_command_oom=${__start_command_state##* }".to_string());
+        parts.push(build_docker_state_snippet(container_name));
         match policy {
             DockerContainerCleanupPolicy::Always => parts.push(format!(
                 "docker rm -f {} >/dev/null 2>&1 || true",
                 quoted_name
             )),
-            DockerContainerCleanupPolicy::Default => parts.push(format!(
-                "if {}; then docker rm -f {} >/dev/null 2>&1 || true; fi",
-                successful_non_oom_condition(),
-                quoted_name
-            )),
-            DockerContainerCleanupPolicy::KeepOnFail => parts.push(format!(
-                "if {}; then docker rm -f {} >/dev/null 2>&1 || true; fi",
-                successful_non_oom_condition(),
-                quoted_name
-            )),
+            DockerContainerCleanupPolicy::Default | DockerContainerCleanupPolicy::KeepOnFail => {
+                parts.push(format!(
+                    "if {}; then docker rm -f {} >/dev/null 2>&1 || true; fi",
+                    successful_non_oom_condition(),
+                    quoted_name
+                ))
+            }
             DockerContainerCleanupPolicy::Keep => {}
         }
+    }
+
+    if let Some(execution_id) = execution_id {
+        parts.push(build_detached_finalize_snippet(execution_id));
     }
 
     parts.join("; ")
@@ -367,8 +377,10 @@ pub(crate) fn start_detached_docker_completion_watcher(
     container_name: &str,
     policy: DockerContainerCleanupPolicy,
     log_path: Option<&PathBuf>,
+    execution_id: Option<&str>,
 ) {
-    let script = build_detached_docker_completion_script(container_name, policy, log_path);
+    let script =
+        build_detached_docker_completion_script(container_name, policy, log_path, execution_id);
     let _ = Command::new("sh")
         .args(["-c", &script])
         .stdout(Stdio::null())
@@ -521,6 +533,7 @@ mod tests {
             "issue144-container",
             DockerContainerCleanupPolicy::Default,
             Some(&log_path),
+            None,
         );
         assert!(script.contains(".State.ExitCode"));
         assert!(script.contains(".State.OOMKilled"));
@@ -576,8 +589,94 @@ mod tests {
             "issue165-container",
             DockerContainerCleanupPolicy::Default,
             Some(&log_path),
+            None,
         );
         assert!(script.contains("__start_command_reason="));
         assert!(script.contains("Reason: %s"));
+    }
+
+    /// Issue #170.1: the watcher must hand the terminal state to the finalizer,
+    /// so a detached record stops being `executing` forever.
+    #[test]
+    fn detached_watcher_invokes_the_finalizer_with_the_inspected_facts() {
+        let log_path = PathBuf::from("/tmp/issue170.log");
+        let script = build_detached_docker_completion_script(
+            "issue170-container",
+            DockerContainerCleanupPolicy::Default,
+            Some(&log_path),
+            Some("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
+        );
+        assert!(script.contains(crate::detached_finalize::INTERNAL_FINALIZE_FLAG));
+        assert!(script.contains("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"));
+        assert!(script.contains("$__start_command_exit"));
+        assert!(script.contains("$__start_command_finished"));
+        // Bookkeeping runs last: a record only becomes terminal once the log is
+        // complete, and a failed finalization can never abort the cleanup.
+        let finalize_at = script
+            .find(crate::detached_finalize::INTERNAL_FINALIZE_FLAG)
+            .unwrap();
+        let footer_at = script.find("Exit Code: %s").unwrap();
+        assert!(finalize_at > footer_at);
+    }
+
+    /// Without an execution id (an un-tracked run) nothing is finalized.
+    #[test]
+    fn detached_watcher_stays_backward_compatible_without_an_execution_id() {
+        let log_path = PathBuf::from("/tmp/issue170.log");
+        let script = build_detached_docker_completion_script(
+            "issue170-container",
+            DockerContainerCleanupPolicy::Default,
+            Some(&log_path),
+            None,
+        );
+        assert!(!script.contains(crate::detached_finalize::INTERNAL_FINALIZE_FLAG));
+    }
+
+    /// Issue #171.1/.2/.3: every cleanup path states the post-mortem facts.
+    #[test]
+    fn detached_watcher_writes_the_post_mortem_on_both_paths() {
+        let log_path = PathBuf::from("/tmp/issue171.log");
+        let script = build_detached_docker_completion_script(
+            "issue171-container",
+            DockerContainerCleanupPolicy::KeepOnFail,
+            Some(&log_path),
+            None,
+        );
+        assert!(script.contains("{{.State.StartedAt}}"));
+        assert!(script.contains("{{.State.FinishedAt}}"));
+        assert!(script.contains("{{.State.Error}}"));
+        assert!(script.contains("=== Container post-mortem ==="));
+        assert!(script.contains("Container removed:"));
+        assert!(script.contains("Container kept for investigation"));
+    }
+
+    /// A container that is always kept used to produce no completion output at
+    /// all; it must still get its post-mortem (issue #171.2).
+    #[test]
+    fn always_kept_containers_still_get_a_post_mortem() {
+        let log_path = PathBuf::from("/tmp/issue171.log");
+        let script = build_detached_docker_completion_script(
+            "issue171-container",
+            DockerContainerCleanupPolicy::Keep,
+            Some(&log_path),
+            None,
+        );
+        assert!(script.contains("=== Container post-mortem ==="));
+        // The only `docker rm -f` left is the copy-paste hint in the kept message.
+        assert!(!script.contains("docker rm -f 'issue171-container' >>"));
+    }
+
+    /// The removal path is the one issue #171.3 is about: at least one line.
+    #[test]
+    fn always_removed_containers_get_the_removal_note() {
+        let log_path = PathBuf::from("/tmp/issue171.log");
+        let script = build_detached_docker_completion_script(
+            "issue171-container",
+            DockerContainerCleanupPolicy::Always,
+            Some(&log_path),
+            None,
+        );
+        assert!(script.contains("Container removed:"));
+        assert!(script.contains("docker rm -f 'issue171-container' >>"));
     }
 }
