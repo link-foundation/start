@@ -106,6 +106,9 @@ impl ResumeHooks for SystemResumeHooks {
             session_name,
             get_docker_container_cleanup_policy(&build_launch_options(record)),
             log_path.as_ref(),
+            // The resumed session gets the same record, so the watcher that
+            // outlives this process finalizes it too (issue #170.1).
+            Some(record.uuid.as_str()),
         );
     }
 
@@ -208,6 +211,9 @@ pub fn build_launch_options(record: &ExecutionRecord) -> IsolationOptions {
         shell: record_option(record, "shell").unwrap_or("auto").to_string(),
         // Append to the same log so one logical session keeps one gap-free record.
         log_path: (!record.log_path.is_empty()).then(|| PathBuf::from(&record.log_path)),
+        // The relaunched session keeps writing to this record, so its watcher
+        // is the one that must mark it terminal (issue #170.1).
+        execution_id: Some(record.uuid.clone()),
     }
 }
 

@@ -573,11 +573,14 @@ describe('ExecutionStore cleanupStale', () => {
     const result = store.cleanupStale({ dryRun: false });
     expect(result.cleaned).toBe(1);
 
-    // Verify it's now "executed" with exit code -1
+    // Verify it's now "executed" with exit code -1. The finish time stays
+    // unknown — cleanup records *when the loss was detected* instead of
+    // fabricating a finish time it cannot know (issue #170.3).
     retrieved = store.get(record.uuid);
     expect(retrieved.status).toBe(ExecutionStatus.EXECUTED);
     expect(retrieved.exitCode).toBe(-1);
-    expect(retrieved.endTime).toBeTruthy();
+    expect(retrieved.endTime).toBeNull();
+    expect(retrieved.staleDetectedAt).toBeTruthy();
   });
 
   it('should handle custom max age', () => {

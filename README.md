@@ -199,6 +199,48 @@ container as running the status stays `executing`, and once it stops the reporte
 when the container is gone and neither a stored exit code nor a log footer can be
 recovered.
 
+When a detached Docker container stops, the completion watcher writes the
+terminal state back into the store, so `--status` reports a finished execution
+instead of one that stays `executing` forever.
+
+`status` answers a single question — **is this execution still running?** A
+`executed` record only means the execution is over; it never means the command
+succeeded. The cause of death lives in the other fields: `exitCode` (decoded as
+`137 (SIGKILL - 128+9)` for a signal), `oomKilled`, `exitReason`, and the
+post-mortem block written into the log.
+
+`endTime` always says where it came from, in `endTimeSource`:
+
+| `endTimeSource`      | Meaning                                                                                                         |
+| -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `docker-finished-at` | `docker inspect` reported `State.FinishedAt` — a real clock reading.                                            |
+| `log-footer`         | Read from the `Finished:` line the run wrote into its own log.                                                  |
+| `observed-at`        | Nothing recorded a finish time; this is when `start` _noticed_, and the same value is repeated in `observedAt`. |
+
+A record whose execution was lost rather than observed ending — a host reboot,
+a killed supervisor — keeps `endTime` empty and carries `staleDetectedAt`
+instead, because the moment cleanup ran is not the moment the command stopped.
+
+Whenever a Docker container is kept for investigation, the log ends with the
+facts `docker inspect` still had while the container existed:
+
+```
+=== Container post-mortem ===
+Container:  my-docker-session
+Exit Code:  137 (SIGKILL - 128+9)
+OOMKilled:  false
+StartedAt:  2026-09-15T22:21:40.942007645Z
+FinishedAt: 2026-09-15T22:21:46.740817278Z
+Lifetime:   5.798s
+Error:      (none)
+```
+
+A removed container states the same facts in one line, before it stops existing:
+
+```
+Container removed: my-docker-session (exit 137, SIGKILL, lifetime 5.798s, oomKilled=false)
+```
+
 `--upload-log` accepts either an execution UUID or an isolation session name. It
 looks up the stored `logPath`, installs `gh-upload-log` with Bun or npm if the
 uploader is missing, and then streams the uploader output directly.
@@ -268,10 +310,10 @@ Memory Evidence:   FATAL ERROR: Reached heap limit Allocation failed - JavaScrip
 `memoryExhausted` answers the narrower question consumers of `oomKilled` are
 really asking - did this run die of memory exhaustion? - and
 `memoryExhaustedReason` carries the log line that proves it. A runtime that
-aborts on its own heap limit dies *below* the container limit, so the kernel
+aborts on its own heap limit dies _below_ the container limit, so the kernel
 never OOM-kills anything and `State.OOMKilled` stays `false`; the only evidence
 is what the dying runtime printed into the log. Both fields appear only for a
-non-zero exit code, so a command that merely *prints* such a marker and then
+non-zero exit code, so a command that merely _prints_ such a marker and then
 succeeds is never reported as a memory failure.
 
 The same tail is scanned for attached and detached sessions alike, with a 64 KiB

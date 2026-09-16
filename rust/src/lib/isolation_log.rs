@@ -171,7 +171,11 @@ pub fn shell_quote(value: &str) -> String {
 }
 
 pub fn create_shell_log_footer_snippet() -> String {
-    let date_command = "date '+%Y-%m-%d %H:%M:%S.%3N' 2>/dev/null || date '+%Y-%m-%d %H:%M:%S'";
+    // UTC, to match `create_log_footer()` (which formats an ISO timestamp). Two
+    // writers of the same `Finished:` line disagreeing on the timezone makes the
+    // footer useless as a source for `end_time` (issue #170.2).
+    let date_command =
+        "date -u '+%Y-%m-%d %H:%M:%S.%3N' 2>/dev/null || date -u '+%Y-%m-%d %H:%M:%S'";
     format!(
         "printf '\\n==================================================\\nFinished: %s\\nExit Code: %s\\n' \"$({})\" \"$__start_command_exit\"",
         date_command

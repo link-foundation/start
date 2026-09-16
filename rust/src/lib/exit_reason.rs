@@ -43,7 +43,11 @@ const EXIT_REASON_MARKERS: [(&str, &str); 5] = [
 
 /// Exit codes above 128 encode the signal that killed the process.
 /// Only the signals that actually show up in command logs are named.
-const SIGNAL_NAMES: [(i32, &str); 10] = [
+///
+/// Public because the detached completion watcher generates a POSIX `case`
+/// from this very table, so the signal the watcher writes into the log and the
+/// one `--status` reports can never disagree (issue #171.4).
+pub const SIGNAL_NAMES: [(i32, &str); 10] = [
     (1, "SIGHUP"),
     (2, "SIGINT"),
     (3, "SIGQUIT"),
@@ -155,6 +159,52 @@ pub fn resolve_memory_exhaustion(
         });
     }
     None
+}
+
+/// Text used wherever a fact could not be observed at all.
+pub const UNKNOWN_EXIT_CODE: &str = "unknown";
+
+/// A decoded exit code: the numeric value, the signal it encodes (if any), and
+/// the human-readable rendering both the container post-mortem and `--status`
+/// print.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExitCodeDescription {
+    pub code: Option<i32>,
+    pub signal: Option<String>,
+    pub text: String,
+}
+
+/// Decode an exit code once, for every caller (issue #171.4).
+///
+/// `128 + n` was previously decoded in the status formatter and described in
+/// prose by the watcher, which is how the same `137` could be reported as
+/// `SIGKILL` in one place and as a bare number in the other.
+pub fn describe_exit_code(exit_code: Option<i32>) -> ExitCodeDescription {
+    let code = match exit_code {
+        Some(code) => code,
+        None => {
+            return ExitCodeDescription {
+                code: None,
+                signal: None,
+                text: UNKNOWN_EXIT_CODE.to_string(),
+            }
+        }
+    };
+    let signal = signal_name_for_exit_code(Some(code));
+    let text = match &signal {
+        Some(name) => format!("{} ({} - 128+{})", code, name, code - 128),
+        None => code.to_string(),
+    };
+    ExitCodeDescription {
+        code: Some(code),
+        signal,
+        text,
+    }
+}
+
+/// Decode an exit code that arrived as text (e.g. from the watcher's shell).
+pub fn describe_exit_code_str(value: &str) -> ExitCodeDescription {
+    describe_exit_code(value.trim().parse::<i32>().ok())
 }
 
 /// Map a shell exit code to the signal name it encodes.

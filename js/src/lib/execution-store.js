@@ -75,6 +75,30 @@ class ExecutionRecord {
     this.logPath = options.logPath || '';
     this.startTime = options.startTime || new Date().toISOString();
     this.endTime = options.endTime || null;
+    // Provenance of `endTime` (issue #170.2). `--status` used to fabricate a
+    // finish time with `new Date()` whenever the record had none, which made an
+    // observation indistinguishable from a real finish time. One of
+    // 'docker-finished-at' | 'log-footer' | 'observed-at'.
+    this.endTimeSource =
+      options.endTimeSource !== undefined ? options.endTimeSource : undefined;
+    // When the end of the execution was *noticed*, for the cases where no real
+    // finish time exists. Always accompanies endTimeSource === 'observed-at'.
+    this.observedAt =
+      options.observedAt !== undefined ? options.observedAt : undefined;
+    // When `cleanupStale()` gave up on a record whose process is gone. This is
+    // a detection time, not a finish time, so it is never written to `endTime`
+    // (issue #170.3).
+    this.staleDetectedAt =
+      options.staleDetectedAt !== undefined
+        ? options.staleDetectedAt
+        : undefined;
+    // `docker inspect .State.StartedAt` of the isolation container, kept next
+    // to `endTime` so the container's lifetime stays reconstructible after the
+    // container itself is gone (issue #171).
+    this.containerStartedAt =
+      options.containerStartedAt !== undefined
+        ? options.containerStartedAt
+        : undefined;
     this.oomKilled =
       options.oomKilled !== undefined ? options.oomKilled : undefined;
     // Query-time hint explaining an opaque exit code (issue #162). Derived from
@@ -122,6 +146,21 @@ class ExecutionRecord {
       startTime: this.startTime,
       endTime: this.endTime,
     };
+    if (this.endTimeSource !== undefined && this.endTimeSource !== null) {
+      obj.endTimeSource = this.endTimeSource;
+    }
+    if (this.observedAt !== undefined && this.observedAt !== null) {
+      obj.observedAt = this.observedAt;
+    }
+    if (this.staleDetectedAt !== undefined && this.staleDetectedAt !== null) {
+      obj.staleDetectedAt = this.staleDetectedAt;
+    }
+    if (
+      this.containerStartedAt !== undefined &&
+      this.containerStartedAt !== null
+    ) {
+      obj.containerStartedAt = this.containerStartedAt;
+    }
     if (this.oomKilled !== undefined && this.oomKilled !== null) {
       obj.oomKilled = this.oomKilled;
     }
@@ -662,10 +701,15 @@ class ExecutionStore {
             (r) => r.uuid === staleRecord.uuid
           );
           if (index >= 0) {
-            // Mark as executed with exit code -1 to indicate abnormal termination
+            // Mark as executed with exit code -1 to indicate abnormal
+            // termination. The real finish time is unknowable here — the
+            // process vanished without writing one — so the record keeps
+            // `endTime: null` and states *when the loss was detected* instead
+            // of passing cleanup time off as a finish time (issue #170.3).
             currentRecords[index].status = ExecutionStatus.EXECUTED;
             currentRecords[index].exitCode = -1;
-            currentRecords[index].endTime = new Date().toISOString();
+            currentRecords[index].endTime = null;
+            currentRecords[index].staleDetectedAt = new Date().toISOString();
             result.cleaned++;
           }
         }

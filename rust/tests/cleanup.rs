@@ -84,7 +84,11 @@ fn test_cleanup_stale_actual_cleanup() {
     let retrieved = store.get(&record.uuid).unwrap();
     assert_eq!(retrieved.status, ExecutionStatus::Executed);
     assert_eq!(retrieved.exit_code, Some(-1));
-    assert!(retrieved.end_time.is_some());
+    // The execution ended at an unknown moment before cleanup ran, so cleanup
+    // records *when the loss was detected* instead of fabricating a finish time
+    // it cannot know (issue #170.3).
+    assert!(retrieved.end_time.is_none());
+    assert!(retrieved.stale_detected_at.is_some());
 }
 
 #[test]

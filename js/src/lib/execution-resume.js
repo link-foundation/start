@@ -411,7 +411,8 @@ async function resumeExecution(store, identifier, deps = {}) {
     startWatcher(
       activeSessionName(plan),
       getDockerContainerCleanupPolicy(record.options || {}),
-      record.logPath || null
+      record.logPath || null,
+      record.uuid || null
     );
   }
 

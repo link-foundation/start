@@ -58,6 +58,9 @@ const EXIT_REASON_MARKERS = [
  * Only the signals that actually show up in command logs are named.
  * @type {Object<number, string>}
  */
+/** Rendered when an exit code is unavailable or not numeric. */
+const UNKNOWN_EXIT_CODE = 'unknown';
+
 const SIGNAL_NAMES = {
   1: 'SIGHUP',
   2: 'SIGINT',
@@ -195,6 +198,31 @@ function signalNameForExitCode(exitCode) {
 }
 
 /**
+ * Describe a terminal exit code, decoding the `128+n` signal convention.
+ *
+ * Single source of truth for issue #171.4: the detached Docker watcher writes
+ * this text into the log at completion time (through the shell it generates),
+ * and `--status` renders the same text at query time from the stored record.
+ * Both used to decode `128+n` on their own, so they could disagree.
+ *
+ * @param {number|string|null|undefined} exitCode - Terminal exit code
+ * @returns {{code: number|null, signal: string|null, text: string}} Description
+ */
+function describeExitCode(exitCode) {
+  const code =
+    typeof exitCode === 'number' ? exitCode : Number.parseInt(exitCode, 10);
+  if (!Number.isFinite(code)) {
+    return { code: null, signal: null, text: UNKNOWN_EXIT_CODE };
+  }
+  const signal = signalNameForExitCode(code);
+  return {
+    code,
+    signal,
+    text: signal ? `${code} (${signal} - 128+${code - 128})` : String(code),
+  };
+}
+
+/**
  * Resolve the best available hint for why an execution ended.
  *
  * Precedence: the log marker (evidence written by the command itself), then the
@@ -223,12 +251,14 @@ function resolveExitReason(input) {
 
 module.exports = {
   EXIT_REASON_MARKERS,
+  UNKNOWN_EXIT_CODE,
   MEMORY_EXHAUSTION_PREFIX,
   SIGNAL_NAMES,
   detectExitReason,
   detectMemoryMarker,
   findExitReasonMarker,
   resolveMemoryExhaustion,
+  describeExitCode,
   resolveExitReason,
   signalNameForExitCode,
 };
