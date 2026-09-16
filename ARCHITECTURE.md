@@ -194,6 +194,44 @@ By default, all isolation environments automatically exit after command completi
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+### Detached Docker Completion
+
+`start --detached --docker` returns before the container does, so the CLI
+process cannot be the one to observe the ending. A detached POSIX shell — the
+completion watcher — outlives it and is the only observer left:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  Completion Watcher (detached sh)                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. docker logs -f <name>      stream output into the log        │
+│  2. docker inspect             ExitCode, OOMKilled, StartedAt,   │
+│                                FinishedAt, Error — read once,    │
+│                                while the container still exists  │
+│  3. cleanup decision           keep → post-mortem block          │
+│                                remove → one-line note, then rm   │
+│  4. log footer                 Finished: / Exit Code:            │
+│  5. finalize the store         status, exitCode, oomKilled,      │
+│                                endTime + endTimeSource           │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+Order is load-bearing. The facts are inspected before any `docker rm`, because
+a removed container cannot be asked anything. The post-mortem is written by the
+shell rather than by the finalizer, so the log does not depend on a second
+runtime launch succeeding. Bookkeeping runs last: a record only becomes terminal
+once its log is complete.
+
+The finalizer is the same binary re-invoked through a hidden flag
+(`--internal-finalize-detached-docker`), so the store format has exactly one
+writer per implementation.
+
+Attached Docker runs reach the same place by a shorter road: the CLI is still
+alive when the container exits, so it inspects the identical five fields itself
+and writes the identical post-mortem.
+
 ## Logging Architecture
 
 ```

@@ -1,0 +1,5 @@
+---
+'start-command': minor
+---
+
+Persist the terminal state of a detached Docker execution and record the container post-mortem. The completion watcher now writes `status`, `exitCode`, `oomKilled` and a real `endTime` back into the store instead of leaving the record `executing` forever, so `--status` stops calling the clock at query time and reporting a different "finish" on every call. `endTime` carries its provenance in `endTimeSource` (`docker-finished-at`, `log-footer`, `observed-at`); a stale record keeps `endTime` empty and records `staleDetectedAt` instead of a fabricated finish time. The single `docker inspect` now also collects `StartedAt`, `FinishedAt` and `State.Error`, and both the detached and the attached path write a post-mortem block for a kept container and a one-line note for a removed one. Signal decoding (`128+n`) is shared by the log and `--status`, so `137` reads as `137 (SIGKILL - 128+9)` everywhere.
