@@ -206,6 +206,8 @@ completion watcher — outlives it and is the only observer left:
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  1. docker logs -f <name>      stream output into the log        │
+│     while State.Running:       docker wait — the stream can end  │
+│                                early (ENOSPC, dockerd restart)   │
 │  2. docker inspect             ExitCode, OOMKilled, StartedAt,   │
 │                                FinishedAt, Error — read once,    │
 │                                while the container still exists  │
@@ -217,6 +219,13 @@ completion watcher — outlives it and is the only observer left:
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+The end of `docker logs -f` is not the end of the container: it also returns
+when its own write to the log fails (ENOSPC) or dockerd restarts. The watcher
+therefore waits on `State.Running`, and a container it still sees running is
+never removed, footered or finalized — its record stays `executing`. A zero
+`FinishedAt` next to `ExitCode=0` is Docker's zero value, not a success, and is
+recorded as `-1` with `exitReason: watcher-lost-container` (issue #174).
 
 Order is load-bearing. The facts are inspected before any `docker rm`, because
 a removed container cannot be asked anything. The post-mortem is written by the
