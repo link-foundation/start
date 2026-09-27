@@ -11,10 +11,13 @@ const {
   buildDockerPostMortemSnippet,
   buildDockerRemovalNoteSnippet,
   buildDockerStateSnippet,
+  buildDockerStillRunningNoteSnippet,
+  buildDockerWaitForExitSnippet,
   DOCKER_STATE_INSPECT_FORMAT,
   formatContainerPostMortem,
   formatContainerRemovalNote,
   normalizeDockerTimestamp,
+  SHELL_VARS,
 } = require('./docker-post-mortem');
 const { buildDetachedFinalizeSnippet } = require('./detached-finalize');
 
@@ -312,6 +315,11 @@ function buildSuccessfulNonOomCondition() {
  *   3. it hands the same facts to the finalizer so the execution record stops
  *      being `executing` forever (issue #170.1).
  *
+ * It only does any of that once the container has really exited: the return of
+ * `docker logs -f` / `docker wait` is not proof of exit (issue #174). A
+ * container that is somehow still running afterwards is never removed, gets no
+ * `Exit Code:` footer and is never finalized — its record stays `executing`.
+ *
  * @param {string} containerName - Docker container name
  * @param {string} policy - One of DOCKER_CONTAINER_CLEANUP_POLICY
  * @param {string|null} logPath - Log file to append to, or null
@@ -326,6 +334,9 @@ function buildDetachedDockerCompletionScript(
 ) {
   const quotedName = shellQuote(containerName);
   const parts = [];
+  // Everything that assumes the container has exited: cleanup, footer and
+  // finalization. Guarded as a whole by `.State.Running` below.
+  const exited = [];
 
   if (logPath) {
     const quotedLogPath = shellQuote(logPath);
@@ -341,33 +352,35 @@ function buildDetachedDockerCompletionScript(
     const keep = `${postMortem}; ${buildDockerKeptLogSnippet(containerName, quotedLogPath)}`;
 
     parts.push(`docker logs -f ${quotedName} >> ${quotedLogPath} 2>&1`);
+    parts.push(buildDockerWaitForExitSnippet(containerName, quotedLogPath));
     parts.push(buildDockerStateSnippet(containerName));
     if (policy === DOCKER_CONTAINER_CLEANUP_POLICY.ALWAYS) {
-      parts.push(remove);
+      exited.push(remove);
     } else if (
       policy === DOCKER_CONTAINER_CLEANUP_POLICY.DEFAULT ||
       policy === DOCKER_CONTAINER_CLEANUP_POLICY.KEEP_ON_FAIL
     ) {
-      parts.push(
+      exited.push(
         `if ${buildSuccessfulNonOomCondition()}; then ${remove}; else ${keep}; fi`
       );
     } else {
       // KEEP: the container is never removed, so the log used to end with the
       // raw command output and nothing else. The post-mortem is exactly the
       // information an operator needs before deciding what to do with it.
-      parts.push(keep);
+      exited.push(keep);
     }
-    parts.push(`${createShellLogFooterSnippet()} >> ${quotedLogPath}`);
+    exited.push(`${createShellLogFooterSnippet()} >> ${quotedLogPath}`);
   } else {
     parts.push(`docker wait ${quotedName} >/dev/null 2>&1`);
+    parts.push(buildDockerWaitForExitSnippet(containerName));
     parts.push(buildDockerStateSnippet(containerName));
     if (policy === DOCKER_CONTAINER_CLEANUP_POLICY.ALWAYS) {
-      parts.push(`docker rm -f ${quotedName} >/dev/null 2>&1 || true`);
+      exited.push(`docker rm -f ${quotedName} >/dev/null 2>&1 || true`);
     } else if (
       policy === DOCKER_CONTAINER_CLEANUP_POLICY.DEFAULT ||
       policy === DOCKER_CONTAINER_CLEANUP_POLICY.KEEP_ON_FAIL
     ) {
-      parts.push(
+      exited.push(
         `if ${buildSuccessfulNonOomCondition()}; then docker rm -f ${quotedName} >/dev/null 2>&1 || true; fi`
       );
     }
@@ -375,8 +388,16 @@ function buildDetachedDockerCompletionScript(
 
   if (executionId) {
     // Last, so the record is only marked terminal once the log is complete.
-    parts.push(buildDetachedFinalizeSnippet(executionId));
+    exited.push(buildDetachedFinalizeSnippet(executionId));
   }
+
+  const stillRunning = logPath
+    ? buildDockerStillRunningNoteSnippet(containerName, shellQuote(logPath))
+    : ':';
+  parts.push(
+    `if [ "$${SHELL_VARS.running}" = true ]; then ${stillRunning}; ` +
+      `else ${exited.length ? exited.join('; ') : ':'}; fi`
+  );
 
   return parts.join('; ');
 }

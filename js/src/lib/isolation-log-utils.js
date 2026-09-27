@@ -4,7 +4,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { describeExitCode } = require('./exit-reason');
+const { describeExitCode, resolveChildExitCode } = require('./exit-reason');
 
 function getTempRoot() {
   return process.env.START_TEMP_ROOT || path.join(os.tmpdir(), 'start-command');
@@ -190,11 +190,15 @@ function runAsIsolatedUser(cmd, username) {
       stdio: 'inherit',
     });
 
-    child.on('exit', (code) => {
+    child.on('exit', (code, signal) => {
+      const exitCode = resolveChildExitCode(code, signal);
       resolve({
-        success: code === 0,
-        message: `Command completed as user "${username}" with exit code ${code}`,
-        exitCode: code || 0,
+        success: exitCode === 0,
+        message: signal
+          ? `Command as user "${username}" was killed by ${signal} (exit code ${exitCode})`
+          : `Command completed as user "${username}" with exit code ${exitCode}`,
+        exitCode,
+        signal: signal || null,
       });
     });
 

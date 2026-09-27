@@ -12,6 +12,7 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { resolveChildExitCode } = require('./exit-reason');
 
 function ensureParentDirectory(filePath) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -282,8 +283,9 @@ function runWithNodeSpawn(options) {
   // The 'close' event fires after all stdio streams have been closed, ensuring
   // all stdout/stderr data has been received. The 'exit' event can fire before
   // buffered data is received, causing output loss on macOS (Issue #57).
-  child.on('close', (code) => {
-    const exitCode = code || 0;
+  child.on('close', (code, signal) => {
+    // A signal death reports `code === null`: never record it as exit 0.
+    const exitCode = resolveChildExitCode(code, signal);
     const durationMs = Date.now() - startTimeMs;
     const endTime = new Date().toISOString().replace('T', ' ').substring(0, 23);
 

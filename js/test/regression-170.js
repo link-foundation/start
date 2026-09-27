@@ -301,7 +301,10 @@ describe('issue #170.1: the detached watcher persists the terminal state', () =>
 
     const stored = store.get(record.uuid);
     expect(stored.status).toBe(ExecutionStatus.EXECUTED);
-    expect(stored.exitCode).toBe(0);
+    // `ExitCode=0` next to a zero `FinishedAt` is Docker's zero value, not an
+    // observed success (issue #174).
+    expect(stored.exitCode).toBe(-1);
+    expect(stored.exitReason).toBe('watcher-lost-container');
     expect(stored.endTimeSource).toBe('observed-at');
     expect(stored.observedAt).toBe(stored.endTime);
     expect(new Date(stored.endTime).getUTCFullYear()).toBeGreaterThan(2000);
