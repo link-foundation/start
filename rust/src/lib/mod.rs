@@ -43,13 +43,17 @@ pub use detached_finalize::{
     build_detached_finalize_snippet, finalize_detached_execution, reconcile_finalized_record,
     run_internal_finalize, DetachedFinalizeFacts, FinalizeOutcome,
     END_TIME_SOURCE_DOCKER_FINISHED_AT, END_TIME_SOURCE_LOG_FOOTER, END_TIME_SOURCE_OBSERVED_AT,
-    INTERNAL_FINALIZE_FLAG,
+    INTERNAL_FINALIZE_FLAG, WATCHER_LOST_CONTAINER,
 };
+pub use docker_cleanup::{build_detached_docker_completion_script, DockerContainerCleanupPolicy};
 pub use docker_post_mortem::{
     build_docker_post_mortem_snippet, build_docker_removal_note_snippet,
-    build_docker_state_snippet, format_container_post_mortem, format_container_removal_note,
-    format_lifetime, normalize_docker_timestamp, ContainerPostMortem, DOCKER_STATE_INSPECT_FORMAT,
-    DOCKER_ZERO_TIME, POST_MORTEM_HEADER,
+    build_docker_running_condition, build_docker_state_snippet,
+    build_docker_still_running_note_snippet, build_docker_wait_for_exit_snippet,
+    format_container_post_mortem, format_container_removal_note, format_lifetime,
+    normalize_docker_timestamp, ContainerPostMortem, DOCKER_RUNNING_INSPECT_FORMAT,
+    DOCKER_STATE_INSPECT_FORMAT, DOCKER_ZERO_TIME, LOG_CAPTURE_STOPPED_NOTE, POST_MORTEM_HEADER,
+    STILL_RUNNING_NOTE,
 };
 pub use execution_attach::{
     attach_execution, attach_execution_with_runners, build_attach_plan,

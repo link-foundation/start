@@ -39,6 +39,11 @@ pub const END_TIME_SOURCE_LOG_FOOTER: &str = "log-footer";
 /// No real finish time exists: this is when the end was *observed*.
 pub const END_TIME_SOURCE_OBSERVED_AT: &str = "observed-at";
 
+/// `exit_reason` of a record whose container exit the watcher never observed:
+/// docker had no `FinishedAt` for it, so neither the exit code nor the end time
+/// is a fact (issue #174).
+pub const WATCHER_LOST_CONTAINER: &str = "watcher-lost-container";
+
 /// The docker facts the watcher hands over.
 #[derive(Debug, Clone, Default)]
 pub struct DetachedFinalizeFacts {
@@ -47,6 +52,8 @@ pub struct DetachedFinalizeFacts {
     pub started_at: String,
     pub finished_at: String,
     pub container_error: String,
+    /// `.State.Running`: `true` means the container has not exited (issue #174).
+    pub running: String,
 }
 
 /// Outcome of a finalization attempt. `updated` is false when there was
@@ -90,6 +97,14 @@ pub fn finalize_detached_execution(
             reason: "missing-arguments".to_string(),
         };
     }
+    if normalize_bool(&facts.running) == Some(true) {
+        // A running container has not finished: its record stays `executing`,
+        // and `--status` keeps probing the live container (issue #174).
+        return FinalizeOutcome {
+            updated: false,
+            reason: "still-running".to_string(),
+        };
+    }
     let mut record = match store.get(execution_id) {
         Some(record) => record,
         None => {
@@ -108,18 +123,26 @@ pub fn finalize_detached_execution(
         };
     }
 
+    let finished_at = normalize_docker_timestamp(Some(&facts.finished_at));
     let described = describe_exit_code_str(&facts.exit_code);
+    // Without a `FinishedAt`, `ExitCode=0` is Docker's zero value for a container
+    // that has not finished — never an observed success (issue #174).
+    let exit_code = match described.code {
+        Some(0) if finished_at.is_none() => None,
+        code => code,
+    };
     record.status = ExecutionStatus::Executed;
-    match described.code {
+    match exit_code {
         Some(code) => record.exit_code = Some(code),
         None => {
-            if record.exit_code.is_none() {
+            if record.exit_code.is_none() || finished_at.is_none() {
                 record.exit_code = Some(-1);
             }
         }
     }
+    let lost = finished_at.is_none();
 
-    match normalize_docker_timestamp(Some(&facts.finished_at)) {
+    match finished_at {
         Some(finished_at) => {
             record.end_time = Some(finished_at);
             record.end_time_source = Some(END_TIME_SOURCE_DOCKER_FINISHED_AT.to_string());
@@ -142,7 +165,9 @@ pub fn finalize_detached_execution(
     if let Some(oom_killed) = normalize_bool(&facts.oom_killed) {
         record.oom_killed = Some(oom_killed);
     }
-    if let Some(reason) = resolve_reason(&record) {
+    let reason =
+        resolve_reason(&record).or_else(|| lost.then(|| WATCHER_LOST_CONTAINER.to_string()));
+    if let Some(reason) = reason {
         record.exit_reason = Some(reason);
     }
     if let Some(error) = normalize_container_error(&facts.container_error) {
@@ -209,7 +234,7 @@ pub fn build_detached_finalize_snippet(execution_id: &str) -> String {
         .map(|path| path.to_string_lossy().to_string())
         .unwrap_or_else(|_| "start".to_string());
     format!(
-        "{} {} {} \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" >/dev/null 2>&1 || true",
+        "{} {} {} \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" >/dev/null 2>&1 || true",
         shell_quote(&executable),
         INTERNAL_FINALIZE_FLAG,
         shell_quote(execution_id),
@@ -218,11 +243,12 @@ pub fn build_detached_finalize_snippet(execution_id: &str) -> String {
         shell_vars::STARTED,
         shell_vars::FINISHED,
         shell_vars::ERROR,
+        shell_vars::RUNNING,
     )
 }
 
 /// Entry point for `--internal-finalize-detached-docker <uuid> <exit> <oom>
-/// <started> <finished> <error>`. Always succeeds: see the module docs.
+/// <started> <finished> <error> <running>`. Always succeeds: see the module docs.
 pub fn run_internal_finalize(args: &[String]) {
     let execution_id = match args.first() {
         Some(value) if !value.is_empty() => value.clone(),
@@ -245,6 +271,7 @@ pub fn run_internal_finalize(args: &[String]) {
             started_at: field(3),
             finished_at: field(4),
             container_error: field(5),
+            running: field(6),
         },
     );
 }

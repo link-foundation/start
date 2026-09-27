@@ -8,8 +8,10 @@ use std::thread;
 use crate::detached_finalize::build_detached_finalize_snippet;
 use crate::docker_post_mortem::{
     build_docker_post_mortem_snippet, build_docker_removal_note_snippet,
-    build_docker_state_snippet, format_container_post_mortem, format_container_removal_note,
-    normalize_docker_timestamp, ContainerPostMortem, DOCKER_STATE_INSPECT_FORMAT,
+    build_docker_state_snippet, build_docker_still_running_note_snippet,
+    build_docker_wait_for_exit_snippet, format_container_post_mortem,
+    format_container_removal_note, normalize_docker_timestamp, shell_vars, ContainerPostMortem,
+    DOCKER_STATE_INSPECT_FORMAT,
 };
 use crate::exit_reason::resolve_memory_exhaustion;
 use crate::isolation::isolation_log::{
@@ -83,7 +85,7 @@ pub(crate) fn docker_networks(options: &IsolationOptions) -> Vec<&str> {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum DockerContainerCleanupPolicy {
+pub enum DockerContainerCleanupPolicy {
     Default,
     Always,
     Keep,
@@ -380,7 +382,12 @@ fn successful_non_oom_condition() -> &'static str {
 /// footer, so the `Finished:`/`Exit Code:` pair stays the last thing in the log
 /// (issue #171.2); the store is finalized *after* the footer, so a record only
 /// becomes terminal once its log is complete (issue #170.1).
-fn build_detached_docker_completion_script(
+///
+/// It only does any of that once the container has really exited: the return of
+/// `docker logs -f` / `docker wait` is not proof of exit (issue #174). A
+/// container that is somehow still running afterwards is never removed, gets no
+/// `Exit Code:` footer and is never finalized — its record stays `executing`.
+pub fn build_detached_docker_completion_script(
     container_name: &str,
     policy: DockerContainerCleanupPolicy,
     log_path: Option<&PathBuf>,
@@ -388,13 +395,19 @@ fn build_detached_docker_completion_script(
 ) -> String {
     let quoted_name = shell_quote(container_name);
     let mut parts = Vec::new();
+    // Everything that assumes the container has exited: cleanup, footer and
+    // finalization. Guarded as a whole by `.State.Running` below.
+    let mut exited = Vec::new();
+    let quoted_log_path = log_path.map(|path| shell_quote(&path.to_string_lossy()));
 
-    if let Some(path) = log_path {
-        let log_path_string = path.to_string_lossy().to_string();
-        let quoted_log_path = shell_quote(&log_path_string);
+    if let Some(quoted_log_path) = quoted_log_path.as_deref() {
         parts.push(format!(
             "docker logs -f {} >> {} 2>&1",
             quoted_name, quoted_log_path
+        ));
+        parts.push(build_docker_wait_for_exit_snippet(
+            container_name,
+            Some(quoted_log_path),
         ));
         parts.push(build_docker_state_snippet(container_name));
 
@@ -402,19 +415,19 @@ fn build_detached_docker_completion_script(
             "docker rm -f {} >> {} 2>&1 || true; {}",
             quoted_name,
             quoted_log_path,
-            build_docker_removal_note_snippet(container_name, &quoted_log_path)
+            build_docker_removal_note_snippet(container_name, quoted_log_path)
         );
         // A kept container is exactly the case the user will investigate, so it
         // gets the full post-mortem before the copy-paste instructions.
         let keep = format!(
             "{}; {}",
-            build_docker_post_mortem_snippet(container_name, &quoted_log_path),
-            build_docker_kept_log_snippet(container_name, &quoted_log_path)
+            build_docker_post_mortem_snippet(container_name, quoted_log_path),
+            build_docker_kept_log_snippet(container_name, quoted_log_path)
         );
         match policy {
-            DockerContainerCleanupPolicy::Always => parts.push(remove),
+            DockerContainerCleanupPolicy::Always => exited.push(remove),
             DockerContainerCleanupPolicy::Default | DockerContainerCleanupPolicy::KeepOnFail => {
-                parts.push(format!(
+                exited.push(format!(
                     "if {}; then {}; else {}; fi",
                     successful_non_oom_condition(),
                     remove,
@@ -423,23 +436,24 @@ fn build_detached_docker_completion_script(
             }
             // Previously wrote nothing at all: the container is always kept, so
             // the log said nothing about why it stopped (issue #171.2).
-            DockerContainerCleanupPolicy::Keep => parts.push(keep),
+            DockerContainerCleanupPolicy::Keep => exited.push(keep),
         }
-        parts.push(format!(
+        exited.push(format!(
             "{} >> {}",
             create_shell_log_footer_snippet(),
             quoted_log_path
         ));
     } else {
         parts.push(format!("docker wait {} >/dev/null 2>&1", quoted_name));
+        parts.push(build_docker_wait_for_exit_snippet(container_name, None));
         parts.push(build_docker_state_snippet(container_name));
         match policy {
-            DockerContainerCleanupPolicy::Always => parts.push(format!(
+            DockerContainerCleanupPolicy::Always => exited.push(format!(
                 "docker rm -f {} >/dev/null 2>&1 || true",
                 quoted_name
             )),
             DockerContainerCleanupPolicy::Default | DockerContainerCleanupPolicy::KeepOnFail => {
-                parts.push(format!(
+                exited.push(format!(
                     "if {}; then docker rm -f {} >/dev/null 2>&1 || true; fi",
                     successful_non_oom_condition(),
                     quoted_name
@@ -450,8 +464,25 @@ fn build_detached_docker_completion_script(
     }
 
     if let Some(execution_id) = execution_id {
-        parts.push(build_detached_finalize_snippet(execution_id));
+        // Last, so the record is only marked terminal once the log is complete.
+        exited.push(build_detached_finalize_snippet(execution_id));
     }
+
+    let still_running = quoted_log_path
+        .as_deref()
+        .map(|log| build_docker_still_running_note_snippet(container_name, log))
+        .unwrap_or_else(|| ":".to_string());
+    let exited = if exited.is_empty() {
+        ":".to_string()
+    } else {
+        exited.join("; ")
+    };
+    parts.push(format!(
+        "if [ \"${}\" = true ]; then {}; else {}; fi",
+        shell_vars::RUNNING,
+        still_running,
+        exited
+    ));
 
     parts.join("; ")
 }

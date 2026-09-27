@@ -55,6 +55,70 @@ pub mod shell_vars {
     pub const SIGNAL: &str = "__start_command_signal";
     pub const EXIT_TEXT: &str = "__start_command_exit_text";
     pub const LIFETIME: &str = "__start_command_lifetime";
+    pub const RUNNING: &str = "__start_command_running";
+}
+
+/// `docker inspect -f` template answering "is the container still running?".
+pub const DOCKER_RUNNING_INSPECT_FORMAT: &str = "{{.State.Running}}";
+
+/// Written into the log when `docker logs -f` returned while the container was
+/// still running (issue #174).
+pub const LOG_CAPTURE_STOPPED_NOTE: &str = concat!(
+    "Log capture stopped early: docker logs -f returned while the container ",
+    "was still running (a failed write to this log such as ENOSPC, or a dockerd ",
+    "restart). Waiting for the container to exit."
+);
+
+/// Written into the log when the watcher gave up while the container was still
+/// running. No footer follows: an `Exit Code:` line would be a fabrication.
+pub const STILL_RUNNING_NOTE: &str = concat!(
+    "The watcher stopped observing it before it exited, so it was not removed ",
+    "and the execution record stays executing."
+);
+
+/// Shell condition that holds while the container is running.
+pub fn build_docker_running_condition(quoted_name: &str) -> String {
+    format!(
+        "[ \"$(docker inspect -f '{}' {} 2>/dev/null)\" = true ]",
+        DOCKER_RUNNING_INSPECT_FORMAT, quoted_name
+    )
+}
+
+/// Shell fragment blocking until the container has really exited.
+///
+/// `docker logs -f` and `docker wait` both return early when the *stream* ends
+/// rather than the container: `docker logs -f C >> LOG` returns as soon as its
+/// own write to LOG fails (ENOSPC, when the container filled the disk the log
+/// lives on), and both return when dockerd restarts under live-restore while the
+/// container keeps running. The watcher used to take that return as the
+/// container's exit, inspect a *running* container — Docker reports its zero
+/// values `ExitCode=0 FinishedAt=0001-01-01T00:00:00Z` — and `docker rm -f` the
+/// live workload as a success (issue #174). So the fragment loops on
+/// `.State.Running`, not on the return of the command it waited on; `sleep 1`
+/// keeps a failing `docker wait` from spinning.
+///
+/// `quoted_log_path` (already shell-quoted) records that log capture stopped
+/// early; `None` when there is no log.
+pub fn build_docker_wait_for_exit_snippet(
+    container_name: &str,
+    quoted_log_path: Option<&str>,
+) -> String {
+    let quoted_name = shell_quote(container_name);
+    let running = build_docker_running_condition(&quoted_name);
+    let mut parts = Vec::new();
+    if let Some(log) = quoted_log_path {
+        parts.push(format!(
+            "if {}; then printf '\\n%s\\n' {} >> {} 2>/dev/null; fi",
+            running,
+            shell_quote(LOG_CAPTURE_STOPPED_NOTE),
+            log
+        ));
+    }
+    parts.push(format!(
+        "while {}; do docker wait {} >/dev/null 2>&1 || sleep 1; done",
+        running, quoted_name
+    ));
+    parts.join("; ")
 }
 
 /// Facts read out of a container's `State` after it stopped.
@@ -166,6 +230,10 @@ pub fn format_container_removal_note(facts: &ContainerPostMortem) -> String {
 
 /// Shell fragment reading the container's terminal state.
 ///
+/// Also records `.State.Running` in `$__start_command_running`, so the caller
+/// can refuse to remove or finalize a container that is still alive
+/// (issue #174).
+///
 /// The four whitespace-free fields are split with `set --` rather than the
 /// `${var%% *}` / `${var##* }` pair the two-field version used: those only ever
 /// reach the first and the last field. `State.Error` is read separately because
@@ -200,6 +268,21 @@ pub fn build_docker_state_snippet(container_name: &str) -> String {
             DOCKER_ZERO_TIME,
             shell_vars::FINISHED,
             UNKNOWN
+        ),
+        // `ExitCode=0` next to a zero `FinishedAt` is Docker's zero value for a
+        // container that has not finished, never an observed exit 0 (issue #174).
+        format!(
+            "if [ \"${}\" = {} ] && [ \"${}\" = 0 ]; then {}=-1; fi",
+            shell_vars::FINISHED,
+            UNKNOWN,
+            shell_vars::EXIT,
+            shell_vars::EXIT
+        ),
+        format!(
+            "{}=$(docker inspect -f '{}' {} 2>/dev/null)",
+            shell_vars::RUNNING,
+            DOCKER_RUNNING_INSPECT_FORMAT,
+            quoted_name
         ),
         build_signal_decode_snippet(),
         build_lifetime_snippet(),
@@ -308,6 +391,22 @@ pub fn build_docker_post_mortem_snippet(container_name: &str, quoted_log_path: &
         finished = shell_vars::FINISHED,
         lifetime = shell_vars::LIFETIME,
         log = quoted_log_path,
+    )
+}
+
+/// Shell fragment appending the note for a container the watcher lost while it
+/// was still running (issue #174).
+pub fn build_docker_still_running_note_snippet(
+    container_name: &str,
+    quoted_log_path: &str,
+) -> String {
+    let quoted_name = shell_quote(container_name);
+    format!(
+        "printf '\\nContainer still running: %s\\n%s\\nCheck it with: docker inspect %s\\n' {} {} {} >> {}",
+        quoted_name,
+        shell_quote(STILL_RUNNING_NOTE),
+        quoted_name,
+        quoted_log_path
     )
 }
 
