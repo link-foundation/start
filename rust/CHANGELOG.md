@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.21.1] - 2026-09-28
+
+Never finalize a still-running detached Docker container as a success. `docker logs -f` also returns when its own write to the log fails (ENOSPC) or when dockerd restarts, so the completion watcher now asks `docker inspect -f '{{.State.Running}}'` and keeps waiting with `docker wait` until the container really exits. If the watcher still sees a running container, it notes this in the log and leaves the container and the execution record alone: no `docker rm -f`, no `Exit Code: 0` footer, and no `executed` status (the finalizer refuses with `still-running`). A zero `FinishedAt` (`0001-01-01T00:00:00Z`) combined with an exit code of 0 is recorded as `-1` with `exit_reason: watcher-lost-container`, not as a success.
+
 ## [0.21.0] - 2026-09-16
 
 Persist the terminal state of a detached Docker execution and record the container post-mortem. The completion watcher now writes `status`, `exitCode`, `oomKilled` and a real `endTime` back into the store instead of leaving the record `executing` forever, so `--status` stops calling the clock at query time and reporting a different "finish" on every call. `endTime` carries its provenance in `endTimeSource` (`docker-finished-at`, `log-footer`, `observed-at`); a stale record keeps `endTime` empty and records `staleDetectedAt` instead of a fabricated finish time. The single `docker inspect` now also collects `StartedAt`, `FinishedAt` and `State.Error`, and both the detached and the attached path write a post-mortem block for a kept container and a one-line note for a removed one. Signal decoding (`128+n`) is shared by the log and `--status`, so `137` reads as `137 (SIGKILL - 128+9)` everywhere.
