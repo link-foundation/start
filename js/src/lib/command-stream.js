@@ -11,6 +11,8 @@
  * - Real-time output capture
  */
 
+const { resolveChildExitCode } = require('./exit-reason');
+
 // Debug mode from environment
 const DEBUG =
   process.env.START_DEBUG === '1' || process.env.START_DEBUG === 'true';
@@ -54,7 +56,7 @@ async function execCommand(command, options = {}) {
     return {
       stdout: (result.stdout || '').trim(),
       stderr: (result.stderr || '').trim(),
-      code: result.code || 0,
+      code: resolveChildExitCode(result.code),
     };
   } catch (err) {
     if (DEBUG) {
@@ -91,7 +93,7 @@ async function execCommandAsync(command, options = {}) {
     return {
       stdout: (result.stdout || '').trim(),
       stderr: (result.stderr || '').trim(),
-      code: result.code || 0,
+      code: resolveChildExitCode(result.code),
     };
   } catch (err) {
     if (DEBUG) {

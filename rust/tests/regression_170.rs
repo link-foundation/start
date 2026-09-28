@@ -320,6 +320,7 @@ fn finalize_writes_status_exit_code_end_time_and_provenance_into_the_store() {
             started_at: CONTAINER_STARTED_AT.to_string(),
             finished_at: CONTAINER_FINISHED_AT.to_string(),
             container_error: String::new(),
+            ..Default::default()
         },
     );
     assert!(outcome.updated, "reason: {}", outcome.reason);
@@ -360,12 +361,19 @@ fn finalize_falls_back_to_observation_time_when_docker_reports_no_finish_time() 
             // The docker zero-time sentinel must never reach a record.
             finished_at: "0001-01-01T00:00:00Z".to_string(),
             container_error: String::new(),
+            ..Default::default()
         },
     );
 
     let stored = store.get(&record.uuid).unwrap();
     assert_eq!(stored.status, ExecutionStatus::Executed);
-    assert_eq!(stored.exit_code, Some(0));
+    // `ExitCode=0` without a `FinishedAt` is Docker's zero value for a container
+    // that never finished, not an observed success (issue #174).
+    assert_eq!(stored.exit_code, Some(-1));
+    assert_eq!(
+        stored.exit_reason.as_deref(),
+        Some("watcher-lost-container")
+    );
     assert_eq!(stored.end_time_source.as_deref(), Some("observed-at"));
     assert_eq!(stored.observed_at, stored.end_time);
     let end_time = DateTime::parse_from_rfc3339(stored.end_time.as_deref().unwrap()).unwrap();
@@ -385,6 +393,7 @@ fn finalize_never_fails_when_the_record_is_gone() {
             started_at: String::new(),
             finished_at: String::new(),
             container_error: String::new(),
+            ..Default::default()
         },
     );
     assert!(!outcome.updated);

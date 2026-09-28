@@ -201,7 +201,10 @@ recovered.
 
 When a detached Docker container stops, the completion watcher writes the
 terminal state back into the store, so `--status` reports a finished execution
-instead of one that stays `executing` forever.
+instead of one that stays `executing` forever. The watcher waits until docker
+reports the container as no longer running — log capture can stop early when
+the log's disk fills up or dockerd restarts — and it never removes or finalizes
+a container that is still running.
 
 `status` answers a single question — **is this execution still running?** A
 `executed` record only means the execution is over; it never means the command

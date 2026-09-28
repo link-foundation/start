@@ -35,6 +35,13 @@ const END_TIME_SOURCE = {
 };
 
 /**
+ * `exitReason` of a record whose container exit the watcher never observed:
+ * docker had no `FinishedAt` for it, so neither the exit code nor the end time
+ * is a fact (issue #174).
+ */
+const WATCHER_LOST_CONTAINER = 'watcher-lost-container';
+
+/**
  * Persist the terminal state of a detached execution.
  *
  * Purely additive with respect to the observation-vs-verdict discipline of
@@ -49,12 +56,18 @@ const END_TIME_SOURCE = {
  * @param {string|null} [options.startedAt] - `.State.StartedAt`
  * @param {string|null} [options.finishedAt] - `.State.FinishedAt`
  * @param {string|null} [options.containerError] - `.State.Error`
+ * @param {boolean|string|null} [options.running] - `.State.Running`
  * @returns {{updated: boolean, reason?: string, record?: Object}} Outcome
  */
 function finalizeDetachedExecution(options = {}) {
   const { store, executionId } = options;
   if (!store || !executionId) {
     return { updated: false, reason: 'missing-arguments' };
+  }
+  if (normalizeBoolean(options.running) === true) {
+    // A running container has not finished: its record stays `executing`, and
+    // `--status` keeps probing the live container (issue #174).
+    return { updated: false, reason: 'still-running' };
   }
 
   let record;
@@ -72,15 +85,22 @@ function finalizeDetachedExecution(options = {}) {
     return { updated: false, reason: 'already-final', record };
   }
 
+  const finishedAt = normalizeDockerTimestamp(options.finishedAt);
   const described = describeExitCode(options.exitCode);
+  // Without a `FinishedAt`, `ExitCode=0` is Docker's zero value for a container
+  // that has not finished — never an observed success (issue #174).
+  const exitCode = described.code === 0 && !finishedAt ? null : described.code;
   record.status = 'executed';
-  if (described.code !== null) {
-    record.exitCode = described.code;
-  } else if (record.exitCode === null || record.exitCode === undefined) {
+  if (exitCode !== null) {
+    record.exitCode = exitCode;
+  } else if (
+    record.exitCode === null ||
+    record.exitCode === undefined ||
+    !finishedAt
+  ) {
     record.exitCode = -1;
   }
 
-  const finishedAt = normalizeDockerTimestamp(options.finishedAt);
   if (finishedAt) {
     record.endTime = new Date(finishedAt).toISOString();
     record.endTimeSource = END_TIME_SOURCE.DOCKER_FINISHED_AT;
@@ -103,7 +123,8 @@ function finalizeDetachedExecution(options = {}) {
     record.oomKilled = oomKilled;
   }
 
-  const exitReason = resolveReason(record);
+  const exitReason =
+    resolveReason(record) || (finishedAt ? null : WATCHER_LOST_CONTAINER);
   if (exitReason) {
     record.exitReason = exitReason;
   }
@@ -222,14 +243,14 @@ function buildDetachedFinalizeSnippet(executionId) {
   return (
     `${shellQuote(process.execPath)} ${shellQuote(__filename)} ` +
     `${shellQuote(executionId)} "$${v.exit}" "$${v.oom}" ` +
-    `"$${v.started}" "$${v.finished}" "$${v.error}" ` +
+    `"$${v.started}" "$${v.finished}" "$${v.error}" "$${v.running}" ` +
     `>/dev/null 2>&1 || true`
   );
 }
 
 /**
  * Entry point used by the detached watcher:
- *   <runtime> detached-finalize.js <uuid> <exit> <oom> <started> <finished> <error>
+ *   <runtime> detached-finalize.js <uuid> <exit> <oom> <started> <finished> <error> <running>
  * Always exits 0 — a bookkeeping failure must never turn into a visible error
  * in a log the user is reading for the command's own output.
  * @param {string[]} argv - Positional arguments
@@ -243,6 +264,7 @@ function main(argv) {
     startedAt,
     finishedAt,
     containerError,
+    running,
   ] = argv;
   if (!executionId || process.env.START_DISABLE_TRACKING === 'true') {
     return;
@@ -262,6 +284,7 @@ function main(argv) {
       startedAt,
       finishedAt,
       containerError,
+      running,
     });
   } catch {
     // Deliberately silent: see the exit-0 contract above.
@@ -274,6 +297,7 @@ if (require.main === module) {
 
 module.exports = {
   END_TIME_SOURCE,
+  WATCHER_LOST_CONTAINER,
   buildDetachedFinalizeSnippet,
   finalizeDetachedExecution,
   main,

@@ -17,6 +17,8 @@
  * `exitCode` or `oomKilled`.
  */
 
+const os = require('os');
+
 /**
  * Reasons carrying this prefix report memory exhaustion, whatever the mechanism
  * (runtime self-abort, kernel OOM killer, failed allocation).
@@ -183,6 +185,27 @@ function resolveMemoryExhaustion(input) {
 }
 
 /**
+ * Exit code of a child process that has finished.
+ *
+ * Node reports `code === null` for a child killed by a signal, and the
+ * `code || 0` this replaces turned that into a successful exit 0 (issue #174).
+ * A signal death follows the shell's `128 + n` convention, so the result
+ * decodes back to the signal through `describeExitCode()`; a missing code with
+ * no known signal is a failure (1), never a success.
+ *
+ * @param {number|null|undefined} code - `code` from `exit`/`close`
+ * @param {string|null} [signal] - `signal` from `exit`/`close`, e.g. `SIGKILL`
+ * @returns {number} Exit code
+ */
+function resolveChildExitCode(code, signal = null) {
+  if (typeof code === 'number' && Number.isFinite(code)) {
+    return code;
+  }
+  const number = signal ? os.constants.signals[signal] : undefined;
+  return typeof number === 'number' ? 128 + number : 1;
+}
+
+/**
  * Map a shell exit code to the signal name it encodes.
  * @param {number|null|undefined} exitCode - Terminal exit code
  * @returns {string|null} Signal name, or null when the code is not a signal
@@ -259,6 +282,7 @@ module.exports = {
   findExitReasonMarker,
   resolveMemoryExhaustion,
   describeExitCode,
+  resolveChildExitCode,
   resolveExitReason,
   signalNameForExitCode,
 };

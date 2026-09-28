@@ -38,6 +38,7 @@ const { dispatchQueryCommand, hasQueryMode } = require('../lib/query-commands');
 const { printVersion } = require('../lib/version');
 const { createStartBlock, createFinishBlock } = require('../lib/output-blocks');
 const { runWithBunSpawn, runWithNodeSpawn } = require('../lib/spawn-helpers');
+const { resolveChildExitCode } = require('../lib/exit-reason');
 const { printUsage } = require('../lib/usage');
 const { buildDisplayCommand, getCommandName } = require('../lib/shell-utils');
 
@@ -820,7 +821,7 @@ async function runDirectWithCommandStream(
     // Use raw() to pass the command without auto-escaping
     // This is important for complex commands with pipes, redirects, etc.
     const result = await $cmd`${raw(cmd)}`;
-    exitCode = result.code || 0;
+    exitCode = resolveChildExitCode(result.code);
 
     // Update PID if available from result
     if (executionRecord && result.pid) {
