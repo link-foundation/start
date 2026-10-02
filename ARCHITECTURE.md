@@ -237,6 +237,24 @@ The finalizer is the same binary re-invoked through a hidden flag
 (`--internal-finalize-detached-docker`), so the store format has exactly one
 writer per implementation.
 
+With `--on-kill-resume <N>` (issue #176) the watcher gets one more branch
+between steps 2 and 3: when the container was killed (exit 137 or
+`OOMKilled`) and recovery attempts remain, it hands off to the recovery step instead of cleaning up
+(`execution-recovery.js` run directly by Node/Bun, or the Rust binary
+re-invoked with the hidden `--internal-recover-detached-docker` flag). The container
+command was wrapped at launch in a small `sh -c` selector that runs the
+recovery command whenever the `/.start-command-recovery` marker exists, so the
+recovery step only has to `docker cp` that marker in, record the attempt
+(`recoveryAttempts`, `recoveryHistory`), write a `[Recovery k/N]` separator into
+the same log, `docker start` the same container and start a fresh watcher that
+follows `docker logs -f --since <restart time>`. A `--stop` sets
+`stopRequestedAt` first, so a deliberate stop is never mistaken for a kill.
+
+Snapshot resumes (`--resume <id> -- <command>`) go through `docker commit`,
+which drops HostConfig; the resume therefore reads the stopped container's
+limits with `docker inspect` first and passes them to `docker run`
+(`docker-resource-limits.js` / `docker_resource_limits.rs`).
+
 Attached Docker runs reach the same place by a shorter road: the CLI is still
 alive when the container exits, so it inspects the identical five fields itself
 and writes the identical post-mortem.

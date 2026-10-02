@@ -40,7 +40,10 @@ Use `--attach <id>` to re-enter a running detached isolated session, and
 `--attach <id> --read-only` to follow its output without sending input. Use
 `--resume <id>` to restart a stopped one in the same environment, or
 `--resume <id> -- <command>` to run a different command against the same
-container filesystem. `--resume-all` re-attaches or reconciles every execution
+container filesystem (the stopped container's memory, CPU and PIDs limits are
+re-applied to the derived container). Add `--on-kill-resume <N>` and
+`--recovery-command <cmd>` to a detached Docker launch to recover from an OOM
+kill in the same container automatically. `--resume-all` re-attaches or reconciles every execution
 still marked running, which is what repairs records after a supervisor restart.
 See [Execution Tracking](../README.md#execution-tracking) for the full behavior.
 
