@@ -663,8 +663,11 @@ describe('issue #176: completion watcher hands kills to the recovery', () => {
     );
   });
 
-  /** Run the real watcher against a fake docker that reports `state`. */
-  function runWatcher(state, options) {
+  /**
+   * Run the real watcher against a fake docker that reports `state`, and
+   * `afterStart` once `docker start` has been called (default: `state`).
+   */
+  function runWatcher(state, options, afterStart = state) {
     const dir = makeTempDir('watcher-176-');
     const binDir = path.join(dir, 'bin');
     const appFolder = path.join(dir, 'app');
@@ -683,8 +686,9 @@ describe('issue #176: completion watcher hands kills to the recovery', () => {
         '      *State.Running*) echo false ;;',
         '      *State.Error*) echo "" ;;',
         '      *HostConfig*) echo "{}" ;;',
-        `      *) echo '${state}' ;;`,
+        `      *) if [ -e "$dir/started" ]; then echo '${afterStart}'; else echo '${state}'; fi ;;`,
         '    esac ;;',
+        '  start) : > "$dir/started" ;;',
         '  logs) echo work ;;',
         '  wait) echo 137 ;;',
         'esac',
@@ -723,19 +727,48 @@ describe('issue #176: completion watcher hands kills to the recovery', () => {
       },
       timeout: 20000,
     });
-    return {
+    const read = () => ({
       calls: fs.readFileSync(path.join(dir, 'calls'), 'utf8'),
       log: fs.readFileSync(logPath, 'utf8'),
       record: new ExecutionStore({ appFolder, useLinks: false }).get(
         record.uuid
       ),
-    };
+    });
+    // A resumed run is finalized by the detached watcher the recovery starts.
+    const deadline = Date.now() + 15000;
+    while (read().record.status !== ExecutionStatus.EXECUTED) {
+      if (Date.now() > deadline) {
+        break;
+      }
+      spawnSync('sleep', ['0.2']);
+    }
+    return read();
   }
 
   const KILLED =
     '137 true 2026-10-01T10:00:00.000000000Z 2026-10-01T10:05:00.000000000Z';
   const FAILED =
     '1 false 2026-10-01T10:00:00.000000000Z 2026-10-01T10:05:00.000000000Z';
+
+  const DONE =
+    '0 false 2026-10-01T10:05:01.000000000Z 2026-10-01T10:06:00.000000000Z';
+
+  it('resumes a killed run through the real recovery entry point', () => {
+    if (needsPosixShell()) {
+      return;
+    }
+    // The watcher runs `execution-recovery.js` as the main module, which
+    // starts the next watcher; that used to throw on a half-built exports
+    // object, so the old watcher finalized the resumed run as exit 137.
+    const { calls, log, record } = runWatcher(KILLED, {}, DONE);
+    expect(calls).toContain('start box');
+    expect(calls).toContain('--since');
+    expect(log).toContain('[Recovery 1/1]');
+    expect(log).not.toContain('Exit Code: 137');
+    expect(record.status).toBe(ExecutionStatus.EXECUTED);
+    expect(record.exitCode).toBe(0);
+    expect(record.options.recoveryAttempts).toBe(1);
+  }, 30000);
 
   it('finalizes an ordinary failure without resuming', () => {
     if (needsPosixShell()) {

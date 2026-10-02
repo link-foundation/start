@@ -3,7 +3,7 @@
 # binary (pass another `start` binary as $1, e.g. the JS CLI, to compare).
 #   1. --on-kill-resume / --recovery-command: `docker kill` the main process,
 #      the watcher resumes the same container with the recovery command.
-#   2. --resume <id> -- <cmd>: a `docker update --pids-limit` limit survives
+#   2. --resume <id> -- <cmd>: `docker update` memory, CPU and PIDs limits survive
 #      the docker commit + docker run snapshot resume.
 set -u
 START=${1:-"$(dirname "$0")/../rust/target/debug/start"}
@@ -28,9 +28,12 @@ LOG=$("$START" --status "$NAME" | sed -n 's/^ *logPath *//p' | tr -d "'\"")
 echo "== log ($LOG)"; cat "$LOG"
 
 echo "== snapshot resume"
+# Memory/CPU go on the stopped container: on hosts without a delegated cgroup
+# memory controller `docker update --memory` only works while it is stopped.
+docker update --memory 256m --memory-swap 256m --cpus 0.5 "$NAME" >/dev/null
 "$START" --resume "$NAME" -- 'cat /proc/self/cgroup >/dev/null; sleep 30'
 sleep 2
-docker inspect -f 'resume-1 pids={{.HostConfig.PidsLimit}}' "$NAME-resume-1"
+docker inspect -f 'resume-1 mem={{.HostConfig.Memory}} swap={{.HostConfig.MemorySwap}} cpus={{.HostConfig.NanoCpus}} pids={{.HostConfig.PidsLimit}}' "$NAME-resume-1"
 
 docker rm -f "$NAME" "$NAME-resume-1" >/dev/null 2>&1
 docker rmi "start-command-resume/$NAME:1" >/dev/null 2>&1

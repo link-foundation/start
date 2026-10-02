@@ -319,13 +319,14 @@ function main(argv) {
       containerError: error,
     });
     return outcome.recovered ? 0 : 1;
-  } catch {
+  } catch (err) {
+    // The watcher discards this output; START_DEBUG=1 shows it when the
+    // entry point is run by hand.
+    if (process.env.START_DEBUG === '1' || process.env.START_DEBUG === 'true') {
+      console.error(`[DEBUG] execution-recovery failed: ${err.stack || err}`);
+    }
     return 1;
   }
-}
-
-if (require.main === module) {
-  process.exitCode = main(process.argv.slice(2));
 }
 
 module.exports = {
@@ -340,3 +341,10 @@ module.exports = {
   main,
   recoverKilledExecution,
 };
+
+// After `module.exports`: run as the watcher's entry point, recovery starts the
+// next watcher through `docker-cleanup.js`, which requires this module back
+// and needs its exports complete.
+if (require.main === module) {
+  process.exitCode = main(process.argv.slice(2));
+}
