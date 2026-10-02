@@ -43,6 +43,7 @@
 
 const { getDefaultDockerImage } = require('./docker-utils');
 const dockerNetworkOptions = require('./docker-network-options');
+const dockerRecoveryOptions = require('./docker-recovery-options');
 const { parseSequence, isSequence } = require('./sequence-parser');
 const { buildCommandString } = require('./shell-utils');
 const {
@@ -194,6 +195,8 @@ function parseArgs(args) {
     network: null, // First Docker network name (compatibility accessor)
     networks: [], // Ordered Docker network names
     networkAliases: [], // Docker network-scoped aliases
+    onKillResume: null, // Resume up to N times when the docker main process is killed (issue #176)
+    recoveryCommand: null, // Command run in the same container on such a resume (issue #176)
     endpoint: null, // SSH endpoint (current level, e.g., user@host)
     endpointStack: null, // SSH endpoints for each level (with nulls for non-ssh levels)
     user: false, // Create isolated user
@@ -408,6 +411,11 @@ function parseOption(args, index, options) {
   const networkOption = dockerNetworkOptions.parse(args, index, options);
   if (networkOption) {
     return networkOption;
+  }
+
+  const recoveryOption = dockerRecoveryOptions.parse(args, index, options);
+  if (recoveryOption) {
+    return recoveryOption;
   }
 
   // --endpoint (for ssh) - supports sequence for stacked isolation
@@ -745,6 +753,8 @@ function validateOptions(options) {
     }
     validateDockerRuntimeOptionsRequireDocker(options);
   }
+
+  dockerRecoveryOptions.validate(options);
 
   // Session name is only valid with isolation
   if (options.session && !options.isolated) {

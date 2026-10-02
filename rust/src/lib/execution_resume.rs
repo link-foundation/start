@@ -22,10 +22,15 @@ use serde_json::{json, Value};
 
 use crate::docker_cleanup::{
     build_docker_runtime_args, docker_command, docker_networks,
-    get_docker_container_cleanup_policy, start_detached_docker_completion_watcher,
+    get_docker_container_cleanup_policy, start_detached_docker_completion_watcher_with,
+    DockerWatcherOptions,
+};
+use crate::docker_resource_limits::{
+    build_resource_limits_status_line, normalize_resource_limits, read_docker_resource_limits,
 };
 use crate::execution_control::{CommandRunner, SystemCommandRunner};
 use crate::execution_store::{ExecutionRecord, ExecutionStatus, ExecutionStore};
+use crate::isolation::isolation_log::append_log_file;
 use crate::isolation::{run_isolated, IsolationOptions, IsolationResult};
 use crate::output_blocks::escape_for_links_notation;
 use crate::session_probe::{probe_session, SessionProbe, SessionState};
@@ -67,6 +72,9 @@ pub struct ResumePlan {
     pub snapshot_image: Option<String>,
     pub command: String,
     pub attempt: u64,
+    /// Resource limits the new container is started with (snapshot resumes
+    /// only, issue #176): `docker commit` does not carry the HostConfig over.
+    pub resource_limits: Vec<String>,
     pub steps: Vec<ResumeStep>,
     pub launch_options: Option<IsolationOptions>,
     pub message: String,
@@ -102,13 +110,17 @@ pub struct SystemResumeHooks;
 impl ResumeHooks for SystemResumeHooks {
     fn start_watcher(&self, session_name: &str, record: &ExecutionRecord) {
         let log_path = (!record.log_path.is_empty()).then(|| PathBuf::from(&record.log_path));
-        start_detached_docker_completion_watcher(
+        start_detached_docker_completion_watcher_with(
             session_name,
             get_docker_container_cleanup_policy(&build_launch_options(record)),
             log_path.as_ref(),
             // The resumed session gets the same record, so the watcher that
             // outlives this process finalizes it too (issue #170.1).
             Some(record.uuid.as_str()),
+            &DockerWatcherOptions {
+                since: None,
+                recover_on_kill: keeps_kill_recovery(session_name, record),
+            },
         );
     }
 
@@ -124,6 +136,17 @@ impl ResumeHooks for SystemResumeHooks {
     fn reconcile(&self, record: &ExecutionRecord) -> ExecutionRecord {
         crate::status_formatter::enrich_detached_status(record)
     }
+}
+
+/// `docker start` re-runs the launch-time selector, so a container resumed in
+/// place keeps its kill recovery (issue #176); a snapshot-derived container
+/// (a different name) has no selector.
+pub fn keeps_kill_recovery(session_name: &str, record: &ExecutionRecord) -> bool {
+    record_option(record, "sessionName") == Some(session_name)
+        && record
+            .options
+            .get("onKillResume")
+            .is_some_and(|value| value.as_u64().unwrap_or(0) > 0)
 }
 
 fn record_option<'a>(record: &'a ExecutionRecord, key: &str) -> Option<&'a str> {
@@ -200,6 +223,10 @@ pub fn build_launch_options(record: &ExecutionRecord) -> IsolationOptions {
         network: networks.first().cloned(),
         networks,
         network_aliases: record_strings(record, "networkAliases"),
+        // Limits captured from the container on an earlier resume (issue #176).
+        resource_limits: normalize_resource_limits(record.options.get("resourceLimits")),
+        on_kill_resume: None,
+        recovery_command: None,
         endpoint: record_option(record, "endpoint").map(str::to_string),
         detached: true,
         user: record_option(record, "user").map(str::to_string),
@@ -274,12 +301,18 @@ fn docker_snapshot_plan(
     session_name: &str,
     command: &str,
     attempt: u64,
+    live_resource_limits: Option<Vec<String>>,
 ) -> ResumePlan {
     let snapshot_image = build_snapshot_image_name(session_name, attempt);
     let new_session_name = build_resumed_session_name(session_name, attempt);
     let docker = docker_command().to_string_lossy().to_string();
 
-    let launch_options = build_launch_options(record);
+    let mut launch_options = build_launch_options(record);
+    // `docker commit` keeps the filesystem but not the HostConfig, so the
+    // limits must be passed to the new container explicitly (issue #176).
+    if let Some(limits) = live_resource_limits {
+        launch_options.resource_limits = limits;
+    }
     let mut container_args = vec!["--name".to_string(), new_session_name.clone()];
     if let Some(user) = record_option(record, "user") {
         container_args.push("--user".to_string());
@@ -324,6 +357,7 @@ fn docker_snapshot_plan(
         snapshot_image: Some(snapshot_image.clone()),
         command: command.to_string(),
         attempt,
+        resource_limits: launch_options.resource_limits.clone(),
         steps,
         launch_options: None,
         message: format!(
@@ -338,6 +372,17 @@ pub fn build_resume_plan(
     record: &ExecutionRecord,
     new_command: Option<&str>,
     probe: &SessionProbe,
+) -> Result<ResumePlan, String> {
+    build_resume_plan_with_limits(record, new_command, probe, None)
+}
+
+/// [`build_resume_plan`] with the resource limits read from the stopped
+/// container with `docker inspect`; falls back to the stored ones when `None`.
+pub fn build_resume_plan_with_limits(
+    record: &ExecutionRecord,
+    new_command: Option<&str>,
+    probe: &SessionProbe,
+    live_resource_limits: Option<Vec<String>>,
 ) -> Result<ResumePlan, String> {
     let session_name = record_option(record, "sessionName")
         .ok_or_else(|| "Execution record does not contain an isolation session name.".to_string())?
@@ -381,6 +426,7 @@ pub fn build_resume_plan(
                 snapshot_image: None,
                 command,
                 attempt,
+                resource_limits: Vec::new(),
                 steps: vec![ResumeStep {
                     command: docker_command().to_string_lossy().to_string(),
                     args: vec!["start".to_string(), session_name.clone()],
@@ -390,9 +436,14 @@ pub fn build_resume_plan(
                 message: format!("Resumed detached docker container: {}", session_name),
                 session_name,
             },
-            Some(new_command) => {
-                docker_snapshot_plan(record, &backend, &session_name, new_command, attempt)
-            }
+            Some(new_command) => docker_snapshot_plan(
+                record,
+                &backend,
+                &session_name,
+                new_command,
+                attempt,
+                live_resource_limits,
+            ),
         });
     }
 
@@ -404,6 +455,7 @@ pub fn build_resume_plan(
         snapshot_image: None,
         command,
         attempt,
+        resource_limits: Vec::new(),
         steps: Vec::new(),
         launch_options: Some(build_launch_options(record)),
         session_name,
@@ -419,6 +471,8 @@ pub struct ResumeResultFields<'a> {
     pub session_name: &'a str,
     pub previous_session_name: Option<&'a str>,
     pub snapshot_image: Option<&'a str>,
+    /// Limits the snapshot-derived container was started with (issue #176).
+    pub resource_limits: &'a [String],
     pub command: &'a str,
     pub message: &'a str,
 }
@@ -451,6 +505,12 @@ pub fn format_resume_result_as_links_notation(result: &ResumeResultFields) -> St
             escape_for_links_notation(image)
         ));
     }
+    if !result.resource_limits.is_empty() {
+        lines.push(format!(
+            "  resourceLimits {}",
+            escape_for_links_notation(&result.resource_limits.join(" "))
+        ));
+    }
     lines.push(format!(
         "  command {}",
         escape_for_links_notation(result.command)
@@ -474,6 +534,8 @@ pub fn format_resume_result(result: &ResumeResultFields, output_format: Option<&
                 "sessionName": result.session_name,
                 "previousSessionName": result.previous_session_name,
                 "snapshotImage": result.snapshot_image,
+                "resourceLimits": (!result.resource_limits.is_empty())
+                    .then_some(result.resource_limits),
                 "command": result.command,
                 "message": result.message,
             });
@@ -482,15 +544,23 @@ pub fn format_resume_result(result: &ResumeResultFields, output_format: Option<&
             }
             serde_json::to_string_pretty(&value).unwrap_or_else(|_| "{}".to_string())
         }
-        Some("text") => [
-            format!("Resume Mode:   {}", result.mode.as_str()),
-            format!("UUID:          {}", result.uuid),
-            format!("Backend:       {}", result.backend),
-            format!("Session Name:  {}", result.session_name),
-            format!("Command:       {}", result.command),
-            result.message.to_string(),
-        ]
-        .join("\n"),
+        Some("text") => {
+            let mut lines = vec![
+                format!("Resume Mode:   {}", result.mode.as_str()),
+                format!("UUID:          {}", result.uuid),
+                format!("Backend:       {}", result.backend),
+                format!("Session Name:  {}", result.session_name),
+                format!("Command:       {}", result.command),
+            ];
+            if !result.resource_limits.is_empty() {
+                lines.push(format!(
+                    "Resource Limits: {}",
+                    result.resource_limits.join(" ")
+                ));
+            }
+            lines.push(result.message.to_string());
+            lines.join("\n")
+        }
         _ => format_resume_result_as_links_notation(result),
     }
 }
@@ -508,6 +578,13 @@ pub fn apply_resume_to_record(
     record
         .options
         .insert("resumedAt".to_string(), json!(Utc::now().to_rfc3339()));
+    // A resume is a new deliberate start: launch-time recovery applies again.
+    record.options.remove("stopRequestedAt");
+    if !plan.resource_limits.is_empty() {
+        record
+            .options
+            .insert("resourceLimits".to_string(), json!(plan.resource_limits));
+    }
 
     if let Some(new_session_name) = &plan.new_session_name {
         let mut history = record
@@ -598,7 +675,19 @@ pub fn resume_execution_with<R: CommandRunner, H: ResumeHooks>(
     };
 
     let probe = probe_session(&record, runner);
-    let plan = match build_resume_plan(&record, command, &probe) {
+    // Only a snapshot resume creates a new container, so only it needs the old
+    // container's limits (issue #176).
+    let live_resource_limits = match (command, record_option(&record, "sessionName")) {
+        (Some(_), Some(session_name))
+            if record_option(&record, "isolated") == Some("docker")
+                && !probe.alive
+                && probe.state == SessionState::Stopped =>
+        {
+            read_docker_resource_limits(session_name, runner)
+        }
+        _ => None,
+    };
+    let plan = match build_resume_plan_with_limits(&record, command, &probe, live_resource_limits) {
         Ok(plan) => plan,
         Err(error) => {
             return ExecutionResumeResult {
@@ -657,6 +746,12 @@ pub fn resume_execution_with<R: CommandRunner, H: ResumeHooks>(
             }
         }
 
+        if let Some(line) = build_resource_limits_status_line(&plan.resource_limits) {
+            if !record.log_path.is_empty() {
+                append_log_file(&PathBuf::from(&record.log_path), &format!("{}\n", line));
+            }
+        }
+
         // The completion watcher died with the previous run (or with the
         // supervisor), so a new one must follow the resumed container.
         hooks.start_watcher(active_session_name(&plan), &record);
@@ -690,6 +785,7 @@ pub fn resume_execution_with<R: CommandRunner, H: ResumeHooks>(
                 session_name: &session_name,
                 previous_session_name: previous_session_name.as_deref(),
                 snapshot_image: plan.snapshot_image.as_deref(),
+                resource_limits: &plan.resource_limits,
                 command: &plan.command,
                 message: &plan.message,
             },

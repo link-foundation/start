@@ -23,6 +23,7 @@ use start_command::{
         reconcile_finalized_record, run_internal_finalize, INTERNAL_FINALIZE_FLAG,
     },
     docker_runtime_status_lines_for_options,
+    execution_recovery::{run_internal_recover, INTERNAL_RECOVER_FLAG},
     execution_store::{
         ExecutionRecord, ExecutionRecordOptions, ExecutionStore, ExecutionStoreOptions,
     },
@@ -113,6 +114,13 @@ fn main() {
     if args.first().map(String::as_str) == Some(INTERNAL_FINALIZE_FLAG) {
         run_internal_finalize(&args[1..]);
         return;
+    }
+
+    // The same watcher hands a killed main process to the launch-time
+    // recovery first (issue #176); its exit code tells it whether the
+    // container was resumed.
+    if args.first().map(String::as_str) == Some(INTERNAL_RECOVER_FLAG) {
+        std::process::exit(run_internal_recover(&args[1..]));
     }
 
     // Handle --version flag
@@ -486,6 +494,9 @@ fn run_with_isolation(
             network: wrapper_options.network.clone(),
             networks: wrapper_options.networks.clone(),
             network_aliases: wrapper_options.network_aliases.clone(),
+            resource_limits: Vec::new(),
+            on_kill_resume: wrapper_options.on_kill_resume,
+            recovery_command: wrapper_options.recovery_command.clone(),
             endpoint: wrapper_options.endpoint.clone(),
             detached: mode == "detached",
             user: created_user.clone(),

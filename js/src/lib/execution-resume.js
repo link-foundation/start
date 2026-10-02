@@ -25,6 +25,12 @@ const {
   startDetachedDockerCompletionWatcher,
 } = require('./docker-cleanup');
 const { escapeForLinksNotation } = require('./output-blocks');
+const {
+  buildResourceLimitsStatusLine,
+  normalizeResourceLimits,
+  readDockerResourceLimits,
+} = require('./docker-resource-limits');
+const { appendLogFile } = require('./isolation-log-utils');
 const { runCommand } = require('./execution-control');
 const { SessionState, probeSession } = require('./session-probe');
 const { getDockerNetworks } = require('./docker-network-lifecycle');
@@ -95,6 +101,8 @@ function buildLaunchOptions(record) {
     mounts: opts.mounts || [],
     networks: opts.networks || [],
     networkAliases: opts.networkAliases || [],
+    // Limits captured from the container on an earlier resume (issue #176).
+    resourceLimits: normalizeResourceLimits(opts.resourceLimits),
     // Append to the same log so one logical session keeps one gap-free record.
     logPath: record.logPath || null,
   };
@@ -152,9 +160,16 @@ function buildSnapshotStartSteps({
  * @param {object} record - Execution record
  * @param {?string} newCommand - Replacement command (from `-- <command>`)
  * @param {object} probe - Result of `probeSession`
+ * @param {?string[]} [liveResourceLimits] - Limits read from the stopped
+ *   container with `docker inspect`; falls back to the stored ones when null
  * @returns {object} Resume plan, or {error}
  */
-function buildResumePlan(record, newCommand, probe = {}) {
+function buildResumePlan(
+  record,
+  newCommand,
+  probe = {},
+  liveResourceLimits = null
+) {
   const opts = (record && record.options) || {};
   const backend = opts.isolated;
   const sessionName = opts.sessionName;
@@ -208,6 +223,11 @@ function buildResumePlan(record, newCommand, probe = {}) {
     // Lazily required: isolation.js pulls in this module's siblings, so a
     // top-level require would create a cycle.
     const { buildDockerRuntimeArgs } = require('./isolation');
+    // `docker commit` keeps the filesystem but not the HostConfig, so the
+    // limits must be passed to the new container explicitly (issue #176).
+    const resourceLimits = normalizeResourceLimits(
+      liveResourceLimits || opts.resourceLimits
+    );
     const snapshotImage = buildSnapshotImageName(sessionName, attempt);
     const newSessionName = buildResumedSessionName(sessionName, attempt);
     return {
@@ -218,6 +238,7 @@ function buildResumePlan(record, newCommand, probe = {}) {
       snapshotImage,
       command,
       attempt,
+      resourceLimits,
       steps: [
         {
           command: getDockerCommand(),
@@ -229,7 +250,7 @@ function buildResumePlan(record, newCommand, probe = {}) {
             '--name',
             newSessionName,
             ...(opts.user ? ['--user', opts.user] : []),
-            ...buildDockerRuntimeArgs(opts),
+            ...buildDockerRuntimeArgs({ ...opts, resourceLimits }),
             snapshotImage,
             'sh',
             '-c',
@@ -280,6 +301,11 @@ function formatResumeResultAsLinksNotation(result) {
       `  snapshotImage ${escapeForLinksNotation(result.snapshotImage)}`
     );
   }
+  if (result.resourceLimits && result.resourceLimits.length > 0) {
+    lines.push(
+      `  resourceLimits ${escapeForLinksNotation(result.resourceLimits.join(' '))}`
+    );
+  }
   lines.push(`  command ${escapeForLinksNotation(result.command)}`);
   lines.push(`  message ${escapeForLinksNotation(result.message)}`);
   return lines.join('\n');
@@ -296,6 +322,9 @@ function formatResumeResult(result, outputFormat) {
       `Backend:       ${result.backend}`,
       `Session Name:  ${result.sessionName}`,
       `Command:       ${result.command}`,
+      ...(result.resourceLimits && result.resourceLimits.length > 0
+        ? [`Resource Limits: ${result.resourceLimits.join(' ')}`]
+        : []),
       result.message,
     ].join('\n');
   }
@@ -314,6 +343,11 @@ function applyResumeToRecord(record, plan, containerId) {
   const options = { ...(record.options || {}) };
   options.resumeCount = plan.attempt;
   options.resumedAt = new Date().toISOString();
+  // A resume is a new deliberate start: launch-time recovery applies again.
+  delete options.stopRequestedAt;
+  if (plan.resourceLimits && plan.resourceLimits.length > 0) {
+    options.resourceLimits = plan.resourceLimits;
+  }
 
   if (plan.newSessionName) {
     options.sessionNameHistory = [
@@ -365,7 +399,25 @@ async function resumeExecution(store, identifier, deps = {}) {
 
   const runner = deps.runner || runCommand;
   const probeFn = deps.probe || ((r) => probeSession(r, runner));
-  const plan = buildResumePlan(record, deps.command || null, probeFn(record));
+  const probe = probeFn(record);
+  const opts = record.options || {};
+  // Only a snapshot resume creates a new container, so only it needs the old
+  // container's limits (issue #176).
+  const liveResourceLimits =
+    deps.command &&
+    opts.isolated === 'docker' &&
+    opts.sessionName &&
+    probe &&
+    !probe.alive &&
+    probe.state === SessionState.STOPPED
+      ? readDockerResourceLimits(opts.sessionName, runner)
+      : null;
+  const plan = buildResumePlan(
+    record,
+    deps.command || null,
+    probe,
+    liveResourceLimits
+  );
   if (plan.error) {
     return { success: false, error: plan.error };
   }
@@ -404,6 +456,11 @@ async function resumeExecution(store, identifier, deps = {}) {
       containerId = (result.stdout || '').trim() || containerId;
     }
 
+    const limitsLine = buildResourceLimitsStatusLine(plan.resourceLimits);
+    if (limitsLine && record.logPath) {
+      appendLogFile(record.logPath, `${limitsLine}\n`);
+    }
+
     // The completion watcher died with the previous run (or with the
     // supervisor), so a new one must follow the resumed container.
     const startWatcher =
@@ -412,7 +469,13 @@ async function resumeExecution(store, identifier, deps = {}) {
       activeSessionName(plan),
       getDockerContainerCleanupPolicy(record.options || {}),
       record.logPath || null,
-      record.uuid || null
+      record.uuid || null,
+      // `docker start` re-runs the launch-time selector, so the session keeps
+      // its kill recovery (issue #176); a snapshot container has no selector.
+      {
+        recoverOnKill:
+          plan.mode === ResumeMode.DOCKER_START && Boolean(opts.onKillResume),
+      }
     );
   }
 
@@ -431,6 +494,7 @@ async function resumeExecution(store, identifier, deps = {}) {
         sessionName: updated.options.sessionName,
         previousSessionName,
         snapshotImage: plan.snapshotImage || null,
+        resourceLimits: plan.resourceLimits || null,
         command: plan.command,
         message: plan.message,
       },

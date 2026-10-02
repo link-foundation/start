@@ -277,6 +277,45 @@ on a stopped container.
 _different_ command against the same container filesystem, instead of
 `docker start -ai`, which would re-run the original entrypoint from scratch.
 
+`docker commit` does not capture a container's HostConfig, so before committing
+`--resume` reads the stopped container's resource limits with `docker inspect`
+(including limits a supervisor applied later with `docker update`) and re-applies
+the non-default ones to the derived `<name>-resume-N` container: `--memory`,
+`--memory-swap`, `--memory-reservation`, `--cpus` (or `--cpu-quota`/`--cpu-period`),
+`--cpu-shares`, `--cpuset-cpus`, `--cpuset-mems`, `--pids-limit`, `--shm-size`,
+`--storage-opt` and `--ulimit`. The re-applied flags are printed as an
+`[Isolation] Resource limits: ...` line and stored as `resourceLimits` in the
+execution record, so `--status` shows them.
+
+##### Resuming automatically after a kill
+
+`--on-kill-resume <N>` lets a detached Docker execution recover from an OOM kill
+(or any `SIGKILL`, exit code 137) without losing its container state. When the
+main process is killed, the completion watcher restarts the **same** container
+with `docker start` and runs `--recovery-command` (or, without it, the original
+command) inside it — up to `N` times. The execution keeps its UUID and its log
+file; each attempt is separated in the log by a `[Recovery k/N]` line, and the
+command can read `START_COMMAND_RECOVERY_ATTEMPT` to know it is resuming.
+
+```bash
+$ --isolated docker --detached --on-kill-resume 2 \
+    --recovery-command 'agent --resume-from-checkpoint' -- agent --task build
+```
+
+`--status` reports `onKillResume`, `recoveryCommand`, `recoveryAttempts` and a
+`recoveryHistory` entry (exit code, OOM flag, start/finish time) per recovery.
+When all attempts are used, the execution is finalized with the last exit code.
+Limits applied with `docker update` survive, because the container is reused.
+
+Limitations: recovery needs execution tracking and a detached session whose only
+isolation level is `docker`; `--stop` cancels any further recovery, but a
+`docker stop`/`docker kill` issued outside `$` looks like a kill and is recovered;
+nothing is recovered if the container has been removed; and a snapshot resume
+(`--resume <id> -- <command>`) or a relaunch of a removed session does not carry
+the recovery options forward. Because the recovery marker stays in the
+container, a later plain `--resume <id>` (`docker start`) runs the recovery
+command rather than the original command.
+
 A resume keeps the original execution UUID, so `--status`, `--list` and
 `--upload-log` keep addressing one logical session across restarts. The previous
 session name is remembered in `sessionNameHistory` and still resolves to the
@@ -469,6 +508,8 @@ This is useful for:
 | `--always-cleanup-container`     | Always remove docker container after exit (docker only)                      |
 | `--keep-container`               | Keep docker container filesystem after exit (docker only)                    |
 | `--keep-container-on-fail`       | Keep failed or OOM-killed docker containers after exit (docker only)         |
+| `--on-kill-resume <N>`           | Resume up to N times after an OOM kill/exit 137 (detached docker only)       |
+| `--recovery-command <cmd>`       | Command to run in the same container on such a resume (implies one attempt)  |
 
 **Note:** Using both `--attached` and `--detached` together will result in an error - you must choose one mode.
 

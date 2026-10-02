@@ -268,6 +268,40 @@ function formatControlResultAsLinksNotation(result) {
   return lines.join('\n');
 }
 
+/**
+ * Record that a stop was requested, for sessions with launch-time kill
+ * recovery (issue #176).
+ * @param {object} store - Execution store
+ * @param {object} record - Execution record
+ * @returns {string|undefined} The previous marker, to restore on failure
+ */
+function markStopRequested(store, record) {
+  const options = record.options || {};
+  if (!options.onKillResume) {
+    return undefined;
+  }
+  const previous = options.stopRequestedAt;
+  record.options = { ...options, stopRequestedAt: new Date().toISOString() };
+  try {
+    store.save(record);
+  } catch {
+    // Best effort: without the marker the session may be recovered once more.
+  }
+  return previous;
+}
+
+function restoreStopRequested(store, record, previous) {
+  if (!record.options || !record.options.onKillResume) {
+    return;
+  }
+  record.options = { ...record.options, stopRequestedAt: previous };
+  try {
+    store.save(record);
+  } catch {
+    // Best effort, see markStopRequested.
+  }
+}
+
 function controlExecution(store, identifier, action, runner = runCommand) {
   if (!store) {
     return { success: false, error: 'Execution tracking is disabled.' };
@@ -286,8 +320,13 @@ function controlExecution(store, identifier, action, runner = runCommand) {
     return { success: false, error: control.error };
   }
 
+  // A deliberate stop must not be mistaken for a kill that launch-time
+  // recovery should undo (issue #176): `docker stop` escalates to SIGKILL,
+  // which exits 137 just like the OOM killer.
+  const previousStopRequestedAt = markStopRequested(store, record);
   const result = runner(control.command, control.args);
   if (!result.success) {
+    restoreStopRequested(store, record, previousStopRequestedAt);
     const detail =
       result.stderr || result.error || `exit code ${result.status}`;
     return {

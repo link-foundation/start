@@ -14,7 +14,8 @@ use crate::args_parser::generate_session_name;
 use crate::docker_cleanup::{
     append_attached_docker_cleanup_message, append_docker_container_cleanup_policy_message,
     build_docker_runtime_args, docker_networks, get_docker_container_cleanup_policy,
-    remove_docker_container, spawn_attached_docker, start_detached_docker_completion_watcher,
+    remove_docker_container, spawn_attached_docker, start_detached_docker_completion_watcher_with,
+    DockerWatcherOptions,
 };
 use crate::docker_network_lifecycle::{connect_and_start, create_and_connect};
 
@@ -56,6 +57,12 @@ pub struct IsolationOptions {
     pub networks: Vec<String>,
     /// Docker network-scoped aliases
     pub network_aliases: Vec<String>,
+    /// Docker resource limits in `--flag=value` form (issue #176)
+    pub resource_limits: Vec<String>,
+    /// Resume up to N times when the docker main process is killed (issue #176)
+    pub on_kill_resume: Option<u32>,
+    /// Command run in the same container on such a resume (issue #176)
+    pub recovery_command: Option<String>,
     /// SSH endpoint
     pub endpoint: Option<String>,
     /// Run in detached mode
@@ -93,6 +100,9 @@ impl Default for IsolationOptions {
             network: None,
             networks: Vec::new(),
             network_aliases: Vec::new(),
+            resource_limits: Vec::new(),
+            on_kill_resume: None,
+            recovery_command: None,
             endpoint: None,
             detached: false,
             user: None,
@@ -633,11 +643,25 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         args.extend(build_docker_runtime_args(options));
 
         args.push(&image);
-        args.push(&shell_to_use);
-        if let Some(flag) = shell_interactive_flag {
-            args.push(flag);
-        }
-        args.extend(&["-c", &effective_command]);
+        let mut main_args = vec![shell_to_use.clone()];
+        main_args.extend(shell_interactive_flag.map(str::to_string));
+        main_args.extend(["-c".to_string(), effective_command.clone()]);
+        // A recovery command is selected by a marker that `docker cp` drops
+        // into the container before it is started again (issue #176).
+        let cmd_args = match options.recovery_command.as_deref() {
+            Some(recovery) => crate::execution_recovery::build_recovery_selector_args(
+                &main_args,
+                &shell_to_use,
+                shell_interactive_flag,
+                &if options.keep_alive {
+                    format!("{}; exec {}", recovery, shell_to_use)
+                } else {
+                    recovery.to_string()
+                },
+            ),
+            None => main_args,
+        };
+        args.extend(cmd_args.iter().map(String::as_str));
 
         if is_debug() {
             eprintln!("[DEBUG] Running: docker {:?}", args);
@@ -663,11 +687,15 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                     }
                 }
 
-                start_detached_docker_completion_watcher(
+                start_detached_docker_completion_watcher_with(
                     &container_name,
                     cleanup_policy,
                     options.log_path.as_ref(),
                     options.execution_id.as_deref(),
+                    &DockerWatcherOptions {
+                        since: None,
+                        recover_on_kill: options.on_kill_resume.is_some(),
+                    },
                 );
 
                 let mut message = format!(

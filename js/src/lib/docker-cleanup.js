@@ -320,17 +320,27 @@ function buildSuccessfulNonOomCondition() {
  * container that is somehow still running afterwards is never removed, gets no
  * `Exit Code:` footer and is never finalized — its record stays `executing`.
  *
+ * With `recoverOnKill` (issue #176), a killed main process (exit 137 or
+ * `OOMKilled`) is first handed to the recovery entry point. When it resumes
+ * the container, this watcher stops here — a new one follows the resumed run —
+ * and cleanup, footer and finalization are left to whichever watcher sees the
+ * last run end.
+ *
  * @param {string} containerName - Docker container name
  * @param {string} policy - One of DOCKER_CONTAINER_CLEANUP_POLICY
  * @param {string|null} logPath - Log file to append to, or null
  * @param {string|null} [executionId] - Execution UUID to finalize, or null
+ * @param {{since?: string, recoverOnKill?: boolean}} [watcherOptions] -
+ *   `since` limits `docker logs` to output after a restart, so a resumed run
+ *   does not copy the previous run's output into the log again
  * @returns {string} The shell script
  */
 function buildDetachedDockerCompletionScript(
   containerName,
   policy,
   logPath,
-  executionId = null
+  executionId = null,
+  watcherOptions = {}
 ) {
   const quotedName = shellQuote(containerName);
   const parts = [];
@@ -351,7 +361,10 @@ function buildDetachedDockerCompletionScript(
     const remove = `docker rm -f ${quotedName} >> ${quotedLogPath} 2>&1 || true; ${removalNote}`;
     const keep = `${postMortem}; ${buildDockerKeptLogSnippet(containerName, quotedLogPath)}`;
 
-    parts.push(`docker logs -f ${quotedName} >> ${quotedLogPath} 2>&1`);
+    const since = watcherOptions.since
+      ? ` --since ${shellQuote(watcherOptions.since)}`
+      : '';
+    parts.push(`docker logs -f${since} ${quotedName} >> ${quotedLogPath} 2>&1`);
     parts.push(buildDockerWaitForExitSnippet(containerName, quotedLogPath));
     parts.push(buildDockerStateSnippet(containerName));
     if (policy === DOCKER_CONTAINER_CLEANUP_POLICY.ALWAYS) {
@@ -394,9 +407,15 @@ function buildDetachedDockerCompletionScript(
   const stillRunning = logPath
     ? buildDockerStillRunningNoteSnippet(containerName, shellQuote(logPath))
     : ':';
+  let recovery = '';
+  if (executionId && watcherOptions.recoverOnKill) {
+    // Lazily required: the recovery module starts watchers itself.
+    const { buildRecoverySnippet } = require('./execution-recovery');
+    recovery = `elif ${buildRecoverySnippet(executionId)}; then :; `;
+  }
   parts.push(
     `if [ "$${SHELL_VARS.running}" = true ]; then ${stillRunning}; ` +
-      `else ${exited.length ? exited.join('; ') : ':'}; fi`
+      `${recovery}else ${exited.length ? exited.join('; ') : ':'}; fi`
   );
 
   return parts.join('; ');
@@ -408,13 +427,16 @@ function buildDetachedDockerCompletionScript(
  * @param {string} policy - One of DOCKER_CONTAINER_CLEANUP_POLICY
  * @param {string|null} logPath - Log file to append to, or null
  * @param {string|null} [executionId] - Execution UUID to finalize, or null
+ * @param {{since?: string, recoverOnKill?: boolean}} [watcherOptions] - See
+ *   `buildDetachedDockerCompletionScript`
  * @returns {void}
  */
 function startDetachedDockerCompletionWatcher(
   containerName,
   policy,
   logPath,
-  executionId = null
+  executionId = null,
+  watcherOptions = {}
 ) {
   const watcher = spawn(
     'sh',
@@ -424,7 +446,8 @@ function startDetachedDockerCompletionWatcher(
         containerName,
         policy,
         logPath,
-        executionId
+        executionId,
+        watcherOptions
       ),
     ],
     {

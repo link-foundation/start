@@ -60,7 +60,7 @@ pub fn docker_runtime_status_lines(
 
 /// Build Docker runtime status lines directly from parsed wrapper options.
 pub fn docker_runtime_status_lines_for_options(options: &WrapperOptions) -> Vec<String> {
-    docker_runtime_status_lines(
+    let mut lines = docker_runtime_status_lines(
         &options.volumes,
         &options.mounts,
         &options.env,
@@ -68,7 +68,52 @@ pub fn docker_runtime_status_lines_for_options(options: &WrapperOptions) -> Vec<
         options.network.as_deref(),
         &options.networks,
         &options.network_aliases,
-    )
+    );
+    lines.extend(recovery_status_lines(
+        options.on_kill_resume,
+        options.recovery_command.as_deref(),
+    ));
+    lines
+}
+
+/// `[Isolation]` line announcing launch-time kill recovery (issue #176).
+/// A recovery command on its own implies one attempt.
+pub fn recovery_status_lines(
+    on_kill_resume: Option<u32>,
+    recovery_command: Option<&str>,
+) -> Vec<String> {
+    let Some(count) = effective_on_kill_resume(on_kill_resume, recovery_command) else {
+        return Vec::new();
+    };
+    vec![format!(
+        "[Isolation] On kill: resume up to {} time(s) with {}",
+        count,
+        recovery_command.unwrap_or("the original command")
+    )]
+}
+
+fn effective_on_kill_resume(
+    on_kill_resume: Option<u32>,
+    recovery_command: Option<&str>,
+) -> Option<u32> {
+    on_kill_resume
+        .filter(|count| *count > 0)
+        .or_else(|| recovery_command.map(|_| 1))
+}
+
+/// Execution-record metadata for launch-time kill recovery (issue #176).
+pub fn recovery_metadata(
+    on_kill_resume: Option<u32>,
+    recovery_command: Option<&str>,
+) -> Vec<(String, serde_json::Value)> {
+    let mut entries = Vec::new();
+    if let Some(count) = effective_on_kill_resume(on_kill_resume, recovery_command) {
+        entries.push(("onKillResume".to_string(), serde_json::json!(count)));
+    }
+    if let Some(command) = recovery_command {
+        entries.push(("recoveryCommand".to_string(), serde_json::json!(command)));
+    }
+    entries
 }
 
 /// Build the execution-record metadata entries for docker runtime options.
@@ -160,7 +205,12 @@ pub fn build_isolation_options_map(
         options.network.as_deref(),
         &options.networks,
         &options.network_aliases,
-    ) {
+    )
+    .into_iter()
+    .chain(recovery_metadata(
+        options.on_kill_resume,
+        options.recovery_command.as_deref(),
+    )) {
         opts_map.insert(k, v);
     }
     if let Some(v) = &options.endpoint {

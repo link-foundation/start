@@ -16,6 +16,8 @@ Options:
   --privileged          Run docker container in privileged mode (docker only)
   --network <name>      Connect to a named network (repeatable, docker only)
   --network-alias <alias> Add alias to the first network (repeatable, docker only)
+  --on-kill-resume <N>  Resume a killed (exit 137 / OOM) detached docker session up to N times
+  --recovery-command <cmd>  Command to run in the same container on such a resume
   --endpoint <endpoint> SSH endpoint (required for ssh isolation, e.g., user@host)
   --isolated-user, -u [name]  Create isolated user with same permissions
   --keep-user           Keep isolated user after command completes
@@ -66,6 +68,7 @@ Examples:
   $ --resume my-docker-session             # Restart the stored command in the same container
   $ --resume my-docker-session -- bash     # Run a different command in the same container
   $ --resume-all                           # Re-attach every still-running execution
+  $ -i docker -d --on-kill-resume 3 --recovery-command 'solve --resume' -- solve
   $ --use-command-stream echo "Hello"      # Use command-stream library`);
   console.log('');
   console.log('Piping with $:');

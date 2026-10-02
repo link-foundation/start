@@ -39,6 +39,9 @@
 use std::env;
 
 use crate::args_parser_queries::{parse_query_option, validate_query_options};
+use crate::docker_recovery_options::{
+    parse_docker_recovery_option, validate_docker_recovery_options,
+};
 use crate::isolation::get_default_docker_image;
 
 /// Valid isolation backends
@@ -94,6 +97,10 @@ pub struct WrapperOptions {
     pub networks: Vec<String>,
     /// Docker network-scoped aliases
     pub network_aliases: Vec<String>,
+    /// Resume up to N times when the docker main process is killed (issue #176)
+    pub on_kill_resume: Option<u32>,
+    /// Command run in the same container on such a resume (issue #176)
+    pub recovery_command: Option<String>,
     /// SSH endpoint (e.g., user@host)
     pub endpoint: Option<String>,
     /// Create isolated user
@@ -160,6 +167,8 @@ impl Default for WrapperOptions {
             network: None,
             networks: Vec::new(),
             network_aliases: Vec::new(),
+            on_kill_resume: None,
+            recovery_command: None,
             endpoint: None,
             user: false,
             user_name: None,
@@ -554,6 +563,12 @@ fn parse_option(
         return Ok(1);
     }
 
+    // Launch-time kill recovery (--on-kill-resume, --recovery-command)
+    let recovery_consumed = parse_docker_recovery_option(args, index, options)?;
+    if recovery_consumed > 0 {
+        return Ok(recovery_consumed);
+    }
+
     // Query/control options (--status, --list, --attach, --resume, ...)
     let query_consumed = parse_query_option(args, index, options)?;
     if query_consumed > 0 {
@@ -628,6 +643,8 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
     if !options.network_aliases.is_empty() && !is_docker {
         return Err("--network-alias option is only valid with --isolated docker".to_string());
     }
+
+    validate_docker_recovery_options(options)?;
 
     // Endpoint is only valid with ssh
     if options.endpoint.is_some() && options.isolated.as_deref() != Some("ssh") {

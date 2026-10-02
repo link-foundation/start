@@ -8,8 +8,11 @@ pub mod detached_finalize;
 pub(crate) mod docker_cleanup;
 mod docker_network_lifecycle;
 pub mod docker_post_mortem;
+pub mod docker_recovery_options;
+pub mod docker_resource_limits;
 pub mod execution_attach;
 pub mod execution_control;
+pub mod execution_recovery;
 pub mod execution_resume;
 pub mod execution_resume_all;
 pub mod execution_store;
@@ -45,7 +48,10 @@ pub use detached_finalize::{
     END_TIME_SOURCE_DOCKER_FINISHED_AT, END_TIME_SOURCE_LOG_FOOTER, END_TIME_SOURCE_OBSERVED_AT,
     INTERNAL_FINALIZE_FLAG, WATCHER_LOST_CONTAINER,
 };
-pub use docker_cleanup::{build_detached_docker_completion_script, DockerContainerCleanupPolicy};
+pub use docker_cleanup::{
+    build_detached_docker_completion_script, build_detached_docker_completion_script_with,
+    DockerContainerCleanupPolicy, DockerWatcherOptions,
+};
 pub use docker_post_mortem::{
     build_docker_post_mortem_snippet, build_docker_removal_note_snippet,
     build_docker_running_condition, build_docker_state_snippet,
