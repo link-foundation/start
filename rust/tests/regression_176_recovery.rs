@@ -5,10 +5,12 @@
 //! option parsing) is in `regression_176.rs`.
 
 use serde_json::{json, Value};
+#[cfg(unix)]
+use start_command::execution_recovery::RECOVERY_ATTEMPT_ENV;
 use start_command::execution_recovery::{
     build_recovery_selector_args, format_recovery_separator, is_killed_exit,
     recover_killed_execution, recovery_selector, RecoveryFacts, RecoveryOutcome, RecoverySeparator,
-    RECOVERY_ATTEMPT_ENV, RECOVERY_MARKER_PATH,
+    RECOVERY_MARKER_PATH,
 };
 use start_command::{
     control_execution_with_runner, ControlAction, DockerWatcherOptions, ExecutionRecord,
