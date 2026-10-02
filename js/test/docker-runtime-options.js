@@ -304,6 +304,9 @@ describe('buildDockerRuntimeMetadata', () => {
       network: null,
       networks: null,
       networkAliases: null,
+      resourceLimits: null,
+      onKillResume: null,
+      recoveryCommand: null,
     });
   });
 
@@ -326,6 +329,9 @@ describe('buildDockerRuntimeMetadata', () => {
         network: 'hive-formal-ai',
         networks: ['hive-formal-ai', 'public-egress'],
         networkAliases: ['formal-ai', 'checker'],
+        resourceLimits: null,
+        onKillResume: null,
+        recoveryCommand: null,
       }
     );
   });

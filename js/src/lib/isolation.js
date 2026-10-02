@@ -505,96 +505,12 @@ const {
   canRunLinuxDockerImages,
 } = require('./docker-utils');
 
-/**
- * Build the docker run runtime argument list contributed by configurable
- * container options: privileged mode, environment variables, volumes/bind
- * mounts, --mount specs, and network configuration. Returned in a stable order so they can be spliced
- * into the `docker run` argv before the image name.
- * @param {object} options - Options (privileged, env, volumes, mounts, network, networkAliases)
- * @returns {string[]} Docker CLI arguments
- */
-function buildDockerRuntimeArgs(options = {}) {
-  const args = [];
-  if (options.privileged) {
-    args.push('--privileged');
-  }
-  for (const envVar of options.env || []) {
-    args.push('-e', envVar);
-  }
-  for (const volume of options.volumes || []) {
-    args.push('-v', volume);
-  }
-  for (const mount of options.mounts || []) {
-    args.push('--mount', mount);
-  }
-  const [firstNetwork] = getDockerNetworks(options);
-  if (firstNetwork) {
-    args.push('--network', firstNetwork);
-  }
-  for (const alias of options.networkAliases || []) {
-    args.push('--network-alias', alias);
-  }
-  return args;
-}
-
-/**
- * Build the human-readable `[Isolation]` status lines for docker runtime
- * options (volumes, mounts, env, privileged). Empty collections and a falsy
- * privileged flag contribute no lines.
- * @param {object} options - Options (volumes, mounts, env, privileged, network, networks, networkAliases)
- * @returns {string[]} Status lines for the start block / log header
- */
-function buildDockerRuntimeStatusLines(options = {}) {
-  const lines = [];
-  if (options.volumes && options.volumes.length > 0) {
-    lines.push(`[Isolation] Volumes: ${options.volumes.join(', ')}`);
-  }
-  if (options.mounts && options.mounts.length > 0) {
-    lines.push(`[Isolation] Mounts: ${options.mounts.join(', ')}`);
-  }
-  if (options.env && options.env.length > 0) {
-    lines.push(`[Isolation] Env: ${options.env.join(', ')}`);
-  }
-  if (options.privileged) {
-    lines.push(`[Isolation] Privileged: true`);
-  }
-  const networks = getDockerNetworks(options);
-  if (networks.length > 0) {
-    lines.push(`[Isolation] Network: ${networks[0]}`);
-  }
-  if (networks.length > 1) {
-    lines.push(`[Isolation] Networks: ${networks.join(', ')}`);
-  }
-  if (options.networkAliases && options.networkAliases.length > 0) {
-    lines.push(
-      `[Isolation] Network aliases: ${options.networkAliases.join(', ')}`
-    );
-  }
-  return lines;
-}
-
-/**
- * Build the execution-record metadata for docker runtime options, normalizing
- * empty collections and a falsy privileged flag to `null`.
- * @param {object} options - Options (volumes, mounts, env, privileged, network, networks, networkAliases)
- * @returns {{volumes: ?string[], mounts: ?string[], env: ?string[], privileged: ?boolean, network: ?string, networks: ?string[], networkAliases: ?string[]}}
- */
-function buildDockerRuntimeMetadata(options = {}) {
-  const networks = getDockerNetworks(options);
-  return {
-    volumes:
-      options.volumes && options.volumes.length > 0 ? options.volumes : null,
-    mounts: options.mounts && options.mounts.length > 0 ? options.mounts : null,
-    env: options.env && options.env.length > 0 ? options.env : null,
-    privileged: options.privileged || null,
-    network: networks[0] || null,
-    networks: networks.length > 0 ? networks : null,
-    networkAliases:
-      options.networkAliases && options.networkAliases.length > 0
-        ? options.networkAliases
-        : null,
-  };
-}
+const {
+  buildDockerRuntimeArgs,
+  buildDockerRuntimeStatusLines,
+  buildDockerRuntimeMetadata,
+} = require('./docker-runtime-args');
+const { buildRecoverySelectorArgs } = require('./execution-recovery');
 
 /**
  * Run command in Docker container
@@ -679,11 +595,22 @@ function runInDocker(command, options = {}) {
       const shellArgs = shellInteractiveFlag
         ? [shellToUse, shellInteractiveFlag]
         : [shellToUse];
-      const cmdArgs = isBareShell
+      const mainCmdArgs = isBareShell
         ? toShellWords(command)
         : isShellInvocationWithArgs(command)
           ? buildShellWithArgsCmdArgs(effectiveCommand)
           : [...shellArgs, '-c', effectiveCommand];
+      // A recovery command is selected by a marker that `docker cp` drops
+      // into the container before it is started again (issue #176).
+      const cmdArgs = options.recoveryCommand
+        ? buildRecoverySelectorArgs(mainCmdArgs, {
+            shell: shellToUse,
+            shellFlag: shellInteractiveFlag,
+            recoveryCommand: options.keepAlive
+              ? `${options.recoveryCommand}; exec ${shellToUse}`
+              : options.recoveryCommand,
+          })
+        : mainCmdArgs;
       dockerArgs.push(options.image, ...cmdArgs);
 
       if (DEBUG) {
@@ -736,7 +663,8 @@ function runInDocker(command, options = {}) {
         containerName,
         cleanupPolicy,
         options.logPath,
-        options.executionId || null
+        options.executionId || null,
+        { recoverOnKill: Boolean(options.onKillResume) }
       );
 
       let message = `Command started in detached docker container: ${containerName}`;
