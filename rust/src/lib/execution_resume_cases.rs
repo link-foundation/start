@@ -266,6 +266,7 @@ fn format_resume_result_emits_a_nested_links_notation_block() {
         session_name: "box",
         previous_session_name: None,
         snapshot_image: None,
+        resource_limits: &[],
         command: "npm test",
         message: "Resumed detached docker container: box",
     });

@@ -46,7 +46,7 @@ pub(crate) fn build_docker_kept_reason_snippet() -> String {
 
 /// Build the extra `docker run` arguments contributed by runtime options
 /// (--privileged, --env/-e, --volume/-v, --mount, --network,
-/// --network-alias). Returned references borrow
+/// --network-alias, resource limits). Returned references borrow
 /// from `options`, which outlives the `docker run` invocation.
 pub(crate) fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<&str> {
     let mut args: Vec<&str> = Vec::new();
@@ -73,6 +73,8 @@ pub(crate) fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<&str>
         args.push("--network-alias");
         args.push(alias);
     }
+    // Already in `--flag=value` form (issue #176).
+    args.extend(options.resource_limits.iter().map(String::as_str));
     args
 }
 
@@ -393,6 +395,36 @@ pub fn build_detached_docker_completion_script(
     log_path: Option<&PathBuf>,
     execution_id: Option<&str>,
 ) -> String {
+    build_detached_docker_completion_script_with(
+        container_name,
+        policy,
+        log_path,
+        execution_id,
+        &DockerWatcherOptions::default(),
+    )
+}
+
+/// Extra behaviour of a detached completion watcher (issue #176).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct DockerWatcherOptions {
+    /// Limits `docker logs` to output after a restart, so a resumed run does
+    /// not copy the previous run's output into the log again.
+    pub since: Option<String>,
+    /// Hand a killed main process (exit 137 or `OOMKilled`) to the recovery
+    /// entry point first. When it resumes the container, this watcher stops
+    /// there — a new one follows the resumed run — and cleanup, footer and
+    /// finalization are left to whichever watcher sees the last run end.
+    pub recover_on_kill: bool,
+}
+
+/// [`build_detached_docker_completion_script`] with [`DockerWatcherOptions`].
+pub fn build_detached_docker_completion_script_with(
+    container_name: &str,
+    policy: DockerContainerCleanupPolicy,
+    log_path: Option<&PathBuf>,
+    execution_id: Option<&str>,
+    watcher: &DockerWatcherOptions,
+) -> String {
     let quoted_name = shell_quote(container_name);
     let mut parts = Vec::new();
     // Everything that assumes the container has exited: cleanup, footer and
@@ -401,9 +433,14 @@ pub fn build_detached_docker_completion_script(
     let quoted_log_path = log_path.map(|path| shell_quote(&path.to_string_lossy()));
 
     if let Some(quoted_log_path) = quoted_log_path.as_deref() {
+        let since = watcher
+            .since
+            .as_deref()
+            .map(|since| format!(" --since {}", shell_quote(since)))
+            .unwrap_or_default();
         parts.push(format!(
-            "docker logs -f {} >> {} 2>&1",
-            quoted_name, quoted_log_path
+            "docker logs -f{} {} >> {} 2>&1",
+            since, quoted_name, quoted_log_path
         ));
         parts.push(build_docker_wait_for_exit_snippet(
             container_name,
@@ -477,24 +514,38 @@ pub fn build_detached_docker_completion_script(
     } else {
         exited.join("; ")
     };
+    let recovery = match execution_id {
+        Some(execution_id) if watcher.recover_on_kill => format!(
+            "elif {}; then :; ",
+            crate::execution_recovery::build_recovery_snippet(execution_id)
+        ),
+        _ => String::new(),
+    };
     parts.push(format!(
-        "if [ \"${}\" = true ]; then {}; else {}; fi",
+        "if [ \"${}\" = true ]; then {}; {}else {}; fi",
         shell_vars::RUNNING,
         still_running,
+        recovery,
         exited
     ));
 
     parts.join("; ")
 }
 
-pub(crate) fn start_detached_docker_completion_watcher(
+pub(crate) fn start_detached_docker_completion_watcher_with(
     container_name: &str,
     policy: DockerContainerCleanupPolicy,
     log_path: Option<&PathBuf>,
     execution_id: Option<&str>,
+    watcher: &DockerWatcherOptions,
 ) {
-    let script =
-        build_detached_docker_completion_script(container_name, policy, log_path, execution_id);
+    let script = build_detached_docker_completion_script_with(
+        container_name,
+        policy,
+        log_path,
+        execution_id,
+        watcher,
+    );
     let _ = Command::new("sh")
         .args(["-c", &script])
         .stdout(Stdio::null())

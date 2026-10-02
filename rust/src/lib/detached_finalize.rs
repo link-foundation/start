@@ -64,7 +64,7 @@ pub struct FinalizeOutcome {
     pub reason: String,
 }
 
-fn normalize_bool(value: &str) -> Option<bool> {
+pub(crate) fn normalize_bool(value: &str) -> Option<bool> {
     match value.trim() {
         "true" => Some(true),
         "false" => Some(false),
@@ -72,7 +72,7 @@ fn normalize_bool(value: &str) -> Option<bool> {
     }
 }
 
-fn normalize_container_error(value: &str) -> Option<String> {
+pub(crate) fn normalize_container_error(value: &str) -> Option<String> {
     let trimmed = value.trim();
     if trimmed.is_empty() || trimmed == "<no value>" || trimmed == "(none)" {
         None

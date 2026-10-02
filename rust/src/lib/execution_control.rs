@@ -472,6 +472,44 @@ pub fn control_execution(
     control_execution_with_runner(store, identifier, action, &SystemCommandRunner)
 }
 
+fn has_kill_recovery(record: &ExecutionRecord) -> bool {
+    record
+        .options
+        .get("onKillResume")
+        .is_some_and(|value| value.as_u64().unwrap_or(0) > 0)
+}
+
+/// Record that a stop was requested, for sessions with launch-time kill
+/// recovery (issue #176). Returns the previous marker, to restore on failure.
+fn mark_stop_requested(store: &ExecutionStore, record: &mut ExecutionRecord) -> Option<Value> {
+    if !has_kill_recovery(record) {
+        return None;
+    }
+    let previous = record.options.insert(
+        "stopRequestedAt".to_string(),
+        json!(chrono::Utc::now().to_rfc3339()),
+    );
+    // Best effort: without the marker the session may be recovered once more.
+    let _ = store.save(record);
+    previous
+}
+
+fn restore_stop_requested(
+    store: &ExecutionStore,
+    record: &mut ExecutionRecord,
+    previous: Option<Value>,
+) {
+    if !has_kill_recovery(record) {
+        return;
+    }
+    match previous {
+        Some(value) => record.options.insert("stopRequestedAt".to_string(), value),
+        None => record.options.remove("stopRequestedAt"),
+    };
+    // Best effort, see mark_stop_requested.
+    let _ = store.save(record);
+}
+
 pub fn control_execution_with_runner<R: CommandRunner>(
     store: Option<&ExecutionStore>,
     identifier: &str,
@@ -486,7 +524,7 @@ pub fn control_execution_with_runner<R: CommandRunner>(
         };
     };
 
-    let Some(record) = store.get(identifier) else {
+    let Some(mut record) = store.get(identifier) else {
         return ExecutionControlResult {
             success: false,
             output: None,
@@ -508,8 +546,13 @@ pub fn control_execution_with_runner<R: CommandRunner>(
         }
     };
 
+    // A deliberate stop must not be mistaken for a kill that launch-time
+    // recovery should undo (issue #176): `docker stop` escalates to SIGKILL,
+    // which exits 137 just like the OOM killer.
+    let previous_stop_requested_at = mark_stop_requested(store, &mut record);
     let result = runner.run(&control.command, &control.args);
     if !result.success {
+        restore_stop_requested(store, &mut record, previous_stop_requested_at);
         let backend = record
             .options
             .get("isolated")
