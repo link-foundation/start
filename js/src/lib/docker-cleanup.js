@@ -320,11 +320,11 @@ function buildSuccessfulNonOomCondition() {
  * container that is somehow still running afterwards is never removed, gets no
  * `Exit Code:` footer and is never finalized — its record stays `executing`.
  *
- * With `recoverOnKill` (issue #176), a killed main process (exit 137 or
- * `OOMKilled`) is first handed to the recovery entry point. When it resumes
- * the container, this watcher stops here — a new one follows the resumed run —
- * and cleanup, footer and finalization are left to whichever watcher sees the
- * last run end.
+ * With `recoverOnKill` (issue #176), a killed main process (exit 137, or
+ * `OOMKilled` without a usable exit code, issue #178) is first handed to the
+ * recovery entry point. When it resumes the container, this watcher stops
+ * here — a new one follows the resumed run — and cleanup, footer and
+ * finalization are left to whichever watcher sees the last run end.
  *
  * @param {string} containerName - Docker container name
  * @param {string} policy - One of DOCKER_CONTAINER_CLEANUP_POLICY
