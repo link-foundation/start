@@ -10,10 +10,7 @@
 //! `OOMKilled=true` with no usable exit code (the watcher's `-1`).
 
 use serde_json::json;
-use start_command::docker_post_mortem::shell_vars;
-use start_command::execution_recovery::{
-    build_recovery_snippet, is_killed_exit, recover_killed_execution, RecoveryFacts,
-};
+use start_command::execution_recovery::{is_killed_exit, recover_killed_execution, RecoveryFacts};
 use start_command::{DockerWatcherOptions, ExecutionRecord, ExecutionStatus};
 use std::cell::RefCell;
 use tempfile::TempDir;
@@ -47,38 +44,6 @@ fn is_killed_exit_only_trusts_oom_killed_without_an_exit_code() {
     assert!(is_killed_exit("", "true"));
     assert!(is_killed_exit("unknown", "true"));
     assert!(!is_killed_exit("", "false"));
-}
-
-#[cfg(unix)]
-#[test]
-fn the_watcher_shell_condition_agrees_with_is_killed_exit() {
-    // Only the condition: the command after it would start a real recovery.
-    let snippet = build_recovery_snippet("uuid");
-    let end = snippet.find("; }; } && ").expect("condition") + "; }; }".len();
-    let condition = &snippet[..end];
-    let extra = [("", "true", true), ("unknown", "true", true)];
-    for (exit_code, oom_killed, killed) in CASES.iter().chain(extra.iter()) {
-        let output = std::process::Command::new("/bin/sh")
-            .arg("-c")
-            .arg(format!(
-                "{}='{}'; {}='{}'; if {}; then echo recover; else echo keep; fi",
-                shell_vars::EXIT,
-                exit_code,
-                shell_vars::OOM,
-                oom_killed,
-                condition
-            ))
-            .output()
-            .expect("sh");
-        assert_eq!(
-            String::from_utf8_lossy(&output.stdout).trim(),
-            if *killed { "recover" } else { "keep" },
-            "exit={} oom={}",
-            exit_code,
-            oom_killed
-        );
-        assert!(output.stderr.is_empty(), "{:?}", output);
-    }
 }
 
 #[test]
@@ -122,11 +87,44 @@ fn recover_killed_execution_does_not_resume_an_exit_0_or_1_with_oom_killed() {
 #[cfg(unix)]
 mod shell {
     use super::*;
+    use start_command::docker_post_mortem::shell_vars;
+    use start_command::execution_recovery::build_recovery_snippet;
     use start_command::{
         build_detached_docker_completion_script_with, DockerContainerCleanupPolicy,
     };
     use std::os::unix::fs::PermissionsExt;
     use std::process::Command;
+
+    #[test]
+    fn the_watcher_shell_condition_agrees_with_is_killed_exit() {
+        // Only the condition: the command after it would start a real recovery.
+        let snippet = build_recovery_snippet("uuid");
+        let end = snippet.find("; }; } && ").expect("condition") + "; }; }".len();
+        let condition = &snippet[..end];
+        let extra = [("", "true", true), ("unknown", "true", true)];
+        for (exit_code, oom_killed, killed) in CASES.iter().chain(extra.iter()) {
+            let output = Command::new("/bin/sh")
+                .arg("-c")
+                .arg(format!(
+                    "{}='{}'; {}='{}'; if {}; then echo recover; else echo keep; fi",
+                    shell_vars::EXIT,
+                    exit_code,
+                    shell_vars::OOM,
+                    oom_killed,
+                    condition
+                ))
+                .output()
+                .expect("sh");
+            assert_eq!(
+                String::from_utf8_lossy(&output.stdout).trim(),
+                if *killed { "recover" } else { "keep" },
+                "exit={} oom={}",
+                exit_code,
+                oom_killed
+            );
+            assert!(output.stderr.is_empty(), "{:?}", output);
+        }
+    }
 
     const TIMES: &str = "2026-10-03T12:00:00.000000000Z 2026-10-03T16:55:20.000000000Z";
 
