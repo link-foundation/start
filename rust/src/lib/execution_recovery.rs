@@ -1,7 +1,8 @@
 //! Launch-time recovery for killed detached docker sessions (issue #176).
 //!
 //! `$ --isolated docker --detached --on-kill-resume 3 --recovery-command B -- A`
-//! runs `A`; when the main process is killed (exit 137 / `OOMKilled`), the
+//! runs `A`; when the main process is killed (exit 137, or `OOMKilled` with no
+//! exit status of its own), the
 //! detached completion watcher hands the inspected facts to this module, which
 //! restarts the *same* container so `B` continues on the same filesystem, with
 //! the same resource limits (they live in the container's HostConfig), under
@@ -86,19 +87,31 @@ pub fn build_recovery_selector_args(
 }
 
 /// Whether the inspected facts describe a killed main process.
+///
+/// Exit 137 (SIGKILL, the OOM killer's signal) always counts. `OOMKilled`
+/// alone does not: Docker sets it when *any* process in the container's
+/// cgroup was OOM-killed (a compiler, a test runner, a child `node`), and it
+/// stays set until the container is started again. A main process that
+/// survived that and then exited 0-127 on its own ran to completion, so the
+/// flag only counts when there is no usable exit status (the watcher's `-1`,
+/// or nothing at all) (issue #178).
 pub fn is_killed_exit(exit_code: &str, oom_killed: &str) -> bool {
-    describe_exit_code_str(exit_code).code == Some(KILLED_EXIT_CODE)
-        || normalize_bool(oom_killed) == Some(true)
+    let code = describe_exit_code_str(exit_code).code;
+    if code == Some(KILLED_EXIT_CODE) {
+        return true;
+    }
+    normalize_bool(oom_killed) == Some(true) && code.is_none_or(|code| code < 0)
 }
 
 /// Shell condition run by the completion watcher: true when the container was
-/// killed and the recovery entry point resumed it.
+/// killed and the recovery entry point resumed it. Mirrors `is_killed_exit`:
+/// `OOMKilled` only counts without a non-negative exit code (issue #178).
 pub fn build_recovery_snippet(execution_id: &str) -> String {
     let executable = std::env::current_exe()
         .map(|path| path.to_string_lossy().to_string())
         .unwrap_or_else(|_| "start".to_string());
     format!(
-        "{{ [ \"${exit}\" = {code} ] || [ \"${oom}\" = true ]; }} && {exe} {flag} {id} \"${exit}\" \"${oom}\" \"${started}\" \"${finished}\" \"${error}\" >/dev/null 2>&1",
+        "{{ [ \"${exit}\" = {code} ] || {{ [ \"${oom}\" = true ] && ! [ \"${exit}\" -ge 0 ] 2>/dev/null; }}; }} && {exe} {flag} {id} \"${exit}\" \"${oom}\" \"${started}\" \"${finished}\" \"${error}\" >/dev/null 2>&1",
         exit = shell_vars::EXIT,
         oom = shell_vars::OOM,
         started = shell_vars::STARTED,

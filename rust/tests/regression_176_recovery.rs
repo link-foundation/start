@@ -152,9 +152,9 @@ fn killed() -> RecoveryFacts {
 }
 
 #[test]
-fn detects_a_kill_by_exit_137_or_oom_killed() {
+fn detects_a_kill_by_exit_137_or_oom_killed_without_an_exit_code() {
     assert!(is_killed_exit("137", "false"));
-    assert!(is_killed_exit("0", "true"));
+    assert!(is_killed_exit("-1", "true"));
     assert!(!is_killed_exit("1", "false"));
     assert!(!is_killed_exit("", ""));
 }

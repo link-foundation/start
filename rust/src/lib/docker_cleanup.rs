@@ -410,9 +410,10 @@ pub struct DockerWatcherOptions {
     /// Limits `docker logs` to output after a restart, so a resumed run does
     /// not copy the previous run's output into the log again.
     pub since: Option<String>,
-    /// Hand a killed main process (exit 137 or `OOMKilled`) to the recovery
-    /// entry point first. When it resumes the container, this watcher stops
-    /// there — a new one follows the resumed run — and cleanup, footer and
+    /// Hand a killed main process (exit 137, or `OOMKilled` without a usable
+    /// exit code, issue #178) to the recovery entry point first. When it
+    /// resumes the container, this watcher stops there — a new one follows
+    /// the resumed run — and cleanup, footer and
     /// finalization are left to whichever watcher sees the last run end.
     pub recover_on_kill: bool,
 }
