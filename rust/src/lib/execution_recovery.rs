@@ -2,11 +2,11 @@
 //!
 //! `$ --isolated docker --detached --on-kill-resume 3 --recovery-command B -- A`
 //! runs `A`; when the main process is killed (exit 137, or `OOMKilled` with no
-//! exit status of its own), the
-//! detached completion watcher hands the inspected facts to this module, which
-//! restarts the *same* container so `B` continues on the same filesystem, with
-//! the same resource limits (they live in the container's HostConfig), under
-//! the same execution UUID and appending to the same log file.
+//! exit status of its own), the detached completion watcher hands the inspected
+//! facts to this module, which restarts the *same* container so `B` continues
+//! on the same filesystem, with the same resource limits (they live in the
+//! container's HostConfig), under the same execution UUID and appending to the
+//! same log file.
 //!
 //! How `B` replaces `A` inside the same container: a container launched with a
 //! recovery command runs a tiny selector as its command. The selector runs `A`
