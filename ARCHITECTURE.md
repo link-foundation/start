@@ -238,8 +238,10 @@ The finalizer is the same binary re-invoked through a hidden flag
 writer per implementation.
 
 With `--on-kill-resume <N>` (issue #176) the watcher gets one more branch
-between steps 2 and 3: when the container was killed (exit 137 or
-`OOMKilled`) and recovery attempts remain, it hands off to the recovery step instead of cleaning up
+between steps 2 and 3: when the main process was killed (exit 137, or
+`OOMKilled` without a usable exit code — the sticky cgroup flag next to an
+exit of 0–127 means a child was OOM-killed and the main process finished on
+its own, issue #178) and recovery attempts remain, it hands off to the recovery step instead of cleaning up
 (`execution-recovery.js` run directly by Node/Bun, or the Rust binary
 re-invoked with the hidden `--internal-recover-detached-docker` flag). The container
 command was wrapped at launch in a small `sh -c` selector that runs the

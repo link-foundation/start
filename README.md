@@ -316,6 +316,14 @@ the recovery options forward. Because the recovery marker stays in the
 container, a later plain `--resume <id>` (`docker start`) runs the recovery
 command rather than the original command.
 
+Only a killed **main process** is recovered. Docker sets `OOMKilled` when _any_
+process in the container was OOM-killed (a compiler, a test runner, a child
+`node`) and keeps it set until the container is started again, so a main
+process that survived that and then exited 0–127 on its own is not resumed:
+its exit code stands, and `oomKilled: true` is still reported by `--status` and
+the post-mortem as an observation. `OOMKilled` counts as a kill only when there
+is no usable exit code (issue #178).
+
 A resume keeps the original execution UUID, so `--status`, `--list` and
 `--upload-log` keep addressing one logical session across restarts. The previous
 session name is remembered in `sessionNameHistory` and still resolves to the
