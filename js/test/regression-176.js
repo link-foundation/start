@@ -490,10 +490,10 @@ describe('issue #176: resuming a killed session', () => {
     return { outcome, runner, watchers };
   }
 
-  it('detects a kill by exit 137 or OOMKilled', () => {
+  it('detects a kill by exit 137, or OOMKilled without an exit code', () => {
     expect(isKilledExit(137, false)).toBe(true);
     expect(isKilledExit('137', 'false')).toBe(true);
-    expect(isKilledExit('0', 'true')).toBe(true);
+    expect(isKilledExit('-1', 'true')).toBe(true);
     expect(isKilledExit('1', 'false')).toBe(false);
   });
 

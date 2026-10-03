@@ -2,11 +2,12 @@
  * Launch-time recovery for killed detached docker sessions (issue #176).
  *
  * `$ --isolated docker --detached --on-kill-resume 3 --recovery-command B -- A`
- * runs `A`; when the main process is killed (exit 137 / `OOMKilled`), the
- * detached completion watcher hands the inspected facts to this module, which
- * restarts the *same* container so `B` continues on the same filesystem, with
- * the same resource limits (they live in the container's HostConfig), under
- * the same execution UUID and appending to the same log file.
+ * runs `A`; when the main process is killed (exit 137, or `OOMKilled` with no
+ * exit status of its own), the detached completion watcher hands the inspected
+ * facts to this module, which restarts the *same* container so `B` continues
+ * on the same filesystem, with the same resource limits (they live in the
+ * container's HostConfig), under the same execution UUID and appending to the
+ * same log file.
  *
  * How `B` replaces `A` inside the same container: a container launched with a
  * recovery command runs a tiny selector as its entrypoint command. The
@@ -81,28 +82,41 @@ function buildRecoverySelectorArgs(mainArgs, params) {
 }
 
 /**
+ * Whether the main process was killed.
+ *
+ * Exit 137 (SIGKILL, the OOM killer's signal) always counts. `OOMKilled` alone
+ * does not: Docker sets it when *any* process in the container's cgroup was
+ * OOM-killed (a compiler, a test runner, a child `node`), and it stays set
+ * until the container is started again. A main process that survived that and
+ * then exited 0-127 on its own ran to completion, so the flag only counts when
+ * there is no usable exit status (the watcher's `-1`, or nothing at all)
+ * (issue #178).
+ *
  * @param {number|string|null} exitCode - `.State.ExitCode`
  * @param {boolean|string|null} oomKilled - `.State.OOMKilled`
  * @returns {boolean} Whether the main process was killed
  */
 function isKilledExit(exitCode, oomKilled) {
-  return (
-    describeExitCode(exitCode).code === KILLED_EXIT_CODE ||
-    oomKilled === true ||
-    oomKilled === 'true'
-  );
+  const { code } = describeExitCode(exitCode);
+  if (code === KILLED_EXIT_CODE) {
+    return true;
+  }
+  const oom = oomKilled === true || oomKilled === 'true';
+  return oom && (code === null || code < 0);
 }
 
 /**
  * Shell condition run by the completion watcher: true when the container was
- * killed and the recovery entry point resumed it.
+ * killed and the recovery entry point resumed it. Mirrors `isKilledExit()`:
+ * `OOMKilled` only counts without a non-negative exit code (issue #178).
  * @param {string} executionId - Execution UUID
  * @returns {string} POSIX shell condition
  */
 function buildRecoverySnippet(executionId) {
   const v = SHELL_VARS;
   return (
-    `{ [ "$${v.exit}" = ${KILLED_EXIT_CODE} ] || [ "$${v.oom}" = true ]; } && ` +
+    `{ [ "$${v.exit}" = ${KILLED_EXIT_CODE} ] || ` +
+    `{ [ "$${v.oom}" = true ] && ! [ "$${v.exit}" -ge 0 ] 2>/dev/null; }; } && ` +
     `${shellQuote(process.execPath)} ${shellQuote(__filename)} ` +
     `${shellQuote(executionId)} "$${v.exit}" "$${v.oom}" ` +
     `"$${v.started}" "$${v.finished}" "$${v.error}" >/dev/null 2>&1`
