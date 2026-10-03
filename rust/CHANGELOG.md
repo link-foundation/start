@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.22.1] - 2026-10-03
+
+Do not resume `--on-kill-resume` executions whose main process exited 0–127 on its own while Docker's sticky `OOMKilled` flag was set. Docker sets `OOMKilled` when *any* process in the container was OOM-killed (a compiler, a test runner, a child `node`) and keeps it until the next start, so a run that survived that and later exited 0 or 1 was resumed as if it had been killed. A run now counts as killed only on exit 137, or on `OOMKilled` without a usable exit code; `oomKilled: true` is still reported in `--status` and the post-mortem.
+
 ## [0.22.0] - 2026-10-02
 
 Keep Docker resource limits across `--resume <id> -- <command>`, and add `--on-kill-resume <N>` / `--recovery-command <cmd>`. `docker commit` does not capture HostConfig, so the snapshot resume now reads the stopped container's limits with `docker inspect` (including ones applied later with `docker update`) and re-applies the non-default ones (`--memory`, `--memory-swap`, `--memory-reservation`, `--cpus`/`--cpu-quota`/`--cpu-period`, `--cpu-shares`, `--cpuset-cpus`, `--cpuset-mems`, `--pids-limit`, `--shm-size`, `--storage-opt`, `--ulimit`) to the `-resume-N` container, prints them as `[Isolation] Resource limits: ...` and stores them as `resourceLimits`. With `--on-kill-resume <N>` a detached Docker execution whose main process is killed (exit 137 or `OOMKilled`) is resumed in the same container up to N times, running `--recovery-command` (or the original command) with `START_COMMAND_RECOVERY_ATTEMPT` set. The UUID and log file are kept, each attempt is separated by a `[Recovery k/N]` line, and `--status` shows `recoveryAttempts` and `recoveryHistory`. `--stop` cancels further recovery.
