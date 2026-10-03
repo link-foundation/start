@@ -47,7 +47,7 @@
   },
   "homepage": "https://github.com/link-foundation/start#readme",
   "devDependencies": {
-    "@changesets/cli": "^2.31.0",
+    "@changesets/cli": "^3.0.3",
     "@eslint/js": "^10.0.1",
     "eslint": "^10.3.0",
     "eslint-config-prettier": "^10.1.8",
