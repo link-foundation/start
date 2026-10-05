@@ -251,6 +251,12 @@ recovery step only has to `docker cp` that marker in, record the attempt
 the same log, `docker start` the same container and start a fresh watcher that
 follows `docker logs -f --since <restart time>`. A `--stop` sets
 `stopRequestedAt` first, so a deliberate stop is never mistaken for a kill.
+With `--on-kill-resume-delay <min[-max]>` (issue #181) the recovery step first
+sleeps a uniformly random delay in 1-second steps (`recovery-delay.js` /
+`recovery_delay.rs`), re-reading `stopRequestedAt` before each step, so a
+`--stop` or `--terminate` issued while the container is already exited cancels
+the pending resume; `--terminate` keeps the marker even though `docker kill`
+fails with "is not running" and reports `recovery-cancelled`.
 
 Snapshot resumes (`--resume <id> -- <command>`) go through `docker commit`,
 which drops HostConfig; the resume therefore reads the stopped container's

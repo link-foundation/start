@@ -302,8 +302,22 @@ $ --isolated docker --detached --on-kill-resume 2 \
     --recovery-command 'agent --resume-from-checkpoint' -- agent --task build
 ```
 
-`--status` reports `onKillResume`, `recoveryCommand`, `recoveryAttempts` and a
-`recoveryHistory` entry (exit code, OOM flag, start/finish time) per recovery.
+`--on-kill-resume-delay <min[-max]>` waits a uniformly random number of seconds
+before each such resume (`30-90`, or one number for a fixed delay; the default
+`0` resumes at once). One host-wide OOM event often kills several executions at
+the same moment; without a delay every one of them is restarted in the same
+second, rebuilds its working set at once and triggers the next OOM event. The
+chosen delay is printed in the `[Recovery k/N]` line (`... resuming container
+box after a 63.2s delay, ...`), and a `--stop` (or `--terminate`) during the
+wait cancels the pending resume.
+
+```bash
+$ --isolated docker --detached --on-kill-resume 3 --on-kill-resume-delay 30-90 -- cargo test
+```
+
+`--status` reports `onKillResume`, `recoveryCommand`, `onKillResumeDelay`,
+`recoveryAttempts` and a `recoveryHistory` entry (exit code, OOM flag, the
+delay as `delayMs` when one is configured, start/finish time) per recovery.
 When all attempts are used, the execution is finalized with the last exit code.
 Limits applied with `docker update` survive, because the container is reused.
 
@@ -526,6 +540,7 @@ This is useful for:
 | `--keep-container-on-fail`       | Keep failed or OOM-killed docker containers after exit (docker only)         |
 | `--on-kill-resume <N>`           | Resume up to N times after an OOM kill/exit 137 (detached docker only)       |
 | `--recovery-command <cmd>`       | Command to run in the same container on such a resume (implies one attempt)  |
+| `--on-kill-resume-delay <s>`     | Wait a random `<min>[-<max>]` seconds before each such resume (default 0)    |
 
 **Note:** Using both `--attached` and `--detached` together will result in an error - you must choose one mode.
 
