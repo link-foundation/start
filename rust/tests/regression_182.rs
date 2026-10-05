@@ -3,7 +3,7 @@
 //! Docker's `State.OOMKilled` is container-wide and sticky (moby/moby#43564):
 //! it cannot say how many processes the OOM killer took, whether the container
 //! hit its own `--memory` limit or the whole host ran out, or how close the run
-//! came to its limit. The kernel counts all of that per cgroup (`memory.events`
+//! came to its limit. The kernel provides raw counters per cgroup (`memory.events`
 //! `oom`/`oom_kill`, `memory.peak`, `memory.max`), but the cgroup is gone once
 //! the container stops.
 //!
@@ -32,14 +32,14 @@ use tempfile::TempDir;
 mod support;
 use support::*;
 
-const HOST_OOM_SAMPLE: &str = "268435456 268300000 0 3";
-const HOST_OOM: CgroupMemory = CgroupMemory {
+const OOM_SAMPLE: &str = "268435456 268300000 0 3";
+const OOM_COUNTERS: CgroupMemory = CgroupMemory {
     limit_bytes: Some(268_435_456),
     peak_bytes: Some(268_300_000),
     oom_events: Some(0),
     oom_kills: Some(3),
 };
-const HOST_NOTE: &str = "oom_kill > oom: a host-wide or parent cgroup OOM killed processes here";
+const UNKNOWN_SCOPE_NOTE: &str = "OOM kill scope unknown";
 
 // ---------------------------------------------------------------------------
 // Reading cgroup v2 memory counters
@@ -47,7 +47,7 @@ const HOST_NOTE: &str = "oom_kill > oom: a host-wide or parent cgroup OOM killed
 
 #[test]
 fn parses_the_sample_the_watcher_writes() {
-    assert_eq!(parse_cgroup_memory_sample(HOST_OOM_SAMPLE), Some(HOST_OOM));
+    assert_eq!(parse_cgroup_memory_sample(OOM_SAMPLE), Some(OOM_COUNTERS));
     assert_eq!(
         parse_cgroup_memory_sample("max - 1 1\n"),
         Some(CgroupMemory {
@@ -63,10 +63,10 @@ fn parses_the_sample_the_watcher_writes() {
 }
 
 #[test]
-fn tells_a_container_limit_from_a_host_wide_or_parent_oom() {
+fn leaves_oom_scope_unknown_with_only_raw_counters() {
     assert_eq!(
-        describe_cgroup_oom_scope(&HOST_OOM),
-        Some(OomScope::HostOrParent)
+        describe_cgroup_oom_scope(&OOM_COUNTERS),
+        Some(OomScope::Unknown)
     );
     let counters = |oom_events, oom_kills| CgroupMemory {
         oom_events: Some(oom_events),
@@ -75,7 +75,7 @@ fn tells_a_container_limit_from_a_host_wide_or_parent_oom() {
     };
     assert_eq!(
         describe_cgroup_oom_scope(&counters(2, 2)),
-        Some(OomScope::ContainerLimit)
+        Some(OomScope::Unknown)
     );
     assert_eq!(describe_cgroup_oom_scope(&counters(4, 0)), None);
 }
@@ -83,10 +83,10 @@ fn tells_a_container_limit_from_a_host_wide_or_parent_oom() {
 #[test]
 fn formats_the_counters_for_status_and_for_the_log() {
     assert_eq!(
-        format_cgroup_memory(&HOST_OOM),
+        format_cgroup_memory(&OOM_COUNTERS),
         format!(
             "peak 255.9 MiB of 256.0 MiB limit, oom 0, oom_kill 3 ({})",
-            HOST_NOTE
+            UNKNOWN_SCOPE_NOTE
         )
     );
     assert_eq!(
@@ -96,7 +96,7 @@ fn formats_the_counters_for_status_and_for_the_log() {
             oom_events: Some(1),
             oom_kills: Some(1),
         }),
-        "peak unknown of no limit, oom 1, oom_kill 1 (the container hit its own memory limit)"
+        "peak unknown of no limit, oom 1, oom_kill 1 (OOM kill scope unknown)"
     );
     assert_eq!(
         format_cgroup_memory_log_line("max 1024 0 0").as_deref(),
@@ -111,7 +111,7 @@ fn record_field_round_trips_and_reads_javascript_values_leniently() {
     let mut record = docker_record(ExecutionStatus::Executed, None, json!({}));
     record.cgroup_memory = Some(CgroupMemory {
         limit_bytes: None,
-        ..HOST_OOM
+        ..OOM_COUNTERS
     });
     store.save(&record).unwrap();
     assert_eq!(
@@ -336,14 +336,11 @@ mod shell {
         assert!(output.status.success(), "{:?}", output);
         assert_eq!(
             std::fs::read_to_string(host.dir().join("sample")).unwrap(),
-            HOST_OOM_SAMPLE
+            OOM_SAMPLE
         );
         assert_eq!(
             std::fs::read_to_string(&log_path).unwrap(),
-            format!(
-                "{}\n",
-                format_cgroup_memory_log_line(HOST_OOM_SAMPLE).unwrap()
-            )
+            format!("{}\n", format_cgroup_memory_log_line(OOM_SAMPLE).unwrap())
         );
     }
 
@@ -371,7 +368,7 @@ mod shell {
         assert!(
             run.log.contains(&format!(
                 "Memory:     memory.max=268435456 memory.peak=268300000 oom=1 oom_kill=3 ({})",
-                HOST_NOTE
+                UNKNOWN_SCOPE_NOTE
             )),
             "{}",
             run.log
@@ -381,7 +378,7 @@ mod shell {
             run.record.cgroup_memory,
             Some(CgroupMemory {
                 oom_events: Some(1),
-                ..HOST_OOM
+                ..OOM_COUNTERS
             })
         );
         assert!(run.leftovers.is_empty(), "{:?}", run.leftovers);
@@ -451,8 +448,8 @@ fn records_nothing_without_a_cgroup_v2_sample() {
 
 #[test]
 fn explains_an_unknown_exit_with_the_per_run_oom_kill_count() {
-    let stored = finalize("137", HOST_OOM_SAMPLE);
-    assert_eq!(stored.cgroup_memory, Some(HOST_OOM));
+    let stored = finalize("137", OOM_SAMPLE);
+    assert_eq!(stored.cgroup_memory, Some(OOM_COUNTERS));
     assert!(stored.exit_reason.is_some());
 }
 
@@ -471,7 +468,7 @@ fn recovery_logs_them_and_notes_them_in_recovery_history() {
         Some(&log_path),
         json!({ "onKillResume": 2 }),
     );
-    record.cgroup_memory = Some(HOST_OOM);
+    record.cgroup_memory = Some(OOM_COUNTERS);
     store.save(&record).unwrap();
     let outcome = recover_killed_execution(
         &store,
@@ -482,7 +479,7 @@ fn recovery_logs_them_and_notes_them_in_recovery_history() {
             started_at: "2026-10-01T10:00:00Z".to_string(),
             finished_at: "2026-10-01T10:05:00Z".to_string(),
             container_error: String::new(),
-            cgroup_memory: HOST_OOM_SAMPLE.to_string(),
+            cgroup_memory: OOM_SAMPLE.to_string(),
         },
         &FakeRunner::new(json!({})),
         &|_: &str, _: &ExecutionRecord, _: &DockerWatcherOptions| {},
@@ -492,7 +489,7 @@ fn recovery_logs_them_and_notes_them_in_recovery_history() {
     assert!(
         log.contains(&format!(
             "{}\n\n[Recovery 1/2]",
-            format_cgroup_memory_log_line(HOST_OOM_SAMPLE).unwrap()
+            format_cgroup_memory_log_line(OOM_SAMPLE).unwrap()
         )),
         "{}",
         log
