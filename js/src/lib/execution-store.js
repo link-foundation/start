@@ -116,6 +116,12 @@ class ExecutionRecord {
       options.memoryExhaustedReason !== undefined
         ? options.memoryExhaustedReason
         : undefined;
+    // cgroup v2 memory counters the detached watcher sampled for the last run
+    // ({limitBytes, peakBytes, oomEvents, oomKills}, issue #182). Unlike the
+    // sticky `oomKilled`, they say how many processes the OOM killer took and
+    // whether the container hit its own limit.
+    this.cgroupMemory =
+      options.cgroupMemory !== undefined ? options.cgroupMemory : undefined;
     this.workingDirectory = options.workingDirectory || process.cwd();
     this.shell = options.shell || process.env.SHELL || '/bin/sh';
     this.platform = options.platform || process.platform;
@@ -175,6 +181,9 @@ class ExecutionRecord {
       this.memoryExhaustedReason !== null
     ) {
       obj.memoryExhaustedReason = this.memoryExhaustedReason;
+    }
+    if (this.cgroupMemory !== undefined && this.cgroupMemory !== null) {
+      obj.cgroupMemory = this.cgroupMemory;
     }
     Object.assign(obj, {
       workingDirectory: this.workingDirectory,

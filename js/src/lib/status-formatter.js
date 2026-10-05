@@ -26,6 +26,7 @@ const {
 } = require('./isolation-log-utils');
 const { normalizeDockerTimestamp } = require('./docker-post-mortem');
 const { END_TIME_SOURCE } = require('./detached-finalize');
+const { formatCgroupMemory } = require('./cgroup-memory');
 
 /**
  * Inspect the live state of a detached docker container by name.
@@ -665,6 +666,10 @@ function formatRecordAsText(record) {
       : []),
     ...(obj.memoryExhaustedReason !== undefined
       ? [`Memory Evidence:   ${obj.memoryExhaustedReason}`]
+      : []),
+    // cgroup v2 counters the detached watcher sampled (issue #182).
+    ...(formatCgroupMemory(obj.cgroupMemory)
+      ? [`Cgroup Memory:     ${formatCgroupMemory(obj.cgroupMemory)}`]
       : []),
     `PID:               ${obj.pid !== null ? obj.pid : 'N/A'}`,
     `Working Directory: ${obj.workingDirectory}`,

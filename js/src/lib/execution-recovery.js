@@ -40,6 +40,11 @@ const {
 } = require('./docker-resource-limits');
 const { shellQuote } = require('./isolation-log-utils');
 const {
+  CGROUP_SHELL_VARS,
+  formatCgroupMemoryLogLine,
+  parseCgroupMemorySample,
+} = require('./cgroup-memory');
+const {
   formatRecoveryDelay,
   getOnKillResumeDelay,
   pickRecoveryDelayMs,
@@ -125,7 +130,8 @@ function buildRecoverySnippet(executionId) {
     `{ [ "$${v.oom}" = true ] && ! [ "$${v.exit}" -ge 0 ] 2>/dev/null; }; } && ` +
     `${shellQuote(process.execPath)} ${shellQuote(__filename)} ` +
     `${shellQuote(executionId)} "$${v.exit}" "$${v.oom}" ` +
-    `"$${v.started}" "$${v.finished}" "$${v.error}" >/dev/null 2>&1`
+    `"$${v.started}" "$${v.finished}" "$${v.error}" ` +
+    `"$${CGROUP_SHELL_VARS.sample}" >/dev/null 2>&1`
   );
 }
 
@@ -200,7 +206,9 @@ function failureDetail(result) {
  * Resume a killed execution in its own container, after the random
  * `--on-kill-resume-delay` wait (issue #181) when one was requested.
  * @param {object} params - {store, executionId, exitCode, oomKilled, startedAt,
- *   finishedAt, containerError, runner, startWatcher, now, random, sleep}
+ *   finishedAt, containerError, cgroupMemory, runner, startWatcher, now,
+ *   random, sleep}; `cgroupMemory` is the watcher's last cgroup v2 sample
+ *   (issue #182)
  * @returns {{recovered: boolean, reason: string, attempt?: number, delayMs?: number}} Outcome
  */
 function recoverKilledExecution(params = {}) {
@@ -254,6 +262,10 @@ function recoverKilledExecution(params = {}) {
       error: params.containerError,
     })}`
   );
+  const memoryLine = formatCgroupMemoryLogLine(params.cgroupMemory);
+  if (memoryLine) {
+    log(`${memoryLine}\n`);
+  }
   log(
     formatRecoverySeparator({
       attempt,
@@ -313,12 +325,20 @@ function recoverKilledExecution(params = {}) {
 
   const described = describeExitCode(params.exitCode);
   const delayed = delayRange ? `, delayMs=${delayMs}` : '';
+  // The killed run's own counters: the resumed run starts a fresh cgroup.
+  const memory = parseCgroupMemorySample(params.cgroupMemory);
+  const counted = memory
+    ? ['oomEvents', 'oomKills']
+        .filter((field) => memory[field] !== null)
+        .map((field) => `, ${field}=${memory[field]}`)
+        .join('')
+    : '';
   record.options = {
     ...opts,
     recoveryAttempts: attempt,
     recoveryHistory: [
       ...(Array.isArray(opts.recoveryHistory) ? opts.recoveryHistory : []),
-      `${attempt}: exit ${described.code}, oomKilled=${params.oomKilled === true || params.oomKilled === 'true'}${delayed}, resumed at ${since}`,
+      `${attempt}: exit ${described.code}, oomKilled=${params.oomKilled === true || params.oomKilled === 'true'}${counted}${delayed}, resumed at ${since}`,
     ],
     lastRecoveryAt: since,
     ...(delayRange ? { lastRecoveryDelayMs: delayMs } : {}),
@@ -329,6 +349,7 @@ function recoverKilledExecution(params = {}) {
   record.endTime = null;
   record.exitReason = undefined;
   record.oomKilled = undefined;
+  record.cgroupMemory = undefined;
   try {
     store.save(record);
   } catch {
@@ -355,14 +376,22 @@ function recoverKilledExecution(params = {}) {
 
 /**
  * Entry point used by the detached watcher:
- *   <runtime> execution-recovery.js <uuid> <exit> <oom> <started> <finished> <error>
+ *   <runtime> execution-recovery.js <uuid> <exit> <oom> <started> <finished> <error> <cgroup>
  * Exits 0 only when the container was resumed; any other outcome lets the
  * watcher continue with its normal cleanup, footer and finalization.
  * @param {string[]} argv - Positional arguments
  * @returns {number} Process exit code
  */
 function main(argv) {
-  const [executionId, exitCode, oomKilled, startedAt, finishedAt, error] = argv;
+  const [
+    executionId,
+    exitCode,
+    oomKilled,
+    startedAt,
+    finishedAt,
+    error,
+    cgroupMemory,
+  ] = argv;
   if (!executionId || process.env.START_DISABLE_TRACKING === 'true') {
     return 1;
   }
@@ -381,6 +410,7 @@ function main(argv) {
       startedAt,
       finishedAt,
       containerError: error,
+      cgroupMemory,
     });
     return outcome.recovered ? 0 : 1;
   } catch (err) {

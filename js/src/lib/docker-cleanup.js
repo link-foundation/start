@@ -23,6 +23,11 @@ const {
   SHELL_VARS,
 } = require('./docker-post-mortem');
 const { buildDetachedFinalizeSnippet } = require('./detached-finalize');
+const {
+  buildCgroupMemoryLogSnippet,
+  buildCgroupSamplerStartSnippet,
+  buildCgroupSamplerStopSnippet,
+} = require('./cgroup-memory');
 
 const DOCKER_CONTAINER_CLEANUP_POLICY = {
   DEFAULT: 'default',
@@ -352,7 +357,9 @@ function buildDetachedDockerCompletionScript(
   watcherOptions = {}
 ) {
   const quotedName = shellQuote(containerName);
-  const parts = [];
+  // The container's cgroup disappears with it, so its memory counters are
+  // sampled while it runs (issue #182).
+  const parts = [buildCgroupSamplerStartSnippet(containerName)];
   // Everything that assumes the container has exited: cleanup, footer and
   // finalization. Guarded as a whole by `.State.Running` below.
   const exited = [];
@@ -367,14 +374,16 @@ function buildDetachedDockerCompletionScript(
       containerName,
       quotedLogPath
     );
-    const remove = `docker rm -f ${quotedName} >> ${quotedLogPath} 2>&1 || true; ${removalNote}`;
-    const keep = `${postMortem}; ${buildDockerKeptLogSnippet(containerName, quotedLogPath)}`;
+    const memory = buildCgroupMemoryLogSnippet(quotedLogPath);
+    const remove = `docker rm -f ${quotedName} >> ${quotedLogPath} 2>&1 || true; ${removalNote}; ${memory}`;
+    const keep = `${postMortem}; ${memory}; ${buildDockerKeptLogSnippet(containerName, quotedLogPath)}`;
 
     const since = watcherOptions.since
       ? ` --since ${shellQuote(watcherOptions.since)}`
       : '';
     parts.push(`docker logs -f${since} ${quotedName} >> ${quotedLogPath} 2>&1`);
     parts.push(buildDockerWaitForExitSnippet(containerName, quotedLogPath));
+    parts.push(buildCgroupSamplerStopSnippet());
     parts.push(buildDockerStateSnippet(containerName));
     if (policy === DOCKER_CONTAINER_CLEANUP_POLICY.ALWAYS) {
       exited.push(remove);
@@ -395,6 +404,7 @@ function buildDetachedDockerCompletionScript(
   } else {
     parts.push(`docker wait ${quotedName} >/dev/null 2>&1`);
     parts.push(buildDockerWaitForExitSnippet(containerName));
+    parts.push(buildCgroupSamplerStopSnippet());
     parts.push(buildDockerStateSnippet(containerName));
     if (policy === DOCKER_CONTAINER_CLEANUP_POLICY.ALWAYS) {
       exited.push(`docker rm -f ${quotedName} >/dev/null 2>&1 || true`);
