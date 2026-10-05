@@ -5,14 +5,16 @@
  * it says that *some* process in the container was OOM-killed at some point,
  * but not how many, not whether the container hit its own `--memory` limit or
  * the whole host ran out, and not how close the execution came to its limit.
- * The kernel keeps all three per cgroup
+ * The kernel provides raw counters per cgroup
  * (https://docs.kernel.org/admin-guide/cgroup-v2.html#memory-interface-files):
- *   memory.events `oom`       the cgroup hit its own limit
- *   memory.events `oom_kill`  processes killed here by *any* OOM killer, so
- *                             `oom_kill > oom` points to a host-wide (or
- *                             parent cgroup) OOM
+ *   memory.events `oom`       allocation events reaching the memory limit
+ *   memory.events `oom_kill`  processes killed here by *any* OOM killer
  *   memory.peak / memory.max  peak usage (Linux 5.19+) and limit (`max` when
  *                             unlimited)
+ * These counters have different units and are hierarchical. A group OOM can
+ * kill several processes for one allocation event; earlier allocation events
+ * can also coexist with a later host OOM. Their comparison cannot establish
+ * container, parent or host scope (issue #185).
  *
  * The cgroup is removed when the container stops, so the values cannot be read
  * afterwards. The detached completion watcher therefore samples them while the
@@ -122,9 +124,8 @@ function buildCgroupMemoryLogSnippet(quotedLogPath) {
   // A function, so `$1`.. of the watcher script itself stay untouched.
   return (
     `__start_command_cgroup_log() { __scm_note=''; ` +
-    `if [ "$4" -gt 0 ] 2>/dev/null; then if [ "$4" -gt "$3" ] 2>/dev/null; then ` +
-    `__scm_note=' (${OOM_SCOPE_NOTES[OOM_SCOPE.HOST_OR_PARENT]})'; ` +
-    `else __scm_note=' (${OOM_SCOPE_NOTES[OOM_SCOPE.CONTAINER_LIMIT]})'; fi; fi; ` +
+    `if [ "$4" -gt 0 ] 2>/dev/null; then ` +
+    `__scm_note=' (${OOM_SCOPE_NOTES[OOM_SCOPE.UNKNOWN]})'; fi; ` +
     `printf 'Memory:     memory.max=%s memory.peak=%s oom=%s oom_kill=%s%s\\n' ` +
     `"$1" "$2" "$3" "$4" "$__scm_note"; }; ` +
     `if [ -n "$${v.sample}" ]; then __start_command_cgroup_log $${v.sample} >> ${quotedLogPath}; fi`
@@ -151,14 +152,17 @@ function formatCgroupMemoryLogLine(text) {
 
 /** Where the OOM killer that killed processes in the container came from. */
 const OOM_SCOPE = {
+  UNKNOWN: 'unknown',
+  // Retained scope names; raw counters alone cannot establish either one.
   CONTAINER_LIMIT: 'container-limit',
   HOST_OR_PARENT: 'host-or-parent',
 };
 
 const OOM_SCOPE_NOTES = {
+  [OOM_SCOPE.UNKNOWN]: 'OOM kill scope unknown',
   [OOM_SCOPE.CONTAINER_LIMIT]: 'the container hit its own memory limit',
   [OOM_SCOPE.HOST_OR_PARENT]:
-    'oom_kill > oom: a host-wide or parent cgroup OOM killed processes here',
+    'a host-wide or parent cgroup OOM killed processes here',
 };
 
 function parseCounter(text) {
@@ -216,16 +220,17 @@ function normalizeCgroupMemory(value) {
 
 /**
  * @param {?object} memory - Counters
- * @returns {?string} One of OOM_SCOPE, or null when nothing was OOM-killed
+ * Raw counters do not attribute the OOM killer's scope. Separately attributed
+ * kernel/cgroup evidence would be needed to establish container, parent or
+ * host scope. An unknown oomEvents count remains unknown, never zero.
+ * @returns {?string} OOM_SCOPE.UNKNOWN for observed kills, otherwise null
  */
 function describeCgroupOomScope(memory) {
   const counters = normalizeCgroupMemory(memory);
   if (!counters || !(counters.oomKills > 0)) {
     return null;
   }
-  return counters.oomKills > (counters.oomEvents || 0)
-    ? OOM_SCOPE.HOST_OR_PARENT
-    : OOM_SCOPE.CONTAINER_LIMIT;
+  return OOM_SCOPE.UNKNOWN;
 }
 
 function formatBytes(bytes) {

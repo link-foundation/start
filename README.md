@@ -251,15 +251,19 @@ after the container exits, so the numbers outlive the cgroup. They follow the
 post-mortem (or the one-line removal note) as one more line:
 
 ```
-Memory:     memory.max=268435456 memory.peak=268300000 oom=0 oom_kill=3 (oom_kill > oom: a host-wide or parent cgroup OOM killed processes here)
+Memory:     memory.max=268435456 memory.peak=268300000 oom=0 oom_kill=3 (OOM kill scope unknown)
 ```
 
-`State.OOMKilled` is one sticky, container-wide boolean; these counters say how
-many processes the kernel killed in _this_ run (`oom_kill`), whether the
-container hit its own limit (`oom`, counted only when the container's own
-`memory.max` was reached) or a host-wide or parent-cgroup OOM reached in from
-outside (`oom_kill > oom`), and how close the run came to its limit
-(`memory.peak` of `memory.max`). `--status` stores them as `cgroupMemory`
+`State.OOMKilled` is one sticky, container-wide boolean; these counters record
+processes killed by any OOM killer (`oom_kill`), allocation events reaching
+the memory limit (`oom`), and peak usage (`memory.peak` of `memory.max`).
+The event counters are hierarchical and have different units: one group OOM
+can kill several processes, and earlier allocation failures can coexist with a
+later host OOM. Comparing these counts cannot distinguish container, parent or
+host scope, so observed kills are labeled `OOM kill scope unknown` (issue #185).
+Scope requires separately attributed kernel/cgroup evidence; a missing `oom`
+count stays unknown. See the [kernel memory interface documentation](https://docs.kernel.org/admin-guide/cgroup-v2.html#memory-interface-files).
+`--status` stores the raw counters as `cgroupMemory`
 (`limitBytes`, `peakBytes`, `oomEvents`, `oomKills`) and shows them as
 `Cgroup Memory:     peak 255.9 MiB of 256.0 MiB limit, oom 0, oom_kill 3 (...)`.
 A non-zero `oomKills` also explains a SIGKILL or unknown exit as
@@ -272,8 +276,7 @@ watcher reads the host's `/proc` and `/sys/fs/cgroup`, so a remote
 `DOCKER_HOST` (or a cgroup v1 host) simply records nothing; a one-second
 interval can miss kills in the last second when the cgroup disappears before
 the final read; `memory.peak` needs Linux 5.19 or newer (otherwise `peak
-unknown`); and the "host-wide or parent" note is a heuristic: `oom_kill > oom`
-also happens when the container's limit was hit inside a nested cgroup.
+unknown`).
 
 `--upload-log` accepts either an execution UUID or an isolation session name. It
 looks up the stored `logPath`, installs `gh-upload-log` with Bun or npm if the

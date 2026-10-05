@@ -4,7 +4,7 @@
  *   Docker's `State.OOMKilled` is container-wide and sticky (moby/moby#43564):
  *   it cannot say how many processes the OOM killer took, whether the
  *   container hit its own `--memory` limit or the whole host ran out, or how
- *   close the run came to its limit. The kernel counts all of that per cgroup
+ *   close the run came to its limit. The kernel provides raw counters per cgroup
  *   (`memory.events` `oom`/`oom_kill`, `memory.peak`, `memory.max`), but the
  *   cgroup is gone once the container stops.
  *
@@ -73,8 +73,8 @@ const needsPosixShell = () => {
 };
 
 const CONTAINER_ID = `182c${'0'.repeat(60)}`;
-const HOST_OOM_SAMPLE = '268435456 268300000 0 3';
-const HOST_OOM = {
+const OOM_SAMPLE = '268435456 268300000 0 3';
+const OOM_COUNTERS = {
   limitBytes: 268435456,
   peakBytes: 268300000,
   oomEvents: 0,
@@ -196,7 +196,7 @@ function runWatcher({ events, during, policy, state = KILLED_STATE, max }) {
 
 describe('issue #182: reading cgroup v2 memory counters', () => {
   it('parses the sample the watcher writes', () => {
-    expect(parseCgroupMemorySample(HOST_OOM_SAMPLE)).toEqual(HOST_OOM);
+    expect(parseCgroupMemorySample(OOM_SAMPLE)).toEqual(OOM_COUNTERS);
     expect(parseCgroupMemorySample('max - 1 1\n')).toEqual({
       limitBytes: null,
       peakBytes: null,
@@ -208,19 +208,19 @@ describe('issue #182: reading cgroup v2 memory counters', () => {
     }
   });
 
-  it('tells a container limit from a host-wide or parent OOM', () => {
-    expect(describeCgroupOomScope(HOST_OOM)).toBe(OOM_SCOPE.HOST_OR_PARENT);
+  it('leaves OOM scope unknown with only raw counters', () => {
+    expect(describeCgroupOomScope(OOM_COUNTERS)).toBe(OOM_SCOPE.UNKNOWN);
     expect(describeCgroupOomScope({ oomEvents: 2, oomKills: 2 })).toBe(
-      OOM_SCOPE.CONTAINER_LIMIT
+      OOM_SCOPE.UNKNOWN
     );
     expect(describeCgroupOomScope({ oomEvents: 4, oomKills: 0 })).toBeNull();
     expect(describeCgroupOomScope(null)).toBeNull();
   });
 
   it('formats the counters for --status and for the log', () => {
-    expect(formatCgroupMemory(HOST_OOM)).toBe(
+    expect(formatCgroupMemory(OOM_COUNTERS)).toBe(
       'peak 255.9 MiB of 256.0 MiB limit, oom 0, oom_kill 3 ' +
-        '(oom_kill > oom: a host-wide or parent cgroup OOM killed processes here)'
+        '(OOM kill scope unknown)'
     );
     expect(
       formatCgroupMemory({
@@ -230,7 +230,7 @@ describe('issue #182: reading cgroup v2 memory counters', () => {
         oomKills: 1,
       })
     ).toBe(
-      'peak unknown of no limit, oom 1, oom_kill 1 (the container hit its own memory limit)'
+      'peak unknown of no limit, oom 1, oom_kill 1 (OOM kill scope unknown)'
     );
     expect(formatCgroupMemoryLogLine('max 1024 0 0')).toBe(
       'Memory:     memory.max=max memory.peak=1024 oom=0 oom_kill=0'
@@ -286,10 +286,10 @@ describe('issue #182: the watcher samples the cgroup while the container runs', 
     });
     expect(result.status).toBe(0);
     expect(fs.readFileSync(path.join(host.dir, 'sample'), 'utf8')).toBe(
-      HOST_OOM_SAMPLE
+      OOM_SAMPLE
     );
     expect(fs.readFileSync(logPath, 'utf8')).toBe(
-      `${formatCgroupMemoryLogLine(HOST_OOM_SAMPLE)}\n`
+      `${formatCgroupMemoryLogLine(OOM_SAMPLE)}\n`
     );
   });
 
@@ -309,7 +309,7 @@ describe('issue #182: the watcher samples the cgroup while the container runs', 
     expect(run.log).toContain('Exit Code:  137 (SIGKILL - 128+9)');
     expect(run.log).toContain(
       'Memory:     memory.max=268435456 memory.peak=268300000 oom=1 oom_kill=3 ' +
-        '(oom_kill > oom: a host-wide or parent cgroup OOM killed processes here)'
+        '(OOM kill scope unknown)'
     );
     expect(run.record.status).toBe(ExecutionStatus.EXECUTED);
     expect(run.record.cgroupMemory).toEqual({
@@ -378,9 +378,9 @@ describe('issue #182: the watcher samples the cgroup while the container runs', 
       exitCode: '137',
       oomKilled: 'false',
       finishedAt: '2026-10-01T10:05:00Z',
-      cgroupMemory: HOST_OOM_SAMPLE,
+      cgroupMemory: OOM_SAMPLE,
     });
-    expect(finalized.cgroupMemory).toEqual(HOST_OOM);
+    expect(finalized.cgroupMemory).toEqual(OOM_COUNTERS);
     expect(finalized.exitReason).toBeTruthy();
   });
 });
@@ -402,7 +402,7 @@ describe('issue #182: the kill recovery keeps the killed run counters', () => {
       status: ExecutionStatus.EXECUTING,
       command: 'cargo test',
       logPath,
-      cgroupMemory: HOST_OOM,
+      cgroupMemory: OOM_COUNTERS,
       options: {
         isolated: 'docker',
         isolationMode: 'detached',
@@ -419,14 +419,14 @@ describe('issue #182: the kill recovery keeps the killed run counters', () => {
       startedAt: '2026-10-01T10:00:00Z',
       finishedAt: '2026-10-01T10:05:00Z',
       containerError: '',
-      cgroupMemory: HOST_OOM_SAMPLE,
+      cgroupMemory: OOM_SAMPLE,
       runner: (command, args) => ok(args[0] === 'inspect' ? '{}\n' : 'cid\n'),
       startWatcher: () => {},
       now: () => new Date('2026-10-01T10:06:00.000Z'),
     });
     expect(outcome.recovered).toBe(true);
     expect(fs.readFileSync(logPath, 'utf8')).toContain(
-      `${formatCgroupMemoryLogLine(HOST_OOM_SAMPLE)}\n\n[Recovery 1/2]`
+      `${formatCgroupMemoryLogLine(OOM_SAMPLE)}\n\n[Recovery 1/2]`
     );
     const stored = store.get(record.uuid);
     expect(stored.options.recoveryHistory).toEqual([
