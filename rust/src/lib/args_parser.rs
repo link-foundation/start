@@ -101,6 +101,8 @@ pub struct WrapperOptions {
     pub on_kill_resume: Option<u32>,
     /// Command run in the same container on such a resume (issue #176)
     pub recovery_command: Option<String>,
+    /// Random `<min>[-<max>]` seconds to wait before each such resume (issue #181)
+    pub on_kill_resume_delay: Option<String>,
     /// SSH endpoint (e.g., user@host)
     pub endpoint: Option<String>,
     /// Create isolated user
@@ -169,6 +171,7 @@ impl Default for WrapperOptions {
             network_aliases: Vec::new(),
             on_kill_resume: None,
             recovery_command: None,
+            on_kill_resume_delay: None,
             endpoint: None,
             user: false,
             user_name: None,

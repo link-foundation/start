@@ -23,6 +23,7 @@ pub mod isolation_metadata;
 pub mod log_uploader;
 pub mod output_blocks;
 pub mod query_commands;
+pub mod recovery_delay;
 pub mod sequence_parser;
 pub mod session_probe;
 pub mod signal_handler;

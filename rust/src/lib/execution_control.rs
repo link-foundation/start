@@ -430,6 +430,30 @@ pub fn format_control_result_as_links_notation(
     process_ids: Option<&Value>,
     message: &str,
 ) -> String {
+    let status = match action {
+        ControlAction::Stop => "signal-sent",
+        ControlAction::Terminate => "terminated",
+    };
+    format_control_result_with_status(
+        action,
+        identifier,
+        record,
+        status,
+        method,
+        process_ids,
+        message,
+    )
+}
+
+fn format_control_result_with_status(
+    action: ControlAction,
+    identifier: &str,
+    record: &ExecutionRecord,
+    status: &str,
+    method: &str,
+    process_ids: Option<&Value>,
+    message: &str,
+) -> String {
     let backend = record
         .options
         .get("isolated")
@@ -440,10 +464,6 @@ pub fn format_control_result_as_links_notation(
         .get("sessionName")
         .and_then(|value| value.as_str())
         .unwrap_or("");
-    let status = match action {
-        ControlAction::Stop => "signal-sent",
-        ControlAction::Terminate => "terminated",
-    };
 
     let mut lines = vec![
         "executionControl".to_string(),
@@ -492,6 +512,23 @@ fn mark_stop_requested(store: &ExecutionStore, record: &mut ExecutionRecord) -> 
     // Best effort: without the marker the session may be recovered once more.
     let _ = store.save(record);
     previous
+}
+
+/// Whether a failed docker control command hit a container that has already
+/// exited while launch-time recovery is configured: the stop marker alone then
+/// cancels the resume the watcher may still be waiting to make (issue #181).
+fn is_pending_recovery_stop(record: &ExecutionRecord, result: &CommandRunOutput) -> bool {
+    if record.options.get("isolated").and_then(Value::as_str) != Some("docker")
+        || !has_kill_recovery(record)
+    {
+        return false;
+    }
+    let detail = format!(
+        "{} {}",
+        result.stderr,
+        result.error.as_deref().unwrap_or_default()
+    );
+    detail.to_lowercase().contains("is not running")
 }
 
 fn restore_stop_requested(
@@ -551,6 +588,34 @@ pub fn control_execution_with_runner<R: CommandRunner>(
     // which exits 137 just like the OOM killer.
     let previous_stop_requested_at = mark_stop_requested(store, &mut record);
     let result = runner.run(&control.command, &control.args);
+    if !result.success && is_pending_recovery_stop(&record, &result) {
+        // The container already exited and its watcher is waiting out
+        // `--on-kill-resume-delay` (issue #181): `docker kill` has nothing to
+        // signal, but the marker it left cancels the pending resume.
+        let session_name = record
+            .options
+            .get("sessionName")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string();
+        let output = format_control_result_with_status(
+            action,
+            identifier,
+            &record,
+            "recovery-cancelled",
+            &control.method,
+            None,
+            &format!(
+                "Cancelled the pending recovery of detached docker container: {}",
+                session_name
+            ),
+        );
+        return ExecutionControlResult {
+            success: true,
+            output: Some(output),
+            error: None,
+        };
+    }
     if !result.success {
         restore_stop_requested(store, &mut record, previous_stop_requested_at);
         let backend = record
