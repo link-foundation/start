@@ -5,6 +5,10 @@ use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use crate::cgroup_memory::{
+    build_cgroup_memory_log_snippet, build_cgroup_sampler_start_snippet,
+    build_cgroup_sampler_stop_snippet,
+};
 use crate::detached_finalize::build_detached_finalize_snippet;
 use crate::docker_post_mortem::{
     build_docker_post_mortem_snippet, build_docker_removal_note_snippet,
@@ -436,7 +440,9 @@ pub fn build_detached_docker_completion_script_with(
     watcher: &DockerWatcherOptions,
 ) -> String {
     let quoted_name = shell_quote(container_name);
-    let mut parts = Vec::new();
+    // The container's cgroup disappears with it, so its memory counters are
+    // sampled while it runs (issue #182).
+    let mut parts = vec![build_cgroup_sampler_start_snippet(container_name)];
     // Everything that assumes the container has exited: cleanup, footer and
     // finalization. Guarded as a whole by `.State.Running` below.
     let mut exited = Vec::new();
@@ -456,19 +462,23 @@ pub fn build_detached_docker_completion_script_with(
             container_name,
             Some(quoted_log_path),
         ));
+        parts.push(build_cgroup_sampler_stop_snippet());
         parts.push(build_docker_state_snippet(container_name));
 
+        let memory = build_cgroup_memory_log_snippet(quoted_log_path);
         let remove = format!(
-            "docker rm -f {} >> {} 2>&1 || true; {}",
+            "docker rm -f {} >> {} 2>&1 || true; {}; {}",
             quoted_name,
             quoted_log_path,
-            build_docker_removal_note_snippet(container_name, quoted_log_path)
+            build_docker_removal_note_snippet(container_name, quoted_log_path),
+            memory
         );
         // A kept container is exactly the case the user will investigate, so it
         // gets the full post-mortem before the copy-paste instructions.
         let keep = format!(
-            "{}; {}",
+            "{}; {}; {}",
             build_docker_post_mortem_snippet(container_name, quoted_log_path),
+            memory,
             build_docker_kept_log_snippet(container_name, quoted_log_path)
         );
         match policy {
@@ -493,6 +503,7 @@ pub fn build_detached_docker_completion_script_with(
     } else {
         parts.push(format!("docker wait {} >/dev/null 2>&1", quoted_name));
         parts.push(build_docker_wait_for_exit_snippet(container_name, None));
+        parts.push(build_cgroup_sampler_stop_snippet());
         parts.push(build_docker_state_snippet(container_name));
         match policy {
             DockerContainerCleanupPolicy::Always => exited.push(format!(

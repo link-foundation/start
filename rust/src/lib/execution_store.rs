@@ -83,6 +83,15 @@ pub struct ExecutionRecord {
     pub container_started_at: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub oom_killed: Option<bool>,
+    /// cgroup v2 memory counters the detached watcher sampled while the
+    /// container ran (issue #182). Unlike the sticky `oom_killed`, they are
+    /// counted for this run only.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::cgroup_memory::deserialize_cgroup_memory"
+    )]
+    pub cgroup_memory: Option<crate::cgroup_memory::CgroupMemory>,
     /// Hint explaining an otherwise opaque exit code (issue #162).
     /// Derived from the log tail on read; never a stored verdict.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -119,6 +128,7 @@ impl ExecutionRecord {
             stale_detected_at: None,
             container_started_at: None,
             oom_killed: None,
+            cgroup_memory: None,
             exit_reason: None,
             memory_exhausted: None,
             memory_exhausted_reason: None,

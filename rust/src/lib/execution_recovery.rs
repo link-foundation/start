@@ -26,6 +26,9 @@ use std::path::PathBuf;
 use chrono::{SecondsFormat, Utc};
 use serde_json::{json, Value};
 
+use crate::cgroup_memory::{
+    cgroup_shell_vars, format_cgroup_memory_log_line, parse_cgroup_memory_sample,
+};
 use crate::detached_finalize::{normalize_bool, normalize_container_error};
 use crate::docker_cleanup::{
     docker_command, get_docker_container_cleanup_policy,
@@ -115,12 +118,13 @@ pub fn build_recovery_snippet(execution_id: &str) -> String {
         .map(|path| path.to_string_lossy().to_string())
         .unwrap_or_else(|_| "start".to_string());
     format!(
-        "{{ [ \"${exit}\" = {code} ] || {{ [ \"${oom}\" = true ] && ! [ \"${exit}\" -ge 0 ] 2>/dev/null; }}; }} && {exe} {flag} {id} \"${exit}\" \"${oom}\" \"${started}\" \"${finished}\" \"${error}\" >/dev/null 2>&1",
+        "{{ [ \"${exit}\" = {code} ] || {{ [ \"${oom}\" = true ] && ! [ \"${exit}\" -ge 0 ] 2>/dev/null; }}; }} && {exe} {flag} {id} \"${exit}\" \"${oom}\" \"${started}\" \"${finished}\" \"${error}\" \"${cgroup}\" >/dev/null 2>&1",
         exit = shell_vars::EXIT,
         oom = shell_vars::OOM,
         started = shell_vars::STARTED,
         finished = shell_vars::FINISHED,
         error = shell_vars::ERROR,
+        cgroup = cgroup_shell_vars::SAMPLE,
         code = KILLED_EXIT_CODE,
         exe = shell_quote(&executable),
         flag = INTERNAL_RECOVER_FLAG,
@@ -181,6 +185,8 @@ pub struct RecoveryFacts {
     pub started_at: String,
     pub finished_at: String,
     pub container_error: String,
+    /// The watcher's last cgroup v2 sample (issue #182).
+    pub cgroup_memory: String,
 }
 
 /// Outcome of a recovery attempt; `recovered` is true only when the container
@@ -395,6 +401,9 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
             error: normalize_container_error(&facts.container_error),
         })
     ));
+    if let Some(line) = format_cgroup_memory_log_line(&facts.cgroup_memory) {
+        log(&format!("{}\n", line));
+    }
     let recovery_command = option_str(&record, "recoveryCommand").map(str::to_string);
     log(&format_recovery_separator(&RecoverySeparator {
         attempt,
@@ -466,14 +475,27 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
     } else {
         String::new()
     };
+    // The killed run's own counters: the resumed run starts a fresh cgroup.
+    let counted = parse_cgroup_memory_sample(&facts.cgroup_memory)
+        .map(|memory| {
+            [
+                ("oomEvents", memory.oom_events),
+                ("oomKills", memory.oom_kills),
+            ]
+            .iter()
+            .filter_map(|(field, value)| value.map(|value| format!(", {}={}", field, value)))
+            .collect::<String>()
+        })
+        .unwrap_or_default();
     history.push(json!(format!(
-        "{}: exit {}, oomKilled={}{}, resumed at {}",
+        "{}: exit {}, oomKilled={}{}{}, resumed at {}",
         attempt,
         described
             .code
             .map(|code| code.to_string())
             .unwrap_or_else(|| "unknown".to_string()),
         oom_killed == Some(true),
+        counted,
         delayed,
         since
     )));
@@ -492,6 +514,7 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
     record.end_time = None;
     record.exit_reason = None;
     record.oom_killed = None;
+    record.cgroup_memory = None;
     // The container is already running again; even if the save fails, the new
     // watcher still follows it and finalizes the record when it ends.
     let _ = store.save(&record);
@@ -529,7 +552,7 @@ pub fn start_system_watcher(
 }
 
 /// Entry point for `--internal-recover-detached-docker <uuid> <exit> <oom>
-/// <started> <finished> <error>`. Returns 0 only when the container was
+/// <started> <finished> <error> <cgroup>`. Returns 0 only when the container was
 /// resumed; any other outcome lets the watcher continue with its normal
 /// cleanup, footer and finalization.
 pub fn run_internal_recover(args: &[String]) -> i32 {
@@ -554,6 +577,7 @@ pub fn run_internal_recover(args: &[String]) -> i32 {
             started_at: field(3),
             finished_at: field(4),
             container_error: field(5),
+            cgroup_memory: field(6),
         },
         &SystemCommandRunner,
         &start_system_watcher,

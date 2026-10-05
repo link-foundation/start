@@ -19,6 +19,7 @@ use std::path::PathBuf;
 use chrono::Utc;
 use serde_json::Value;
 
+use crate::cgroup_memory::{cgroup_shell_vars, parse_cgroup_memory_sample};
 use crate::docker_post_mortem::{normalize_docker_timestamp, shell_vars};
 use crate::execution_store::{
     ExecutionRecord, ExecutionStatus, ExecutionStore, ExecutionStoreOptions,
@@ -54,6 +55,9 @@ pub struct DetachedFinalizeFacts {
     pub container_error: String,
     /// `.State.Running`: `true` means the container has not exited (issue #174).
     pub running: String,
+    /// Last cgroup v2 sample of the watcher,
+    /// `<memory.max> <memory.peak> <oom> <oom_kill>` (issue #182).
+    pub cgroup_memory: String,
 }
 
 /// Outcome of a finalization attempt. `updated` is false when there was
@@ -165,6 +169,10 @@ pub fn finalize_detached_execution(
     if let Some(oom_killed) = normalize_bool(&facts.oom_killed) {
         record.oom_killed = Some(oom_killed);
     }
+    // Counted by the kernel for this run only, unlike the sticky `OOMKilled`.
+    if let Some(cgroup_memory) = parse_cgroup_memory_sample(&facts.cgroup_memory) {
+        record.cgroup_memory = Some(cgroup_memory);
+    }
     let reason =
         resolve_reason(&record).or_else(|| lost.then(|| WATCHER_LOST_CONTAINER.to_string()));
     if let Some(reason) = reason {
@@ -195,7 +203,12 @@ fn resolve_reason(record: &ExecutionRecord) -> Option<String> {
     } else {
         read_log_tail(&record.log_path, FATAL_MARKER_TAIL_BYTES)
     };
-    resolve_exit_reason(record.exit_code, tail.as_deref(), record.oom_killed, None)
+    resolve_exit_reason(
+        record.exit_code,
+        tail.as_deref(),
+        record.oom_killed,
+        record.cgroup_memory.and_then(|memory| memory.oom_kills),
+    )
 }
 
 /// Reconcile an in-memory record with one the detached watcher already
@@ -234,7 +247,7 @@ pub fn build_detached_finalize_snippet(execution_id: &str) -> String {
         .map(|path| path.to_string_lossy().to_string())
         .unwrap_or_else(|_| "start".to_string());
     format!(
-        "{} {} {} \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" >/dev/null 2>&1 || true",
+        "{} {} {} \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" >/dev/null 2>&1 || true",
         shell_quote(&executable),
         INTERNAL_FINALIZE_FLAG,
         shell_quote(execution_id),
@@ -244,11 +257,12 @@ pub fn build_detached_finalize_snippet(execution_id: &str) -> String {
         shell_vars::FINISHED,
         shell_vars::ERROR,
         shell_vars::RUNNING,
+        cgroup_shell_vars::SAMPLE,
     )
 }
 
 /// Entry point for `--internal-finalize-detached-docker <uuid> <exit> <oom>
-/// <started> <finished> <error> <running>`. Always succeeds: see the module docs.
+/// <started> <finished> <error> <running> <cgroup>`. Always succeeds: see the module docs.
 pub fn run_internal_finalize(args: &[String]) {
     let execution_id = match args.first() {
         Some(value) if !value.is_empty() => value.clone(),
@@ -272,6 +286,7 @@ pub fn run_internal_finalize(args: &[String]) {
             finished_at: field(4),
             container_error: field(5),
             running: field(6),
+            cgroup_memory: field(7),
         },
     );
 }

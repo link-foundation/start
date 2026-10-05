@@ -107,6 +107,7 @@ fn killed() -> RecoveryFacts {
         started_at: "2026-10-01T10:00:00Z".to_string(),
         finished_at: "2026-10-01T10:05:00Z".to_string(),
         container_error: String::new(),
+        ..Default::default()
     }
 }
 

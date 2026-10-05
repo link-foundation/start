@@ -43,6 +43,7 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
         return enriched;
     }
     let tail = read_log_tail(&enriched.log_path, FATAL_MARKER_TAIL_BYTES);
+    let oom_kills = enriched.cgroup_memory.and_then(|memory| memory.oom_kills);
     // A record finalized before #180 may carry the cgroup OOM reason for an
     // ordinary exit (the sticky flag was blamed for exit 0/1): re-derive it.
     if enriched.exit_reason.is_none()
@@ -52,7 +53,7 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
             enriched.exit_code,
             tail.as_deref(),
             enriched.oom_killed,
-            None,
+            oom_kills,
         );
     }
     if enriched.memory_exhausted.is_none() {
@@ -60,7 +61,7 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
             enriched.exit_code,
             tail.as_deref(),
             enriched.oom_killed,
-            None,
+            oom_kills,
         ) {
             enriched.memory_exhausted = Some(memory.memory_exhausted);
             enriched.memory_exhausted_reason = Some(memory.memory_exhausted_reason);
@@ -296,6 +297,10 @@ fn format_record_as_links_notation_with_enrichments(
                             }
                         }
                     }
+                } else if value.is_object() {
+                    // Nested records such as `cgroupMemory` (issue #182), in
+                    // the same layout as the JavaScript formatter.
+                    append_links_value(&mut lines, &key, &value, 2);
                 } else {
                     let formatted_value = match &value {
                         Value::String(s) => escape_for_links_notation(s),
@@ -403,6 +408,13 @@ fn format_record_as_text_with_enrichments(
     }
     if let Some(ref reason) = record.memory_exhausted_reason {
         lines.push(format!("Memory Evidence:   {}", reason));
+    }
+    // cgroup v2 counters the detached watcher sampled (issue #182).
+    if let Some(ref memory) = record.cgroup_memory {
+        lines.push(format!(
+            "Cgroup Memory:     {}",
+            crate::cgroup_memory::format_cgroup_memory(memory)
+        ));
     }
     lines.push(format!("PID:               {}", pid_str));
     if let Some(process_ids) = process_ids {

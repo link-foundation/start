@@ -54,6 +54,7 @@ fn facts(exit_code: &str, finished_at: &str, running: &str) -> DetachedFinalizeF
         finished_at: finished_at.to_string(),
         container_error: String::new(),
         running: running.to_string(),
+        ..Default::default()
     }
 }
 
@@ -199,6 +200,8 @@ mod shell {
                 "        echo \"$answer\" > \"$dir/current\"".to_string(),
                 "        echo \"$answer\" ;;".to_string(),
                 "      *State.Error*) echo \"\" ;;".to_string(),
+                // The cgroup sampler (issue #182): no cgroup to find here.
+                "      *'{{.Id}}'*|*State.Pid*) echo 0 ;;".to_string(),
                 "      *) echo \"inspect-state\" >> \"$dir/calls\"; cat \"$dir/state\" ;;".to_string(),
                 "    esac ;;".to_string(),
                 "  logs) echo logs >> \"$dir/calls\"; echo work; exit 1 ;;".to_string(),

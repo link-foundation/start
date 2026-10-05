@@ -144,6 +144,7 @@ fn the_finalizer_does_not_record_the_flag_as_the_reason_for_exit_1() {
             finished_at: "2026-10-01T19:41:00Z".to_string(),
             container_error: String::new(),
             running: "false".to_string(),
+            ..Default::default()
         },
     );
 

@@ -65,6 +65,7 @@ fn recover_killed_execution_does_not_resume_an_exit_0_or_1_with_oom_killed() {
             started_at: "2026-10-03T12:00:00Z".to_string(),
             finished_at: "2026-10-03T16:55:20Z".to_string(),
             container_error: String::new(),
+            ..Default::default()
         };
         let outcome = recover_killed_execution(
             &store,
