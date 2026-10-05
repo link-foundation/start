@@ -1,5 +1,15 @@
 # start-command
 
+## 0.35.2
+
+### Patch Changes
+
+- e234c05: Stop reporting `exitReason: memory-exhaustion (cgroup-oom-killer)` and `memoryExhausted: true` (`Docker reported State.OOMKilled=true`) for executions that exited 0, 1 or any other ordinary code while Docker's sticky `OOMKilled` flag was set. The flag is container-wide (moby/moby#43564): it turns on when _any_ process in the container is OOM-killed, such as a `rustc` child under `cargo test`, and stays on until the next start. It now counts as the exit reason only when the command itself died by SIGKILL (exit 137) or its exit code is unknown, the same rule `--on-kill-resume` uses since #178. `oomKilled: true` is still reported. A stale cgroup reason stored by an older version is dropped by `--status`. An attached container kept after a child OOM kill now says `Docker reports a process in it was OOM-killed`.
+
+  Add `--on-kill-resume-delay <min[-max]>` for `--on-kill-resume`/`--recovery-command`: wait a uniformly random number of seconds (e.g. `30-90`; one number is a fixed delay, the default `0` resumes at once) before each recovery, so executions killed by the same host-wide OOM event do not all restart in the same second and trigger the next one. The chosen delay is printed in the `[Recovery k/N]` line, stored as `delayMs` in `recoveryHistory` and as `lastRecoveryDelayMs`, and shown in the `[Isolation] On kill:` line. A `--stop` or `--terminate` during the wait cancels the pending resume; `--terminate` of the already exited container now reports `recovery-cancelled` instead of failing.
+
+  Record the container's cgroup v2 memory counters for detached Docker executions: the completion watcher samples `memory.max`, `memory.peak` and the `memory.events` `oom`/`oom_kill` counters every second (and once more after the container exits, since the cgroup disappears with it). They are written as a `Memory:` line after the container post-mortem, stored as `cgroupMemory` (`limitBytes`, `peakBytes`, `oomEvents`, `oomKills`) and shown by `--status` as `Cgroup Memory:` with a note telling a container-limit OOM (`oom_kill == oom`) from a host-wide or parent-cgroup OOM (`oom_kill > oom`). A non-zero `oomKills` explains a SIGKILL or unknown exit as a cgroup OOM kill, and each `--on-kill-resume` `recoveryHistory` entry notes `oomEvents`/`oomKills` of the killed run. Hosts without cgroup v2 or with a remote `DOCKER_HOST` record nothing.
+
 ## 0.35.1
 
 ### Patch Changes
