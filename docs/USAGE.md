@@ -45,7 +45,10 @@ re-applied to the derived container). Add `--on-kill-resume <N>` and
 `--recovery-command <cmd>` to a detached Docker launch to recover from an OOM
 kill in the same container automatically, and `--on-kill-resume-delay 30-90`
 to wait a random 30–90 seconds before each such resume so that executions
-killed by the same OOM event do not all restart at once. `--resume-all` re-attaches or reconciles every execution
+killed by the same OOM event do not all restart at once. On cgroup v2 hosts a
+detached Docker execution also records its container's `memory.peak`,
+`memory.max` and `oom`/`oom_kill` counters (`cgroupMemory`, a `Memory:` log
+line), which tell a container-limit OOM from a host-wide one. `--resume-all` re-attaches or reconciles every execution
 still marked running, which is what repairs records after a supervisor restart.
 See [Execution Tracking](../README.md#execution-tracking) for the full behavior.
 
