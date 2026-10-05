@@ -6,7 +6,10 @@ const {
   readLogTail,
   shellQuote,
 } = require('./isolation-log-utils');
-const { resolveMemoryExhaustion } = require('./exit-reason');
+const {
+  isOomKillOfCommand,
+  resolveMemoryExhaustion,
+} = require('./exit-reason');
 const {
   buildDockerPostMortemSnippet,
   buildDockerRemovalNoteSnippet,
@@ -266,10 +269,16 @@ function buildAttachedDockerKeptMessage({
   oomKilled,
   logPath,
 }) {
-  let message =
-    oomKilled === true
-      ? `\nContainer kept because Docker reports it was OOM-killed.`
-      : `\nContainer kept because the command failed.`;
+  let message;
+  if (oomKilled !== true) {
+    message = `\nContainer kept because the command failed.`;
+  } else if (isOomKillOfCommand({ exitCode, oomKilled })) {
+    message = `\nContainer kept because Docker reports it was OOM-killed.`;
+  } else {
+    // The flag is container-wide (#180): a child was OOM-killed, the command
+    // itself exited on its own.
+    message = `\nContainer kept because Docker reports a process in it was OOM-killed.`;
+  }
   const memory = resolveMemoryExhaustion({
     exitCode,
     logTail: logPath ? readLogTail(logPath, FATAL_MARKER_TAIL_BYTES) : null,

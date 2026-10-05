@@ -369,6 +369,14 @@ succeeds is never reported as a memory failure.
 The same tail is scanned for attached and detached sessions alike, with a 64 KiB
 window, because V8 prints a long native stack trace after the marker.
 
+Without a log marker, Docker's `State.OOMKilled` explains the exit
+(`memory-exhaustion (cgroup-oom-killer)`, `Docker reported State.OOMKilled=true`)
+only when the command itself was SIGKILLed (exit 137) or its exit code is
+unknown. The flag is container-wide and sticky (moby/moby#43564): it turns on
+when _any_ process in the container is OOM-killed, so a `cargo test` whose
+`rustc` child was OOM-killed and which later exited `1` on its own reports
+`oomKilled true` with no memory exit reason (issue #180).
+
 `exitReason`, `memoryExhausted` and `memoryExhaustedReason` are only hints. They
 never change `status`, `exitCode` or `oomKilled`, which stay observations of what
 the backend actually reported.

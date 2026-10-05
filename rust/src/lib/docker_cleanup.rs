@@ -13,7 +13,7 @@ use crate::docker_post_mortem::{
     format_container_removal_note, normalize_docker_timestamp, shell_vars, ContainerPostMortem,
     DOCKER_STATE_INSPECT_FORMAT,
 };
-use crate::exit_reason::resolve_memory_exhaustion;
+use crate::exit_reason::{is_oom_kill_of_command, resolve_memory_exhaustion};
 use crate::isolation::isolation_log::{
     append_log_file, create_shell_log_footer_snippet, read_log_tail, shell_quote,
     FATAL_MARKER_TAIL_BYTES,
@@ -275,6 +275,19 @@ pub(crate) fn read_docker_container_status(container_name: &str) -> Option<Strin
     }
 }
 
+/// Why an attached container was kept. The OOM flag is container-wide (#180):
+/// a child OOM-killed under a command that exited on its own is not the
+/// command being OOM-killed.
+pub(crate) fn attached_docker_kept_reason(exit_code: i32, oom_killed: bool) -> &'static str {
+    if !oom_killed {
+        "\nContainer kept because the command failed."
+    } else if is_oom_kill_of_command(Some(exit_code), Some(true), None) {
+        "\nContainer kept because Docker reports it was OOM-killed."
+    } else {
+        "\nContainer kept because Docker reports a process in it was OOM-killed."
+    }
+}
+
 pub(crate) fn append_attached_docker_cleanup_message(
     message: &mut String,
     container_name: &str,
@@ -313,11 +326,7 @@ pub(crate) fn append_attached_docker_cleanup_message(
         message.push_str(&docker_container_cleanup_instructions(container_name));
         message.push_str(&post_mortem(false));
     } else {
-        if oom_killed {
-            message.push_str("\nContainer kept because Docker reports it was OOM-killed.");
-        } else {
-            message.push_str("\nContainer kept because the command failed.");
-        }
+        message.push_str(attached_docker_kept_reason(exit_code, oom_killed));
         // A runtime that aborts on its own memory limit never trips the
         // container flag, so `oomKilled false` alone would contradict the
         // `FATAL ERROR` the runtime just printed into this very log (issue
@@ -325,7 +334,7 @@ pub(crate) fn append_attached_docker_cleanup_message(
         let tail = log_path
             .and_then(|path| read_log_tail(&path.to_string_lossy(), FATAL_MARKER_TAIL_BYTES));
         if let Some(memory) =
-            resolve_memory_exhaustion(Some(exit_code), tail.as_deref(), Some(oom_killed))
+            resolve_memory_exhaustion(Some(exit_code), tail.as_deref(), Some(oom_killed), None)
         {
             message.push_str(&format!(
                 "\nMemory exhaustion detected in the log: {}",
@@ -747,6 +756,14 @@ mod tests {
             evaluate_reason("137", "true"),
             "exitCode=137 oomKilled=true"
         );
+    }
+
+    #[test]
+    fn attached_kept_reason_names_a_child_oom_kill_not_the_command() {
+        assert!(attached_docker_kept_reason(1, true).contains("a process in it was OOM-killed"));
+        assert!(attached_docker_kept_reason(0, true).contains("a process in it was OOM-killed"));
+        assert!(attached_docker_kept_reason(137, true).contains("reports it was OOM-killed."));
+        assert!(attached_docker_kept_reason(1, false).contains("the command failed"));
     }
 
     #[test]

@@ -162,6 +162,7 @@ function resolveReason(record) {
       exitCode: record.exitCode,
       logTail,
       oomKilled: record.oomKilled,
+      cgroupMemory: record.cgroupMemory,
     });
   } catch {
     return null;

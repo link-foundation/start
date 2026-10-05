@@ -7,7 +7,9 @@
 
 use crate::execution_control::collect_process_ids;
 use crate::execution_store::{ExecutionRecord, ExecutionStatus, ExecutionStore};
-use crate::exit_reason::{describe_exit_code, resolve_exit_reason, resolve_memory_exhaustion};
+use crate::exit_reason::{
+    describe_exit_code, resolve_exit_reason, resolve_memory_exhaustion, CGROUP_OOM_EXIT_REASON,
+};
 use crate::isolation::isolation_log::{read_log_tail, FATAL_MARKER_TAIL_BYTES};
 use crate::output_blocks::{escape_for_links_notation, format_value_for_links_notation};
 use crate::status_footer::read_footer_from_log;
@@ -41,14 +43,25 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
         return enriched;
     }
     let tail = read_log_tail(&enriched.log_path, FATAL_MARKER_TAIL_BYTES);
-    if enriched.exit_reason.is_none() {
-        enriched.exit_reason =
-            resolve_exit_reason(enriched.exit_code, tail.as_deref(), enriched.oom_killed);
+    // A record finalized before #180 may carry the cgroup OOM reason for an
+    // ordinary exit (the sticky flag was blamed for exit 0/1): re-derive it.
+    if enriched.exit_reason.is_none()
+        || enriched.exit_reason.as_deref() == Some(CGROUP_OOM_EXIT_REASON)
+    {
+        enriched.exit_reason = resolve_exit_reason(
+            enriched.exit_code,
+            tail.as_deref(),
+            enriched.oom_killed,
+            None,
+        );
     }
     if enriched.memory_exhausted.is_none() {
-        if let Some(memory) =
-            resolve_memory_exhaustion(enriched.exit_code, tail.as_deref(), enriched.oom_killed)
-        {
+        if let Some(memory) = resolve_memory_exhaustion(
+            enriched.exit_code,
+            tail.as_deref(),
+            enriched.oom_killed,
+            None,
+        ) {
             enriched.memory_exhausted = Some(memory.memory_exhausted);
             enriched.memory_exhausted_reason = Some(memory.memory_exhausted_reason);
         }

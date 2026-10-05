@@ -16,6 +16,7 @@ const { collectProcessIds } = require('./execution-control');
 const { getDockerCommand, getDockerSpawnOptions } = require('./docker-cleanup');
 const {
   describeExitCode,
+  CGROUP_OOM_EXIT_REASON,
   resolveExitReason,
   resolveMemoryExhaustion,
 } = require('./exit-reason');
@@ -433,9 +434,18 @@ function attachExitReason(record, logTail) {
     exitCode: record.exitCode,
     logTail,
     oomKilled: record.oomKilled,
+    cgroupMemory: record.cgroupMemory,
   });
 
   if (!exitReason) {
+    // A record finalized before #180 may carry the cgroup OOM reason for an
+    // ordinary exit (the sticky flag was blamed for exit 0/1): drop it.
+    if (record.exitReason === CGROUP_OOM_EXIT_REASON) {
+      const cleared = Object.create(Object.getPrototypeOf(record));
+      Object.assign(cleared, record);
+      cleared.exitReason = undefined;
+      return cleared;
+    }
     return record;
   }
 
@@ -470,6 +480,7 @@ function attachMemoryExhaustion(record, logTail) {
     exitCode: record.exitCode,
     logTail,
     oomKilled: record.oomKilled,
+    cgroupMemory: record.cgroupMemory,
   });
 
   if (!memory) {

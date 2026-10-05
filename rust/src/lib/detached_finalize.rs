@@ -195,7 +195,7 @@ fn resolve_reason(record: &ExecutionRecord) -> Option<String> {
     } else {
         read_log_tail(&record.log_path, FATAL_MARKER_TAIL_BYTES)
     };
-    resolve_exit_reason(record.exit_code, tail.as_deref(), record.oom_killed)
+    resolve_exit_reason(record.exit_code, tail.as_deref(), record.oom_killed, None)
 }
 
 /// Reconcile an in-memory record with one the detached watcher already
