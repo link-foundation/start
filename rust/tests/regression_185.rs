@@ -1,8 +1,8 @@
 //! Issue #185: allocation events and killed processes cannot establish OOM scope.
 
 use start_command::cgroup_memory::{
-    build_cgroup_memory_log_snippet, describe_cgroup_oom_scope, format_cgroup_memory,
-    format_cgroup_memory_log_line, parse_cgroup_memory_sample, CgroupMemory,
+    describe_cgroup_oom_scope, format_cgroup_memory, format_cgroup_memory_log_line,
+    parse_cgroup_memory_sample, CgroupMemory,
 };
 use start_command::exit_reason::{
     resolve_exit_reason, resolve_memory_exhaustion, CGROUP_OOM_EXIT_REASON,
@@ -80,6 +80,7 @@ fn does_not_report_an_oom_scope_when_kills_are_zero_or_unknown() {
 #[test]
 #[cfg(unix)]
 fn writes_the_same_unknown_scope_from_the_posix_watcher_shell() {
+    use start_command::cgroup_memory::build_cgroup_memory_log_snippet;
     use std::process::Command;
 
     let dir = tempfile::TempDir::new().unwrap();
