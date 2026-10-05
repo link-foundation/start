@@ -302,6 +302,23 @@ function restoreStopRequested(store, record, previous) {
   }
 }
 
+/**
+ * Whether a failed docker control command hit a container that has already
+ * exited while launch-time recovery is configured: the stop marker alone then
+ * cancels the resume the watcher may still be waiting to make.
+ * @param {object} record - Execution record
+ * @param {object} result - Failed control command result
+ * @returns {boolean} Whether the stop marker should stand
+ */
+function isPendingRecoveryStop(record, result) {
+  const options = record.options || {};
+  if (options.isolated !== 'docker' || !options.onKillResume) {
+    return false;
+  }
+  const detail = `${result.stderr || ''} ${result.error || ''}`;
+  return /is not running/i.test(detail);
+}
+
 function controlExecution(store, identifier, action, runner = runCommand) {
   if (!store) {
     return { success: false, error: 'Execution tracking is disabled.' };
@@ -325,6 +342,25 @@ function controlExecution(store, identifier, action, runner = runCommand) {
   // which exits 137 just like the OOM killer.
   const previousStopRequestedAt = markStopRequested(store, record);
   const result = runner(control.command, control.args);
+  if (!result.success && isPendingRecoveryStop(record, result)) {
+    // The container already exited and its watcher is waiting out
+    // `--on-kill-resume-delay` (issue #181): `docker kill` has nothing to
+    // signal, but the marker it left cancels the pending resume.
+    return {
+      success: true,
+      output: formatControlResultAsLinksNotation({
+        action,
+        identifier,
+        uuid: record.uuid,
+        status: 'recovery-cancelled',
+        backend: record.options.isolated,
+        sessionName: record.options.sessionName,
+        method: control.method,
+        processIds: null,
+        message: `Cancelled the pending recovery of detached docker container: ${record.options.sessionName}`,
+      }),
+    };
+  }
   if (!result.success) {
     restoreStopRequested(store, record, previousStopRequestedAt);
     const detail =

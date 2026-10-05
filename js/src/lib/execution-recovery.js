@@ -39,6 +39,12 @@ const {
   readDockerResourceLimits,
 } = require('./docker-resource-limits');
 const { shellQuote } = require('./isolation-log-utils');
+const {
+  formatRecoveryDelay,
+  getOnKillResumeDelay,
+  pickRecoveryDelayMs,
+  waitForRecoveryDelay,
+} = require('./recovery-delay');
 
 /** File whose presence makes the selector run the recovery command. */
 const RECOVERY_MARKER_PATH = '/.start-command-recovery';
@@ -125,7 +131,7 @@ function buildRecoverySnippet(executionId) {
 
 /**
  * The `[Recovery k/N]` separator written into the session log.
- * @param {object} params - {attempt, maxAttempts, exitCode, oomKilled, containerName, command}
+ * @param {object} params - {attempt, maxAttempts, exitCode, oomKilled, containerName, command, delayMs}
  * @returns {string} Separator line, newline terminated
  */
 function formatRecoverySeparator(params) {
@@ -134,12 +140,27 @@ function formatRecoverySeparator(params) {
   const what = params.command
     ? `running recovery command: ${params.command}`
     : 'running the original command again';
+  const delay =
+    params.delayMs > 0
+      ? ` after a ${formatRecoveryDelay(params.delayMs)} delay`
+      : '';
   return (
     `\n[Recovery ${params.attempt}/${params.maxAttempts}] ` +
     `Main process was killed (exit ${described.code}${signal}, ` +
     `oomKilled=${params.oomKilled === true || params.oomKilled === 'true'}); ` +
-    `resuming container ${params.containerName}, ${what}\n`
+    `resuming container ${params.containerName}${delay}, ${what}\n`
   );
+}
+
+function isStopRequested(store, executionId) {
+  try {
+    const current = store.get(executionId);
+    return Boolean(
+      current && current.options && current.options.stopRequestedAt
+    );
+  } catch {
+    return false;
+  }
 }
 
 function appendToLog(logPath, text) {
@@ -176,10 +197,11 @@ function failureDetail(result) {
 }
 
 /**
- * Resume a killed execution in its own container.
+ * Resume a killed execution in its own container, after the random
+ * `--on-kill-resume-delay` wait (issue #181) when one was requested.
  * @param {object} params - {store, executionId, exitCode, oomKilled, startedAt,
- *   finishedAt, containerError, runner, startWatcher, now}
- * @returns {{recovered: boolean, reason: string, attempt?: number}} Outcome
+ *   finishedAt, containerError, runner, startWatcher, now, random, sleep}
+ * @returns {{recovered: boolean, reason: string, attempt?: number, delayMs?: number}} Outcome
  */
 function recoverKilledExecution(params = {}) {
   const { store, executionId } = params;
@@ -215,6 +237,8 @@ function recoverKilledExecution(params = {}) {
   const runner = params.runner || require('./execution-control').runCommand;
   const now = params.now || (() => new Date());
   const attempt = used + 1;
+  const delayRange = getOnKillResumeDelay(opts);
+  const delayMs = pickRecoveryDelayMs(delayRange, params.random);
   const giveUp = (reason) => {
     log(`[Recovery ${attempt}/${maxAttempts}] Failed: ${reason}\n`);
     return { recovered: false, reason: 'resume-failed', attempt };
@@ -238,8 +262,27 @@ function recoverKilledExecution(params = {}) {
       oomKilled: params.oomKilled,
       containerName,
       command: opts.recoveryCommand || null,
+      delayMs,
     })
   );
+
+  // Executions killed by one host-wide OOM event must not all come back in
+  // the same second (issue #181). `--stop` during the wait cancels the resume:
+  // the container has already exited, so `docker stop` only leaves the
+  // `stopRequestedAt` marker this loop polls for.
+  if (delayMs > 0) {
+    const cancelled = waitForRecoveryDelay({
+      delayMs,
+      sleep: params.sleep,
+      shouldCancel: () => isStopRequested(store, executionId),
+    });
+    if (cancelled) {
+      log(
+        `[Recovery ${attempt}/${maxAttempts}] Not resuming: the session was stopped on request during the delay.\n`
+      );
+      return { recovered: false, reason: 'stop-requested', attempt, delayMs };
+    }
+  }
 
   // Docker keeps `docker update` limits in the HostConfig across restarts;
   // they are read back so the log and `--status` show what the resumed run
@@ -269,14 +312,16 @@ function recoverKilledExecution(params = {}) {
   }
 
   const described = describeExitCode(params.exitCode);
+  const delayed = delayRange ? `, delayMs=${delayMs}` : '';
   record.options = {
     ...opts,
     recoveryAttempts: attempt,
     recoveryHistory: [
       ...(Array.isArray(opts.recoveryHistory) ? opts.recoveryHistory : []),
-      `${attempt}: exit ${described.code}, oomKilled=${params.oomKilled === true || params.oomKilled === 'true'}, resumed at ${since}`,
+      `${attempt}: exit ${described.code}, oomKilled=${params.oomKilled === true || params.oomKilled === 'true'}${delayed}, resumed at ${since}`,
     ],
     lastRecoveryAt: since,
+    ...(delayRange ? { lastRecoveryDelayMs: delayMs } : {}),
     ...(resourceLimits && resourceLimits.length > 0 ? { resourceLimits } : {}),
   };
   record.status = 'executing';
@@ -300,7 +345,12 @@ function recoverKilledExecution(params = {}) {
     record.uuid,
     { since, recoverOnKill: true }
   );
-  return { recovered: true, reason: 'resumed', attempt };
+  return {
+    recovered: true,
+    reason: 'resumed',
+    attempt,
+    ...(delayRange ? { delayMs } : {}),
+  };
 }
 
 /**

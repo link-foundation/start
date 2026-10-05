@@ -307,6 +307,7 @@ describe('buildDockerRuntimeMetadata', () => {
       resourceLimits: null,
       onKillResume: null,
       recoveryCommand: null,
+      onKillResumeDelay: null,
     });
   });
 
@@ -332,6 +333,7 @@ describe('buildDockerRuntimeMetadata', () => {
         resourceLimits: null,
         onKillResume: null,
         recoveryCommand: null,
+        onKillResumeDelay: null,
       }
     );
   });

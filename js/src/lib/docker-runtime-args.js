@@ -9,11 +9,12 @@ const {
   buildResourceLimitsStatusLine,
   normalizeResourceLimits,
 } = require('./docker-resource-limits');
+const { getOnKillResumeDelay } = require('./recovery-delay');
 
 /**
  * Number of kill recoveries requested at launch; a recovery command on its own
  * implies one (issue #176).
- * @param {object} options - Options (onKillResume, recoveryCommand)
+ * @param {object} options - Options (onKillResume, recoveryCommand, onKillResumeDelay)
  * @returns {?number} Attempt limit, or null when recovery is off
  */
 function getOnKillResume(options = {}) {
@@ -63,7 +64,7 @@ function buildDockerRuntimeArgs(options = {}) {
  * options (volumes, mounts, env, privileged, networks, resource limits and
  * the launch-time recovery command). Empty collections and a falsy privileged
  * flag contribute no lines.
- * @param {object} options - Options (volumes, mounts, env, privileged, network, networks, networkAliases, resourceLimits, onKillResume, recoveryCommand)
+ * @param {object} options - Options (volumes, mounts, env, privileged, network, networks, networkAliases, resourceLimits, onKillResume, recoveryCommand, onKillResumeDelay)
  * @returns {string[]} Status lines for the start block / log header
  */
 function buildDockerRuntimeStatusLines(options = {}) {
@@ -99,8 +100,10 @@ function buildDockerRuntimeStatusLines(options = {}) {
   const onKillResume = getOnKillResume(options);
   if (onKillResume) {
     const what = options.recoveryCommand || 'the original command';
+    const delay = getOnKillResumeDelay(options);
+    const after = delay ? ` after a random ${delay}s delay` : '';
     lines.push(
-      `[Isolation] On kill: resume up to ${onKillResume} time(s) with ${what}`
+      `[Isolation] On kill: resume up to ${onKillResume} time(s)${after} with ${what}`
     );
   }
   return lines;
@@ -109,7 +112,7 @@ function buildDockerRuntimeStatusLines(options = {}) {
 /**
  * Build the execution-record metadata for docker runtime options, normalizing
  * empty collections and a falsy privileged flag to `null`.
- * @param {object} options - Options (volumes, mounts, env, privileged, network, networks, networkAliases, resourceLimits, onKillResume, recoveryCommand)
+ * @param {object} options - Options (volumes, mounts, env, privileged, network, networks, networkAliases, resourceLimits, onKillResume, recoveryCommand, onKillResumeDelay)
  * @returns {object} Record metadata
  */
 function buildDockerRuntimeMetadata(options = {}) {
@@ -130,6 +133,9 @@ function buildDockerRuntimeMetadata(options = {}) {
     resourceLimits: resourceLimits.length > 0 ? resourceLimits : null,
     onKillResume: getOnKillResume(options),
     recoveryCommand: options.recoveryCommand || null,
+    onKillResumeDelay: getOnKillResume(options)
+      ? getOnKillResumeDelay(options)
+      : null,
   };
 }
 
