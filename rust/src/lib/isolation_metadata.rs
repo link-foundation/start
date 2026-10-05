@@ -8,6 +8,7 @@
 //! independently.
 
 use crate::args_parser::WrapperOptions;
+use crate::recovery_delay::effective_on_kill_resume_delay;
 use std::collections::HashMap;
 
 /// Build the human-readable `[Isolation]` status lines for docker runtime
@@ -69,9 +70,10 @@ pub fn docker_runtime_status_lines_for_options(options: &WrapperOptions) -> Vec<
         &options.networks,
         &options.network_aliases,
     );
-    lines.extend(recovery_status_lines(
+    lines.extend(recovery_status_lines_with_delay(
         options.on_kill_resume,
         options.recovery_command.as_deref(),
+        options.on_kill_resume_delay.as_deref(),
     ));
     lines
 }
@@ -82,12 +84,26 @@ pub fn recovery_status_lines(
     on_kill_resume: Option<u32>,
     recovery_command: Option<&str>,
 ) -> Vec<String> {
+    recovery_status_lines_with_delay(on_kill_resume, recovery_command, None)
+}
+
+/// [`recovery_status_lines`] that also names the random delay before each
+/// resume (issue #181).
+pub fn recovery_status_lines_with_delay(
+    on_kill_resume: Option<u32>,
+    recovery_command: Option<&str>,
+    on_kill_resume_delay: Option<&str>,
+) -> Vec<String> {
     let Some(count) = effective_on_kill_resume(on_kill_resume, recovery_command) else {
         return Vec::new();
     };
+    let after = effective_on_kill_resume_delay(on_kill_resume_delay)
+        .map(|delay| format!(" after a random {}s delay", delay))
+        .unwrap_or_default();
     vec![format!(
-        "[Isolation] On kill: resume up to {} time(s) with {}",
+        "[Isolation] On kill: resume up to {} time(s){} with {}",
         count,
+        after,
         recovery_command.unwrap_or("the original command")
     )]
 }
@@ -106,12 +122,26 @@ pub fn recovery_metadata(
     on_kill_resume: Option<u32>,
     recovery_command: Option<&str>,
 ) -> Vec<(String, serde_json::Value)> {
+    recovery_metadata_with_delay(on_kill_resume, recovery_command, None)
+}
+
+/// [`recovery_metadata`] plus the normalized `onKillResumeDelay` range
+/// (issue #181), stored only when it is not zero.
+pub fn recovery_metadata_with_delay(
+    on_kill_resume: Option<u32>,
+    recovery_command: Option<&str>,
+    on_kill_resume_delay: Option<&str>,
+) -> Vec<(String, serde_json::Value)> {
     let mut entries = Vec::new();
-    if let Some(count) = effective_on_kill_resume(on_kill_resume, recovery_command) {
-        entries.push(("onKillResume".to_string(), serde_json::json!(count)));
-    }
+    let Some(count) = effective_on_kill_resume(on_kill_resume, recovery_command) else {
+        return entries;
+    };
+    entries.push(("onKillResume".to_string(), serde_json::json!(count)));
     if let Some(command) = recovery_command {
         entries.push(("recoveryCommand".to_string(), serde_json::json!(command)));
+    }
+    if let Some(delay) = effective_on_kill_resume_delay(on_kill_resume_delay) {
+        entries.push(("onKillResumeDelay".to_string(), serde_json::json!(delay)));
     }
     entries
 }
@@ -207,9 +237,10 @@ pub fn build_isolation_options_map(
         &options.network_aliases,
     )
     .into_iter()
-    .chain(recovery_metadata(
+    .chain(recovery_metadata_with_delay(
         options.on_kill_resume,
         options.recovery_command.as_deref(),
+        options.on_kill_resume_delay.as_deref(),
     )) {
         opts_map.insert(k, v);
     }

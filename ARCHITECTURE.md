@@ -205,9 +205,12 @@ completion watcher — outlives it and is the only observer left:
 │                  Completion Watcher (detached sh)                │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
+│  0. cgroup sampler (bg)        memory.max/peak, memory.events    │
+│                                oom/oom_kill every 1s (cgroup v2) │
 │  1. docker logs -f <name>      stream output into the log        │
 │     while State.Running:       docker wait — the stream can end  │
 │                                early (ENOSPC, dockerd restart)   │
+│     stop the sampler           one final read, then kill it      │
 │  2. docker inspect             ExitCode, OOMKilled, StartedAt,   │
 │                                FinishedAt, Error — read once,    │
 │                                while the container still exists  │
@@ -233,6 +236,19 @@ shell rather than by the finalizer, so the log does not depend on a second
 runtime launch succeeding. Bookkeeping runs last: a record only becomes terminal
 once its log is complete.
 
+The cgroup sampler (issue #182, `cgroup-memory.js` / `cgroup_memory.rs`) runs
+in the background of the same shell. It finds the container's cgroup through
+`docker inspect` (`.Id`, `.State.Pid` → `/proc/<pid>/cgroup`, falling back to
+the systemd and cgroupfs driver paths), and every second rewrites one line
+(`memory.max memory.peak oom oom_kill`) into a temporary file. The cgroup
+vanishes together with the container, so the last good sample is kept when a
+read fails. It is stopped after the wait-for-exit step, the sample is moved into
+a shell variable, written as the `Memory:` log line after the post-mortem, and
+passed to the finalizer and to the recovery step as one more argument
+(`cgroupMemory` in the record, `oomEvents`/`oomKills` in `recoveryHistory`).
+Hosts without cgroup v2, or a remote `DOCKER_HOST`, produce an empty sample and
+change nothing.
+
 The finalizer is the same binary re-invoked through a hidden flag
 (`--internal-finalize-detached-docker`), so the store format has exactly one
 writer per implementation.
@@ -251,6 +267,12 @@ recovery step only has to `docker cp` that marker in, record the attempt
 the same log, `docker start` the same container and start a fresh watcher that
 follows `docker logs -f --since <restart time>`. A `--stop` sets
 `stopRequestedAt` first, so a deliberate stop is never mistaken for a kill.
+With `--on-kill-resume-delay <min[-max]>` (issue #181) the recovery step first
+sleeps a uniformly random delay in 1-second steps (`recovery-delay.js` /
+`recovery_delay.rs`), re-reading `stopRequestedAt` before each step, so a
+`--stop` or `--terminate` issued while the container is already exited cancels
+the pending resume; `--terminate` keeps the marker even though `docker kill`
+fails with "is not running" and reports `recovery-cancelled`.
 
 Snapshot resumes (`--resume <id> -- <command>`) go through `docker commit`,
 which drops HostConfig; the resume therefore reads the stopped container's

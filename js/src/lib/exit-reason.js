@@ -26,6 +26,11 @@ const os = require('os');
 const MEMORY_EXHAUSTION_PREFIX = 'memory-exhaustion';
 
 /**
+ * Reason reported when the container-wide OOM observation explains the exit.
+ */
+const CGROUP_OOM_EXIT_REASON = `${MEMORY_EXHAUSTION_PREFIX} (cgroup-oom-killer)`;
+
+/**
  * Fatal markers, most specific first. The first matching entry wins.
  * @type {{reason: string, pattern: RegExp}[]}
  */
@@ -155,7 +160,12 @@ function detectMemoryMarker(text) {
  * a fatal marker (a test fixture, an `rg` dump) cannot turn a clean run into a
  * reported memory failure.
  *
- * @param {{exitCode?: number|null, logTail?: string|null, oomKilled?: boolean}|null} input
+ * The container-wide OOM signals (`State.OOMKilled`, the cgroup `oom_kill`
+ * counter) only count when the exit fits an OOM kill of the command itself:
+ * a child OOM-killed under a command that later exits 1 is not the reason the
+ * command ended (#180).
+ *
+ * @param {{exitCode?: number|null, logTail?: string|null, oomKilled?: boolean, cgroupMemory?: object|null}|null} input
  * @returns {{memoryExhausted: true, memoryExhaustedReason: string}|null}
  */
 function resolveMemoryExhaustion(input) {
@@ -175,13 +185,61 @@ function resolveMemoryExhaustion(input) {
   if (marker) {
     return { memoryExhausted: true, memoryExhaustedReason: marker.line };
   }
-  if (input.oomKilled === true) {
+  if (input.oomKilled === true && isOomKillOfCommand(input)) {
     return {
       memoryExhausted: true,
       memoryExhaustedReason: 'Docker reported State.OOMKilled=true',
     };
   }
+  const oomKills = cgroupOomKills(input.cgroupMemory);
+  if (oomKills > 0 && isOomKillOfCommand(input)) {
+    return {
+      memoryExhausted: true,
+      memoryExhaustedReason: `cgroup memory.events reported oom_kill=${oomKills}`,
+    };
+  }
   return null;
+}
+
+/**
+ * `oom_kill` counter sampled from the container cgroup (issue #182).
+ * @param {{oomKills?: number|null}|null|undefined} cgroupMemory - Sampled counters
+ * @returns {number} Number of OOM-killed processes, 0 when unknown
+ */
+function cgroupOomKills(cgroupMemory) {
+  const value = cgroupMemory ? cgroupMemory.oomKills : null;
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+/**
+ * Can a container-wide OOM observation be blamed on the command itself?
+ *
+ * Docker's `State.OOMKilled` and the cgroup `oom_kill` counter are
+ * container-wide and sticky (moby/moby#43564): they turn on as soon as *any*
+ * process in the container is OOM-killed, e.g. one `rustc` child under
+ * `cargo test`, while the command keeps running and later exits on its own
+ * (issue #180). The OOM killer always sends SIGKILL, so the observation only
+ * explains the command's exit when that exit is 137 (`128 + SIGKILL`) or there
+ * is no usable exit code at all (null, or the `-1` of an unknown exit). This is
+ * the rule `isKilledExit()` already applies to `--on-kill-resume` (#178).
+ *
+ * @param {{exitCode?: number|null, oomKilled?: boolean, cgroupMemory?: object|null}|null} input
+ * @returns {boolean} True when an OOM was observed and the exit fits an OOM kill
+ */
+function isOomKillOfCommand(input) {
+  if (!input) {
+    return false;
+  }
+  const observed =
+    input.oomKilled === true || cgroupOomKills(input.cgroupMemory) > 0;
+  if (!observed) {
+    return false;
+  }
+  const { exitCode } = input;
+  if (typeof exitCode !== 'number' || !Number.isFinite(exitCode)) {
+    return true;
+  }
+  return exitCode < 0 || signalNameForExitCode(exitCode) === 'SIGKILL';
 }
 
 /**
@@ -249,9 +307,10 @@ function describeExitCode(exitCode) {
  * Resolve the best available hint for why an execution ended.
  *
  * Precedence: the log marker (evidence written by the command itself), then the
- * cgroup OOM observation, then the signal encoded in the exit code.
+ * cgroup OOM observation when the exit fits an OOM kill of the command (#180),
+ * then the signal encoded in the exit code.
  *
- * @param {{exitCode?: number|null, logTail?: string|null, oomKilled?: boolean}|null} input
+ * @param {{exitCode?: number|null, logTail?: string|null, oomKilled?: boolean, cgroupMemory?: object|null}|null} input
  * @returns {string|null} Exit reason hint, or null when nothing is known
  */
 function resolveExitReason(input) {
@@ -264,8 +323,8 @@ function resolveExitReason(input) {
     return fromLog;
   }
 
-  if (input.oomKilled === true) {
-    return 'memory-exhaustion (cgroup-oom-killer)';
+  if (isOomKillOfCommand(input)) {
+    return CGROUP_OOM_EXIT_REASON;
   }
 
   const signalName = signalNameForExitCode(input.exitCode);
@@ -273,6 +332,7 @@ function resolveExitReason(input) {
 }
 
 module.exports = {
+  CGROUP_OOM_EXIT_REASON,
   EXIT_REASON_MARKERS,
   UNKNOWN_EXIT_CODE,
   MEMORY_EXHAUSTION_PREFIX,
@@ -280,6 +340,7 @@ module.exports = {
   detectExitReason,
   detectMemoryMarker,
   findExitReasonMarker,
+  isOomKillOfCommand,
   resolveMemoryExhaustion,
   describeExitCode,
   resolveChildExitCode,

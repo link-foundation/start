@@ -5,6 +5,10 @@ use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use crate::cgroup_memory::{
+    build_cgroup_memory_log_snippet, build_cgroup_sampler_start_snippet,
+    build_cgroup_sampler_stop_snippet,
+};
 use crate::detached_finalize::build_detached_finalize_snippet;
 use crate::docker_post_mortem::{
     build_docker_post_mortem_snippet, build_docker_removal_note_snippet,
@@ -13,7 +17,7 @@ use crate::docker_post_mortem::{
     format_container_removal_note, normalize_docker_timestamp, shell_vars, ContainerPostMortem,
     DOCKER_STATE_INSPECT_FORMAT,
 };
-use crate::exit_reason::resolve_memory_exhaustion;
+use crate::exit_reason::{is_oom_kill_of_command, resolve_memory_exhaustion};
 use crate::isolation::isolation_log::{
     append_log_file, create_shell_log_footer_snippet, read_log_tail, shell_quote,
     FATAL_MARKER_TAIL_BYTES,
@@ -275,6 +279,19 @@ pub(crate) fn read_docker_container_status(container_name: &str) -> Option<Strin
     }
 }
 
+/// Why an attached container was kept. The OOM flag is container-wide (#180):
+/// a child OOM-killed under a command that exited on its own is not the
+/// command being OOM-killed.
+pub(crate) fn attached_docker_kept_reason(exit_code: i32, oom_killed: bool) -> &'static str {
+    if !oom_killed {
+        "\nContainer kept because the command failed."
+    } else if is_oom_kill_of_command(Some(exit_code), Some(true), None) {
+        "\nContainer kept because Docker reports it was OOM-killed."
+    } else {
+        "\nContainer kept because Docker reports a process in it was OOM-killed."
+    }
+}
+
 pub(crate) fn append_attached_docker_cleanup_message(
     message: &mut String,
     container_name: &str,
@@ -313,11 +330,7 @@ pub(crate) fn append_attached_docker_cleanup_message(
         message.push_str(&docker_container_cleanup_instructions(container_name));
         message.push_str(&post_mortem(false));
     } else {
-        if oom_killed {
-            message.push_str("\nContainer kept because Docker reports it was OOM-killed.");
-        } else {
-            message.push_str("\nContainer kept because the command failed.");
-        }
+        message.push_str(attached_docker_kept_reason(exit_code, oom_killed));
         // A runtime that aborts on its own memory limit never trips the
         // container flag, so `oomKilled false` alone would contradict the
         // `FATAL ERROR` the runtime just printed into this very log (issue
@@ -325,7 +338,7 @@ pub(crate) fn append_attached_docker_cleanup_message(
         let tail = log_path
             .and_then(|path| read_log_tail(&path.to_string_lossy(), FATAL_MARKER_TAIL_BYTES));
         if let Some(memory) =
-            resolve_memory_exhaustion(Some(exit_code), tail.as_deref(), Some(oom_killed))
+            resolve_memory_exhaustion(Some(exit_code), tail.as_deref(), Some(oom_killed), None)
         {
             message.push_str(&format!(
                 "\nMemory exhaustion detected in the log: {}",
@@ -427,7 +440,9 @@ pub fn build_detached_docker_completion_script_with(
     watcher: &DockerWatcherOptions,
 ) -> String {
     let quoted_name = shell_quote(container_name);
-    let mut parts = Vec::new();
+    // The container's cgroup disappears with it, so its memory counters are
+    // sampled while it runs (issue #182).
+    let mut parts = vec![build_cgroup_sampler_start_snippet(container_name)];
     // Everything that assumes the container has exited: cleanup, footer and
     // finalization. Guarded as a whole by `.State.Running` below.
     let mut exited = Vec::new();
@@ -447,19 +462,23 @@ pub fn build_detached_docker_completion_script_with(
             container_name,
             Some(quoted_log_path),
         ));
+        parts.push(build_cgroup_sampler_stop_snippet());
         parts.push(build_docker_state_snippet(container_name));
 
+        let memory = build_cgroup_memory_log_snippet(quoted_log_path);
         let remove = format!(
-            "docker rm -f {} >> {} 2>&1 || true; {}",
+            "docker rm -f {} >> {} 2>&1 || true; {}; {}",
             quoted_name,
             quoted_log_path,
-            build_docker_removal_note_snippet(container_name, quoted_log_path)
+            build_docker_removal_note_snippet(container_name, quoted_log_path),
+            memory
         );
         // A kept container is exactly the case the user will investigate, so it
         // gets the full post-mortem before the copy-paste instructions.
         let keep = format!(
-            "{}; {}",
+            "{}; {}; {}",
             build_docker_post_mortem_snippet(container_name, quoted_log_path),
+            memory,
             build_docker_kept_log_snippet(container_name, quoted_log_path)
         );
         match policy {
@@ -484,6 +503,7 @@ pub fn build_detached_docker_completion_script_with(
     } else {
         parts.push(format!("docker wait {} >/dev/null 2>&1", quoted_name));
         parts.push(build_docker_wait_for_exit_snippet(container_name, None));
+        parts.push(build_cgroup_sampler_stop_snippet());
         parts.push(build_docker_state_snippet(container_name));
         match policy {
             DockerContainerCleanupPolicy::Always => exited.push(format!(
@@ -747,6 +767,14 @@ mod tests {
             evaluate_reason("137", "true"),
             "exitCode=137 oomKilled=true"
         );
+    }
+
+    #[test]
+    fn attached_kept_reason_names_a_child_oom_kill_not_the_command() {
+        assert!(attached_docker_kept_reason(1, true).contains("a process in it was OOM-killed"));
+        assert!(attached_docker_kept_reason(0, true).contains("a process in it was OOM-killed"));
+        assert!(attached_docker_kept_reason(137, true).contains("reports it was OOM-killed."));
+        assert!(attached_docker_kept_reason(1, false).contains("the command failed"));
     }
 
     #[test]

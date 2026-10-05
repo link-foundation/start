@@ -197,6 +197,7 @@ function parseArgs(args) {
     networkAliases: [], // Docker network-scoped aliases
     onKillResume: null, // Resume up to N times when the docker main process is killed (issue #176)
     recoveryCommand: null, // Command run in the same container on such a resume (issue #176)
+    onKillResumeDelay: null, // Random <min>[-<max>] seconds to wait before each such resume (issue #181)
     endpoint: null, // SSH endpoint (current level, e.g., user@host)
     endpointStack: null, // SSH endpoints for each level (with nulls for non-ssh levels)
     user: false, // Create isolated user

@@ -4,6 +4,7 @@
 
 pub mod args_parser;
 pub mod args_parser_queries;
+pub mod cgroup_memory;
 pub mod detached_finalize;
 pub(crate) mod docker_cleanup;
 mod docker_network_lifecycle;
@@ -23,6 +24,7 @@ pub mod isolation_metadata;
 pub mod log_uploader;
 pub mod output_blocks;
 pub mod query_commands;
+pub mod recovery_delay;
 pub mod sequence_parser;
 pub mod session_probe;
 pub mod signal_handler;

@@ -137,10 +137,16 @@ pub fn detect_memory_marker(text: Option<&str>) -> Option<ExitReasonMarker> {
 /// Only abnormal exits are explained: a command that merely printed a fatal
 /// marker (an `rg` dump, a quoted incident log) and then succeeded is not a
 /// memory failure. An observation, never a verdict (issue #151).
+///
+/// The container-wide OOM signals (`State.OOMKilled`, the cgroup `oom_kill`
+/// counter) only count when the exit fits an OOM kill of the command itself:
+/// a child OOM-killed under a command that later exits 1 is not the reason the
+/// command ended (issue #180).
 pub fn resolve_memory_exhaustion(
     exit_code: Option<i32>,
     log_tail: Option<&str>,
     oom_killed: Option<bool>,
+    oom_kills: Option<u64>,
 ) -> Option<MemoryExhaustion> {
     match exit_code {
         Some(code) if code != 0 => {}
@@ -152,13 +158,50 @@ pub fn resolve_memory_exhaustion(
             memory_exhausted_reason: marker.line,
         });
     }
-    if oom_killed == Some(true) {
+    if oom_killed == Some(true) && is_oom_kill_of_command(exit_code, oom_killed, None) {
         return Some(MemoryExhaustion {
             memory_exhausted: true,
             memory_exhausted_reason: "Docker reported State.OOMKilled=true".to_string(),
         });
     }
+    let kills = oom_kills.unwrap_or(0);
+    if kills > 0 && is_oom_kill_of_command(exit_code, None, oom_kills) {
+        return Some(MemoryExhaustion {
+            memory_exhausted: true,
+            memory_exhausted_reason: format!("cgroup memory.events reported oom_kill={}", kills),
+        });
+    }
     None
+}
+
+/// Reason reported when the container-wide OOM observation explains the exit.
+pub const CGROUP_OOM_EXIT_REASON: &str = "memory-exhaustion (cgroup-oom-killer)";
+
+/// Can a container-wide OOM observation be blamed on the command itself?
+///
+/// Docker's `State.OOMKilled` and the cgroup `oom_kill` counter are
+/// container-wide and sticky (moby/moby#43564): they turn on as soon as *any*
+/// process in the container is OOM-killed, e.g. one `rustc` child under
+/// `cargo test`, while the command keeps running and later exits on its own
+/// (issue #180). The OOM killer always sends SIGKILL, so the observation only
+/// explains the command's exit when that exit is 137 (`128 + SIGKILL`) or there
+/// is no usable exit code at all (none, or the `-1` of an unknown exit). This
+/// is the rule `is_killed_exit` already applies to `--on-kill-resume` (#178).
+pub fn is_oom_kill_of_command(
+    exit_code: Option<i32>,
+    oom_killed: Option<bool>,
+    oom_kills: Option<u64>,
+) -> bool {
+    let observed = oom_killed == Some(true) || oom_kills.unwrap_or(0) > 0;
+    if !observed {
+        return false;
+    }
+    match exit_code {
+        None => true,
+        Some(code) => {
+            code < 0 || signal_name_for_exit_code(Some(code)).as_deref() == Some("SIGKILL")
+        }
+    }
 }
 
 /// Text used wherever a fact could not be observed at all.
@@ -222,18 +265,20 @@ pub fn signal_name_for_exit_code(exit_code: Option<i32>) -> Option<String> {
 /// Resolve the best available hint for why an execution ended.
 ///
 /// Precedence: the log marker (evidence written by the command itself), then
-/// the cgroup OOM observation, then the signal encoded in the exit code.
+/// the cgroup OOM observation when the exit fits an OOM kill of the command
+/// (issue #180), then the signal encoded in the exit code.
 pub fn resolve_exit_reason(
     exit_code: Option<i32>,
     log_tail: Option<&str>,
     oom_killed: Option<bool>,
+    oom_kills: Option<u64>,
 ) -> Option<String> {
     if let Some(reason) = detect_exit_reason(log_tail) {
         return Some(reason);
     }
 
-    if oom_killed == Some(true) {
-        return Some("memory-exhaustion (cgroup-oom-killer)".to_string());
+    if is_oom_kill_of_command(exit_code, oom_killed, oom_kills) {
+        return Some(CGROUP_OOM_EXIT_REASON.to_string());
     }
 
     signal_name_for_exit_code(exit_code).map(|name| format!("signal ({})", name))
@@ -293,7 +338,7 @@ mod tests {
         let tail =
             "FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory";
         assert_eq!(
-            resolve_exit_reason(Some(139), Some(tail), Some(false)),
+            resolve_exit_reason(Some(139), Some(tail), Some(false), None),
             Some("memory-exhaustion (v8-heap-limit)".to_string())
         );
     }
@@ -326,27 +371,30 @@ mod tests {
         let tail =
             "FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory";
         let observed =
-            resolve_memory_exhaustion(Some(139), Some(tail), Some(false)).expect("observed");
+            resolve_memory_exhaustion(Some(139), Some(tail), Some(false), None).expect("observed");
         assert!(observed.memory_exhausted);
         assert_eq!(observed.memory_exhausted_reason, tail);
         // The same marker with a successful exit is just output, not a failure.
         assert_eq!(
-            resolve_memory_exhaustion(Some(0), Some(tail), Some(false)),
+            resolve_memory_exhaustion(Some(0), Some(tail), Some(false), None),
             None
         );
-        assert_eq!(resolve_memory_exhaustion(None, Some(tail), None), None);
+        assert_eq!(
+            resolve_memory_exhaustion(None, Some(tail), None, None),
+            None
+        );
     }
 
     #[test]
     fn memory_exhaustion_falls_back_to_the_container_flag() {
-        let observed =
-            resolve_memory_exhaustion(Some(137), Some("no marker"), Some(true)).expect("observed");
+        let observed = resolve_memory_exhaustion(Some(137), Some("no marker"), Some(true), None)
+            .expect("observed");
         assert_eq!(
             observed.memory_exhausted_reason,
             "Docker reported State.OOMKilled=true"
         );
         assert_eq!(
-            resolve_memory_exhaustion(Some(1), Some("no marker"), Some(false)),
+            resolve_memory_exhaustion(Some(1), Some("no marker"), Some(false), None),
             None
         );
     }
@@ -354,13 +402,13 @@ mod tests {
     #[test]
     fn falls_back_to_cgroup_observation_then_signal() {
         assert_eq!(
-            resolve_exit_reason(Some(137), None, Some(true)),
+            resolve_exit_reason(Some(137), None, Some(true), None),
             Some("memory-exhaustion (cgroup-oom-killer)".to_string())
         );
         assert_eq!(
-            resolve_exit_reason(Some(139), Some("no marker here"), Some(false)),
+            resolve_exit_reason(Some(139), Some("no marker here"), Some(false), None),
             Some("signal (SIGSEGV)".to_string())
         );
-        assert_eq!(resolve_exit_reason(Some(0), Some("fine"), None), None);
+        assert_eq!(resolve_exit_reason(Some(0), Some("fine"), None, None), None);
     }
 }

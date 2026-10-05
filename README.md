@@ -244,6 +244,37 @@ A removed container states the same facts in one line, before it stops existing:
 Container removed: my-docker-session (exit 137, SIGKILL, lifetime 5.798s, oomKilled=false)
 ```
 
+On a cgroup v2 host the watcher also samples the container's own memory
+counters while it runs (issue #182) — `memory.max`, `memory.peak` and the
+`oom`/`oom_kill` counters of `memory.events` — once a second, and once more
+after the container exits, so the numbers outlive the cgroup. They follow the
+post-mortem (or the one-line removal note) as one more line:
+
+```
+Memory:     memory.max=268435456 memory.peak=268300000 oom=0 oom_kill=3 (oom_kill > oom: a host-wide or parent cgroup OOM killed processes here)
+```
+
+`State.OOMKilled` is one sticky, container-wide boolean; these counters say how
+many processes the kernel killed in _this_ run (`oom_kill`), whether the
+container hit its own limit (`oom`, counted only when the container's own
+`memory.max` was reached) or a host-wide or parent-cgroup OOM reached in from
+outside (`oom_kill > oom`), and how close the run came to its limit
+(`memory.peak` of `memory.max`). `--status` stores them as `cgroupMemory`
+(`limitBytes`, `peakBytes`, `oomEvents`, `oomKills`) and shows them as
+`Cgroup Memory:     peak 255.9 MiB of 256.0 MiB limit, oom 0, oom_kill 3 (...)`.
+A non-zero `oomKills` also explains a SIGKILL or unknown exit as
+`memory-exhaustion (cgroup-oom-killer)` (`cgroup memory.events reported
+oom_kill=3`) when `State.OOMKilled` was not set, and
+each `--on-kill-resume` entry in `recoveryHistory` gets `oomEvents=N, oomKills=M`.
+
+Limits: only cgroup v2 hosts and detached Docker executions are sampled; the
+watcher reads the host's `/proc` and `/sys/fs/cgroup`, so a remote
+`DOCKER_HOST` (or a cgroup v1 host) simply records nothing; a one-second
+interval can miss kills in the last second when the cgroup disappears before
+the final read; `memory.peak` needs Linux 5.19 or newer (otherwise `peak
+unknown`); and the "host-wide or parent" note is a heuristic: `oom_kill > oom`
+also happens when the container's limit was hit inside a nested cgroup.
+
 `--upload-log` accepts either an execution UUID or an isolation session name. It
 looks up the stored `logPath`, installs `gh-upload-log` with Bun or npm if the
 uploader is missing, and then streams the uploader output directly.
@@ -302,8 +333,25 @@ $ --isolated docker --detached --on-kill-resume 2 \
     --recovery-command 'agent --resume-from-checkpoint' -- agent --task build
 ```
 
-`--status` reports `onKillResume`, `recoveryCommand`, `recoveryAttempts` and a
-`recoveryHistory` entry (exit code, OOM flag, start/finish time) per recovery.
+`--on-kill-resume-delay <min[-max]>` waits a uniformly random number of seconds
+before each such resume (`30-90`, or one number for a fixed delay; the default
+`0` resumes at once). One host-wide OOM event often kills several executions at
+the same moment; without a delay every one of them is restarted in the same
+second, rebuilds its working set at once and triggers the next OOM event. The
+chosen delay is printed in the `[Recovery k/N]` line (`... resuming container
+box after a 63.2s delay, ...`), and a `--stop` (or `--terminate`) during the
+wait cancels the pending resume.
+
+```bash
+$ --isolated docker --detached --on-kill-resume 3 --on-kill-resume-delay 30-90 -- cargo test
+```
+
+`--status` reports `onKillResume`, `recoveryCommand`, `onKillResumeDelay`,
+`recoveryAttempts` and a `recoveryHistory` entry (exit code, OOM flag, the
+killed run's cgroup `oomEvents`/`oomKills` when they were sampled, the delay as
+`delayMs` when one is configured, start/finish time) per recovery. The killed
+run's `Memory:` line is written into the log right before the `[Recovery k/N]`
+separator, and `cgroupMemory` is cleared for the resumed run.
 When all attempts are used, the execution is finalized with the last exit code.
 Limits applied with `docker update` survive, because the container is reused.
 
@@ -368,6 +416,14 @@ succeeds is never reported as a memory failure.
 
 The same tail is scanned for attached and detached sessions alike, with a 64 KiB
 window, because V8 prints a long native stack trace after the marker.
+
+Without a log marker, Docker's `State.OOMKilled` explains the exit
+(`memory-exhaustion (cgroup-oom-killer)`, `Docker reported State.OOMKilled=true`)
+only when the command itself was SIGKILLed (exit 137) or its exit code is
+unknown. The flag is container-wide and sticky (moby/moby#43564): it turns on
+when _any_ process in the container is OOM-killed, so a `cargo test` whose
+`rustc` child was OOM-killed and which later exited `1` on its own reports
+`oomKilled true` with no memory exit reason (issue #180).
 
 `exitReason`, `memoryExhausted` and `memoryExhaustedReason` are only hints. They
 never change `status`, `exitCode` or `oomKilled`, which stay observations of what
@@ -518,6 +574,7 @@ This is useful for:
 | `--keep-container-on-fail`       | Keep failed or OOM-killed docker containers after exit (docker only)         |
 | `--on-kill-resume <N>`           | Resume up to N times after an OOM kill/exit 137 (detached docker only)       |
 | `--recovery-command <cmd>`       | Command to run in the same container on such a resume (implies one attempt)  |
+| `--on-kill-resume-delay <s>`     | Wait a random `<min>[-<max>]` seconds before each such resume (default 0)    |
 
 **Note:** Using both `--attached` and `--detached` together will result in an error - you must choose one mode.
 

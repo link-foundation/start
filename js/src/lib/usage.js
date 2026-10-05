@@ -18,6 +18,7 @@ Options:
   --network-alias <alias> Add alias to the first network (repeatable, docker only)
   --on-kill-resume <N>  Resume a killed (exit 137 / OOM) detached docker session up to N times
   --recovery-command <cmd>  Command to run in the same container on such a resume
+  --on-kill-resume-delay <min[-max]>  Wait a random number of seconds before each such resume (default 0)
   --endpoint <endpoint> SSH endpoint (required for ssh isolation, e.g., user@host)
   --isolated-user, -u [name]  Create isolated user with same permissions
   --keep-user           Keep isolated user after command completes
@@ -69,6 +70,7 @@ Examples:
   $ --resume my-docker-session -- bash     # Run a different command in the same container
   $ --resume-all                           # Re-attach every still-running execution
   $ -i docker -d --on-kill-resume 3 --recovery-command 'solve --resume' -- solve
+  $ -i docker -d --on-kill-resume 3 --on-kill-resume-delay 30-90 -- cargo test
   $ --use-command-stream echo "Hello"      # Use command-stream library`);
   console.log('');
   console.log('Piping with $:');

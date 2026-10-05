@@ -16,6 +16,7 @@ const { collectProcessIds } = require('./execution-control');
 const { getDockerCommand, getDockerSpawnOptions } = require('./docker-cleanup');
 const {
   describeExitCode,
+  CGROUP_OOM_EXIT_REASON,
   resolveExitReason,
   resolveMemoryExhaustion,
 } = require('./exit-reason');
@@ -25,6 +26,7 @@ const {
 } = require('./isolation-log-utils');
 const { normalizeDockerTimestamp } = require('./docker-post-mortem');
 const { END_TIME_SOURCE } = require('./detached-finalize');
+const { formatCgroupMemory } = require('./cgroup-memory');
 
 /**
  * Inspect the live state of a detached docker container by name.
@@ -433,9 +435,18 @@ function attachExitReason(record, logTail) {
     exitCode: record.exitCode,
     logTail,
     oomKilled: record.oomKilled,
+    cgroupMemory: record.cgroupMemory,
   });
 
   if (!exitReason) {
+    // A record finalized before #180 may carry the cgroup OOM reason for an
+    // ordinary exit (the sticky flag was blamed for exit 0/1): drop it.
+    if (record.exitReason === CGROUP_OOM_EXIT_REASON) {
+      const cleared = Object.create(Object.getPrototypeOf(record));
+      Object.assign(cleared, record);
+      cleared.exitReason = undefined;
+      return cleared;
+    }
     return record;
   }
 
@@ -470,6 +481,7 @@ function attachMemoryExhaustion(record, logTail) {
     exitCode: record.exitCode,
     logTail,
     oomKilled: record.oomKilled,
+    cgroupMemory: record.cgroupMemory,
   });
 
   if (!memory) {
@@ -654,6 +666,10 @@ function formatRecordAsText(record) {
       : []),
     ...(obj.memoryExhaustedReason !== undefined
       ? [`Memory Evidence:   ${obj.memoryExhaustedReason}`]
+      : []),
+    // cgroup v2 counters the detached watcher sampled (issue #182).
+    ...(formatCgroupMemory(obj.cgroupMemory)
+      ? [`Cgroup Memory:     ${formatCgroupMemory(obj.cgroupMemory)}`]
       : []),
     `PID:               ${obj.pid !== null ? obj.pid : 'N/A'}`,
     `Working Directory: ${obj.workingDirectory}`,

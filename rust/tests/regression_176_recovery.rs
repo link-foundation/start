@@ -148,6 +148,7 @@ fn killed() -> RecoveryFacts {
         started_at: "2026-10-01T10:00:00Z".to_string(),
         finished_at: "2026-10-01T10:05:00Z".to_string(),
         container_error: String::new(),
+        ..Default::default()
     }
 }
 
@@ -169,6 +170,7 @@ fn formats_the_recovery_separator() {
             oom_killed: "true",
             container_name: "box",
             command: Some("solve --resume"),
+            delay_ms: 0,
         }),
         "\n[Recovery 1/3] Main process was killed (exit 137, SIGKILL, oomKilled=true); resuming container box, running recovery command: solve --resume\n"
     );
@@ -185,6 +187,7 @@ fn marks_the_container_restarts_it_and_keeps_the_same_uuid_and_log() {
             recovered: true,
             reason: "resumed".to_string(),
             attempt: Some(1),
+            delay_ms: None,
         }
     );
 

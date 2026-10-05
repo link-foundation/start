@@ -4,7 +4,11 @@
  *                               killed (exit 137 / OOMKilled)
  *   --recovery-command <cmd>    command to run in the same container on resume
  *                               (without it, the original command is re-run)
+ *   --on-kill-resume-delay <s>  wait a random <min>[-<max>] seconds before
+ *                               each resume (issue #181)
  */
+
+const { parseOnKillResumeDelayValue } = require('./recovery-delay');
 
 function parseOnKillResumeValue(value) {
   const text = String(value).trim();
@@ -19,17 +23,33 @@ function parseOnKillResumeValue(value) {
 
 function parseDockerRecoveryOption(args, index, options) {
   const arg = args[index];
-  if (arg === '--on-kill-resume' || arg === '--recovery-command') {
+  if (
+    arg === '--on-kill-resume' ||
+    arg === '--recovery-command' ||
+    arg === '--on-kill-resume-delay'
+  ) {
     if (index + 1 >= args.length || args[index + 1].startsWith('-')) {
-      const value = arg === '--on-kill-resume' ? 'count' : 'command';
+      const value = {
+        '--on-kill-resume': 'count',
+        '--recovery-command': 'command',
+        '--on-kill-resume-delay': 'seconds',
+      }[arg];
       throw new Error(`Option ${arg} requires a ${value} argument`);
     }
     if (arg === '--on-kill-resume') {
       options.onKillResume = parseOnKillResumeValue(args[index + 1]);
+    } else if (arg === '--on-kill-resume-delay') {
+      options.onKillResumeDelay = parseOnKillResumeDelayValue(args[index + 1]);
     } else {
       options.recoveryCommand = args[index + 1];
     }
     return 2;
+  }
+  if (arg.startsWith('--on-kill-resume-delay=')) {
+    options.onKillResumeDelay = parseOnKillResumeDelayValue(
+      arg.slice('--on-kill-resume-delay='.length)
+    );
+    return 1;
   }
   if (arg.startsWith('--on-kill-resume=')) {
     options.onKillResume = parseOnKillResumeValue(
@@ -47,7 +67,7 @@ function parseDockerRecoveryOption(args, index, options) {
 /**
  * Recovery is driven by the detached docker completion watcher, so it needs a
  * detached session whose only isolation level is docker. A recovery command on
- * its own implies one attempt.
+ * its own implies one attempt; a delay without either has nothing to delay.
  * @param {object} options - Parsed options
  * @throws {Error} If the recovery options are used where they cannot work
  */
@@ -62,6 +82,14 @@ function validateDockerRecoveryOptions(options) {
     options.onKillResume ??= 1;
   }
   if (!options.onKillResume) {
+    if (
+      options.onKillResumeDelay !== null &&
+      options.onKillResumeDelay !== undefined
+    ) {
+      throw new Error(
+        '--on-kill-resume-delay requires --on-kill-resume or --recovery-command'
+      );
+    }
     return;
   }
   const flag = options.recoveryCommand

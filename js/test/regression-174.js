@@ -113,6 +113,8 @@ function runWatcher({ policy, running, state, withLog = true }) {
       '        echo "$answer" > "$dir/current"',
       '        echo "$answer" ;;',
       '      *State.Error*) echo "" ;;',
+      // The cgroup sampler (issue #182): no cgroup to find here.
+      "      *'{{.Id}}'*|*State.Pid*) echo 0 ;;",
       '      *) echo "inspect-state" >> "$dir/calls"; cat "$dir/state" ;;',
       '    esac ;;',
       '  logs) echo logs >> "$dir/calls"; echo work; exit 1 ;;',

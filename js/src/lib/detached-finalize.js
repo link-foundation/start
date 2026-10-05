@@ -23,6 +23,10 @@ const {
   normalizeDockerTimestamp,
 } = require('./docker-post-mortem');
 const { shellQuote } = require('./isolation-log-utils');
+const {
+  CGROUP_SHELL_VARS,
+  parseCgroupMemorySample,
+} = require('./cgroup-memory');
 
 /** Provenance markers for `endTime` (issue #170.2). */
 const END_TIME_SOURCE = {
@@ -57,6 +61,8 @@ const WATCHER_LOST_CONTAINER = 'watcher-lost-container';
  * @param {string|null} [options.finishedAt] - `.State.FinishedAt`
  * @param {string|null} [options.containerError] - `.State.Error`
  * @param {boolean|string|null} [options.running] - `.State.Running`
+ * @param {string|null} [options.cgroupMemory] - Last cgroup v2 sample of the
+ *   watcher, `<memory.max> <memory.peak> <oom> <oom_kill>` (issue #182)
  * @returns {{updated: boolean, reason?: string, record?: Object}} Outcome
  */
 function finalizeDetachedExecution(options = {}) {
@@ -123,6 +129,12 @@ function finalizeDetachedExecution(options = {}) {
     record.oomKilled = oomKilled;
   }
 
+  // Counted by the kernel for this run only, unlike the sticky `OOMKilled`.
+  const cgroupMemory = parseCgroupMemorySample(options.cgroupMemory);
+  if (cgroupMemory) {
+    record.cgroupMemory = cgroupMemory;
+  }
+
   const exitReason =
     resolveReason(record) || (finishedAt ? null : WATCHER_LOST_CONTAINER);
   if (exitReason) {
@@ -162,6 +174,7 @@ function resolveReason(record) {
       exitCode: record.exitCode,
       logTail,
       oomKilled: record.oomKilled,
+      cgroupMemory: record.cgroupMemory,
     });
   } catch {
     return null;
@@ -244,13 +257,13 @@ function buildDetachedFinalizeSnippet(executionId) {
     `${shellQuote(process.execPath)} ${shellQuote(__filename)} ` +
     `${shellQuote(executionId)} "$${v.exit}" "$${v.oom}" ` +
     `"$${v.started}" "$${v.finished}" "$${v.error}" "$${v.running}" ` +
-    `>/dev/null 2>&1 || true`
+    `"$${CGROUP_SHELL_VARS.sample}" >/dev/null 2>&1 || true`
   );
 }
 
 /**
  * Entry point used by the detached watcher:
- *   <runtime> detached-finalize.js <uuid> <exit> <oom> <started> <finished> <error> <running>
+ *   <runtime> detached-finalize.js <uuid> <exit> <oom> <started> <finished> <error> <running> <cgroup>
  * Always exits 0 — a bookkeeping failure must never turn into a visible error
  * in a log the user is reading for the command's own output.
  * @param {string[]} argv - Positional arguments
@@ -265,6 +278,7 @@ function main(argv) {
     finishedAt,
     containerError,
     running,
+    cgroupMemory,
   ] = argv;
   if (!executionId || process.env.START_DISABLE_TRACKING === 'true') {
     return;
@@ -285,6 +299,7 @@ function main(argv) {
       finishedAt,
       containerError,
       running,
+      cgroupMemory,
     });
   } catch {
     // Deliberately silent: see the exit-0 contract above.

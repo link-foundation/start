@@ -26,6 +26,9 @@ use std::path::PathBuf;
 use chrono::{SecondsFormat, Utc};
 use serde_json::{json, Value};
 
+use crate::cgroup_memory::{
+    cgroup_shell_vars, format_cgroup_memory_log_line, parse_cgroup_memory_sample,
+};
 use crate::detached_finalize::{normalize_bool, normalize_container_error};
 use crate::docker_cleanup::{
     docker_command, get_docker_container_cleanup_policy,
@@ -42,6 +45,10 @@ use crate::execution_store::{
 };
 use crate::exit_reason::describe_exit_code_str;
 use crate::isolation::isolation_log::shell_quote;
+use crate::recovery_delay::{
+    format_recovery_delay, pick_recovery_delay_ms, record_on_kill_resume_delay, system_random,
+    system_sleep, wait_for_recovery_delay,
+};
 
 /// Hidden argument the detached watcher re-invokes this binary with.
 pub const INTERNAL_RECOVER_FLAG: &str = "--internal-recover-detached-docker";
@@ -111,12 +118,13 @@ pub fn build_recovery_snippet(execution_id: &str) -> String {
         .map(|path| path.to_string_lossy().to_string())
         .unwrap_or_else(|_| "start".to_string());
     format!(
-        "{{ [ \"${exit}\" = {code} ] || {{ [ \"${oom}\" = true ] && ! [ \"${exit}\" -ge 0 ] 2>/dev/null; }}; }} && {exe} {flag} {id} \"${exit}\" \"${oom}\" \"${started}\" \"${finished}\" \"${error}\" >/dev/null 2>&1",
+        "{{ [ \"${exit}\" = {code} ] || {{ [ \"${oom}\" = true ] && ! [ \"${exit}\" -ge 0 ] 2>/dev/null; }}; }} && {exe} {flag} {id} \"${exit}\" \"${oom}\" \"${started}\" \"${finished}\" \"${error}\" \"${cgroup}\" >/dev/null 2>&1",
         exit = shell_vars::EXIT,
         oom = shell_vars::OOM,
         started = shell_vars::STARTED,
         finished = shell_vars::FINISHED,
         error = shell_vars::ERROR,
+        cgroup = cgroup_shell_vars::SAMPLE,
         code = KILLED_EXIT_CODE,
         exe = shell_quote(&executable),
         flag = INTERNAL_RECOVER_FLAG,
@@ -132,6 +140,8 @@ pub struct RecoverySeparator<'a> {
     pub oom_killed: &'a str,
     pub container_name: &'a str,
     pub command: Option<&'a str>,
+    /// Random `--on-kill-resume-delay` wait before the resume (issue #181).
+    pub delay_ms: u64,
 }
 
 /// The `[Recovery k/N]` separator written into the session log.
@@ -149,14 +159,20 @@ pub fn format_recovery_separator(params: &RecoverySeparator) -> String {
         Some(command) => format!("running recovery command: {}", command),
         None => "running the original command again".to_string(),
     };
+    let delay = if params.delay_ms > 0 {
+        format!(" after a {} delay", format_recovery_delay(params.delay_ms))
+    } else {
+        String::new()
+    };
     format!(
-        "\n[Recovery {}/{}] Main process was killed (exit {}{}, oomKilled={}); resuming container {}, {}\n",
+        "\n[Recovery {}/{}] Main process was killed (exit {}{}, oomKilled={}); resuming container {}{}, {}\n",
         params.attempt,
         params.max_attempts,
         code,
         signal,
         normalize_bool(params.oom_killed) == Some(true),
         params.container_name,
+        delay,
         what
     )
 }
@@ -169,6 +185,8 @@ pub struct RecoveryFacts {
     pub started_at: String,
     pub finished_at: String,
     pub container_error: String,
+    /// The watcher's last cgroup v2 sample (issue #182).
+    pub cgroup_memory: String,
 }
 
 /// Outcome of a recovery attempt; `recovered` is true only when the container
@@ -178,6 +196,8 @@ pub struct RecoveryOutcome {
     pub recovered: bool,
     pub reason: String,
     pub attempt: Option<u64>,
+    /// The `--on-kill-resume-delay` wait, when one is configured (issue #181).
+    pub delay_ms: Option<u64>,
 }
 
 impl RecoveryOutcome {
@@ -186,8 +206,31 @@ impl RecoveryOutcome {
             recovered: false,
             reason: reason.to_string(),
             attempt: None,
+            delay_ms: None,
         }
     }
+}
+
+/// Where the `--on-kill-resume-delay` wait gets its randomness and sleeps;
+/// tests swap both out (issue #181).
+pub struct RecoveryDelayHooks<'a> {
+    pub random: &'a dyn Fn() -> f64,
+    pub sleep: &'a dyn Fn(u64),
+}
+
+impl Default for RecoveryDelayHooks<'_> {
+    fn default() -> Self {
+        RecoveryDelayHooks {
+            random: &system_random,
+            sleep: &system_sleep,
+        }
+    }
+}
+
+fn is_stop_requested(store: &ExecutionStore, execution_id: &str) -> bool {
+    store
+        .get(execution_id)
+        .is_some_and(|record| option_str(&record, "stopRequestedAt").is_some())
 }
 
 /// Starts the completion watcher that follows a resumed container.
@@ -279,6 +322,26 @@ pub fn recover_killed_execution<R: CommandRunner + ?Sized>(
     runner: &R,
     start_watcher: WatcherStarter,
 ) -> RecoveryOutcome {
+    recover_killed_execution_with_delay(
+        store,
+        execution_id,
+        facts,
+        runner,
+        start_watcher,
+        &RecoveryDelayHooks::default(),
+    )
+}
+
+/// [`recover_killed_execution`] after the random `--on-kill-resume-delay`
+/// wait (issue #181), with injectable randomness and sleep.
+pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
+    store: &ExecutionStore,
+    execution_id: &str,
+    facts: &RecoveryFacts,
+    runner: &R,
+    start_watcher: WatcherStarter,
+    delay: &RecoveryDelayHooks,
+) -> RecoveryOutcome {
     if execution_id.is_empty() {
         return RecoveryOutcome::not("missing-arguments");
     }
@@ -311,6 +374,8 @@ pub fn recover_killed_execution<R: CommandRunner + ?Sized>(
     }
 
     let attempt = used + 1;
+    let delay_range = record_on_kill_resume_delay(record.options.get("onKillResumeDelay"));
+    let delay_ms = pick_recovery_delay_ms(delay_range.as_deref(), delay.random);
     let give_up = |reason: String| {
         log(&format!(
             "[Recovery {}/{}] Failed: {}\n",
@@ -320,6 +385,7 @@ pub fn recover_killed_execution<R: CommandRunner + ?Sized>(
             recovered: false,
             reason: "resume-failed".to_string(),
             attempt: Some(attempt),
+            delay_ms: None,
         }
     };
 
@@ -335,6 +401,9 @@ pub fn recover_killed_execution<R: CommandRunner + ?Sized>(
             error: normalize_container_error(&facts.container_error),
         })
     ));
+    if let Some(line) = format_cgroup_memory_log_line(&facts.cgroup_memory) {
+        log(&format!("{}\n", line));
+    }
     let recovery_command = option_str(&record, "recoveryCommand").map(str::to_string);
     log(&format_recovery_separator(&RecoverySeparator {
         attempt,
@@ -343,7 +412,29 @@ pub fn recover_killed_execution<R: CommandRunner + ?Sized>(
         oom_killed: &facts.oom_killed,
         container_name: &container_name,
         command: recovery_command.as_deref(),
+        delay_ms,
     }));
+
+    // Executions killed by one host-wide OOM event must not all come back in
+    // the same second (issue #181). `--stop` during the wait cancels the
+    // resume: the container has already exited, so `docker stop` only leaves
+    // the `stopRequestedAt` marker this loop polls for.
+    if delay_ms > 0
+        && wait_for_recovery_delay(delay_ms, delay.sleep, &|| {
+            is_stop_requested(store, execution_id)
+        })
+    {
+        log(&format!(
+            "[Recovery {}/{}] Not resuming: the session was stopped on request during the delay.\n",
+            attempt, max_attempts
+        ));
+        return RecoveryOutcome {
+            recovered: false,
+            reason: "stop-requested".to_string(),
+            attempt: Some(attempt),
+            delay_ms: Some(delay_ms),
+        };
+    }
 
     // Docker keeps `docker update` limits in the HostConfig across restarts;
     // they are read back so the log and `--status` show what the resumed run
@@ -379,20 +470,42 @@ pub fn recover_killed_execution<R: CommandRunner + ?Sized>(
         .and_then(Value::as_array)
         .cloned()
         .unwrap_or_default();
+    let delayed = if delay_range.is_some() {
+        format!(", delayMs={}", delay_ms)
+    } else {
+        String::new()
+    };
+    // The killed run's own counters: the resumed run starts a fresh cgroup.
+    let counted = parse_cgroup_memory_sample(&facts.cgroup_memory)
+        .map(|memory| {
+            [
+                ("oomEvents", memory.oom_events),
+                ("oomKills", memory.oom_kills),
+            ]
+            .iter()
+            .filter_map(|(field, value)| value.map(|value| format!(", {}={}", field, value)))
+            .collect::<String>()
+        })
+        .unwrap_or_default();
     history.push(json!(format!(
-        "{}: exit {}, oomKilled={}, resumed at {}",
+        "{}: exit {}, oomKilled={}{}{}, resumed at {}",
         attempt,
         described
             .code
             .map(|code| code.to_string())
             .unwrap_or_else(|| "unknown".to_string()),
         oom_killed == Some(true),
+        counted,
+        delayed,
         since
     )));
     let options = &mut record.options;
     options.insert("recoveryAttempts".to_string(), json!(attempt));
     options.insert("recoveryHistory".to_string(), Value::Array(history));
     options.insert("lastRecoveryAt".to_string(), json!(since));
+    if delay_range.is_some() {
+        options.insert("lastRecoveryDelayMs".to_string(), json!(delay_ms));
+    }
     if !resource_limits.is_empty() {
         options.insert("resourceLimits".to_string(), json!(resource_limits));
     }
@@ -401,6 +514,7 @@ pub fn recover_killed_execution<R: CommandRunner + ?Sized>(
     record.end_time = None;
     record.exit_reason = None;
     record.oom_killed = None;
+    record.cgroup_memory = None;
     // The container is already running again; even if the save fails, the new
     // watcher still follows it and finalizes the record when it ends.
     let _ = store.save(&record);
@@ -417,6 +531,7 @@ pub fn recover_killed_execution<R: CommandRunner + ?Sized>(
         recovered: true,
         reason: "resumed".to_string(),
         attempt: Some(attempt),
+        delay_ms: delay_range.map(|_| delay_ms),
     }
 }
 
@@ -437,7 +552,7 @@ pub fn start_system_watcher(
 }
 
 /// Entry point for `--internal-recover-detached-docker <uuid> <exit> <oom>
-/// <started> <finished> <error>`. Returns 0 only when the container was
+/// <started> <finished> <error> <cgroup>`. Returns 0 only when the container was
 /// resumed; any other outcome lets the watcher continue with its normal
 /// cleanup, footer and finalization.
 pub fn run_internal_recover(args: &[String]) -> i32 {
@@ -462,6 +577,7 @@ pub fn run_internal_recover(args: &[String]) -> i32 {
             started_at: field(3),
             finished_at: field(4),
             container_error: field(5),
+            cgroup_memory: field(6),
         },
         &SystemCommandRunner,
         &start_system_watcher,

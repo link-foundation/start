@@ -5,9 +5,12 @@
 //!                             killed (exit 137 / OOMKilled)
 //! --recovery-command <cmd>    command to run in the same container on resume
 //!                             (without it, the original command is re-run)
+//! --on-kill-resume-delay <s>  wait a random <min>[-<max>] seconds before
+//!                             each resume (issue #181)
 //! ```
 
 use crate::args_parser::WrapperOptions;
+use crate::recovery_delay::parse_on_kill_resume_delay_value;
 
 fn parse_on_kill_resume_value(value: &str) -> Result<u32, String> {
     let text = value.trim();
@@ -30,21 +33,25 @@ pub fn parse_docker_recovery_option(
     options: &mut WrapperOptions,
 ) -> Result<usize, String> {
     let arg = args[index].as_str();
-    if arg == "--on-kill-resume" || arg == "--recovery-command" {
+    if arg == "--on-kill-resume" || arg == "--recovery-command" || arg == "--on-kill-resume-delay" {
         let Some(value) = args.get(index + 1).filter(|value| !value.starts_with('-')) else {
-            let kind = if arg == "--on-kill-resume" {
-                "count"
-            } else {
-                "command"
+            let kind = match arg {
+                "--on-kill-resume" => "count",
+                "--recovery-command" => "command",
+                _ => "seconds",
             };
             return Err(format!("Option {} requires a {} argument", arg, kind));
         };
-        if arg == "--on-kill-resume" {
-            options.on_kill_resume = Some(parse_on_kill_resume_value(value)?);
-        } else {
-            options.recovery_command = Some(value.clone());
+        match arg {
+            "--on-kill-resume" => options.on_kill_resume = Some(parse_on_kill_resume_value(value)?),
+            "--recovery-command" => options.recovery_command = Some(value.clone()),
+            _ => options.on_kill_resume_delay = Some(parse_on_kill_resume_delay_value(value)?),
         }
         return Ok(2);
+    }
+    if let Some(value) = arg.strip_prefix("--on-kill-resume-delay=") {
+        options.on_kill_resume_delay = Some(parse_on_kill_resume_delay_value(value)?);
+        return Ok(1);
     }
     if let Some(value) = arg.strip_prefix("--on-kill-resume=") {
         options.on_kill_resume = Some(parse_on_kill_resume_value(value)?);
@@ -58,7 +65,8 @@ pub fn parse_docker_recovery_option(
 }
 
 /// Recovery is driven by the detached docker completion watcher, so it needs a
-/// detached docker session. A recovery command on its own implies one attempt.
+/// detached docker session. A recovery command on its own implies one attempt;
+/// a delay without either has nothing to delay.
 pub fn validate_docker_recovery_options(options: &mut WrapperOptions) -> Result<(), String> {
     if let Some(command) = options.recovery_command.as_deref() {
         if command.trim().is_empty() {
@@ -67,6 +75,12 @@ pub fn validate_docker_recovery_options(options: &mut WrapperOptions) -> Result<
         options.on_kill_resume.get_or_insert(1);
     }
     if options.on_kill_resume.is_none() {
+        if options.on_kill_resume_delay.is_some() {
+            return Err(
+                "--on-kill-resume-delay requires --on-kill-resume or --recovery-command"
+                    .to_string(),
+            );
+        }
         return Ok(());
     }
     let flag = if options.recovery_command.is_some() {
