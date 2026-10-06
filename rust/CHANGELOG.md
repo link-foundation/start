@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.22.4] - 2026-10-06
+
+Scope explicit resume status, memory evidence and log reads to execution attempts; preserve earlier evidence in attempt history and report launch, watcher, output and terminal lifecycle separately, matching JavaScript.
+
 ## [0.22.3] - 2026-10-05
 
 Report OOM kill scope as unknown when only cgroup memory counters are available. Allocation events and killed processes have different units, so their comparison cannot establish container, parent or host scope. Preserve raw counters and the exit-code guard for earlier child OOM kills.
