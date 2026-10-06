@@ -313,7 +313,11 @@ describe('issue #176: snapshot resume keeps the resource limits', () => {
     expect(saved[0].options.sessionName).toBe('box-resume-1');
     expect(result.output).toContain('--pids-limit=64');
     // A snapshot container has no recovery selector.
-    expect(watchers[0][4]).toEqual({ recoverOnKill: false });
+    expect(watchers[0][4]).toEqual({
+      recoverOnKill: false,
+      since: saved[0].attempt.startedAt,
+      attemptNumber: saved[0].attempt.number,
+    });
   });
 
   it('shows the limits in [Isolation] lines and stores them as metadata', () => {

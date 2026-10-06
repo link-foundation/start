@@ -1,4 +1,5 @@
 const { spawn, spawnSync } = require('child_process');
+const path = require('path');
 const {
   appendLogFile,
   createShellLogFooterSnippet,
@@ -381,7 +382,16 @@ function buildDetachedDockerCompletionScript(
     const since = watcherOptions.since
       ? ` --since ${shellQuote(watcherOptions.since)}`
       : '';
-    parts.push(`docker logs -f${since} ${quotedName} >> ${quotedLogPath} 2>&1`);
+    if (watcherOptions.attemptNumber) {
+      const capture = shellQuote(path.join(__dirname, 'detached-output.js'));
+      parts.push(
+        `docker logs -f --timestamps${since} ${quotedName} 2>&1 | ${shellQuote(process.execPath)} ${capture} ${quotedLogPath} ${watcherOptions.attemptNumber} ${shellQuote(watcherOptions.since)}`
+      );
+    } else {
+      parts.push(
+        `docker logs -f${since} ${quotedName} >> ${quotedLogPath} 2>&1`
+      );
+    }
     parts.push(buildDockerWaitForExitSnippet(containerName, quotedLogPath));
     parts.push(buildCgroupSamplerStopSnippet());
     parts.push(buildDockerStateSnippet(containerName));
@@ -420,7 +430,9 @@ function buildDetachedDockerCompletionScript(
 
   if (executionId) {
     // Last, so the record is only marked terminal once the log is complete.
-    exited.push(buildDetachedFinalizeSnippet(executionId));
+    exited.push(
+      buildDetachedFinalizeSnippet(executionId, watcherOptions.attemptNumber)
+    );
   }
 
   const stillRunning = logPath
@@ -474,7 +486,13 @@ function startDetachedDockerCompletionWatcher(
       stdio: 'ignore',
     }
   );
+  watcher.on('error', (error) => {
+    if (process.env.START_DEBUG === '1' || process.env.START_DEBUG === 'true') {
+      console.error(`[DEBUG] completion watcher failed: ${error.message}`);
+    }
+  });
   watcher.unref();
+  return Boolean(watcher.pid);
 }
 
 function spawnAttachedDocker(dockerArgs, logPath) {

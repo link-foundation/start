@@ -54,6 +54,14 @@ with killed processes cannot distinguish a container, parent or host OOM.
 still marked running, which is what repairs records after a supervisor restart.
 See [Execution Tracking](../README.md#execution-tracking) for the full behavior.
 
+After an explicit resume, `--status <id> --output-format json` and
+`--list --output-format json` include `attempt` and `attemptHistory`. Use
+`attempt.startedAt` and the byte offset `attempt.logOffset` to select the
+current run in the shared log. `attempt.launchAcceptedAt` and
+`attempt.watcherAttachedAt` report launch and observation setup separately;
+`attempt.lastOutputAt` remains `null` until the resumed Docker command emits
+output. Previous exit and memory evidence stays in `attemptHistory`.
+
 For examples checked against the real JavaScript and Rust command output, see
 [EXAMPLES.md](EXAMPLES.md).
 

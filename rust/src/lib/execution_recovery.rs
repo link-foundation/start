@@ -34,7 +34,9 @@ use crate::docker_cleanup::{
     docker_command, get_docker_container_cleanup_policy,
     start_detached_docker_completion_watcher_with, DockerWatcherOptions,
 };
-use crate::docker_post_mortem::{format_container_post_mortem, shell_vars, ContainerPostMortem};
+use crate::docker_post_mortem::{
+    format_container_post_mortem, normalize_docker_timestamp, shell_vars, ContainerPostMortem,
+};
 use crate::docker_resource_limits::{
     build_resource_limits_status_line, read_docker_resource_limits,
 };
@@ -455,15 +457,44 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
     }
 
     let since = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
+    let mut next_attempt = record.attempt.as_ref().map(|_| {
+        crate::execution_attempt::create_attempt(&record, "automatic-recovery", &container_name)
+    });
+    if let Some(attempt) = next_attempt.as_mut() {
+        attempt.started_at = since.clone();
+        let mut lifecycle = record.clone();
+        lifecycle.attempt = Some(attempt.clone());
+        crate::execution_attempt::append_lifecycle(&lifecycle, "resume-started", json!({}));
+    }
     let started = runner.run(
         &docker_command().to_string_lossy(),
         &["start".to_string(), container_name.clone()],
     );
     if !started.success {
+        if let Some(attempt) = next_attempt.as_ref() {
+            let mut lifecycle = record.clone();
+            lifecycle.attempt = Some(attempt.clone());
+            crate::execution_attempt::append_lifecycle(
+                &lifecycle,
+                "launch-failed",
+                json!({"error": failure_detail(&started)}),
+            );
+        }
         return give_up(format!("docker start failed: {}", failure_detail(&started)));
     }
 
     let described = describe_exit_code_str(&facts.exit_code);
+    if let Some(attempt) = next_attempt.as_mut() {
+        record.status = ExecutionStatus::Executed;
+        record.exit_code = described.code;
+        record.end_time = normalize_docker_timestamp(Some(&facts.finished_at));
+        record.container_started_at = normalize_docker_timestamp(Some(&facts.started_at));
+        record.oom_killed = oom_killed;
+        record.cgroup_memory = parse_cgroup_memory_sample(&facts.cgroup_memory);
+        crate::execution_attempt::archive_attempt(&mut record);
+        attempt.launch_accepted_at = Some(Utc::now().to_rfc3339());
+        record.attempt = Some(attempt.clone());
+    }
     let mut history = record
         .options
         .get("recoveryHistory")
@@ -515,18 +546,37 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
     record.exit_reason = None;
     record.oom_killed = None;
     record.cgroup_memory = None;
+    record.memory_exhausted = None;
+    record.memory_exhausted_reason = None;
+    record.end_time_source = None;
+    record.observed_at = None;
+    record.stale_detected_at = None;
+    record.container_started_at = None;
     // The container is already running again; even if the save fails, the new
     // watcher still follows it and finalizes the record when it ends.
     let _ = store.save(&record);
 
+    if next_attempt.is_some() {
+        crate::execution_attempt::append_lifecycle(&record, "launch-accepted", json!({}));
+    }
     start_watcher(
         &container_name,
         &record,
         &DockerWatcherOptions {
             since: Some(since),
             recover_on_kill: true,
+            attempt_number: next_attempt.as_ref().map(|attempt| attempt.number),
         },
     );
+    if let Some(attempt) = next_attempt {
+        if let Ok(Some(current)) = store.patch_attempt(
+            &record.uuid,
+            attempt.number,
+            json!({"watcherAttachedAt": Utc::now().to_rfc3339()}),
+        ) {
+            crate::execution_attempt::append_lifecycle(&current, "watcher-attached", json!({}));
+        }
+    }
     RecoveryOutcome {
         recovered: true,
         reason: "resumed".to_string(),
@@ -542,7 +592,7 @@ pub fn start_system_watcher(
     watcher: &DockerWatcherOptions,
 ) {
     let log_path = (!record.log_path.is_empty()).then(|| PathBuf::from(&record.log_path));
-    start_detached_docker_completion_watcher_with(
+    let _ = start_detached_docker_completion_watcher_with(
         container_name,
         get_docker_container_cleanup_policy(&build_launch_options(record)),
         log_path.as_ref(),

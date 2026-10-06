@@ -318,8 +318,34 @@ function recoverKilledExecution(params = {}) {
   }
 
   const since = now().toISOString();
+  const {
+    appendLifecycle,
+    archiveAttempt,
+    createAttempt,
+    patchAttempt,
+  } = require('./execution-attempt');
+  const nextAttempt = record.attempt
+    ? createAttempt(record, {
+        mode: 'automatic-recovery',
+        sessionName: containerName,
+      })
+    : null;
+  if (nextAttempt) {
+    nextAttempt.startedAt = since;
+    appendLifecycle(
+      { uuid: record.uuid, logPath: record.logPath, attempt: nextAttempt },
+      'resume-started'
+    );
+  }
   const started = runner(getDockerCommand(), ['start', containerName]);
   if (!started.success) {
+    if (nextAttempt) {
+      appendLifecycle(
+        { uuid: record.uuid, logPath: record.logPath, attempt: nextAttempt },
+        'launch-failed',
+        { error: failureDetail(started) }
+      );
+    }
     return giveUp(`docker start failed: ${failureDetail(started)}`);
   }
 
@@ -327,6 +353,19 @@ function recoverKilledExecution(params = {}) {
   const delayed = delayRange ? `, delayMs=${delayMs}` : '';
   // The killed run's own counters: the resumed run starts a fresh cgroup.
   const memory = parseCgroupMemorySample(params.cgroupMemory);
+  if (nextAttempt) {
+    Object.assign(record, {
+      status: 'executed',
+      exitCode: described.code,
+      endTime: params.finishedAt || null,
+      containerStartedAt: params.startedAt || undefined,
+      oomKilled: params.oomKilled === true || params.oomKilled === 'true',
+      cgroupMemory: memory || undefined,
+    });
+    archiveAttempt(record);
+    nextAttempt.launchAcceptedAt = new Date().toISOString();
+    record.attempt = nextAttempt;
+  }
   const counted = memory
     ? ['oomEvents', 'oomKills']
         .filter((field) => memory[field] !== null)
@@ -350,6 +389,12 @@ function recoverKilledExecution(params = {}) {
   record.exitReason = undefined;
   record.oomKilled = undefined;
   record.cgroupMemory = undefined;
+  record.memoryExhausted = undefined;
+  record.memoryExhaustedReason = undefined;
+  record.endTimeSource = undefined;
+  record.observedAt = undefined;
+  record.staleDetectedAt = undefined;
+  record.containerStartedAt = undefined;
   try {
     store.save(record);
   } catch {
@@ -359,13 +404,28 @@ function recoverKilledExecution(params = {}) {
 
   const startWatcher =
     params.startWatcher || startDetachedDockerCompletionWatcher;
+  if (nextAttempt) {
+    appendLifecycle(record, 'launch-accepted');
+  }
   startWatcher(
     containerName,
     getDockerContainerCleanupPolicy(opts),
     record.logPath || null,
     record.uuid,
-    { since, recoverOnKill: true }
+    {
+      since,
+      recoverOnKill: true,
+      ...(nextAttempt ? { attemptNumber: nextAttempt.number } : {}),
+    }
   );
+  if (nextAttempt) {
+    const current = patchAttempt(store, record, {
+      watcherAttachedAt: new Date().toISOString(),
+    });
+    if (current) {
+      appendLifecycle(current, 'watcher-attached');
+    }
+  }
   return {
     recovered: true,
     reason: 'resumed',

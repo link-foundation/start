@@ -287,14 +287,19 @@ pub const FATAL_MARKER_TAIL_BYTES: u64 = 64 * 1024;
 /// line, and that fragment must not be treated as the beginning of a line by
 /// the anchored footer matcher.
 pub fn read_log_tail(log_path: &str, bytes: u64) -> Option<String> {
+    read_log_tail_from(log_path, bytes, 0)
+}
+
+/// Read only bytes at or after the current attempt boundary.
+pub fn read_log_tail_from(log_path: &str, bytes: u64, offset: u64) -> Option<String> {
     let mut file = fs::File::open(log_path).ok()?;
     let size = file.metadata().ok()?.len();
-    let length = size.min(bytes);
+    let length = size.saturating_sub(offset).min(bytes);
     file.seek(SeekFrom::Start(size - length)).ok()?;
     let mut buffer = Vec::with_capacity(length as usize);
     file.take(length).read_to_end(&mut buffer).ok()?;
     let tail = String::from_utf8_lossy(&buffer).into_owned();
-    if size <= bytes {
+    if size - length == offset || length == 0 {
         return Some(tail);
     }
     Some(match tail.find('\n') {

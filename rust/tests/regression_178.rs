@@ -186,6 +186,7 @@ mod shell {
             &DockerWatcherOptions {
                 since: None,
                 recover_on_kill: true,
+                attempt_number: None,
             },
         );
         // The watcher re-invokes the running executable, which here is the

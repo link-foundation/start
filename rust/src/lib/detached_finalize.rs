@@ -21,11 +21,12 @@ use serde_json::Value;
 
 use crate::cgroup_memory::{cgroup_shell_vars, parse_cgroup_memory_sample};
 use crate::docker_post_mortem::{normalize_docker_timestamp, shell_vars};
+use crate::execution_attempt::{append_lifecycle, read_attempt_activity, read_attempt_log_tail};
 use crate::execution_store::{
     ExecutionRecord, ExecutionStatus, ExecutionStore, ExecutionStoreOptions,
 };
 use crate::exit_reason::{describe_exit_code_str, resolve_exit_reason};
-use crate::isolation::isolation_log::{read_log_tail, shell_quote, FATAL_MARKER_TAIL_BYTES};
+use crate::isolation::isolation_log::{shell_quote, FATAL_MARKER_TAIL_BYTES};
 
 /// Hidden argument the detached watcher re-invokes this binary with.
 /// Not part of the public CLI surface: it is an implementation detail of the
@@ -95,6 +96,15 @@ pub fn finalize_detached_execution(
     execution_id: &str,
     facts: &DetachedFinalizeFacts,
 ) -> FinalizeOutcome {
+    finalize_detached_execution_with_attempt(store, execution_id, facts, None)
+}
+
+pub fn finalize_detached_execution_with_attempt(
+    store: &ExecutionStore,
+    execution_id: &str,
+    facts: &DetachedFinalizeFacts,
+    attempt_number: Option<u64>,
+) -> FinalizeOutcome {
     if execution_id.is_empty() {
         return FinalizeOutcome {
             updated: false,
@@ -118,6 +128,23 @@ pub fn finalize_detached_execution(
             }
         }
     };
+    if let Some(attempt) = &record.attempt {
+        let started = normalize_docker_timestamp(Some(&facts.started_at));
+        let older = started
+            .as_deref()
+            .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+            .zip(chrono::DateTime::parse_from_rfc3339(&attempt.started_at).ok())
+            .is_some_and(|(started, since)| started < since);
+        if attempt_number.is_some_and(|number| number != attempt.number)
+            || older
+            || (attempt_number.is_none() && started.is_none())
+        {
+            return FinalizeOutcome {
+                updated: false,
+                reason: "stale-attempt".into(),
+            };
+        }
+    }
     if record.status == ExecutionStatus::Executed && record.end_time.is_some() {
         // Already finalized (e.g. a `--status` query got there first, or the
         // watcher ran twice after a resume). Nothing to correct.
@@ -184,11 +211,20 @@ pub fn finalize_detached_execution(
             .insert("containerError".to_string(), Value::String(error));
     }
 
+    read_attempt_activity(&mut record);
     match store.save(&record) {
-        Ok(()) => FinalizeOutcome {
-            updated: true,
-            reason: "finalized".to_string(),
-        },
+        Ok(()) => {
+            append_lifecycle(
+                &record,
+                "terminal",
+                serde_json::json!({ "status": record.status, "exitCode": record.exit_code,
+                "endTime": record.end_time, "exitReason": record.exit_reason, "oomKilled": record.oom_killed, "cgroupMemory": record.cgroup_memory }),
+            );
+            FinalizeOutcome {
+                updated: true,
+                reason: "finalized".to_string(),
+            }
+        }
         Err(error) => FinalizeOutcome {
             updated: false,
             reason: format!("save-failed: {}", error),
@@ -201,7 +237,7 @@ fn resolve_reason(record: &ExecutionRecord) -> Option<String> {
     let tail = if record.log_path.is_empty() {
         None
     } else {
-        read_log_tail(&record.log_path, FATAL_MARKER_TAIL_BYTES)
+        read_attempt_log_tail(record, FATAL_MARKER_TAIL_BYTES)
     };
     resolve_exit_reason(
         record.exit_code,
@@ -243,11 +279,18 @@ pub fn reconcile_finalized_record(
 /// `|| true`, so a finalization failure can never abort the watcher's remaining
 /// cleanup work.
 pub fn build_detached_finalize_snippet(execution_id: &str) -> String {
+    build_detached_finalize_snippet_with_attempt(execution_id, None)
+}
+
+pub fn build_detached_finalize_snippet_with_attempt(
+    execution_id: &str,
+    attempt_number: Option<u64>,
+) -> String {
     let executable = std::env::current_exe()
         .map(|path| path.to_string_lossy().to_string())
         .unwrap_or_else(|_| "start".to_string());
     format!(
-        "{} {} {} \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" >/dev/null 2>&1 || true",
+        "{} {} {} \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" \"${}\"{} >/dev/null 2>&1 || true",
         shell_quote(&executable),
         INTERNAL_FINALIZE_FLAG,
         shell_quote(execution_id),
@@ -258,6 +301,7 @@ pub fn build_detached_finalize_snippet(execution_id: &str) -> String {
         shell_vars::ERROR,
         shell_vars::RUNNING,
         cgroup_shell_vars::SAMPLE,
+        attempt_number.map(|number| format!(" {}", shell_quote(&number.to_string()))).unwrap_or_default(),
     )
 }
 
@@ -276,7 +320,7 @@ pub fn run_internal_finalize(args: &[String]) {
         app_folder: std::env::var("START_APP_FOLDER").ok().map(PathBuf::from),
         ..ExecutionStoreOptions::default()
     });
-    finalize_detached_execution(
+    finalize_detached_execution_with_attempt(
         &store,
         &execution_id,
         &DetachedFinalizeFacts {
@@ -288,5 +332,6 @@ pub fn run_internal_finalize(args: &[String]) {
             running: field(6),
             cgroup_memory: field(7),
         },
+        field(8).parse().ok(),
     );
 }

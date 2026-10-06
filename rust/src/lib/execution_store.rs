@@ -64,6 +64,10 @@ pub struct ExecutionRecord {
     pub log_path: String,
     pub start_time: String,
     pub end_time: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attempt: Option<crate::execution_attempt::ExecutionAttempt>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attempt_history: Vec<Value>,
     /// Where `end_time` came from (issue #170.2): `docker-finished-at`,
     /// `log-footer` or `observed-at`. Without it a real finish time and a
     /// timestamp taken when someone happened to run `--status` are
@@ -123,6 +127,8 @@ impl ExecutionRecord {
             log_path: String::new(),
             start_time: now.to_rfc3339(),
             end_time: None,
+            attempt: None,
+            attempt_history: Vec::new(),
             end_time_source: None,
             observed_at: None,
             stale_detected_at: None,
@@ -576,6 +582,41 @@ impl ExecutionStore {
         }
 
         Ok(())
+    }
+
+    /// Merge attempt metadata under the lock without replacing a watcher's terminal state.
+    pub fn patch_attempt(
+        &self,
+        uuid: &str,
+        number: u64,
+        fields: Value,
+    ) -> Result<Option<ExecutionRecord>, String> {
+        let mut lock = LockManager::new(self.lock_file_path.clone());
+        if !lock.acquire(LOCK_TIMEOUT_MS) {
+            return Err("Failed to acquire lock for attempt metadata".into());
+        }
+        let mut records = self.read_lino_records();
+        let Some(current) = records
+            .iter_mut()
+            .find(|r| r.uuid == uuid && r.attempt.as_ref().is_some_and(|a| a.number == number))
+        else {
+            return Ok(None);
+        };
+        let mut value =
+            serde_json::to_value(current.attempt.as_ref().unwrap()).map_err(|e| e.to_string())?;
+        if let Some(fields) = fields.as_object() {
+            for (key, field) in fields {
+                value[key] = field.clone();
+            }
+        }
+        current.attempt = Some(serde_json::from_value(value).map_err(|e| e.to_string())?);
+        let updated = current.clone();
+        self.write_lino_records(&records)
+            .map_err(|e| e.to_string())?;
+        if self.use_links {
+            self.write_links_record(&updated);
+        }
+        Ok(Some(updated))
     }
 
     /// Get an execution record by UUID or session name (falls back to options.sessionName)

@@ -94,7 +94,15 @@ function readDockerState(record) {
   if (opts.isolated !== 'docker' || !opts.sessionName) {
     return null;
   }
-  return inspectDockerState(opts.sessionName);
+  const state = inspectDockerState(opts.sessionName);
+  if (
+    record.attempt &&
+    state?.startedAt &&
+    Date.parse(state.startedAt) < Date.parse(record.attempt.startedAt)
+  ) {
+    return null;
+  }
+  return state;
 }
 
 /**
@@ -506,12 +514,26 @@ function attachMemoryExhaustion(record, logTail) {
  * @returns {Object} Possibly updated execution record
  */
 function enrichDetachedStatus(record) {
-  const logTail =
-    record && record.logPath
-      ? readLogTail(record.logPath, FATAL_MARKER_TAIL_BYTES)
-      : null;
+  if (!record) {
+    return record;
+  }
+  const {
+    readAttemptActivity,
+    readAttemptLogTail,
+  } = require('./execution-attempt');
+  const logTail = record
+    ? readAttemptLogTail(record, FATAL_MARKER_TAIL_BYTES)
+    : null;
   const resolved = resolveDetachedStatus(record, logTail);
-  return attachMemoryExhaustion(attachExitReason(resolved, logTail), logTail);
+  const enriched = attachMemoryExhaustion(
+    attachExitReason(resolved, logTail),
+    logTail
+  );
+  const copy = Object.assign(
+    Object.create(Object.getPrototypeOf(enriched)),
+    enriched
+  );
+  return readAttemptActivity(copy);
 }
 
 /**
@@ -693,6 +715,16 @@ function formatRecordAsText(record) {
     lines.push(`Stale Detected At: ${obj.staleDetectedAt}`);
   }
   lines.push(`Log Path:          ${obj.logPath}`);
+  if (obj.attempt) {
+    lines.push(
+      `Attempt:           ${obj.attempt.number}`,
+      `Attempt Started:   ${obj.attempt.startedAt}`,
+      `Attempt Log Offset: ${obj.attempt.logOffset ?? 'N/A'}`,
+      `Launch Accepted:   ${obj.attempt.launchAcceptedAt || 'N/A'}`,
+      `Watcher Attached:  ${obj.attempt.watcherAttachedAt || 'N/A'}`,
+      `Last Output:       ${obj.attempt.lastOutputAt || 'N/A'}`
+    );
+  }
 
   // Format options as nested list instead of JSON
   const optionEntries = Object.entries(obj.options || {}).filter(

@@ -96,7 +96,19 @@ pub(crate) fn read_docker_state(record: &ExecutionRecord) -> Option<DockerState>
         return None;
     }
     let session_name = record.options.get("sessionName")?.as_str()?;
-    inspect_docker_state(session_name)
+    let state = inspect_docker_state(session_name)?;
+    if let Some(attempt) = &record.attempt {
+        let older = state
+            .started_at
+            .as_deref()
+            .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+            .zip(chrono::DateTime::parse_from_rfc3339(&attempt.started_at).ok())
+            .is_some_and(|(started, since)| started < since);
+        if older {
+            return None;
+        }
+    }
+    Some(state)
 }
 
 /// Best-effort terminal exit code reported by the isolation backend itself

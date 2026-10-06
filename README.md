@@ -244,6 +244,36 @@ A removed container states the same facts in one line, before it stops existing:
 Container removed: my-docker-session (exit 137, SIGKILL, lifetime 5.798s, oomKilled=false)
 ```
 
+Explicit `--resume` keeps the execution UUID and log, and starts a new
+`attempt`. Status and list output expose its `number`, `startedAt`,
+`logOffset` (a byte offset into that log), `mode`, `previousSessionName` and
+`sessionName`. Attempt numbers start at 1 for the original execution; the
+first explicit resume is attempt 2. Existing resume/recovery counters remain
+available separately. The execution's original `startTime` stays unchanged.
+
+Previous exit, finish-time, OOM, runtime memory-exhaustion and cgroup evidence
+is retained in `attemptHistory` and cleared from the current record. Current
+status reads only the log at or after `attempt.logOffset`, so an old footer
+or fatal error cannot finish or diagnose a quiet new run. Older records still
+work; their historical log boundaries are unknown (`null`) rather than inferred.
+An unreadable current log also has a `null` boundary and supplies no log evidence.
+
+The log records JSON entries prefixed with `[Start Command Lifecycle]` for
+`resume-started`, `launch-accepted`, `watcher-attached`, and `terminal`, with
+the attempt number, time and container names. Failed launches or watcher
+attachments produce `launch-failed` or `watcher-attachment-failed`. A rejected
+launch leaves the previous stored attempt intact. `launchAcceptedAt` means
+the backend accepted the launch; `watcherAttachedAt` means the watcher process
+was started. Neither means the command made progress or completed successfully.
+
+For resumed detached Docker commands, `lastOutputAt` is the latest timestamp
+of command output observed by the watcher. Docker's timestamp prefixes remain
+in the log. Lifecycle messages and old Docker output do not advance this field;
+a quiet run leaves it `null`. This is evidence of output, not proof of task
+progress. Output timestamps are read from a small per-attempt `.activity`
+sidecar next to the log, and are saved when the watcher finalizes the record.
+Automatic kill recovery after an explicit resume starts another scoped attempt.
+
 On a cgroup v2 host the watcher also samples the container's own memory
 counters while it runs (issue #182) — `memory.max`, `memory.peak` and the
 `oom`/`oom_kill` counters of `memory.events` — once a second, and once more

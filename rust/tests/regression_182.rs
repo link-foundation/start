@@ -154,6 +154,7 @@ fn starts_the_sampler_first_and_stops_it_before_reading_the_state() {
             &DockerWatcherOptions {
                 since: None,
                 recover_on_kill: true,
+                attempt_number: None,
             },
         );
         assert!(script.starts_with(&build_cgroup_sampler_start_snippet("box")));
