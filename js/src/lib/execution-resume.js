@@ -506,7 +506,8 @@ async function resumeExecution(store, identifier, deps = {}) {
           since: attempt.startedAt,
           attemptNumber: attempt.number,
           recoverOnKill:
-            plan.mode === ResumeMode.DOCKER_START && Boolean(opts.onKillResume),
+            plan.mode !== ResumeMode.DOCKER_SNAPSHOT &&
+            Boolean(opts.onKillResume),
         }
       );
       if (watcher === false) {

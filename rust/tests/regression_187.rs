@@ -399,7 +399,9 @@ fn snapshot_resume_records_both_container_names() {
 
 #[test]
 fn relaunch_defers_watcher_until_after_persistence() {
-    let (_temp, store, record) = fixture();
+    let (_temp, store, mut record) = fixture();
+    record.options.insert("onKillResume".into(), json!(1));
+    store.save(&record).unwrap();
     let mut runner = support::FakeRunner::new(json!({}));
     runner.container_status = "".into();
     let result = resume_execution_with(
@@ -419,6 +421,11 @@ fn relaunch_defers_watcher_until_after_persistence() {
         store.get(&record.uuid).unwrap().attempt.unwrap().mode,
         "relaunch"
     );
+    let saved = store.get(&record.uuid).unwrap();
+    assert!(start_command::execution_resume::keeps_kill_recovery(
+        saved.options["sessionName"].as_str().unwrap(),
+        &saved
+    ));
 }
 
 #[test]

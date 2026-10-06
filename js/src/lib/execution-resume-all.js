@@ -138,7 +138,7 @@ function resumeAllExecutions(store, deps = {}) {
               attemptNumber: record.attempt.number,
               recoverOnKill:
                 Boolean(record.options?.onKillResume) &&
-                ['docker-start', 'automatic-recovery'].includes(
+                ['docker-start', 'automatic-recovery', 'relaunch'].includes(
                   record.attempt.mode
                 ),
             }

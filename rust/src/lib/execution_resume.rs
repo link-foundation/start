@@ -152,11 +152,14 @@ impl ResumeHooks for SystemResumeHooks {
 }
 
 /// `docker start` re-runs the launch-time selector, so a container resumed in
-/// place keeps its kill recovery (issue #176); a snapshot-derived container
-/// (a different name) has no selector.
+/// place or relaunched through isolation keeps its kill recovery (issue #176);
+/// a snapshot-derived container has no selector.
 pub fn keeps_kill_recovery(session_name: &str, record: &ExecutionRecord) -> bool {
     record.attempt.as_ref().is_none_or(|attempt| {
-        attempt.mode == "docker-start" || attempt.mode == "automatic-recovery"
+        matches!(
+            attempt.mode.as_str(),
+            "docker-start" | "automatic-recovery" | "relaunch"
+        )
     }) && record_option(record, "sessionName") == Some(session_name)
         && record
             .options

@@ -80,15 +80,22 @@ const accepted = () => ({ success: true, stdout: 'container-id\n', status: 0 });
 
 describe('issue #187: explicit resume attempts', () => {
   it('reattaches the current attempt without enabling kill recovery for snapshot commands', async () => {
-    for (const command of [undefined, 'replacement']) {
+    for (const mode of ['docker-start', 'docker-snapshot', 'relaunch']) {
+      const command = mode === 'docker-snapshot' ? 'replacement' : undefined;
       const { store, record } = fixture();
       record.options.onKillResume = 1;
       store.save(record);
       await resumeExecution(store, record.uuid, {
         command,
-        probe: stopped,
+        probe:
+          mode === 'relaunch'
+            ? () => ({ alive: false, state: SessionState.MISSING })
+            : stopped,
         runner: accepted,
-        startWatcher: () => {},
+        runIsolated: () => ({ success: true, containerId: 'new-container' }),
+        startWatcher: (_name, _policy, _log, _uuid, options) => {
+          expect(options.recoverOnKill).toBe(mode !== 'docker-snapshot');
+        },
       });
       const current = store.get(record.uuid);
       let options;
@@ -104,7 +111,7 @@ describe('issue #187: explicit resume attempts', () => {
       });
       expect(options.attemptNumber).toBe(2);
       expect(options.since).toBe(current.attempt.startedAt);
-      expect(options.recoverOnKill).toBe(command === undefined);
+      expect(options.recoverOnKill).toBe(mode !== 'docker-snapshot');
     }
   });
   it('merges attachment metadata without reviving a completed or newer attempt', async () => {
