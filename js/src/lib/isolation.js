@@ -659,13 +659,15 @@ function runInDocker(command, options = {}) {
         }
       }
 
-      startDetachedDockerCompletionWatcher(
-        containerName,
-        cleanupPolicy,
-        options.logPath,
-        options.executionId || null,
-        { recoverOnKill: Boolean(options.onKillResume) }
-      );
+      if (!options.deferCompletionWatcher) {
+        startDetachedDockerCompletionWatcher(
+          containerName,
+          cleanupPolicy,
+          options.logPath,
+          options.executionId || null,
+          { recoverOnKill: Boolean(options.onKillResume) }
+        );
+      }
 
       let message = `Command started in detached docker container: ${containerName}`;
       message += `\nContainer ID: ${containerId.substring(0, 12)}`;

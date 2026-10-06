@@ -75,6 +75,8 @@ class ExecutionRecord {
     this.logPath = options.logPath || '';
     this.startTime = options.startTime || new Date().toISOString();
     this.endTime = options.endTime || null;
+    this.attempt = options.attempt;
+    this.attemptHistory = options.attemptHistory;
     // Provenance of `endTime` (issue #170.2). `--status` used to fabricate a
     // finish time with `new Date()` whenever the record had none, which made an
     // observation indistinguishable from a real finish time. One of
@@ -152,6 +154,12 @@ class ExecutionRecord {
       startTime: this.startTime,
       endTime: this.endTime,
     };
+    if (this.attempt) {
+      obj.attempt = this.attempt;
+    }
+    if (this.attemptHistory) {
+      obj.attemptHistory = this.attemptHistory;
+    }
     if (this.endTimeSource !== undefined && this.endTimeSource !== null) {
       obj.endTimeSource = this.endTimeSource;
     }
@@ -552,6 +560,29 @@ class ExecutionStore {
       }
 
       return true;
+    } finally {
+      lock.release();
+    }
+  }
+
+  // Merge watcher metadata under the database lock without replacing terminal state.
+  patchAttempt(uuid, number, fields) {
+    const lock = new LockManager(this.lockFilePath);
+    if (!lock.acquire()) {
+      throw new Error('Failed to acquire lock for attempt metadata');
+    }
+    try {
+      const records = this.readLinoRecords();
+      const current = records.find((record) => record.uuid === uuid);
+      if (current?.attempt?.number !== number) {
+        return null;
+      }
+      current.attempt = { ...current.attempt, ...fields };
+      this.writeLinoRecords(records);
+      if (this.useLinks) {
+        this.writeLinksRecord(current);
+      }
+      return current;
     } finally {
       lock.release();
     }

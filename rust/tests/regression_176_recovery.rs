@@ -358,6 +358,7 @@ fn builds_the_recovery_branch_only_when_requested() {
         &DockerWatcherOptions {
             since: Some("2026-10-01T10:05:01.000Z".to_string()),
             recover_on_kill: true,
+            attempt_number: None,
         },
     );
     assert!(
@@ -444,6 +445,7 @@ mod shell {
             &DockerWatcherOptions {
                 since: None,
                 recover_on_kill: true,
+                attempt_number: None,
             },
         );
         // The watcher re-invokes the running executable, which here is the

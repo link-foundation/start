@@ -86,6 +86,8 @@ pub struct IsolationOptions {
     /// UUID of the execution record a detached backend must finalize once the
     /// session ends (issue #170.1). `None` disables store bookkeeping.
     pub execution_id: Option<String>,
+    /// Explicit resume attaches only after saving its new attempt.
+    pub defer_completion_watcher: bool,
 }
 
 impl Default for IsolationOptions {
@@ -112,6 +114,7 @@ impl Default for IsolationOptions {
             keep_container: false,
             keep_container_on_fail: false,
             execution_id: None,
+            defer_completion_watcher: false,
             shell: "auto".to_string(),
             log_path: None,
         }
@@ -687,16 +690,19 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                     }
                 }
 
-                start_detached_docker_completion_watcher_with(
-                    &container_name,
-                    cleanup_policy,
-                    options.log_path.as_ref(),
-                    options.execution_id.as_deref(),
-                    &DockerWatcherOptions {
-                        since: None,
-                        recover_on_kill: options.on_kill_resume.is_some(),
-                    },
-                );
+                if !options.defer_completion_watcher {
+                    let _ = start_detached_docker_completion_watcher_with(
+                        &container_name,
+                        cleanup_policy,
+                        options.log_path.as_ref(),
+                        options.execution_id.as_deref(),
+                        &DockerWatcherOptions {
+                            since: None,
+                            recover_on_kill: options.on_kill_resume.is_some(),
+                            attempt_number: None,
+                        },
+                    );
+                }
 
                 let mut message = format!(
                     "Command started in detached docker container: {}",

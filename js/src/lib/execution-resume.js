@@ -31,6 +31,12 @@ const {
   readDockerResourceLimits,
 } = require('./docker-resource-limits');
 const { appendLogFile } = require('./isolation-log-utils');
+const {
+  appendLifecycle,
+  archiveAttempt,
+  createAttempt,
+  patchAttempt,
+} = require('./execution-attempt');
 const { runCommand } = require('./execution-control');
 const { SessionState, probeSession } = require('./session-probe');
 const { getDockerNetworks } = require('./docker-network-lifecycle');
@@ -105,6 +111,7 @@ function buildLaunchOptions(record) {
     resourceLimits: normalizeResourceLimits(opts.resourceLimits),
     // Append to the same log so one logical session keeps one gap-free record.
     logPath: record.logPath || null,
+    deferCompletionWatcher: true,
   };
 }
 
@@ -339,10 +346,17 @@ function formatResumeResult(result, outputFormat) {
  * @param {?string} containerId - New container id, when one was created
  * @returns {object} The updated record
  */
-function applyResumeToRecord(record, plan, containerId) {
+function applyResumeToRecord(
+  record,
+  plan,
+  containerId,
+  attempt = createAttempt(record, plan)
+) {
+  archiveAttempt(record);
+  record.attempt = attempt;
   const options = { ...(record.options || {}) };
   options.resumeCount = plan.attempt;
-  options.resumedAt = new Date().toISOString();
+  options.resumedAt = attempt.startedAt;
   // A resume is a new deliberate start: launch-time recovery applies again.
   delete options.stopRequestedAt;
   if (plan.resourceLimits && plan.resourceLimits.length > 0) {
@@ -423,6 +437,13 @@ async function resumeExecution(store, identifier, deps = {}) {
   }
 
   let containerId = null;
+  const attempt = createAttempt(record, plan);
+  const lifecycleRecord = {
+    uuid: record.uuid,
+    logPath: record.logPath,
+    attempt,
+  };
+  appendLifecycle(lifecycleRecord, 'resume-started');
 
   if (plan.mode === ResumeMode.RELAUNCH) {
     const runIsolated = deps.runIsolated || require('./isolation').runIsolated;
@@ -432,6 +453,9 @@ async function resumeExecution(store, identifier, deps = {}) {
       plan.launchOptions
     );
     if (!launchResult || !launchResult.success) {
+      appendLifecycle(lifecycleRecord, 'launch-failed', {
+        error: launchResult?.message || 'unknown error',
+      });
       return {
         success: false,
         error: `Failed to relaunch ${plan.backend} session "${plan.sessionName}": ${
@@ -448,6 +472,7 @@ async function resumeExecution(store, identifier, deps = {}) {
           (result.stderr || '').trim() ||
           result.error ||
           `exit code ${result.status}`;
+        appendLifecycle(lifecycleRecord, 'launch-failed', { error: detail });
         return {
           success: false,
           error: `Failed to resume ${plan.backend} session "${plan.sessionName}": ${detail}`,
@@ -460,28 +485,52 @@ async function resumeExecution(store, identifier, deps = {}) {
     if (limitsLine && record.logPath) {
       appendLogFile(record.logPath, `${limitsLine}\n`);
     }
-
-    // The completion watcher died with the previous run (or with the
-    // supervisor), so a new one must follow the resumed container.
-    const startWatcher =
-      deps.startWatcher || startDetachedDockerCompletionWatcher;
-    startWatcher(
-      activeSessionName(plan),
-      getDockerContainerCleanupPolicy(record.options || {}),
-      record.logPath || null,
-      record.uuid || null,
-      // `docker start` re-runs the launch-time selector, so the session keeps
-      // its kill recovery (issue #176); a snapshot container has no selector.
-      {
-        recoverOnKill:
-          plan.mode === ResumeMode.DOCKER_START && Boolean(opts.onKillResume),
-      }
-    );
   }
 
   const previousSessionName = plan.newSessionName ? plan.sessionName : null;
-  const updated = applyResumeToRecord(record, plan, containerId);
+  attempt.launchAcceptedAt = new Date().toISOString();
+  const updated = applyResumeToRecord(record, plan, containerId, attempt);
   store.save(updated);
+  appendLifecycle(updated, 'launch-accepted');
+
+  if (plan.backend === 'docker') {
+    try {
+      const startWatcher =
+        deps.startWatcher || startDetachedDockerCompletionWatcher;
+      const watcher = startWatcher(
+        activeSessionName(plan),
+        getDockerContainerCleanupPolicy(updated.options),
+        updated.logPath || null,
+        updated.uuid || null,
+        {
+          since: attempt.startedAt,
+          attemptNumber: attempt.number,
+          recoverOnKill:
+            plan.mode === ResumeMode.DOCKER_START && Boolean(opts.onKillResume),
+        }
+      );
+      if (watcher === false) {
+        throw new Error('Watcher process could not be started');
+      }
+      const current = patchAttempt(store, updated, {
+        watcherAttachedAt: new Date().toISOString(),
+      });
+      if (current) {
+        appendLifecycle(current, 'watcher-attached');
+      }
+    } catch (error) {
+      const current = patchAttempt(store, updated, {
+        watcherError: error.message,
+      });
+      appendLifecycle(current || updated, 'watcher-attachment-failed', {
+        error: error.message,
+      });
+      return {
+        success: false,
+        error: `Launch accepted, but completion watcher attachment failed: ${error.message}`,
+      };
+    }
+  }
 
   return {
     success: true,

@@ -94,6 +94,11 @@ pub struct ExecutionResumeResult {
 pub trait ResumeHooks {
     /// Attach a fresh completion watcher to a resumed docker session.
     fn start_watcher(&self, session_name: &str, record: &ExecutionRecord);
+    /// Report attachment failures while keeping existing injectable hooks compatible.
+    fn attach_watcher(&self, session_name: &str, record: &ExecutionRecord) -> Result<(), String> {
+        self.start_watcher(session_name, record);
+        Ok(())
+    }
 
     /// Launch the command again through its isolation backend.
     fn relaunch(&self, backend: &str, command: &str, options: &IsolationOptions)
@@ -109,6 +114,10 @@ pub struct SystemResumeHooks;
 
 impl ResumeHooks for SystemResumeHooks {
     fn start_watcher(&self, session_name: &str, record: &ExecutionRecord) {
+        let _ = self.attach_watcher(session_name, record);
+    }
+
+    fn attach_watcher(&self, session_name: &str, record: &ExecutionRecord) -> Result<(), String> {
         let log_path = (!record.log_path.is_empty()).then(|| PathBuf::from(&record.log_path));
         start_detached_docker_completion_watcher_with(
             session_name,
@@ -118,10 +127,14 @@ impl ResumeHooks for SystemResumeHooks {
             // outlives this process finalizes it too (issue #170.1).
             Some(record.uuid.as_str()),
             &DockerWatcherOptions {
-                since: None,
+                since: record
+                    .attempt
+                    .as_ref()
+                    .map(|attempt| attempt.started_at.clone()),
+                attempt_number: record.attempt.as_ref().map(|attempt| attempt.number),
                 recover_on_kill: keeps_kill_recovery(session_name, record),
             },
-        );
+        )
     }
 
     fn relaunch(
@@ -142,7 +155,9 @@ impl ResumeHooks for SystemResumeHooks {
 /// place keeps its kill recovery (issue #176); a snapshot-derived container
 /// (a different name) has no selector.
 pub fn keeps_kill_recovery(session_name: &str, record: &ExecutionRecord) -> bool {
-    record_option(record, "sessionName") == Some(session_name)
+    record.attempt.as_ref().is_none_or(|attempt| {
+        attempt.mode == "docker-start" || attempt.mode == "automatic-recovery"
+    }) && record_option(record, "sessionName") == Some(session_name)
         && record
             .options
             .get("onKillResume")
@@ -241,6 +256,7 @@ pub fn build_launch_options(record: &ExecutionRecord) -> IsolationOptions {
         // The relaunched session keeps writing to this record, so its watcher
         // is the one that must mark it terminal (issue #170.1).
         execution_id: Some(record.uuid.clone()),
+        defer_completion_watcher: true,
     }
 }
 
@@ -572,12 +588,20 @@ pub fn apply_resume_to_record(
     plan: &ResumePlan,
     container_id: Option<&str>,
 ) {
+    let attempt = crate::execution_attempt::create_attempt(
+        record,
+        plan.mode.as_str(),
+        active_session_name(plan),
+    );
+    crate::execution_attempt::archive_attempt(record);
+    record.attempt = Some(attempt);
     record
         .options
         .insert("resumeCount".to_string(), json!(plan.attempt));
-    record
-        .options
-        .insert("resumedAt".to_string(), json!(Utc::now().to_rfc3339()));
+    record.options.insert(
+        "resumedAt".to_string(),
+        json!(record.attempt.as_ref().unwrap().started_at),
+    );
     // A resume is a new deliberate start: launch-time recovery applies again.
     record.options.remove("stopRequestedAt");
     if !plan.resource_limits.is_empty() {
@@ -699,11 +723,24 @@ pub fn resume_execution_with<R: CommandRunner, H: ResumeHooks>(
     };
 
     let mut container_id: Option<String> = None;
+    let mut attempt = crate::execution_attempt::create_attempt(
+        &record,
+        plan.mode.as_str(),
+        active_session_name(&plan),
+    );
+    let mut lifecycle_record = record.clone();
+    lifecycle_record.attempt = Some(attempt.clone());
+    crate::execution_attempt::append_lifecycle(&lifecycle_record, "resume-started", json!({}));
 
     if plan.mode == ResumeMode::Relaunch {
         let launch_options = plan.launch_options.clone().unwrap_or_default();
         let launch_result = hooks.relaunch(&plan.backend, &plan.command, &launch_options);
         if !launch_result.success {
+            crate::execution_attempt::append_lifecycle(
+                &lifecycle_record,
+                "launch-failed",
+                json!({ "error": launch_result.message }),
+            );
             return ExecutionResumeResult {
                 success: false,
                 output: None,
@@ -731,6 +768,11 @@ pub fn resume_execution_with<R: CommandRunner, H: ResumeHooks>(
                         )
                     })
                 };
+                crate::execution_attempt::append_lifecycle(
+                    &lifecycle_record,
+                    "launch-failed",
+                    json!({ "error": detail }),
+                );
                 return ExecutionResumeResult {
                     success: false,
                     output: None,
@@ -751,10 +793,6 @@ pub fn resume_execution_with<R: CommandRunner, H: ResumeHooks>(
                 append_log_file(&PathBuf::from(&record.log_path), &format!("{}\n", line));
             }
         }
-
-        // The completion watcher died with the previous run (or with the
-        // supervisor), so a new one must follow the resumed container.
-        hooks.start_watcher(active_session_name(&plan), &record);
     }
 
     let previous_session_name = plan
@@ -762,12 +800,54 @@ pub fn resume_execution_with<R: CommandRunner, H: ResumeHooks>(
         .as_ref()
         .map(|_| plan.session_name.clone());
     apply_resume_to_record(&mut record, &plan, container_id.as_deref());
+    attempt.launch_accepted_at = Some(Utc::now().to_rfc3339());
+    record
+        .options
+        .insert("resumedAt".into(), json!(attempt.started_at));
+    record.attempt = Some(attempt.clone());
     if let Err(error) = store.save(&record) {
         return ExecutionResumeResult {
             success: false,
             output: None,
             error: Some(error),
         };
+    }
+    crate::execution_attempt::append_lifecycle(&record, "launch-accepted", json!({}));
+    if plan.backend == "docker" {
+        let attachment = hooks.attach_watcher(active_session_name(&plan), &record);
+        let fields = match &attachment {
+            Ok(()) => json!({"watcherAttachedAt": Utc::now().to_rfc3339()}),
+            Err(error) => json!({"watcherError": error}),
+        };
+        match store.patch_attempt(&record.uuid, attempt.number, fields) {
+            Ok(Some(current)) => crate::execution_attempt::append_lifecycle(
+                &current,
+                if attachment.is_ok() {
+                    "watcher-attached"
+                } else {
+                    "watcher-attachment-failed"
+                },
+                json!({"error": attachment.as_ref().err()}),
+            ),
+            Ok(None) => {}
+            Err(error) => {
+                return ExecutionResumeResult {
+                    success: false,
+                    output: None,
+                    error: Some(error),
+                }
+            }
+        }
+        if let Err(error) = attachment {
+            return ExecutionResumeResult {
+                success: false,
+                output: None,
+                error: Some(format!(
+                    "Launch accepted, but completion watcher attachment failed: {}",
+                    error
+                )),
+            };
+        }
     }
 
     let session_name = record_option(&record, "sessionName")

@@ -5,14 +5,15 @@
 //! - JSON: Standard JSON output
 //! - Text: Human-readable text format
 
+use crate::execution_attempt::{read_attempt_activity, read_attempt_log_tail};
 use crate::execution_control::collect_process_ids;
 use crate::execution_store::{ExecutionRecord, ExecutionStatus, ExecutionStore};
 use crate::exit_reason::{
     describe_exit_code, resolve_exit_reason, resolve_memory_exhaustion, CGROUP_OOM_EXIT_REASON,
 };
-use crate::isolation::isolation_log::{read_log_tail, FATAL_MARKER_TAIL_BYTES};
+use crate::isolation::isolation_log::FATAL_MARKER_TAIL_BYTES;
 use crate::output_blocks::{escape_for_links_notation, format_value_for_links_notation};
-use crate::status_footer::read_footer_from_log;
+use crate::status_footer::{parse_footer_from_tail, read_footer_from_log};
 use crate::status_probe::{
     apply_end_time, backend_exit_code, is_detached_docker_record, is_detached_session_alive,
     read_docker_state, resolve_oom_observation,
@@ -39,10 +40,11 @@ pub fn read_exit_code_from_log(log_path: &str) -> Option<i32> {
 /// `oomKilled` (issue #165).
 pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
     let mut enriched = resolve_detached_status(record);
+    read_attempt_activity(&mut enriched);
     if enriched.status != ExecutionStatus::Executed {
         return enriched;
     }
-    let tail = read_log_tail(&enriched.log_path, FATAL_MARKER_TAIL_BYTES);
+    let tail = read_attempt_log_tail(&enriched, FATAL_MARKER_TAIL_BYTES);
     let oom_kills = enriched.cgroup_memory.and_then(|memory| memory.oom_kills);
     // A record finalized before #180 may carry the cgroup OOM reason for an
     // ordinary exit (the sticky flag was blamed for exit 0/1): re-derive it.
@@ -75,7 +77,8 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
 /// returns an updated copy with status "executed". If it shows "executed" but
 /// the session is still running, returns a copy with status "executing".
 fn resolve_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
-    let footer = read_footer_from_log(&record.log_path);
+    let tail = read_attempt_log_tail(record, FATAL_MARKER_TAIL_BYTES);
+    let footer = parse_footer_from_tail(tail.as_deref().unwrap_or(""));
     let footer_exit = footer.exit_code;
     let is_detached_docker = is_detached_docker_record(record);
     let docker_state = if is_detached_docker {
@@ -442,6 +445,31 @@ fn format_record_as_text_with_enrichments(
         lines.push(format!("Stale Detected At: {}", detected));
     }
     lines.push(format!("Log Path:          {}", record.log_path));
+    if let Some(attempt) = &record.attempt {
+        lines.extend([
+            format!("Attempt:           {}", attempt.number),
+            format!("Attempt Started:   {}", attempt.started_at),
+            format!(
+                "Attempt Log Offset: {}",
+                attempt
+                    .log_offset
+                    .map(|offset| offset.to_string())
+                    .unwrap_or_else(|| "N/A".into())
+            ),
+            format!(
+                "Launch Accepted:   {}",
+                attempt.launch_accepted_at.as_deref().unwrap_or("N/A")
+            ),
+            format!(
+                "Watcher Attached:  {}",
+                attempt.watcher_attached_at.as_deref().unwrap_or("N/A")
+            ),
+            format!(
+                "Last Output:       {}",
+                attempt.last_output_at.as_deref().unwrap_or("N/A")
+            ),
+        ]);
+    }
 
     // Format options as nested list instead of JSON
     if !record.options.is_empty() {

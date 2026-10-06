@@ -274,7 +274,7 @@ describe('resumeExecution', () => {
     assert.strictEqual(watchers.length, 1);
     assert.strictEqual(watchers[0][0], 'box');
     assert.strictEqual(watchers[0][2], '/tmp/session.log');
-    assert.strictEqual(store.saved.length, 1);
+    assert.strictEqual(store.saved.length, 2);
     assert.strictEqual(store.saved[0].uuid, record.uuid);
     assert.strictEqual(store.saved[0].status, 'executing');
     assert.strictEqual(store.saved[0].options.resumeCount, 1);
@@ -329,6 +329,7 @@ describe('resumeExecution', () => {
     const launches = [];
     const result = await resumeExecution(store, 'box', {
       probe: () => probeWith(SessionState.MISSING),
+      startWatcher: () => {},
       runIsolated: (backend, command, options) => {
         launches.push({ backend, command, options });
         return Promise.resolve({ success: true, containerId: 'newid' });

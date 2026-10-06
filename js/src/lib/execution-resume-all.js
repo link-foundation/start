@@ -131,7 +131,18 @@ function resumeAllExecutions(store, deps = {}) {
         sessionName,
         getDockerContainerCleanupPolicy(record.options || {}),
         record.logPath || null,
-        record.uuid || null
+        record.uuid || null,
+        record.attempt
+          ? {
+              since: record.attempt.startedAt,
+              attemptNumber: record.attempt.number,
+              recoverOnKill:
+                Boolean(record.options?.onKillResume) &&
+                ['docker-start', 'automatic-recovery'].includes(
+                  record.attempt.mode
+                ),
+            }
+          : {}
       );
       executions.push(
         describeRecord(

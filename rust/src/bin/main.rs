@@ -106,6 +106,12 @@ fn main() {
 
     let config = Config::from_env();
     let args: Vec<String> = env::args().skip(1).collect();
+    if args.first().map(String::as_str)
+        == Some(start_command::detached_output::INTERNAL_OUTPUT_FLAG)
+    {
+        start_command::detached_output::run_internal_output(&args[1..]);
+        return;
+    }
 
     // The detached docker completion watcher re-invokes this binary to write
     // the terminal state back into the store once the container is gone (issue
@@ -511,6 +517,7 @@ fn run_with_isolation(
             // watcher is the only thing that can mark the record terminal
             // (issue #170.1).
             execution_id: Some(execution_record.uuid.clone()),
+            defer_completion_watcher: false,
         };
         run_isolated(env, command, &options)
     } else if let Some(ref user) = created_user {

@@ -85,6 +85,17 @@ function finalizeDetachedExecution(options = {}) {
   if (!record) {
     return { updated: false, reason: 'record-not-found' };
   }
+  const started = normalizeDockerTimestamp(options.startedAt);
+  const attemptNumber = options.attemptNumber ?? null;
+  if (
+    record.attempt &&
+    ((attemptNumber !== null &&
+      Number(attemptNumber) !== record.attempt.number) ||
+      (started && Date.parse(started) < Date.parse(record.attempt.startedAt)) ||
+      (attemptNumber === null && !started))
+  ) {
+    return { updated: false, reason: 'stale-attempt' };
+  }
   if (record.status === 'executed' && record.endTime) {
     // Already finalized (e.g. a `--status` query got there first, or the
     // watcher ran twice after a resume). Nothing to correct.
@@ -146,11 +157,24 @@ function finalizeDetachedExecution(options = {}) {
     record.options = { ...(record.options || {}), containerError };
   }
 
+  const {
+    appendLifecycle,
+    readAttemptActivity,
+  } = require('./execution-attempt');
+  readAttemptActivity(record);
   try {
     store.save(record);
   } catch (err) {
     return { updated: false, reason: `save-failed: ${err.message}`, record };
   }
+  appendLifecycle(record, 'terminal', {
+    status: record.status,
+    exitCode: record.exitCode,
+    endTime: record.endTime,
+    exitReason: record.exitReason || null,
+    oomKilled: record.oomKilled ?? null,
+    cgroupMemory: record.cgroupMemory || null,
+  });
   return { updated: true, record };
 }
 
@@ -163,12 +187,10 @@ function finalizeDetachedExecution(options = {}) {
 function resolveReason(record) {
   try {
     const { resolveExitReason } = require('./exit-reason');
-    const {
-      FATAL_MARKER_TAIL_BYTES,
-      readLogTail,
-    } = require('./isolation-log-utils');
+    const { FATAL_MARKER_TAIL_BYTES } = require('./isolation-log-utils');
+    const { readAttemptLogTail } = require('./execution-attempt');
     const logTail = record.logPath
-      ? readLogTail(record.logPath, FATAL_MARKER_TAIL_BYTES)
+      ? readAttemptLogTail(record, FATAL_MARKER_TAIL_BYTES)
       : null;
     return resolveExitReason({
       exitCode: record.exitCode,
@@ -251,13 +273,13 @@ function reconcileFinalizedRecord(store, record) {
  * @param {string} executionId - UUID of the record to finalize
  * @returns {string} POSIX shell fragment
  */
-function buildDetachedFinalizeSnippet(executionId) {
+function buildDetachedFinalizeSnippet(executionId, attemptNumber = null) {
   const v = SHELL_VARS;
   return (
     `${shellQuote(process.execPath)} ${shellQuote(__filename)} ` +
     `${shellQuote(executionId)} "$${v.exit}" "$${v.oom}" ` +
     `"$${v.started}" "$${v.finished}" "$${v.error}" "$${v.running}" ` +
-    `"$${CGROUP_SHELL_VARS.sample}" >/dev/null 2>&1 || true`
+    `"$${CGROUP_SHELL_VARS.sample}"${attemptNumber === null ? '' : ` ${shellQuote(attemptNumber)}`} >/dev/null 2>&1 || true`
   );
 }
 
@@ -279,6 +301,7 @@ function main(argv) {
     containerError,
     running,
     cgroupMemory,
+    attemptNumber,
   ] = argv;
   if (!executionId || process.env.START_DISABLE_TRACKING === 'true') {
     return;
@@ -300,6 +323,7 @@ function main(argv) {
       containerError,
       running,
       cgroupMemory,
+      attemptNumber: attemptNumber || null,
     });
   } catch {
     // Deliberately silent: see the exit-0 contract above.
