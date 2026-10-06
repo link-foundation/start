@@ -1,5 +1,11 @@
 # start-command
 
+## 0.35.4
+
+### Patch Changes
+
+- 6544236: Scope explicit resume status, memory evidence and log reads to execution attempts; preserve earlier evidence in attempt history and report launch, watcher, output and terminal lifecycle separately.
+
 ## 0.35.3
 
 ### Patch Changes
