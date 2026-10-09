@@ -296,17 +296,19 @@ count stays unknown. See the [kernel memory interface documentation](https://doc
 `--status` stores the raw counters as `cgroupMemory`
 (`limitBytes`, `peakBytes`, `oomEvents`, `oomKills`) and shows them as
 `Cgroup Memory:     peak 255.9 MiB of 256.0 MiB limit, oom 0, oom_kill 3 (...)`.
-A non-zero `oomKills` also explains a SIGKILL or unknown exit as
-`memory-exhaustion (cgroup-oom-killer)` (`cgroup memory.events reported
-oom_kill=3`) when `State.OOMKilled` was not set, and
-each `--on-kill-resume` entry in `recoveryHistory` gets `oomEvents=N, oomKills=M`.
+Historical `oomKills` and Docker's sticky flag do not explain a later SIGKILL.
+Only a recent sampled counter delta near the main command's finish, together
+with the OOM flag and an appropriate main-process exit, produces a cgroup OOM
+verdict. An attributed Docker service restart takes precedence. Otherwise the
+reason is `signal (SIGKILL; cause unknown)`; raw flags/counters remain available.
 
-Limits: only cgroup v2 hosts and detached Docker executions are sampled; the
-watcher reads the host's `/proc` and `/sys/fs/cgroup`, so a remote
-`DOCKER_HOST` (or a cgroup v1 host) simply records nothing; a one-second
-interval can miss kills in the last second when the cgroup disappears before
-the final read; `memory.peak` needs Linux 5.19 or newer (otherwise `peak
-unknown`).
+Both attached and detached Docker runs sample cgroup v2. The sampler first
+looks for an ID-attributed local cgroup, then uses `docker exec ... sh` through
+the daemon with a private cgroup namespace, supporting remote and DinD setups.
+Missing shell, shared namespace or unavailable counters produce an explicit
+`Memory: unavailable (...) memory.limit=... (HostConfig)` line. Last valid
+samples survive temporary outages. A one-second interval can miss the final
+kill after the cgroup disappears, and older kernels may not expose peak usage.
 
 `--upload-log` accepts either an execution UUID or an isolation session name. It
 looks up the stored `logPath`, installs `gh-upload-log` with Bun or npm if the
@@ -350,6 +352,55 @@ the non-default ones to the derived `<name>-resume-N` container: `--memory`,
 `--storage-opt` and `--ulimit`. The re-applied flags are printed as an
 `[Isolation] Resource limits: ...` line and stored as `resourceLimits` in the
 execution record, so `--status` shows them.
+
+##### Docker launch limits, recovery limits and CPU penalty
+
+Both CLIs accept `--memory`, `--memory-swap` and `--cpus` at launch. Memory uses
+positive Docker sizes (`64m`, `4g`, bytes); CPU uses a positive count (`1.5`).
+All three also accept `N%` or a uniform `MIN%-MAX%` range within `(0, 100]`.
+Percentages use `docker info` capacity on the daemon, including remote/DinD,
+and are resolved once when the container is created. Resolved bytes/CPU counts
+and raw requests appear in the log header and status options. Plain resumes
+preserve them. Swap defaults to the same memory value, disabling extra swap.
+
+```bash
+$ -i docker -d --image alpine --memory 64m --cpus 1 -- sleep 30
+$ -i docker -d --memory '90%-100%' --cpus '50%' --cpu-penalty -- my-task
+$ -i docker -d --memory '90%-100%' --on-kill-resume 3 --on-kill-resume-memory '70%-80%' -- my-task
+$ --resume my-session --memory 128m
+```
+
+Use `start` in place of `$` for Rust. A manual override or qualifying OOM
+recovery finishes `docker update` before starting the command, or passes the
+new cap to replacement creation. Recovery draws a new range value each time,
+logs old/new/requested memory and persists the effective limit. Ordinary exits
+0/1 and historical child OOM events do not trigger a recovery memory change.
+
+`--cpu-penalty` is opt-in and Docker-only. Defaults are a 2-CPU penalty after
+an average at least 95% of usable capacity for 15 minutes; after at least
+15 minutes capped, a full-window average below 65% of that cap lifts it.
+Set `--cpu-penalty-cpus`, `--cpu-penalty-trigger`,
+`--cpu-penalty-trigger-window`, `--cpu-penalty-release` and
+`--cpu-penalty-release-window` to customize them. Durations accept `ms/s/m/h`.
+Timestamp-weighted windows require complete coverage; outages/restarts reset
+coverage. Daemon capacity is refreshed for resize, and caps that cannot lower
+capacity are skipped. Each transition logs once. Lifting restores a finite
+base/daemon quota; the original base survives a resume while penalized.
+
+Status exposes `cpuPenalty` with `phase`, `since`, `limitCpus`, `baseCpus`,
+`penaltyCount` and `penalizedMs`. Monitoring also works during attached runs and
+when execution tracking is disabled. JS stacked isolation forwards requests
+until the Docker level resolves daemon capacity.
+
+Launches reserve their exact attempt/session before Docker side effects. A
+final save failure attaches the watcher, stops the new container and reports
+`LAUNCH_PERSISTENCE_FAILED` JSON with UUID, name and whether it is still running.
+Malformed legacy locks are reclaimed after a short grace; atomic lock publication
+and database replacement preserve records across partial writes. Set
+`START_DEBUG=1` for opt-in lock and launch tracing.
+
+See the [requirements, research and incident studies](docs/case-studies/issue-195/README.md)
+for reproduction, verification and evidence limits.
 
 ##### Resuming automatically after a kill
 
@@ -402,8 +453,9 @@ process in the container was OOM-killed (a compiler, a test runner, a child
 `node`) and keeps it set until the container is started again, so a main
 process that survived that and then exited 0–127 on its own is not resumed:
 its exit code stands, and `oomKilled: true` is still reported by `--status` and
-the post-mortem as an observation. `OOMKilled` counts as a kill only when there
-is no usable exit code (issue #178).
+the post-mortem as an observation. Unknown exits with an OOM flag can still
+use bounded kill recovery (issue #178); a changed recovery memory limit requires
+fresh exit-time OOM evidence.
 
 A resume keeps the original execution UUID, so `--status`, `--list` and
 `--upload-log` keep addressing one logical session across restarts. The previous
@@ -450,13 +502,13 @@ succeeds is never reported as a memory failure.
 The same tail is scanned for attached and detached sessions alike, with a 64 KiB
 window, because V8 prints a long native stack trace after the marker.
 
-Without a log marker, Docker's `State.OOMKilled` explains the exit
-(`memory-exhaustion (cgroup-oom-killer)`, `Docker reported State.OOMKilled=true`)
-only when the command itself was SIGKILLed (exit 137) or its exit code is
-unknown. The flag is container-wide and sticky (moby/moby#43564): it turns on
-when _any_ process in the container is OOM-killed, so a `cargo test` whose
-`rustc` child was OOM-killed and which later exited `1` on its own reports
-`oomKilled true` with no memory exit reason (issue #180).
+Docker's `State.OOMKilled` remains a raw observation. It explains a terminal
+cgroup OOM only with a recent sampled `oom_kill` delta near `FinishedAt` and
+SIGKILL/unknown main exit. An earlier child OOM followed by a later 137 is
+insufficient. Local Docker service journal evidence that names the force-killed
+container reports `killed (docker daemon restart)` instead, regardless of the
+sticky flag. Without attribution the SIGKILL cause is unknown. Old stored OOM
+verdicts are recomputed by status/list; runtime fatal-memory markers still apply.
 
 `exitReason`, `memoryExhausted` and `memoryExhaustedReason` are only hints. They
 never change `status`, `exitCode` or `oomKilled`, which stay observations of what

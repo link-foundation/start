@@ -1,0 +1,38 @@
+Traceback (most recent call last):
+  File "/tmp/gh-issue-solver-1791574234041/experiments/issue-195-real-docker.py", line 18, in <module>
+    launch = run(cli+['-i','docker','-d','--image','alpine:3.23','--session',name,'--keep-container','--memory','64m','--cpus','1','--cpu-penalty','--cpu-penalty-cpus','0.5','--cpu-penalty-trigger','20%','--cpu-penalty-trigger-window','1s','--cpu-penalty-release-window','1s','--',workload],env)
+  File "/tmp/gh-issue-solver-1791574234041/experiments/issue-195-real-docker.py", line 9, in run
+    raise RuntimeError(f'{argv[0:4]}: {p.stdout}')
+RuntimeError: ['bun', '/tmp/gh-issue-solver-1791574234041/js/src/bin/cli.js', '-i', 'docker']: │ session   00cd6dbf-3671-4755-8860-5a426d5ca070
+│ start     2026-10-09 20:34:53.151
+│
+│ isolation docker
+│ mode      detached
+│ image     alpine:3.23
+│ container start-195-js-94805
+│
+[DEBUG] Detected shell in docker image alpine:3.23: /bin/sh
+$ sh -c "(while :; do :; done) & p=$!; sleep 10; kill $p; wait $p 2>/dev/null; sleep 8; echo finite-done"
+
+[DEBUG] Running: docker run -d --name start-195-js-94805 --memory=67108864 --cpus=1 --memory-swap=67108864 alpine:3.23 sh -c (while :; do :; done) & p=$!; sleep 10; kill $p; wait $p 2>/dev/null; sleep 8; echo finite-done
+[DEBUG] shell: /bin/sh
+[DEBUG] keepAlive: false
+[DEBUG] autoRemoveDockerContainer: false
+[DEBUG] docker cleanup policy: keep
+Error: Failed to run in docker: docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: unable to apply cgroup configuration: cannot enter cgroupv2 "/sys/fs/cgroup/docker" with domain controllers -- it is in threaded mode
+
+Run 'docker run --help' for more information
+
+✗
+│ finish    2026-10-09 20:34:55.875
+│ duration  2.744s
+│ exit      1
+│
+│ isolation docker
+│ mode      detached
+│ image     alpine:3.23
+│ container start-195-js-94805
+│
+│ log       /tmp/start-195-js-k3fqy3n7/isolation/docker/00cd6dbf-3671-4755-8860-5a426d5ca070.log
+│ session   00cd6dbf-3671-4755-8860-5a426d5ca070
+

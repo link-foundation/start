@@ -265,3 +265,24 @@ $ $'echo "hello \'world\'"'    # Use ANSI-C quoting
 - [Bash Reference Manual - Pipelines](https://www.gnu.org/software/bash/manual/html_node/Pipelines.html)
 - [POSIX Shell Command Language](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html)
 - [Case Study: Issue #28 - Shell Quoting Analysis](case-studies/issue-28/README.md)
+
+## Docker resource controls and exit evidence
+
+`--memory`, `--memory-swap`, and `--cpus` accept positive absolute values, daemon
+percentages, or uniform percentage ranges. Swap defaults to memory. Values resolve
+once at creation and survive a plain resume. `--resume <id> --memory 128m` and
+`--on-kill-resume-memory '70%-80%'` apply overrides before the command starts;
+the latter requires fresh exit-time OOM evidence.
+
+`--cpu-penalty` enables timestamp-weighted hysteresis with a default 2-CPU cap,
+95%/15m trigger and 65%-of-cap/15m release. All five settings have matching
+`--cpu-penalty-*` flags and `ms/s/m/h` duration units. State is visible in status.
+
+Attached and detached memory diagnostics use a local cgroup or daemon exec with
+a private namespace and shell. Missing counters produce an explicit unavailable
+line plus HostConfig memory limit. Historical child OOMs and a sticky flag cannot
+explain a later SIGKILL; matching Docker service journal evidence identifies a
+daemon restart, otherwise the cause stays unknown.
+
+See the [full guide](../README.md#docker-launch-limits-recovery-limits-and-cpu-penalty)
+and [requirements and verification](case-studies/issue-195/README.md).

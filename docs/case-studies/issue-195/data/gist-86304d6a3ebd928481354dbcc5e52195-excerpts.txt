@@ -1,0 +1,1 @@
+141373: [VERBOSE] Session 741969bf-7134-4028-a379-d7cd2332c68c reported oomKilled=true with an ordinary exit 0 and no log footer yet; the main process exited by itself, so it SURVIVED the OOM event (executed, issue #2408)

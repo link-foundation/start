@@ -1,0 +1,34 @@
+[
+  {
+    "number": 188,
+    "title": "fix: scope explicit resume evidence and lifecycle to execution attempts (#187)"
+  },
+  {
+    "number": 186,
+    "title": "fix: keep cgroup OOM scope unknown without attributed evidence (#185)"
+  },
+  {
+    "number": 184,
+    "title": "fix: sticky OOMKilled exit reason (#180), --on-kill-resume-delay (#181), cgroup v2 memory counters (#182)"
+  },
+  {
+    "number": 179,
+    "title": "fix: --on-kill-resume no longer resumes runs that exited 0/1 with Docker's sticky OOMKilled flag"
+  },
+  {
+    "number": 177,
+    "title": "Docker resume: re-apply resource limits on snapshot resume, add --on-kill-resume / --recovery-command (#176)"
+  },
+  {
+    "number": 175,
+    "title": "Detached docker watcher: wait for the real exit, never rm -f or finalize a running container as exit 0 (#174)"
+  },
+  {
+    "number": 173,
+    "title": "fix: persist detached docker terminal state and record the container post-mortem"
+  },
+  {
+    "number": 169,
+    "title": "fix(ci): repair the Node 24 release breakage and close every CI/CD false negative"
+  }
+]

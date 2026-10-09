@@ -34,7 +34,7 @@
           "argv": ["echo", "Hello World"]
         }
       },
-      "expectedNormalizedStdout": "│ session   <uuid>\n│ start     <timestamp>\n│\n$ echo \"Hello World\"\n\nHello World\n\n✓\n│ finish    <timestamp>\n│ duration  <duration>\n│ exit      0\n│\n│ log       <log-path>\n│ session   <uuid>\n"
+      "expectedNormalizedStdout": "\u2502 session   <uuid>\n\u2502 start     <timestamp>\n\u2502\n$ echo \"Hello World\"\n\nHello World\n\n\u2713\n\u2502 finish    <timestamp>\n\u2502 duration  <duration>\n\u2502 exit      0\n\u2502\n\u2502 log       <log-path>\n\u2502 session   <uuid>\n"
     },
     {
       "id": "docker-box-js",
@@ -115,6 +115,43 @@
           "command": ""
         },
         "reason": "List output depends on the user's local execution store."
+      }
+    },
+    {
+      "id": "docker-resource-controls",
+      "title": "Finite Docker resource controls",
+      "references": [
+        {
+          "file": "README.md",
+          "text": "--memory 64m --cpus 1"
+        },
+        {
+          "file": "examples/docker-resource-controls.sh",
+          "text": "--memory 64m --cpus 1"
+        }
+      ],
+      "parseOnly": {
+        "argv": [
+          "-i",
+          "docker",
+          "-d",
+          "--image",
+          "alpine",
+          "--memory",
+          "64m",
+          "--cpus",
+          "1",
+          "--",
+          "sleep",
+          "30"
+        ],
+        "expected": {
+          "isolated": "docker",
+          "memory": "64m",
+          "cpus": "1",
+          "command": "sleep 30"
+        },
+        "reason": "Resource enforcement requires usable daemon cgroup controllers. Dedicated JS/Rust regression suites validate resolution and command ordering, and the finite real-Docker probe checks enforcement where supported."
       }
     }
   ]
