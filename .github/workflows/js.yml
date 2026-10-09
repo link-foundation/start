@@ -338,7 +338,9 @@ jobs:
 
       - name: Prepare Docker integration images (Linux)
         if: runner.os == 'Linux'
-        run: bash scripts/prepare-docker-test-images.sh
+        run: |
+          python3 experiments/issue-195-ci-image-preparation.py
+          bash scripts/prepare-docker-test-images.sh
 
       - name: Run tests
         working-directory: js
@@ -466,7 +468,9 @@ jobs:
         run: bun install
 
       - name: Prepare Docker integration images
-        run: bash scripts/prepare-docker-test-images.sh
+        run: |
+          python3 experiments/issue-195-ci-image-preparation.py
+          bash scripts/prepare-docker-test-images.sh
 
       - name: Run tests with coverage
         id: coverage

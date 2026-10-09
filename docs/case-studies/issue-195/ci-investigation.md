@@ -13,6 +13,8 @@ The first implementation push, `f549fbb8b6b5c98bd0726edc3bb00b3f54552223`, trigg
 
 The final review also corrected the reusable Docker probes to accept either successful `memory.max` sampling or the unavailable-counter `memory.limit` fallback, and to clean up a resumed container even when a later probe assertion fails.
 
+The second push, `bcc5133aaf29858d8f9a8869f734d4c1aedeae47`, triggered runs at **2026-10-09 21:25:00 UTC**. Workflow checks and all three JavaScript platforms passed. [Rust run 37993313071](https://github.com/link-foundation/start/actions/runs/37993313071) failed before tests because concurrent anonymous ECR pulls were also throttled: `rust-linux-37993313071.log` line 508 and `rust-coverage-37993313071.log` line 545 report `toomanyrequests: Rate exceeded`. The helper now uses already-cached tags, tries [Google's Docker Hub cache](https://docs.cloud.google.com/artifact-registry/docs/pull-cached-dockerhub-images), ECR and Docker Hub, and makes at most three attempts per registry with bounded backoff. Exhausting every source still fails the job. The offline `experiments/issue-195-ci-image-preparation.py` regression verifies fallback, no pulls for cached tags and finite failure after nine unsuccessful pulls.
+
 Local verification after these corrections includes both full suites, the existing workflow invariants, formatting/lint, native Actionlint with ShellCheck/Pyflakes, shell checks for both new helpers, and ordinary Docker smoke tests in both CLIs. Finalization requires every relevant check on the latest pushed SHA to pass; older placeholder or intermediate runs are not accepted as evidence for the final commit.
 
 To reproduce the CI preparation and workflow lint locally on Linux:
@@ -23,4 +25,5 @@ bash scripts/install-actionlint.sh /tmp/start-actionlint
 # ShellCheck and Pyflakes must be installed and available on PATH.
 /tmp/start-actionlint/actionlint -color
 shellcheck scripts/install-actionlint.sh scripts/prepare-docker-test-images.sh
+python3 experiments/issue-195-ci-image-preparation.py
 ```
