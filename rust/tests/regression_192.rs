@@ -1,6 +1,5 @@
 use start_command::cgroup_memory::{
     build_cgroup_memory_log_snippet, build_cgroup_sampler_start_snippet,
-    build_cgroup_sampler_stop_snippet,
 };
 #[test]
 fn remote_samples_and_explicit_unavailable_diagnostics() {
@@ -11,6 +10,7 @@ fn remote_samples_and_explicit_unavailable_diagnostics() {
 #[test]
 #[cfg(unix)]
 fn real_shell_remote_missing_shell_outage_and_shared_namespace() {
+    use start_command::cgroup_memory::build_cgroup_sampler_stop_snippet;
     let dir = tempfile::tempdir().unwrap();
     let script = dir.path().join("sampler.sh");
     std::fs::write(

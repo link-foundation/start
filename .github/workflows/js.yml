@@ -336,6 +336,10 @@ jobs:
         working-directory: js
         run: bun install
 
+      - name: Prepare Docker integration images (Linux)
+        if: runner.os == 'Linux'
+        run: bash scripts/prepare-docker-test-images.sh
+
       - name: Run tests
         working-directory: js
         run: bun run test
@@ -460,6 +464,9 @@ jobs:
       - name: Install dependencies
         working-directory: js
         run: bun install
+
+      - name: Prepare Docker integration images
+        run: bash scripts/prepare-docker-test-images.sh
 
       - name: Run tests with coverage
         id: coverage

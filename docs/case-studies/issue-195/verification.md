@@ -9,6 +9,8 @@
 - `node scripts/check-test-parity.mjs` and `node scripts/check-doc-examples.mjs --implementation all` pass.
 - New regression files `js/test/regression-189.js` through `regression-194.js`, and corresponding Rust files.
 
+The [CI investigation](ci-investigation.md) records the first final-commit run failures, exact errors and log line numbers, Docker registry and workflow fixes, and Windows regression-test corrections. Linux integration and coverage jobs preload official images from Amazon ECR to retain real Docker testing without Docker Hub's shared-runner pull quota.
+
 Fault injection covers empty/truncated locks and invalid owner types, partial ENOSPC writes, reservation ordering, save failures after accepted launch, watcher attachment, stop failure identity, concurrent writers and dead launcher recovery. Safe shell fixtures cover hidden local cgroups, daemon exec fallback, missing shells, shared namespaces and transient outages. Virtual-time CPU tests cover full cycles, weighted windows, gaps, resize, restart, ineffective caps and base restoration. A finite monitor fixture verifies apply/lift/reapply with tracking disabled; resume tests preserve legacy CPU quota format during explicit overrides.
 
 ## Real Docker evidence

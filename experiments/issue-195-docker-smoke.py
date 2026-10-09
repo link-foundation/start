@@ -24,7 +24,7 @@ for impl,cli in [('js',['bun',str(root/'js/src/bin/cli.js')]),('rust',[str(root/
     log=pathlib.Path(status['logPath']).read_text()
     if 'Memory:' in log: break
     time.sleep(.25)
-   assert 'Memory:' in log and 'memory.limit=' in log,log
+   assert 'Memory:' in log and ('memory.limit=' in log or 'memory.max=' in log),log
    run(cli+['-i','docker','--image','alpine:3.23','--','echo attached-smoke'])
    attached=[]
    for p in pathlib.Path(folder).rglob('*.log'):

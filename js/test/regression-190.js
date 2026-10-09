@@ -104,7 +104,8 @@ it('forwards raw resource and penalty options through every remaining Docker lev
     'work',
   ]).wrapperOptions;
   const command = buildNextLevelCommand(options, 'work');
-  expect(command).toContain('--memory 70%-80%');
-  expect(command).toContain('--cpus 50%');
+  const words = require('../src/lib/shell-utils').splitShellWords(command);
+  expect(words[words.indexOf('--memory') + 1]).toBe('70%-80%');
+  expect(words[words.indexOf('--cpus') + 1]).toBe('50%');
   expect(command).toContain('--cpu-penalty-trigger-window 2000ms');
 });
