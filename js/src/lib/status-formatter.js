@@ -326,6 +326,9 @@ function applyEndTime(enriched, dockerState, footerFinishedAt) {
 }
 
 function resolveDetachedStatus(record, logTail) {
+  if (require('./launch-owner').hasActiveLaunch(record)) {
+    return record;
+  }
   const footer = parseFooterFromTail(logTail);
   const footerExit = footer.exitCode;
   const dockerState = isDetachedDockerRecord(record)
@@ -444,6 +447,7 @@ function attachExitReason(record, logTail) {
     logTail,
     oomKilled: record.oomKilled,
     cgroupMemory: record.cgroupMemory,
+    exitEvidence: record.options?.exitEvidence,
   });
 
   if (!exitReason) {
@@ -490,9 +494,22 @@ function attachMemoryExhaustion(record, logTail) {
     logTail,
     oomKilled: record.oomKilled,
     cgroupMemory: record.cgroupMemory,
+    exitEvidence: record.options?.exitEvidence,
   });
 
   if (!memory) {
+    if (
+      record.memoryExhaustedReason?.startsWith('Docker reported') ||
+      record.memoryExhaustedReason?.startsWith('cgroup memory.events')
+    ) {
+      const cleared = Object.assign(
+        Object.create(Object.getPrototypeOf(record)),
+        record
+      );
+      delete cleared.memoryExhausted;
+      delete cleared.memoryExhaustedReason;
+      return cleared;
+    }
     return record;
   }
 
@@ -516,6 +533,14 @@ function attachMemoryExhaustion(record, logTail) {
 function enrichDetachedStatus(record) {
   if (!record) {
     return record;
+  }
+  const cpuPenalty = require('./cpu-penalty-monitor').readState(record);
+  if (cpuPenalty) {
+    record = Object.assign(
+      Object.create(Object.getPrototypeOf(record)),
+      record
+    );
+    record.cpuPenalty = cpuPenalty;
   }
   const {
     readAttemptActivity,
@@ -692,6 +717,9 @@ function formatRecordAsText(record) {
     // cgroup v2 counters the detached watcher sampled (issue #182).
     ...(formatCgroupMemory(obj.cgroupMemory)
       ? [`Cgroup Memory:     ${formatCgroupMemory(obj.cgroupMemory)}`]
+      : []),
+    ...(obj.cpuPenalty
+      ? [`CPU Penalty:       ${JSON.stringify(obj.cpuPenalty)}`]
       : []),
     `PID:               ${obj.pid !== null ? obj.pid : 'N/A'}`,
     `Working Directory: ${obj.workingDirectory}`,

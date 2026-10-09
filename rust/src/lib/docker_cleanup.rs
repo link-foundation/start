@@ -98,7 +98,7 @@ pub enum DockerContainerCleanupPolicy {
     KeepOnFail,
 }
 
-pub(crate) fn docker_command() -> std::ffi::OsString {
+pub fn docker_command() -> std::ffi::OsString {
     std::env::var_os("START_DOCKER_BIN").unwrap_or_else(|| std::ffi::OsString::from("docker"))
 }
 
@@ -330,13 +330,25 @@ pub(crate) fn append_attached_docker_cleanup_message(
         message.push_str(&docker_container_cleanup_instructions(container_name));
         message.push_str(&post_mortem(false));
     } else {
-        message.push_str(attached_docker_kept_reason(exit_code, oom_killed));
+        let tail = log_path
+            .and_then(|path| read_log_tail(&path.to_string_lossy(), FATAL_MARKER_TAIL_BYTES));
+        if crate::exit_reason::resolve_exit_reason(
+            Some(exit_code),
+            tail.as_deref(),
+            Some(oom_killed),
+            None,
+        )
+        .as_deref()
+            == Some(crate::exit_reason::CGROUP_OOM_EXIT_REASON)
+        {
+            message.push_str("\nContainer kept because Docker reports it was OOM-killed.");
+        } else {
+            message.push_str(attached_docker_kept_reason(exit_code, oom_killed));
+        }
         // A runtime that aborts on its own memory limit never trips the
         // container flag, so `oomKilled false` alone would contradict the
         // `FATAL ERROR` the runtime just printed into this very log (issue
         // #165). Best effort: the tail is read right after the child exits.
-        let tail = log_path
-            .and_then(|path| read_log_tail(&path.to_string_lossy(), FATAL_MARKER_TAIL_BYTES));
         if let Some(memory) =
             resolve_memory_exhaustion(Some(exit_code), tail.as_deref(), Some(oom_killed), None)
         {
@@ -444,6 +456,14 @@ pub fn build_detached_docker_completion_script_with(
     // The container's cgroup disappears with it, so its memory counters are
     // sampled while it runs (issue #182).
     let mut parts = vec![build_cgroup_sampler_start_snippet(container_name)];
+    let cpu_start = crate::cpu_penalty_monitor::start_snippet(
+        execution_id,
+        container_name,
+        watcher.attempt_number,
+    );
+    if !cpu_start.is_empty() {
+        parts.push(cpu_start);
+    }
     // Everything that assumes the container has exited: cleanup, footer and
     // finalization. Guarded as a whole by `.State.Running` below.
     let mut exited = Vec::new();
@@ -477,8 +497,13 @@ pub fn build_detached_docker_completion_script_with(
             container_name,
             Some(quoted_log_path),
         ));
+        parts.push(crate::cpu_penalty_monitor::stop_snippet());
         parts.push(build_cgroup_sampler_stop_snippet());
         parts.push(build_docker_state_snippet(container_name));
+        parts.push(crate::exit_evidence::snippet(
+            container_name,
+            quoted_log_path,
+        ));
 
         let memory = build_cgroup_memory_log_snippet(quoted_log_path);
         let remove = format!(
@@ -518,6 +543,7 @@ pub fn build_detached_docker_completion_script_with(
     } else {
         parts.push(format!("docker wait {} >/dev/null 2>&1", quoted_name));
         parts.push(build_docker_wait_for_exit_snippet(container_name, None));
+        parts.push(crate::cpu_penalty_monitor::stop_snippet());
         parts.push(build_cgroup_sampler_stop_snippet());
         parts.push(build_docker_state_snippet(container_name));
         match policy {

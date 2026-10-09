@@ -97,15 +97,10 @@ describe('issue #185: counter-only OOM scope is unknown', () => {
     }
     for (const exitCode of [137, null, -1]) {
       const input = { exitCode, oomKilled: false, cgroupMemory };
-      expect(resolveExitReason(input)).toBe(CGROUP_OOM_EXIT_REASON);
-      expect(resolveMemoryExhaustion(input)).toEqual(
-        exitCode === null
-          ? null
-          : {
-              memoryExhausted: true,
-              memoryExhaustedReason: 'cgroup memory.events reported oom_kill=3',
-            }
-      );
+      expect(resolveExitReason(input)).not.toBe(CGROUP_OOM_EXIT_REASON);
+      expect(resolveMemoryExhaustion(input)).toBeNull();
+      const attributed = { ...input, exitEvidence: { mainOom: true } };
+      expect(resolveExitReason(attributed)).toBe(CGROUP_OOM_EXIT_REASON);
     }
   });
 });

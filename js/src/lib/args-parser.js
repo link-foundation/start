@@ -44,6 +44,8 @@
 const { getDefaultDockerImage } = require('./docker-utils');
 const dockerNetworkOptions = require('./docker-network-options');
 const dockerRecoveryOptions = require('./docker-recovery-options');
+const cpuPenalty = require('./cpu-penalty');
+const dockerResourceOptions = require('./docker-resource-options');
 const { parseSequence, isSequence } = require('./sequence-parser');
 const { buildCommandString } = require('./shell-utils');
 const {
@@ -414,6 +416,14 @@ function parseOption(args, index, options) {
     return networkOption;
   }
 
+  const cpuConsumed = cpuPenalty.parse(args, index, options);
+  if (cpuConsumed) {
+    return cpuConsumed;
+  }
+  const resourceOption = dockerResourceOptions.parse(args, index, options);
+  if (resourceOption) {
+    return resourceOption;
+  }
   const recoveryOption = dockerRecoveryOptions.parse(args, index, options);
   if (recoveryOption) {
     return recoveryOption;
@@ -756,6 +766,8 @@ function validateOptions(options) {
   }
 
   dockerRecoveryOptions.validate(options);
+  dockerResourceOptions.validate(options);
+  cpuPenalty.validate(options);
 
   // Session name is only valid with isolation
   if (options.session && !options.isolated) {

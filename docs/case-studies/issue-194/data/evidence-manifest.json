@@ -1,0 +1,5 @@
+{
+  "sharedArchiveRoot": "../../issue-195/data",
+  "manifest": "../../issue-195/data/evidence-manifest.json",
+  "reason": "Both incidents use the same three full logs; preserve one checksummed canonical archive to avoid duplication."
+}

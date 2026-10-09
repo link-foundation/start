@@ -336,7 +336,12 @@ mod shell {
         let output = host.run(&script, None);
         assert!(output.status.success(), "{:?}", output);
         assert_eq!(
-            std::fs::read_to_string(host.dir().join("sample")).unwrap(),
+            std::fs::read_to_string(host.dir().join("sample"))
+                .unwrap()
+                .split_whitespace()
+                .take(4)
+                .collect::<Vec<_>>()
+                .join(" "),
             OOM_SAMPLE
         );
         assert_eq!(

@@ -10,7 +10,7 @@
 use crate::args_parser::WrapperOptions;
 use crate::execution_attach::{attach_execution, ExecutionAttachResult};
 use crate::execution_control::{control_execution, ControlAction, ExecutionControlResult};
-use crate::execution_resume::{resume_execution, ExecutionResumeResult};
+use crate::execution_resume::{resume_execution_with_options, ExecutionResumeResult};
 use crate::execution_resume_all::{resume_all_executions, ExecutionResumeAllResult};
 use crate::execution_store::{CleanupOptions, ExecutionStore};
 use crate::log_uploader::upload_execution_log;
@@ -206,7 +206,8 @@ pub fn dispatch_query_command(
             Some(command)
         };
         return Some(report_result(
-            resume_execution(store, identifier, new_command, output_format).into(),
+            resume_execution_with_options(store, identifier, new_command, output_format, options)
+                .into(),
         ));
     }
     if options.resume_all {

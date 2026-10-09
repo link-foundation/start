@@ -308,6 +308,7 @@ pub fn run_screen_with_log_capture(
             cleanup();
 
             return IsolationResult {
+                diagnostics: None,
                 success: exit_code == 0,
                 session_name: Some(session_name.to_string()),
                 container_id: None,
@@ -326,6 +327,7 @@ pub fn run_screen_with_log_capture(
         if waited >= max_wait {
             cleanup();
             return IsolationResult {
+                diagnostics: None,
                 success: false,
                 session_name: Some(session_name.to_string()),
                 message: format!(

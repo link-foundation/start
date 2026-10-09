@@ -95,7 +95,9 @@ fn kept_footer_stays_plain_for_other_exits_and_real_oom_kills() {
 fn attached_kept_reason_names_a_child_oom_kill_not_the_command() {
     assert!(attached_docker_kept_reason(1, true).contains("a process in it was OOM-killed"));
     assert!(attached_docker_kept_reason(0, true).contains("a process in it was OOM-killed"));
-    assert!(attached_docker_kept_reason(137, true).contains("reports it was OOM-killed."));
+    assert!(
+        attached_docker_kept_reason(137, true).contains("reports a process in it was OOM-killed.")
+    );
     assert!(attached_docker_kept_reason(1, false).contains("the command failed"));
 }
 

@@ -25,9 +25,7 @@ use crate::docker_cleanup::{
     get_docker_container_cleanup_policy, start_detached_docker_completion_watcher_with,
     DockerWatcherOptions,
 };
-use crate::docker_resource_limits::{
-    build_resource_limits_status_line, normalize_resource_limits, read_docker_resource_limits,
-};
+use crate::docker_resource_limits::{build_resource_limits_status_line, normalize_resource_limits};
 use crate::execution_control::{CommandRunner, SystemCommandRunner};
 use crate::execution_store::{ExecutionRecord, ExecutionStatus, ExecutionStore};
 use crate::isolation::isolation_log::append_log_file;
@@ -243,8 +241,16 @@ pub fn build_launch_options(record: &ExecutionRecord) -> IsolationOptions {
         network_aliases: record_strings(record, "networkAliases"),
         // Limits captured from the container on an earlier resume (issue #176).
         resource_limits: normalize_resource_limits(record.options.get("resourceLimits")),
-        on_kill_resume: None,
-        recovery_command: None,
+        cpu_penalty_config: record
+            .options
+            .get("cpuPenaltyConfig")
+            .and_then(|v| serde_json::from_value(v.clone()).ok()),
+        on_kill_resume: record
+            .options
+            .get("onKillResume")
+            .and_then(Value::as_u64)
+            .map(|n| n as u32),
+        recovery_command: record_option(record, "recoveryCommand").map(str::to_string),
         endpoint: record_option(record, "endpoint").map(str::to_string),
         detached: true,
         user: record_option(record, "user").map(str::to_string),
@@ -607,6 +613,7 @@ pub fn apply_resume_to_record(
     );
     // A resume is a new deliberate start: launch-time recovery applies again.
     record.options.remove("stopRequestedAt");
+    record.options.remove("exitEvidence");
     if !plan.resource_limits.is_empty() {
         record
             .options
@@ -655,229 +662,9 @@ fn active_session_name(plan: &ResumePlan) -> &str {
         .unwrap_or(&plan.session_name)
 }
 
-/// Resume a tracked execution by UUID or session name.
-pub fn resume_execution(
-    store: Option<&ExecutionStore>,
-    identifier: &str,
-    command: Option<&str>,
-    output_format: Option<&str>,
-) -> ExecutionResumeResult {
-    resume_execution_with(
-        store,
-        identifier,
-        command,
-        output_format,
-        &SystemCommandRunner,
-        &SystemResumeHooks,
-    )
-}
-
-/// Resume with an injectable command runner and hooks, so tests never touch
-/// docker.
-pub fn resume_execution_with<R: CommandRunner, H: ResumeHooks>(
-    store: Option<&ExecutionStore>,
-    identifier: &str,
-    command: Option<&str>,
-    output_format: Option<&str>,
-    runner: &R,
-    hooks: &H,
-) -> ExecutionResumeResult {
-    let Some(store) = store else {
-        return ExecutionResumeResult {
-            success: false,
-            output: None,
-            error: Some("Execution tracking is disabled.".to_string()),
-        };
-    };
-
-    let Some(mut record) = store.get(identifier) else {
-        return ExecutionResumeResult {
-            success: false,
-            output: None,
-            error: Some(format!(
-                "No execution found with UUID or session name: {}",
-                identifier
-            )),
-        };
-    };
-
-    let probe = probe_session(&record, runner);
-    // Only a snapshot resume creates a new container, so only it needs the old
-    // container's limits (issue #176).
-    let live_resource_limits = match (command, record_option(&record, "sessionName")) {
-        (Some(_), Some(session_name))
-            if record_option(&record, "isolated") == Some("docker")
-                && !probe.alive
-                && probe.state == SessionState::Stopped =>
-        {
-            read_docker_resource_limits(session_name, runner)
-        }
-        _ => None,
-    };
-    let plan = match build_resume_plan_with_limits(&record, command, &probe, live_resource_limits) {
-        Ok(plan) => plan,
-        Err(error) => {
-            return ExecutionResumeResult {
-                success: false,
-                output: None,
-                error: Some(error),
-            }
-        }
-    };
-
-    let mut container_id: Option<String> = None;
-    let mut attempt = crate::execution_attempt::create_attempt(
-        &record,
-        plan.mode.as_str(),
-        active_session_name(&plan),
-    );
-    let mut lifecycle_record = record.clone();
-    lifecycle_record.attempt = Some(attempt.clone());
-    crate::execution_attempt::append_lifecycle(&lifecycle_record, "resume-started", json!({}));
-
-    if plan.mode == ResumeMode::Relaunch {
-        let launch_options = plan.launch_options.clone().unwrap_or_default();
-        let launch_result = hooks.relaunch(&plan.backend, &plan.command, &launch_options);
-        if !launch_result.success {
-            crate::execution_attempt::append_lifecycle(
-                &lifecycle_record,
-                "launch-failed",
-                json!({ "error": launch_result.message }),
-            );
-            return ExecutionResumeResult {
-                success: false,
-                output: None,
-                error: Some(format!(
-                    "Failed to relaunch {} session \"{}\": {}",
-                    plan.backend, plan.session_name, launch_result.message
-                )),
-            };
-        }
-        container_id = launch_result.container_id;
-    } else {
-        for step in &plan.steps {
-            let result = runner.run(&step.command, &step.args);
-            if !result.success {
-                let detail = if !result.stderr.trim().is_empty() {
-                    result.stderr.trim().to_string()
-                } else {
-                    result.error.clone().unwrap_or_else(|| {
-                        format!(
-                            "exit code {}",
-                            result
-                                .status
-                                .map(|code| code.to_string())
-                                .unwrap_or_else(|| "unknown".to_string())
-                        )
-                    })
-                };
-                crate::execution_attempt::append_lifecycle(
-                    &lifecycle_record,
-                    "launch-failed",
-                    json!({ "error": detail }),
-                );
-                return ExecutionResumeResult {
-                    success: false,
-                    output: None,
-                    error: Some(format!(
-                        "Failed to resume {} session \"{}\": {}",
-                        plan.backend, plan.session_name, detail
-                    )),
-                };
-            }
-            let stdout = result.stdout.trim().to_string();
-            if !stdout.is_empty() {
-                container_id = Some(stdout);
-            }
-        }
-
-        if let Some(line) = build_resource_limits_status_line(&plan.resource_limits) {
-            if !record.log_path.is_empty() {
-                append_log_file(&PathBuf::from(&record.log_path), &format!("{}\n", line));
-            }
-        }
-    }
-
-    let previous_session_name = plan
-        .new_session_name
-        .as_ref()
-        .map(|_| plan.session_name.clone());
-    apply_resume_to_record(&mut record, &plan, container_id.as_deref());
-    attempt.launch_accepted_at = Some(Utc::now().to_rfc3339());
-    record
-        .options
-        .insert("resumedAt".into(), json!(attempt.started_at));
-    record.attempt = Some(attempt.clone());
-    if let Err(error) = store.save(&record) {
-        return ExecutionResumeResult {
-            success: false,
-            output: None,
-            error: Some(error),
-        };
-    }
-    crate::execution_attempt::append_lifecycle(&record, "launch-accepted", json!({}));
-    if plan.backend == "docker" {
-        let attachment = hooks.attach_watcher(active_session_name(&plan), &record);
-        let fields = match &attachment {
-            Ok(()) => json!({"watcherAttachedAt": Utc::now().to_rfc3339()}),
-            Err(error) => json!({"watcherError": error}),
-        };
-        match store.patch_attempt(&record.uuid, attempt.number, fields) {
-            Ok(Some(current)) => crate::execution_attempt::append_lifecycle(
-                &current,
-                if attachment.is_ok() {
-                    "watcher-attached"
-                } else {
-                    "watcher-attachment-failed"
-                },
-                json!({"error": attachment.as_ref().err()}),
-            ),
-            Ok(None) => {}
-            Err(error) => {
-                return ExecutionResumeResult {
-                    success: false,
-                    output: None,
-                    error: Some(error),
-                }
-            }
-        }
-        if let Err(error) = attachment {
-            return ExecutionResumeResult {
-                success: false,
-                output: None,
-                error: Some(format!(
-                    "Launch accepted, but completion watcher attachment failed: {}",
-                    error
-                )),
-            };
-        }
-    }
-
-    let session_name = record_option(&record, "sessionName")
-        .unwrap_or(&plan.session_name)
-        .to_string();
-
-    ExecutionResumeResult {
-        success: true,
-        output: Some(format_resume_result(
-            &ResumeResultFields {
-                identifier,
-                uuid: &record.uuid,
-                mode: plan.mode,
-                backend: &plan.backend,
-                session_name: &session_name,
-                previous_session_name: previous_session_name.as_deref(),
-                snapshot_image: plan.snapshot_image.as_deref(),
-                resource_limits: &plan.resource_limits,
-                command: &plan.command,
-                message: &plan.message,
-            },
-            output_format,
-        )),
-        error: None,
-    }
-}
-
-#[cfg(test)]
-#[path = "execution_resume_cases.rs"]
-mod tests;
+#[path = "execution_resume_flow.rs"]
+mod resume_flow;
+pub use resume_flow::{
+    resume_execution, resume_execution_with, resume_execution_with_options,
+    resume_execution_with_resources,
+};

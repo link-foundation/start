@@ -16,6 +16,7 @@ const {
   supportsLogfileOption,
   resetScreenVersionCache,
   getDefaultDockerImage,
+  canRunLinuxDockerImages,
 } = require('../src/lib/isolation');
 
 describe('Isolation Module', () => {
@@ -665,8 +666,8 @@ describe('detectShellInEnvironment', () => {
   });
 
   it('should auto-detect shell in docker if docker is available', () => {
-    if (!isCommandAvailable('docker')) {
-      console.log('  Skipping: docker not installed');
+    if (!canRunLinuxDockerImages()) {
+      console.log('  Skipping: Docker cannot run Linux container images');
       return;
     }
     // Use alpine:latest which is commonly available and has sh
@@ -703,8 +704,8 @@ describe('Shell option forwarding to isolation runners', () => {
 
   describe('runInDocker shell option', () => {
     it('should accept shell option in options object', async () => {
-      if (!isCommandAvailable('docker')) {
-        console.log('  Skipping: docker not installed');
+      if (!canRunLinuxDockerImages()) {
+        console.log('  Skipping: Docker cannot run Linux container images');
         return;
       }
 

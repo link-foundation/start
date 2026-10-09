@@ -4,7 +4,11 @@
 
 pub mod args_parser;
 pub mod args_parser_queries;
+mod atomic_write;
+pub mod attached_diagnostics;
 pub mod cgroup_memory;
+pub mod cpu_penalty;
+pub mod cpu_penalty_monitor;
 pub mod detached_finalize;
 pub mod detached_output;
 pub(crate) mod docker_cleanup;
@@ -12,6 +16,7 @@ mod docker_network_lifecycle;
 pub mod docker_post_mortem;
 pub mod docker_recovery_options;
 pub mod docker_resource_limits;
+pub mod docker_resource_options;
 pub mod execution_attach;
 pub mod execution_attempt;
 pub mod execution_control;
@@ -19,20 +24,24 @@ pub mod execution_recovery;
 pub mod execution_resume;
 pub mod execution_resume_all;
 pub mod execution_store;
+pub mod exit_evidence;
 pub mod exit_reason;
 pub mod failure_handler;
 pub mod isolation;
 pub mod isolation_metadata;
+pub mod launch_owner;
 pub mod log_uploader;
 pub mod output_blocks;
 pub mod query_commands;
 pub mod recovery_delay;
+pub mod resume_resources;
 pub mod sequence_parser;
 pub mod session_probe;
 pub mod signal_handler;
 pub mod status_footer;
 pub mod status_formatter;
 pub mod status_probe;
+pub mod store_lock;
 pub mod substitution;
 pub mod usage;
 pub mod user_manager;
@@ -54,7 +63,7 @@ pub use detached_finalize::{
 };
 pub use docker_cleanup::{
     build_detached_docker_completion_script, build_detached_docker_completion_script_with,
-    DockerContainerCleanupPolicy, DockerWatcherOptions,
+    docker_command, DockerContainerCleanupPolicy, DockerWatcherOptions,
 };
 pub use docker_post_mortem::{
     build_docker_post_mortem_snippet, build_docker_removal_note_snippet,

@@ -181,8 +181,16 @@ function resolveMemoryExhaustion(input) {
     return null;
   }
 
+  const evidence =
+    input.exitEvidence || require('./exit-evidence').fromLog(input.logTail);
+  if (evidence.daemonRestart) {
+    return null;
+  }
   const marker = detectMemoryMarker(input.logTail);
-  if (marker) {
+  if (
+    marker &&
+    !(marker.reason.includes('kernel-oom-killer') && !evidence.mainOom)
+  ) {
     return { memoryExhausted: true, memoryExhaustedReason: marker.line };
   }
   if (input.oomKilled === true && isOomKillOfCommand(input)) {
@@ -230,9 +238,9 @@ function isOomKillOfCommand(input) {
   if (!input) {
     return false;
   }
-  const observed =
-    input.oomKilled === true || cgroupOomKills(input.cgroupMemory) > 0;
-  if (!observed) {
+  const evidence =
+    input.exitEvidence || require('./exit-evidence').fromLog(input.logTail);
+  if (!evidence.mainOom || evidence.daemonRestart) {
     return false;
   }
   const { exitCode } = input;
@@ -318,8 +326,16 @@ function resolveExitReason(input) {
     return null;
   }
 
+  const evidence =
+    input.exitEvidence || require('./exit-evidence').fromLog(input.logTail);
+  if (evidence.daemonRestart) {
+    return 'killed (docker daemon restart)';
+  }
   const fromLog = detectExitReason(input.logTail);
-  if (fromLog) {
+  if (
+    fromLog &&
+    !(fromLog.includes('kernel-oom-killer') && !evidence.mainOom)
+  ) {
     return fromLog;
   }
 
@@ -328,7 +344,9 @@ function resolveExitReason(input) {
   }
 
   const signalName = signalNameForExitCode(input.exitCode);
-  return signalName ? `signal (${signalName})` : null;
+  return signalName
+    ? `signal (${signalName}${signalName === 'SIGKILL' ? '; cause unknown' : ''})`
+    : null;
 }
 
 module.exports = {

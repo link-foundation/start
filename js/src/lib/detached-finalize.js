@@ -146,6 +146,21 @@ function finalizeDetachedExecution(options = {}) {
     record.cgroupMemory = cgroupMemory;
   }
 
+  const evidence = require('./exit-evidence');
+  const logged = evidence.fromLog(
+    record.logPath
+      ? require('./execution-attempt').readAttemptLogTail(record, 65536)
+      : null
+  );
+  record.options.exitEvidence = {
+    daemonRestart: logged.daemonRestart,
+    mainOom:
+      !logged.daemonRestart &&
+      (logged.mainOom ||
+        (evidence.recentOomDelta(options.cgroupMemory, options.finishedAt) &&
+          record.oomKilled === true &&
+          (record.exitCode === 137 || record.exitCode < 0))),
+  };
   const exitReason =
     resolveReason(record) || (finishedAt ? null : WATCHER_LOST_CONTAINER);
   if (exitReason) {
@@ -197,6 +212,7 @@ function resolveReason(record) {
       logTail,
       oomKilled: record.oomKilled,
       cgroupMemory: record.cgroupMemory,
+      exitEvidence: record.options?.exitEvidence,
     });
   } catch {
     return null;

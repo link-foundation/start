@@ -1,0 +1,49 @@
+[
+  {
+    "url": "https://api.github.com/repos/link-foundation/start/issues/comments/6084956497",
+    "html_url": "https://github.com/link-foundation/start/issues/193#issuecomment-6084956497",
+    "issue_url": "https://api.github.com/repos/link-foundation/start/issues/193",
+    "id": 6084956497,
+    "node_id": "IC_kwDOP85RQM8AAAABarERUQ",
+    "user": {
+      "login": "konard",
+      "id": 1431904,
+      "node_id": "MDQ6VXNlcjE0MzE5MDQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1431904?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/konard",
+      "html_url": "https://github.com/konard",
+      "followers_url": "https://api.github.com/users/konard/followers",
+      "following_url": "https://api.github.com/users/konard/following{/other_user}",
+      "gists_url": "https://api.github.com/users/konard/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/konard/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/konard/subscriptions",
+      "organizations_url": "https://api.github.com/users/konard/orgs",
+      "repos_url": "https://api.github.com/users/konard/repos",
+      "events_url": "https://api.github.com/users/konard/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/konard/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "created_at": "2026-10-09T16:27:41Z",
+    "updated_at": "2026-10-09T16:27:41Z",
+    "body": "## Root cause found: a 0-byte `executions.lock` left by ENOSPC is never treated as stale, so every write fails forever\n\nAll four `$ --resume` runs on this host failed the same way, and so did every other write since 14:32 UTC. The cause is not contention.\n\n```\n$ ls -la ~/.start-command/          # inside the hive-mind root container, 16:25 UTC\n-rw-r--r-- 1 box box 248912 Oct  9 14:27 executions.lino     ← last successful write\n-rw-r--r-- 1 box box      0 Oct  9 14:32 executions.lock     ← empty, never removed\n```\nThe disk was full at 14:32 UTC (concurrent `docker commit` snapshots, link-assistant/hive-mind#2889). The kernel logged `No space left on device` in that window.\n\n`js/src/lib/execution-store.js` → `LockManager`:\n\n1. `acquire()` creates the lock with `fs.writeFileSync(lockFilePath, JSON.stringify(lockData), { flag: 'wx' })`. On ENOSPC the file is **created** but its content is not written. The error is not `EEXIST`, so it is rethrown with `lockAcquired = false`, and `release()` does not unlink the file.\n2. From then on, every `acquire()` sees the file and calls `readLockFile()`. `JSON.parse('')` throws, so it returns `null`.\n3. `if (lockData && this.isLockStale(lockData))` → `lockData` is `null`, so the stale check (which would return `true` for `!lockData`) is **never called**, and the file is never removed.\n4. `writeFileSync(..., {flag:'wx'})` → `EEXIST` → retry for `LOCK_TIMEOUT_MS` (30 s) → `Failed to acquire lock for database write`.\n\nThe same happens if the process is killed between creating and writing the file, or if the content is truncated.\n\nConsequences seen here: `$ --resume` launched the container, then `store.save(updated)` threw. The record stayed `executed 137/127`, and **no completion watcher was started**, so the task's end will not be recorded either. `$ --status` reports these running tasks as finished. hive-mind's `/limits` and queue throttling rely on that (link-assistant/hive-mind issue to follow), and so does any `$ --list`-based recovery.\n\n### Suggested fix\n\n- In `acquire()`, treat an unreadable or empty lock as stale once it is older than a short grace period (for example, file `mtime` older than 2–5 s). Replace `if (lockData && this.isLockStale(lockData))` with `if (this.isLockStale(lockData, stat))`, and use `mtime` when there is no timestamp.\n- Create the lock atomically with its content: write `executions.lock.<pid>.<rand>` first, then `fs.linkSync(tmp, lockFilePath)` (fails with `EEXIST` like `wx`) and unlink the temp file. A lock file then either has full content or does not exist. On any error after creation, unlink what was created.\n- `$ --resume`: if saving the record fails after the container started, still start the completion watcher, retry the save, and print an explicit \"running but untracked\" warning with the container name (this issue's original report).\n- Tests: an empty lock file, a truncated JSON lock, and an ENOSPC on write (inject `fs`) must not block later writers beyond the grace period.\n\nWorkaround: remove the empty `~/.start-command/executions.lock` (it is never a live lock once it is older than a few seconds).\n",
+    "author_association": "MEMBER",
+    "pin": null,
+    "reactions": {
+      "url": "https://api.github.com/repos/link-foundation/start/issues/comments/6084956497/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "performed_via_github_app": null,
+    "minimized": null
+  }
+]

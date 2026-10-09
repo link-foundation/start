@@ -106,6 +106,14 @@ fn main() {
 
     let config = Config::from_env();
     let args: Vec<String> = env::args().skip(1).collect();
+    if args.first().is_some_and(|s| s == "__start-cpu-monitor") {
+        start_command::cpu_penalty_monitor::main(&args[1..]);
+        return;
+    }
+    if args.first().is_some_and(|s| s == "__start-exit-evidence") {
+        start_command::exit_evidence::main(&args[1..]);
+        return;
+    }
     if args.first().map(String::as_str)
         == Some(start_command::detached_output::INTERNAL_OUTPUT_FLAG)
     {
@@ -159,7 +167,7 @@ fn main() {
         }
     };
 
-    let wrapper_options = parsed.wrapper_options;
+    let mut wrapper_options = parsed.wrapper_options;
     let parsed_command = parsed.command.clone();
 
     // Options that address an existing execution never start a new one.
@@ -170,6 +178,12 @@ fn main() {
         process::exit(exit_code);
     }
     drop(query_store);
+    if wrapper_options.isolated.as_deref() == Some("docker") {
+        if let Err(error) = start_command::docker_resource_options::prepare(&mut wrapper_options) {
+            eprintln!("Error: {}", error);
+            process::exit(1);
+        }
+    }
 
     // Check if no command was provided
     if parsed_command.is_empty() {
@@ -462,12 +476,14 @@ fn run_with_isolation(
         ..Default::default()
     });
     if let Some(ref store) = execution_store {
+        start_command::launch_owner::mark_launch(&mut execution_record);
         match store.save(&execution_record) {
-            Err(e) if config.verbose => {
+            Err(e) => {
                 eprintln!(
-                    "[ExecutionStore] Warning: Failed to save initial record: {}",
-                    e
+                    "{}",
+                    serde_json::json!({"code": "LAUNCH_RESERVATION_FAILED", "uuid": execution_record.uuid, "containerName": session_name, "error": e})
                 );
+                process::exit(1);
             }
             Ok(()) => {
                 if config.verbose {
@@ -475,7 +491,6 @@ fn run_with_isolation(
                 }
                 set_current_execution(execution_record.clone(), store.clone());
             }
-            _ => {}
         }
     }
     log_content = log_content.replacen(
@@ -500,7 +515,8 @@ fn run_with_isolation(
             network: wrapper_options.network.clone(),
             networks: wrapper_options.networks.clone(),
             network_aliases: wrapper_options.network_aliases.clone(),
-            resource_limits: Vec::new(),
+            resource_limits: wrapper_options.resource_limits.clone(),
+            cpu_penalty_config: wrapper_options.cpu_penalty_config.clone(),
             on_kill_resume: wrapper_options.on_kill_resume,
             recovery_command: wrapper_options.recovery_command.clone(),
             endpoint: wrapper_options.endpoint.clone(),
@@ -516,7 +532,9 @@ fn run_with_isolation(
             // A detached backend outlives this process, so its completion
             // watcher is the only thing that can mark the record terminal
             // (issue #170.1).
-            execution_id: Some(execution_record.uuid.clone()),
+            execution_id: execution_store
+                .as_ref()
+                .map(|_| execution_record.uuid.clone()),
             defer_completion_watcher: false,
         };
         run_isolated(env, command, &options)
@@ -547,6 +565,15 @@ fn run_with_isolation(
 
     // Update execution record: detached keeps "executing" (resolved at query time)
     if let Some(ref store) = execution_store {
+        execution_record
+            .options
+            .insert("launchPending".into(), serde_json::json!(false));
+        if let Some(facts) = &result.diagnostics {
+            execution_record.cgroup_memory = facts.memory;
+            execution_record
+                .options
+                .insert("exitEvidence".into(), facts.evidence.clone());
+        }
         if let Some(container_id) = result.container_id.clone() {
             execution_record.options.insert(
                 "containerId".to_string(),
@@ -565,9 +592,24 @@ fn run_with_isolation(
             execution_record.clone()
         };
         if let Err(e) = store.save(&record_to_save) {
-            if config.verbose {
-                eprintln!("[ExecutionStore] Warning: Failed to update record: {}", e);
+            if environment == Some("docker") && mode == "detached" && result.success {
+                use start_command::execution_control::CommandRunner;
+                let stop = start_command::execution_control::SystemCommandRunner.run(
+                    &start_command::docker_command().to_string_lossy(),
+                    &["stop".into(), session_name.clone()],
+                );
+                if stop.success {
+                    execution_record.complete(-1);
+                    let _ = store.save(&execution_record);
+                }
+                eprintln!(
+                    "{}",
+                    serde_json::json!({"code":"LAUNCH_PERSISTENCE_FAILED", "uuid":execution_record.uuid, "containerName":session_name, "running":!stop.success, "error":e})
+                );
+                clear_current_execution();
+                process::exit(1);
             }
+            eprintln!("[ExecutionStore] Failed to update record: {}", e);
         }
         clear_current_execution();
     }

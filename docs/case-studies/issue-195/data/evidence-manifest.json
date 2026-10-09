@@ -1,0 +1,48 @@
+{
+  "retrievedAt": "2026-10-09",
+  "method": "gh gist view (authenticated), complete text; deterministic gzip; credentials redacted only",
+  "logs": [
+    {
+      "source": "https://gist.github.com/21335417cc285d8ed249fc6465bd36d3",
+      "archive": "gist-21335417cc285d8ed249fc6465bd36d3.log.gz",
+      "lineCount": 104859,
+      "originalSHA256": "1b6e70684e680d4617b73550a0c88062384734d0eb17b02bf21136a77dda6b26",
+      "redactedSHA256": "1b6e70684e680d4617b73550a0c88062384734d0eb17b02bf21136a77dda6b26",
+      "archiveSHA256": "4348d7b8ae93a445de50c7e9f18bb23e5e17640c37485f02b341cfe656eac028",
+      "redactions": {
+        "github": 0,
+        "api": 0,
+        "telegram": 0,
+        "authorization": 0
+      }
+    },
+    {
+      "source": "https://gist.github.com/86304d6a3ebd928481354dbcc5e52195",
+      "archive": "gist-86304d6a3ebd928481354dbcc5e52195.log.gz",
+      "lineCount": 449236,
+      "originalSHA256": "73e43736ce30665a011e24c468e15bfd03a56cff25092ea1b1a0e84a8201807b",
+      "redactedSHA256": "df324a06aff0a01b91b07188157f5ac1cfc5e7ba635575ec309d2481034cd06f",
+      "archiveSHA256": "ad96e30260728a587ccd65106046d982ea129ad55fd933300b2b2a595efd9e00",
+      "redactions": {
+        "github": 0,
+        "api": 106,
+        "telegram": 0,
+        "authorization": 0
+      }
+    },
+    {
+      "source": "https://gist.github.com/c0967850510c8731d9f41d815dcd0ecc",
+      "archive": "gist-c0967850510c8731d9f41d815dcd0ecc.log.gz",
+      "lineCount": 105087,
+      "originalSHA256": "7a61201d9fa419547977c1bc0fe639e84ce696e4b11bfbfcd4ed947736de12ef",
+      "redactedSHA256": "a55cbb9271c929377301ed411b40c4d97b00be6ab3657d203fb4e9e5f9ff4922",
+      "archiveSHA256": "8a11bb0cb96ae380e1b52a3b754e785704552cb7530625e21468dfae57beb32e",
+      "redactions": {
+        "github": 0,
+        "api": 1,
+        "telegram": 0,
+        "authorization": 0
+      }
+    }
+  ]
+}

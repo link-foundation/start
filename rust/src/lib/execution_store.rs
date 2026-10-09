@@ -1,19 +1,15 @@
 //! Execution Store - Dual storage (.lino text + .links binary) for command execution records
 
 use crate::lino_value_json::{json_to_lino_value, lino_value_to_json};
-use crate::local_hostname;
 use chrono::Utc;
 use lino_objects_codec::{decode, encode, LinoValue};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
-use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::thread;
-use std::time::Duration;
 use uuid::Uuid;
 
 /// Default application folder name
@@ -26,8 +22,6 @@ const LINKS_DB_FILE: &str = "executions.links";
 const LOCK_FILE: &str = "executions.lock";
 /// Lock timeout in milliseconds
 const LOCK_TIMEOUT_MS: u64 = 30000;
-/// Consider lock stale after this many milliseconds
-const LOCK_STALE_MS: u64 = 60000;
 
 /// Execution status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -96,6 +90,8 @@ pub struct ExecutionRecord {
         deserialize_with = "crate::cgroup_memory::deserialize_cgroup_memory"
     )]
     pub cgroup_memory: Option<crate::cgroup_memory::CgroupMemory>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cpu_penalty: Option<Value>,
     /// Hint explaining an otherwise opaque exit code (issue #162).
     /// Derived from the log tail on read; never a stored verdict.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -135,6 +131,7 @@ impl ExecutionRecord {
             container_started_at: None,
             oom_killed: None,
             cgroup_memory: None,
+            cpu_penalty: None,
             exit_reason: None,
             memory_exhausted: None,
             memory_exhausted_reason: None,
@@ -225,121 +222,7 @@ pub struct ExecutionRecordOptions {
     pub options: Option<HashMap<String, Value>>,
 }
 
-/// File-based lock manager
-pub struct LockManager {
-    lock_file_path: PathBuf,
-    lock_acquired: bool,
-}
-
-impl LockManager {
-    /// Create a new lock manager
-    pub fn new(lock_file_path: PathBuf) -> Self {
-        LockManager {
-            lock_file_path,
-            lock_acquired: false,
-        }
-    }
-
-    /// Acquire an exclusive lock
-    pub fn acquire(&mut self, timeout_ms: u64) -> bool {
-        let start = std::time::Instant::now();
-        let timeout = Duration::from_millis(timeout_ms);
-
-        while start.elapsed() < timeout {
-            // Check if existing lock is stale
-            if self.lock_file_path.exists() {
-                if let Some(lock_data) = self.read_lock_file() {
-                    if self.is_lock_stale(&lock_data) {
-                        let _ = fs::remove_file(&self.lock_file_path);
-                    }
-                }
-            }
-
-            // Try to create lock file exclusively
-            match OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&self.lock_file_path)
-            {
-                Ok(mut file) => {
-                    let lock_data = json!({
-                        "pid": std::process::id(),
-                        "timestamp": std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .map(|d| d.as_millis())
-                            .unwrap_or(0),
-                        "hostname": local_hostname::get()
-                            .map(|h| h.to_string_lossy().to_string())
-                            .unwrap_or_default()
-                    });
-                    let _ = file.write_all(lock_data.to_string().as_bytes());
-                    self.lock_acquired = true;
-                    return true;
-                }
-                Err(_) => {
-                    // Lock file exists, wait and retry
-                    thread::sleep(Duration::from_millis(100));
-                    continue;
-                }
-            }
-        }
-
-        false
-    }
-
-    /// Release the lock
-    pub fn release(&mut self) {
-        if self.lock_acquired {
-            let _ = fs::remove_file(&self.lock_file_path);
-            self.lock_acquired = false;
-        }
-    }
-
-    /// Read lock file data
-    fn read_lock_file(&self) -> Option<Value> {
-        let content = fs::read_to_string(&self.lock_file_path).ok()?;
-        serde_json::from_str(&content).ok()
-    }
-
-    /// Check if lock is stale
-    fn is_lock_stale(&self, lock_data: &Value) -> bool {
-        let timestamp = lock_data.get("timestamp").and_then(|t| t.as_u64());
-
-        // Check if lock is too old
-        if let Some(ts) = timestamp {
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_millis() as u64)
-                .unwrap_or(0);
-            if now - ts > LOCK_STALE_MS {
-                return true;
-            }
-        } else {
-            return true;
-        }
-
-        // Check if the process that holds the lock is still running (Unix only)
-        #[cfg(unix)]
-        {
-            let pid = lock_data.get("pid").and_then(|p| p.as_u64());
-            if let Some(p) = pid {
-                // Check if process exists using kill(pid, 0)
-                let result = unsafe { libc::kill(p as i32, 0) };
-                if result != 0 {
-                    return true; // Process doesn't exist
-                }
-            }
-        }
-
-        false
-    }
-}
-
-impl Drop for LockManager {
-    fn drop(&mut self) {
-        self.release();
-    }
-}
+pub use crate::store_lock::LockManager;
 
 /// Check if clink is installed
 pub fn is_clink_installed() -> bool {
@@ -460,7 +343,7 @@ impl ExecutionStore {
             .map(|record| json_to_lino_value(&record.to_json()))
             .collect();
         let content = encode(&LinoValue::Array(data));
-        fs::write(&self.lino_db_path, content)?;
+        crate::atomic_write::atomic_write(&self.lino_db_path, content.as_bytes())?;
         self.log(&format!("Wrote {} records to lino file", records.len()));
         Ok(())
     }
@@ -552,6 +435,22 @@ impl ExecutionStore {
 
     /// Save an execution record (creates or updates)
     pub fn save(&self, record: &ExecutionRecord) -> Result<(), String> {
+        self.save_reserved(record, None)
+    }
+
+    pub fn reserve_launch(
+        &self,
+        record: &ExecutionRecord,
+        previous: &ExecutionRecord,
+    ) -> Result<(), String> {
+        self.save_reserved(record, Some(previous))
+    }
+
+    fn save_reserved(
+        &self,
+        record: &ExecutionRecord,
+        previous: Option<&ExecutionRecord>,
+    ) -> Result<(), String> {
         let mut lock = LockManager::new(self.lock_file_path.clone());
 
         if !lock.acquire(LOCK_TIMEOUT_MS) {
@@ -563,6 +462,17 @@ impl ExecutionStore {
 
         // Find existing record index
         let existing_index = records.iter().position(|r| r.uuid == record.uuid);
+        if let Some(previous) = previous {
+            let current = existing_index
+                .and_then(|i| records.get(i))
+                .ok_or("Execution disappeared before launch reservation")?;
+            if crate::launch_owner::has_active_launch(current)
+                || current.attempt.as_ref().map(|a| a.number)
+                    != previous.attempt.as_ref().map(|a| a.number)
+            {
+                return Err("A different resume already reserved this execution".into());
+            }
+        }
 
         if let Some(idx) = existing_index {
             // Update existing record
@@ -688,6 +598,9 @@ impl ExecutionStore {
             .iter()
             .filter(|r| r.status == ExecutionStatus::Executing)
         {
+            if crate::launch_owner::has_active_launch(record) {
+                continue;
+            }
             let mut is_stale = false;
 
             // Check if process is still running (Unix only, same platform)

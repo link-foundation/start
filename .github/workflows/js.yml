@@ -10,6 +10,7 @@ on:
       - 'ARCHITECTURE.md'
       - 'docs/**'
       - 'examples/**'
+      - 'experiments/**'
       - 'js/**'
       - 'scripts/**'
       - '.github/workflows/js.yml'
@@ -21,6 +22,7 @@ on:
       - 'ARCHITECTURE.md'
       - 'docs/**'
       - 'examples/**'
+      - 'experiments/**'
       - 'js/**'
       - 'scripts/**'
       - '.github/workflows/js.yml'
@@ -334,6 +336,13 @@ jobs:
         working-directory: js
         run: bun install
 
+      - name: Prepare Docker integration images (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          python3 experiments/issue-195-ci-image-preparation.py
+          python3 experiments/issue-195-ci-docker-capability.py
+          bash scripts/prepare-docker-test-images.sh
+
       - name: Run tests
         working-directory: js
         run: bun run test
@@ -458,6 +467,12 @@ jobs:
       - name: Install dependencies
         working-directory: js
         run: bun install
+
+      - name: Prepare Docker integration images
+        run: |
+          python3 experiments/issue-195-ci-image-preparation.py
+          python3 experiments/issue-195-ci-docker-capability.py
+          bash scripts/prepare-docker-test-images.sh
 
       - name: Run tests with coverage
         id: coverage

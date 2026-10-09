@@ -41,14 +41,22 @@ jobs:
         with:
           persist-credentials: false
 
-      # The Docker image bundles shellcheck and pyflakes, so this also lints
-      # every `run:` block. A native actionlint binary without shellcheck on
-      # PATH silently skips the shell checks and exits 0 - worth knowing when
-      # reproducing a failure locally:
-      #   docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
-      - uses: docker://rhysd/actionlint:1.7.7
-        with:
-          args: -color
+      # Install rhysd/actionlint natively to avoid Docker Hub pull quotas.
+      # ShellCheck is preinstalled on the Linux runner. Require it explicitly
+      # so native actionlint cannot silently skip shell checks.
+      - name: Install native actionlint and Pyflakes
+        run: |
+          command -v shellcheck
+          python -m pip install --user pyflakes==3.4.0
+          bash scripts/install-actionlint.sh "$RUNNER_TEMP/actionlint-bin"
+          echo "$RUNNER_TEMP/actionlint-bin" >> "$GITHUB_PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Lint workflow syntax and embedded scripts
+        run: |
+          command -v shellcheck
+          command -v pyflakes
+          actionlint -color
 
   zizmor:
     name: Zizmor

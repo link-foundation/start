@@ -128,16 +128,12 @@ fn retains_the_exit_code_guard_for_earlier_child_oom_kills() {
         );
     }
     for exit_code in [Some(137), None, Some(-1)] {
-        assert_eq!(
+        assert_ne!(
             resolve_exit_reason(exit_code, None, Some(false), memory.oom_kills).as_deref(),
             Some(CGROUP_OOM_EXIT_REASON)
         );
-        let observed = resolve_memory_exhaustion(exit_code, None, Some(false), memory.oom_kills);
-        assert_eq!(
-            observed
-                .as_ref()
-                .map(|value| value.memory_exhausted_reason.as_str()),
-            exit_code.map(|_| "cgroup memory.events reported oom_kill=3")
+        assert!(
+            resolve_memory_exhaustion(exit_code, None, Some(false), memory.oom_kills).is_none()
         );
     }
 }

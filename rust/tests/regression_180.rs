@@ -32,9 +32,9 @@ const CASES: [(i32, bool, Option<&str>, bool); 7] = [
     (0, true, None, false),
     (1, true, None, false),
     (1, false, None, false),
-    (137, true, Some(CGROUP_OOM_EXIT_REASON), true),
-    (137, false, Some("signal (SIGKILL)"), false),
-    (-1, true, Some(CGROUP_OOM_EXIT_REASON), true),
+    (137, true, Some("signal (SIGKILL; cause unknown)"), false),
+    (137, false, Some("signal (SIGKILL; cause unknown)"), false),
+    (-1, true, None, false),
     (139, true, Some("signal (SIGSEGV)"), false),
 ];
 
@@ -63,9 +63,9 @@ fn the_sticky_flag_is_an_exit_reason_only_for_sigkill_or_an_unknown_exit() {
 
 #[test]
 fn blames_the_flag_on_the_command_only_for_sigkill_or_an_unknown_exit() {
-    assert!(is_oom_kill_of_command(Some(137), Some(true), None));
-    assert!(is_oom_kill_of_command(None, Some(true), None));
-    assert!(is_oom_kill_of_command(Some(-1), Some(true), None));
+    assert!(!is_oom_kill_of_command(Some(137), Some(true), None));
+    assert!(!is_oom_kill_of_command(None, Some(true), None));
+    assert!(!is_oom_kill_of_command(Some(-1), Some(true), None));
     assert!(!is_oom_kill_of_command(Some(0), Some(true), None));
     assert!(!is_oom_kill_of_command(Some(1), Some(true), None));
     assert!(!is_oom_kill_of_command(Some(137), Some(false), None));

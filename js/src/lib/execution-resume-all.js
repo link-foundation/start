@@ -125,6 +125,17 @@ function resumeAllExecutions(store, deps = {}) {
   for (const record of records) {
     const probe = probeFn(record);
     const sessionName = probe.sessionName;
+    if (require('./launch-owner').hasActiveLaunch(record)) {
+      executions.push(
+        describeRecord(
+          record,
+          probe,
+          ResumeAllAction.RUNNING,
+          'Launch is reserved; no watcher or duplicate launch was started.'
+        )
+      );
+      continue;
+    }
 
     if (probe.alive && probe.backend === 'docker') {
       startWatcher(

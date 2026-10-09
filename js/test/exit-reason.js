@@ -111,7 +111,11 @@ describe('resolveExitReason', () => {
   });
 
   it('should report the cgroup OOM observation when there is no marker', () => {
-    const reason = resolveExitReason({ exitCode: 137, oomKilled: true });
+    const reason = resolveExitReason({
+      exitCode: 137,
+      oomKilled: true,
+      exitEvidence: { mainOom: true },
+    });
     assert.strictEqual(reason, 'memory-exhaustion (cgroup-oom-killer)');
   });
 
@@ -173,6 +177,7 @@ describe('resolveMemoryExhaustion', () => {
       resolveMemoryExhaustion({
         exitCode: 137,
         logTail: 'killed\n',
+        exitEvidence: { mainOom: true },
         oomKilled: true,
       }),
       {

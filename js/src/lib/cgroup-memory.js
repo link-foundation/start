@@ -67,6 +67,7 @@ function buildCgroupFunctionsSnippet() {
     '__start_command_cgroup_read() { __scr_events=$(cat "$1/memory.events" 2>/dev/null) || return 1; ' +
       "__scr_oom=$(printf '%s\\n' \"$__scr_events\" | sed -n 's/^oom //p'); " +
       "__scr_kill=$(printf '%s\\n' \"$__scr_events\" | sed -n 's/^oom_kill //p'); " +
+      'case "$__scr_oom:$__scr_kill" in *[!0-9:]*|:*|*:) return 1;; esac; ' +
       '__scr_max=$(cat "$1/memory.max" 2>/dev/null); __scr_peak=$(cat "$1/memory.peak" 2>/dev/null); ' +
       'printf \'%s %s %s %s %s\\n\' "${__scr_max:--}" "${__scr_peak:--}" ' +
       '"${__scr_oom:--}" "${__scr_kill:--}" "$1"; }',
@@ -82,13 +83,33 @@ function buildCgroupFunctionsSnippet() {
  */
 function buildCgroupSamplerStartSnippet(containerName) {
   const v = CGROUP_SHELL_VARS;
+  const name = shellQuote(containerName);
+  const remoteRead = '__start_command_cgroup_read /sys/fs/cgroup';
   return [
     buildCgroupFunctionsSnippet(),
     `${v.file}="\${TMPDIR:-/tmp}/start-command-cgroup.$$"`,
-    `rm -f "$${v.file}" "$${v.file}.tmp"`,
-    `( __scs_dir=$(__start_command_cgroup_dir ${shellQuote(containerName)}) || exit 0; ` +
-      'while __scs_line=$(__start_command_cgroup_read "$__scs_dir"); do ' +
-      `printf '%s\\n' "$__scs_line" > "$${v.file}.tmp" && mv -f "$${v.file}.tmp" "$${v.file}"; ` +
+    `rm -f "$${v.file}" "$${v.file}.tmp" "$${v.file}.reason"`,
+    `__start_command_memory_limit=$(docker inspect -f '{{.HostConfig.Memory}}' ${name} 2>/dev/null)`,
+    `__start_command_sample_name=${name}`,
+    // The first counter is a baseline, including after watcher restart. Only
+    // changes between adjacent successful samples supply exit-time evidence.
+    `( export START_COMMAND_CGROUP_SAMPLING=1; __scs_previous=''; __scs_previous_at=0; __scs_changed=0; ` +
+      `__scs_dir=$(__start_command_cgroup_dir ${name}); while :; do ` +
+      '__scs_line=""; if [ -n "$__scs_dir" ]; then __scs_line=$(__start_command_cgroup_read "$__scs_dir"); fi; ' +
+      `if [ -z "$__scs_line" ]; then __scs_ns=$(docker inspect -f '{{.HostConfig.CgroupnsMode}}' ${name} 2>/dev/null); ` +
+      `if [ "$__scs_ns" = private ]; then ` +
+      `__scs_remote=$(docker exec ${name} sh -c ${shellQuote(`${buildCgroupFunctionsSnippet()}; ${remoteRead}`)} 2>&1); __scs_exit=$?; ` +
+      'if [ "$__scs_exit" = 0 ]; then __scs_line=$__scs_remote; ' +
+      'else __scs_detail=$(printf "%s" "$__scs_remote" | sed -n "1p" | cut -c 1-240); ' +
+      `printf '%s\n' "local cgroup unavailable; Docker exec exit=$__scs_exit: \${__scs_detail:-private cgroup v2 counters unreadable}" > "$${v.file}.reason"; fi; ` +
+      `else printf '%s\n' "local cgroup unavailable; container cgroup namespace=\${__scs_ns:-unavailable}, private required" > "$${v.file}.reason"; fi; fi; ` +
+      '__scs_now=$(date +%s); if [ -n "$__scs_line" ]; then ' +
+      '__scs_kill=$(printf "%s" "$__scs_line" | cut -d " " -f 4); ' +
+      'if [ -n "$__scs_previous" ] && [ "$__scs_kill" -gt "$__scs_previous" ] 2>/dev/null && [ "$((__scs_now-__scs_previous_at))" -le 3 ]; then __scs_changed=$__scs_now; fi; ' +
+      '__scs_previous=$__scs_kill; __scs_previous_at=$__scs_now; ' +
+      '__scs_fields=$(printf "%s" "$__scs_line" | cut -d " " -f 1-4); ' +
+      `printf '%s %s %s %s\\n' "$__scs_fields" "$__scs_changed" "$__scs_now" "$__scs_dir" > "$${v.file}.tmp" && mv -f "$${v.file}.tmp" "$${v.file}"; fi; ` +
+      `if [ "$(docker inspect -f '{{.State.Running}}' ${name} 2>/dev/null)" = false ]; then break; fi; ` +
       `sleep ${CGROUP_SAMPLE_INTERVAL_SECONDS}; done ) >/dev/null 2>&1 & ${v.sampler}=$!`,
   ].join('; ');
 }
@@ -106,10 +127,16 @@ function buildCgroupSamplerStopSnippet() {
     `kill "$${v.sampler}" 2>/dev/null`,
     `wait "$${v.sampler}" 2>/dev/null`,
     `${v.sample}=$(cat "$${v.file}" 2>/dev/null)`,
-    `__scs_dir=$(printf '%s' "$${v.sample}" | cut -s -d ' ' -f 5-)`,
-    `if [ -n "$__scs_dir" ] && __scs_line=$(__start_command_cgroup_read "$__scs_dir"); then ${v.sample}=$__scs_line; fi`,
-    `rm -f "$${v.file}" "$${v.file}.tmp"`,
-    `${v.sample}=$(printf '%s' "$${v.sample}" | cut -d ' ' -f 1-4)`,
+    `__start_command_memory_unavailable=$(cat "$${v.file}.reason" 2>/dev/null)`,
+    `__scs_dir=$(printf '%s' "$${v.sample}" | cut -s -d ' ' -f 7-)`,
+    `if [ -n "$__scs_dir" ] && __scs_line=$(__start_command_cgroup_read "$__scs_dir"); then ` +
+      `__scs_old=$(printf '%s' "$${v.sample}" | cut -d ' ' -f 4); __scs_at=$(printf '%s' "$${v.sample}" | cut -d ' ' -f 6); ` +
+      `__scs_changed=$(printf '%s' "$${v.sample}" | cut -d ' ' -f 5); __scs_now=$(date +%s); ` +
+      `__scs_new=$(printf '%s' "$__scs_line" | cut -d ' ' -f 4); ` +
+      `if [ "$__scs_new" -gt "$__scs_old" ] 2>/dev/null && [ "$((__scs_now-__scs_at))" -le 3 ]; then __scs_changed=$__scs_now; fi; ` +
+      `${v.sample}="$(printf '%s' "$__scs_line" | cut -d ' ' -f 1-4) $__scs_changed $__scs_now"; fi`,
+    `rm -f "$${v.file}" "$${v.file}.tmp" "$${v.file}.reason"`,
+    `${v.sample}=$(printf '%s' "$${v.sample}" | cut -d ' ' -f 1-6)`,
   ].join('; ');
 }
 
@@ -128,7 +155,8 @@ function buildCgroupMemoryLogSnippet(quotedLogPath) {
     `__scm_note=' (${OOM_SCOPE_NOTES[OOM_SCOPE.UNKNOWN]})'; fi; ` +
     `printf 'Memory:     memory.max=%s memory.peak=%s oom=%s oom_kill=%s%s\\n' ` +
     `"$1" "$2" "$3" "$4" "$__scm_note"; }; ` +
-    `if [ -n "$${v.sample}" ]; then __start_command_cgroup_log $${v.sample} >> ${quotedLogPath}; fi`
+    `if [ -n "$${v.sample}" ]; then __start_command_cgroup_log $${v.sample} >> ${quotedLogPath}; ` +
+    `else printf 'Memory:     unavailable (%s) memory.limit=%s (HostConfig)\\n' "\${__start_command_memory_unavailable:-sampler stopped before a reading; local cgroup unavailable}" "\${__start_command_memory_limit:-unknown}" >> ${quotedLogPath}; fi`
   );
 }
 
@@ -138,10 +166,14 @@ function buildCgroupMemoryLogSnippet(quotedLogPath) {
  * @param {string|null|undefined} text - `<memory.max> <memory.peak> <oom> <oom_kill>`
  * @returns {?string} Line without a trailing newline, or null without a sample
  */
-function formatCgroupMemoryLogLine(text) {
+function formatCgroupMemoryLogLine(
+  text,
+  memoryLimit = 'unknown',
+  unavailable = 'sampler unavailable; local cgroup hidden or unreadable'
+) {
   const counters = parseCgroupMemorySample(text);
   if (!counters) {
-    return null;
+    return `Memory:     unavailable (${unavailable}) memory.limit=${memoryLimit} (HostConfig)`;
   }
   const [max, peak, oom, kill] = String(text).trim().split(/\s+/);
   const scope = describeCgroupOomScope(counters);

@@ -270,11 +270,14 @@ describe('resumeExecution', () => {
         watchers.push([name, policy, logPath]),
     });
     assert.strictEqual(result.success, true, result.error);
-    assert.deepStrictEqual(calls, [['docker', 'start', 'box']]);
+    assert.deepStrictEqual(
+      calls.filter((call) => call[1] !== 'inspect'),
+      [['docker', 'start', 'box']]
+    );
     assert.strictEqual(watchers.length, 1);
     assert.strictEqual(watchers[0][0], 'box');
     assert.strictEqual(watchers[0][2], '/tmp/session.log');
-    assert.strictEqual(store.saved.length, 2);
+    assert.strictEqual(store.saved.length, 3);
     assert.strictEqual(store.saved[0].uuid, record.uuid);
     assert.strictEqual(store.saved[0].status, 'executing');
     assert.strictEqual(store.saved[0].options.resumeCount, 1);
@@ -320,7 +323,10 @@ describe('resumeExecution', () => {
     });
     assert.strictEqual(result.success, false);
     assert.match(result.error, /no such container/);
-    assert.strictEqual(store.saved.length, 0);
+    assert.strictEqual(store.saved.length, 2);
+    assert.strictEqual(store.saved.at(-1).status, 'executing');
+    assert.strictEqual(store.saved.at(-1).options.sessionName, 'box');
+    assert.strictEqual(store.saved.at(-1).options.launchPending, undefined);
   });
 
   test('relaunches through the isolation backend when the container is gone', async () => {

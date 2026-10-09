@@ -40,6 +40,11 @@ const {
 } = require('./docker-resource-limits');
 const { shellQuote } = require('./isolation-log-utils');
 const {
+  reserveLaunch,
+  rollbackLaunch,
+  failLaunchedPersistence,
+} = require('./launch-persistence');
+const {
   CGROUP_SHELL_VARS,
   formatCgroupMemoryLogLine,
   parseCgroupMemorySample,
@@ -299,7 +304,51 @@ function recoverKilledExecution(params = {}) {
   // Docker keeps `docker update` limits in the HostConfig across restarts;
   // they are read back so the log and `--status` show what the resumed run
   // is held to, and so a later relaunch can re-apply them.
-  const resourceLimits = readDockerResourceLimits(containerName, runner);
+  let resourceLimits =
+    readDockerResourceLimits(containerName, runner) ||
+    opts.resourceLimits ||
+    [];
+  resourceLimits = require('./resume-resources').restoreBaseCpu(
+    resourceLimits,
+    opts
+  );
+  if (opts.cpuPenaltyConfig) {
+    try {
+      resourceLimits = require('./resume-resources').clampCpuToDaemon(
+        resourceLimits,
+        runner
+      );
+    } catch (error) {
+      return giveUp(error.message);
+    }
+  }
+  const evidence = require('./exit-evidence');
+  const terminalOom =
+    (params.oomKilled === true || params.oomKilled === 'true') &&
+    evidence.recentOomDelta(params.cgroupMemory, params.finishedAt) &&
+    !evidence.fromLog(
+      record.logPath
+        ? require('./execution-attempt').readAttemptLogTail(record, 65536)
+        : null
+    ).daemonRestart;
+  let recoveryLimits = null;
+  if (opts.onKillResumeMemory && terminalOom) {
+    try {
+      recoveryLimits =
+        require('./docker-resource-options').resolveResourceOptions(
+          { memory: opts.onKillResumeMemory, resourceLimits },
+          runner,
+          params.random
+        );
+    } catch (error) {
+      return giveUp(`recovery limit failed: ${error.message}`);
+    }
+    log(
+      `Recovery memory limit: ${resourceLimits.find((s) => s.startsWith('--memory=')) || 'unlimited'} -> ${recoveryLimits.resolvedLimits.memory} (${opts.onKillResumeMemory})\n`
+    );
+    resourceLimits = recoveryLimits.resourceLimits;
+  }
+
   const limitsLine = buildResourceLimitsStatusLine(resourceLimits);
   if (limitsLine) {
     log(`${limitsLine}\n`);
@@ -337,18 +386,6 @@ function recoverKilledExecution(params = {}) {
       'resume-started'
     );
   }
-  const started = runner(getDockerCommand(), ['start', containerName]);
-  if (!started.success) {
-    if (nextAttempt) {
-      appendLifecycle(
-        { uuid: record.uuid, logPath: record.logPath, attempt: nextAttempt },
-        'launch-failed',
-        { error: failureDetail(started) }
-      );
-    }
-    return giveUp(`docker start failed: ${failureDetail(started)}`);
-  }
-
   const described = describeExitCode(params.exitCode);
   const delayed = delayRange ? `, delayMs=${delayMs}` : '';
   // The killed run's own counters: the resumed run starts a fresh cgroup.
@@ -363,7 +400,7 @@ function recoverKilledExecution(params = {}) {
       cgroupMemory: memory || undefined,
     });
     archiveAttempt(record);
-    nextAttempt.launchAcceptedAt = new Date().toISOString();
+
     record.attempt = nextAttempt;
   }
   const counted = memory
@@ -374,6 +411,18 @@ function recoverKilledExecution(params = {}) {
     : '';
   record.options = {
     ...opts,
+    ...(recoveryLimits
+      ? {
+          resolvedLimits: {
+            ...opts.resolvedLimits,
+            ...recoveryLimits.resolvedLimits,
+          },
+          resourceLimitSpecs: {
+            ...opts.resourceLimitSpecs,
+            memory: opts.onKillResumeMemory,
+          },
+        }
+      : {}),
     recoveryAttempts: attempt,
     recoveryHistory: [
       ...(Array.isArray(opts.recoveryHistory) ? opts.recoveryHistory : []),
@@ -383,6 +432,7 @@ function recoverKilledExecution(params = {}) {
     ...(delayRange ? { lastRecoveryDelayMs: delayMs } : {}),
     ...(resourceLimits && resourceLimits.length > 0 ? { resourceLimits } : {}),
   };
+  delete record.options.exitEvidence;
   record.status = 'executing';
   record.exitCode = null;
   record.endTime = null;
@@ -395,11 +445,56 @@ function recoverKilledExecution(params = {}) {
   record.observedAt = undefined;
   record.staleDetectedAt = undefined;
   record.containerStartedAt = undefined;
+  const previousData = globalThis.structuredClone(store.get(executionId));
+  const previous = record.constructor.fromObject
+    ? record.constructor.fromObject(previousData)
+    : previousData;
+  try {
+    reserveLaunch(store, record, previous);
+  } catch (error) {
+    return giveUp(`launch reservation failed: ${error.message}`);
+  }
+  if (recoveryLimits || opts.cpuPenaltyConfig) {
+    const updated = runner(getDockerCommand(), [
+      'update',
+      ...resourceLimits.filter((s) =>
+        /^--(?:memory|memory-swap|cpus|cpu-quota|cpu-period)=/.test(s)
+      ),
+      containerName,
+    ]);
+    if (!updated.success) {
+      rollbackLaunch(store, previous);
+      return giveUp(`docker update failed: ${failureDetail(updated)}`);
+    }
+  }
+  const started = runner(getDockerCommand(), ['start', containerName]);
+  if (!started.success) {
+    if (nextAttempt) {
+      appendLifecycle(
+        { uuid: record.uuid, logPath: record.logPath, attempt: nextAttempt },
+        'launch-failed',
+        { error: failureDetail(started) }
+      );
+    }
+    rollbackLaunch(store, previous);
+    return giveUp(`docker start failed: ${failureDetail(started)}`);
+  }
+
+  if (opts.cpuPenaltyConfig) {
+    record.options.resolvedLimits = {
+      ...record.options.resolvedLimits,
+      cpus: require('./docker-resource-limits').cpuCount(resourceLimits),
+    };
+  }
+  record.options.launchPending = false;
+  if (nextAttempt) {
+    nextAttempt.launchAcceptedAt = new Date().toISOString();
+  }
+  let persistenceError = null;
   try {
     store.save(record);
-  } catch {
-    // The container is already running again; the new watcher still follows
-    // it and finalizes the record when it ends.
+  } catch (error) {
+    persistenceError = error;
   }
 
   const startWatcher =
@@ -407,24 +502,45 @@ function recoverKilledExecution(params = {}) {
   if (nextAttempt) {
     appendLifecycle(record, 'launch-accepted');
   }
-  startWatcher(
-    containerName,
-    getDockerContainerCleanupPolicy(opts),
-    record.logPath || null,
-    record.uuid,
-    {
-      since,
-      recoverOnKill: true,
-      ...(nextAttempt ? { attemptNumber: nextAttempt.number } : {}),
-    }
-  );
-  if (nextAttempt) {
+  try {
+    startWatcher(
+      containerName,
+      getDockerContainerCleanupPolicy(opts),
+      record.logPath || null,
+      record.uuid,
+      {
+        since,
+        recoverOnKill: true,
+        ...(nextAttempt ? { attemptNumber: nextAttempt.number } : {}),
+      }
+    );
+  } catch (error) {
+    const warning = failLaunchedPersistence(
+      store,
+      record,
+      runner,
+      persistenceError || error
+    );
+    log(`[Recovery] ${warning}\n`);
+    return { recovered: false, reason: warning, attempt };
+  }
+  if (nextAttempt && !persistenceError) {
     const current = patchAttempt(store, record, {
       watcherAttachedAt: new Date().toISOString(),
     });
     if (current) {
       appendLifecycle(current, 'watcher-attached');
     }
+  }
+  if (persistenceError) {
+    const warning = failLaunchedPersistence(
+      store,
+      record,
+      runner,
+      persistenceError
+    );
+    log(`[Recovery] ${warning}\n`);
+    return { recovered: false, reason: warning, attempt };
   }
   return {
     recovered: true,

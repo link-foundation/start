@@ -97,6 +97,12 @@ function buildDockerRuntimeStatusLines(options = {}) {
   if (limitsLine) {
     lines.push(limitsLine);
   }
+  const limitsSummary = require('./docker-resource-options').limitsLogLine(
+    options
+  );
+  if (limitsSummary) {
+    lines.push(limitsSummary);
+  }
   const onKillResume = getOnKillResume(options);
   if (onKillResume) {
     const what = options.recoveryCommand || 'the original command';
@@ -131,6 +137,15 @@ function buildDockerRuntimeMetadata(options = {}) {
         ? options.networkAliases
         : null,
     resourceLimits: resourceLimits.length > 0 ? resourceLimits : null,
+    resolvedLimits: options.resolvedLimits || null,
+    resourceLimitSpecs: options.resourceLimitSpecs || null,
+    onKillResumeMemory: options.onKillResumeMemory || null,
+    ...(options.cpuPenaltyConfig
+      ? {
+          cpuPenaltyConfig: options.cpuPenaltyConfig,
+          baseResourceLimits: resourceLimits,
+        }
+      : {}),
     onKillResume: getOnKillResume(options),
     recoveryCommand: options.recoveryCommand || null,
     onKillResumeDelay: getOnKillResume(options)

@@ -187,9 +187,11 @@ mod shell {
             [
                 "#!/bin/sh".to_string(),
                 format!("dir='{}'", dir.display()),
+                "[ \"$START_COMMAND_CGROUP_SAMPLING\" = 1 ] && exit 1".to_string(),
                 "case \"$1\" in".to_string(),
                 "  inspect)".to_string(),
                 "    case \"$3\" in".to_string(),
+                "      *HostConfig*) exit 1 ;;".to_string(),
                 "      *State.Running*)".to_string(),
                 "        answer=$(head -n 1 \"$dir/running\")".to_string(),
                 "        if [ \"$(wc -l < \"$dir/running\")\" -gt 1 ]; then".to_string(),

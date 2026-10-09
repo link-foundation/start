@@ -209,3 +209,44 @@ pub fn build_resource_limits_status_line(limits: &[String]) -> Option<String> {
         Some(format!("[Isolation] Resource limits: {}", limits.join(" ")))
     }
 }
+
+/// An existing quota/period cannot be changed to Docker NanoCPUs in place.
+pub fn cpu_count(limits: &[String]) -> Option<f64> {
+    let get = |prefix: &str| {
+        limits.iter().find_map(|s| {
+            s.strip_prefix(prefix)
+                .and_then(|n| n.parse::<f64>().ok())
+                .filter(|n| *n > 0.0)
+        })
+    };
+    get("--cpus=")
+        .or_else(|| get("--cpu-quota=").map(|q| q / get("--cpu-period=").unwrap_or(100000.0)))
+}
+pub fn cpu_update_args(limits: &[String], cpus: f64) -> Vec<String> {
+    if !limits.iter().any(|s| s.starts_with("--cpus="))
+        && limits
+            .iter()
+            .any(|s| s.starts_with("--cpu-quota=") || s.starts_with("--cpu-period="))
+    {
+        vec![
+            "--cpu-period=100000".into(),
+            format!("--cpu-quota={}", (cpus * 100000.0).ceil() as i64),
+        ]
+    } else {
+        vec!["--cpus".into(), cpus.to_string()]
+    }
+}
+pub fn with_cpu_limit(mut limits: Vec<String>, cpus: f64) -> Vec<String> {
+    let args = cpu_update_args(&limits, cpus);
+    limits.retain(|s| {
+        !["--cpus=", "--cpu-quota=", "--cpu-period="]
+            .iter()
+            .any(|p| s.starts_with(p))
+    });
+    if args[0] == "--cpus" {
+        limits.push(format!("--cpus={}", cpus));
+    } else {
+        limits.extend(args);
+    }
+    limits
+}
