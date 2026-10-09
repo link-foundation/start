@@ -61,3 +61,13 @@ GitHub Releases. The release title carries the `[Rust]` prefix, e.g.
 ## License
 
 Released into the public domain under the [Unlicense](../LICENSE).
+
+### Docker resource and recovery controls
+
+Launch with `--memory 64m`, `--memory-swap 64m` and `--cpus 1`, or use daemon
+percentages and uniform ranges such as `--memory '70%-80%'`. Memory-swap defaults
+to memory. `--cpu-penalty` enables delayed caps and reports state through status.
+Manual `--resume <id> --memory 128m` updates before starting;
+`--on-kill-resume-memory` changes memory only after a fresh qualifying OOM.
+See the [full resource and recovery guide](../README.md#docker-launch-limits-recovery-limits-and-cpu-penalty)
+and [incident research](../docs/case-studies/issue-195/README.md).

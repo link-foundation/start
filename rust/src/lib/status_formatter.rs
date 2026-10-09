@@ -40,11 +40,17 @@ pub fn read_exit_code_from_log(log_path: &str) -> Option<i32> {
 /// `oomKilled` (issue #165).
 pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
     let mut enriched = resolve_detached_status(record);
+    if let Some(state) = crate::cpu_penalty_monitor::read_state(record) {
+        enriched.cpu_penalty = Some(state);
+    }
     read_attempt_activity(&mut enriched);
     if enriched.status != ExecutionStatus::Executed {
         return enriched;
     }
-    let tail = read_attempt_log_tail(&enriched, FATAL_MARKER_TAIL_BYTES);
+    let tail = crate::exit_evidence::record_tail(
+        &enriched,
+        read_attempt_log_tail(&enriched, FATAL_MARKER_TAIL_BYTES),
+    );
     let oom_kills = enriched.cgroup_memory.and_then(|memory| memory.oom_kills);
     // A record finalized before #180 may carry the cgroup OOM reason for an
     // ordinary exit (the sticky flag was blamed for exit 0/1): re-derive it.
@@ -57,6 +63,14 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
             enriched.oom_killed,
             oom_kills,
         );
+    }
+    if enriched
+        .memory_exhausted_reason
+        .as_deref()
+        .is_some_and(|s| s.starts_with("Docker reported") || s.starts_with("cgroup memory.events"))
+    {
+        enriched.memory_exhausted = None;
+        enriched.memory_exhausted_reason = None;
     }
     if enriched.memory_exhausted.is_none() {
         if let Some(memory) = resolve_memory_exhaustion(
@@ -77,6 +91,9 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
 /// returns an updated copy with status "executed". If it shows "executed" but
 /// the session is still running, returns a copy with status "executing".
 fn resolve_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
+    if crate::launch_owner::has_active_launch(record) {
+        return record.clone();
+    }
     let tail = read_attempt_log_tail(record, FATAL_MARKER_TAIL_BYTES);
     let footer = parse_footer_from_tail(tail.as_deref().unwrap_or(""));
     let footer_exit = footer.exit_code;
@@ -418,6 +435,9 @@ fn format_record_as_text_with_enrichments(
             "Cgroup Memory:     {}",
             crate::cgroup_memory::format_cgroup_memory(memory)
         ));
+    }
+    if let Some(ref state) = record.cpu_penalty {
+        lines.push(format!("CPU Penalty:       {}", state));
     }
     lines.push(format!("PID:               {}", pid_str));
     if let Some(process_ids) = process_ids {

@@ -29,6 +29,17 @@ Options:
   --on-kill-resume <N>  Resume a killed (exit 137 / OOM) detached docker session up to N times
   --recovery-command <cmd>  Command to run in the same container on such a resume
   --on-kill-resume-delay <min[-max]>  Wait a random number of seconds before each such resume (default 0)
+  --memory <size|N%|MIN%-MAX%>  Docker RAM cap; percentages use daemon capacity
+  --memory-swap <spec>  Combined memory+swap cap (defaults to memory, no extra swap)
+  --cpus <n|N%|MIN%-MAX%>  Docker CPU cap; ranges draw once per creation
+  --on-kill-resume-memory <spec>  New memory cap before a qualifying OOM recovery
+  --cpu-penalty        Enable delayed Docker CPU penalty (default off)
+  --cpu-penalty-cpus <n>  Penalty cap (default 2 CPUs)
+  --cpu-penalty-trigger <p%>  Busy threshold (default 95% of usable CPUs)
+  --cpu-penalty-trigger-window <d>  Fully covered busy window (default 15m)
+  --cpu-penalty-release <p%>  Quiet threshold (default 65% of penalty cap)
+  --cpu-penalty-release-window <d>  Minimum quiet/capped window (default 15m)
+                        Durations accept ms, s, m, h; --status reports penalty state
   --endpoint <endpoint> SSH endpoint (required for ssh isolation, e.g., user@host)
   --isolated-user, -u [name]  Create isolated user with same permissions
   --keep-user           Keep isolated user after command completes

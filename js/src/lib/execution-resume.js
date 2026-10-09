@@ -28,7 +28,6 @@ const { escapeForLinksNotation } = require('./output-blocks');
 const {
   buildResourceLimitsStatusLine,
   normalizeResourceLimits,
-  readDockerResourceLimits,
 } = require('./docker-resource-limits');
 const { appendLogFile } = require('./isolation-log-utils');
 const {
@@ -38,6 +37,11 @@ const {
   patchAttempt,
 } = require('./execution-attempt');
 const { runCommand } = require('./execution-control');
+const {
+  reserveLaunch,
+  rollbackLaunch,
+  failLaunchedPersistence,
+} = require('./launch-persistence');
 const { SessionState, probeSession } = require('./session-probe');
 const { getDockerNetworks } = require('./docker-network-lifecycle');
 const {
@@ -89,6 +93,7 @@ function buildResumedSessionName(sessionName, attempt) {
 function buildLaunchOptions(record) {
   const opts = record.options || {};
   return {
+    ...opts,
     image: opts.image || null,
     session: opts.sessionName,
     detached: true,
@@ -359,6 +364,7 @@ function applyResumeToRecord(
   options.resumedAt = attempt.startedAt;
   // A resume is a new deliberate start: launch-time recovery applies again.
   delete options.stopRequestedAt;
+  delete options.exitEvidence;
   if (plan.resourceLimits && plan.resourceLimits.length > 0) {
     options.resourceLimits = plan.resourceLimits;
   }
@@ -411,27 +417,61 @@ async function resumeExecution(store, identifier, deps = {}) {
     };
   }
 
+  if (require('./launch-owner').hasActiveLaunch(record)) {
+    return {
+      success: false,
+      error: 'An execution launch is already reserved.',
+    };
+  }
+  const previousData = globalThis.structuredClone(
+    record.toObject ? record.toObject() : record
+  );
+  const previous = record.constructor.fromObject
+    ? record.constructor.fromObject(previousData)
+    : previousData;
   const runner = deps.runner || runCommand;
   const probeFn = deps.probe || ((r) => probeSession(r, runner));
   const probe = probeFn(record);
   const opts = record.options || {};
-  // Only a snapshot resume creates a new container, so only it needs the old
-  // container's limits (issue #176).
-  const liveResourceLimits =
-    deps.command &&
-    opts.isolated === 'docker' &&
-    opts.sessionName &&
-    probe &&
-    !probe.alive &&
-    probe.state === SessionState.STOPPED
-      ? readDockerResourceLimits(opts.sessionName, runner)
-      : null;
+  let resources;
+  try {
+    resources = require('./resume-resources').prepareResumeResources(
+      record,
+      probe,
+      deps.resourceOptions || {},
+      runner,
+      deps.random
+    );
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+  const planningRecord = resources
+    ? {
+        ...record,
+        options: { ...opts, resourceLimits: resources.resourceLimits },
+      }
+    : record;
   const plan = buildResumePlan(
-    record,
+    planningRecord,
     deps.command || null,
     probe,
-    liveResourceLimits
+    resources?.resourceLimits
   );
+  if (resources && !plan.error) {
+    plan.resourceLimits = resources.resourceLimits;
+    if (plan.mode === ResumeMode.DOCKER_START && resources.update) {
+      plan.steps.unshift({
+        command: getDockerCommand(),
+        args: [
+          'update',
+          ...resources.resourceLimits.filter((s) =>
+            /^--(?:memory|memory-swap|cpus|cpu-quota|cpu-period)=/.test(s)
+          ),
+          plan.sessionName,
+        ],
+      });
+    }
+  }
   if (plan.error) {
     return { success: false, error: plan.error };
   }
@@ -444,15 +484,50 @@ async function resumeExecution(store, identifier, deps = {}) {
     attempt,
   };
   appendLifecycle(lifecycleRecord, 'resume-started');
+  const updated = applyResumeToRecord(record, plan, null, attempt);
+  if (resources) {
+    updated.options.resolvedLimits = resources.resolvedLimits;
+    updated.options.resourceLimitSpecs = resources.resourceLimitSpecs;
+    if (
+      opts.cpuPenaltyConfig &&
+      deps.resourceOptions?.cpus !== null &&
+      deps.resourceOptions?.cpus !== undefined
+    ) {
+      updated.options.baseResourceLimits = resources.resourceLimits;
+    }
+  }
+  try {
+    reserveLaunch(store, updated, previous);
+  } catch (error) {
+    appendLifecycle(lifecycleRecord, 'launch-failed', { error: error.message });
+    return {
+      success: false,
+      error: `Launch reservation failed: ${error.message}`,
+    };
+  }
+
+  if (resources && deps.resourceOptions?.memory && record.logPath) {
+    const oldMemory = resources.oldMemory;
+    appendLogFile(
+      record.logPath,
+      `Resume memory limit: ${oldMemory} -> ${resources.resolvedLimits.memory} (${deps.resourceOptions.memory})\n`
+    );
+  }
 
   if (plan.mode === ResumeMode.RELAUNCH) {
     const runIsolated = deps.runIsolated || require('./isolation').runIsolated;
-    const launchResult = await runIsolated(
-      plan.backend,
-      plan.command,
-      plan.launchOptions
-    );
+    let launchResult;
+    try {
+      launchResult = await runIsolated(
+        plan.backend,
+        plan.command,
+        plan.launchOptions
+      );
+    } catch (error) {
+      launchResult = { success: false, message: error.message };
+    }
     if (!launchResult || !launchResult.success) {
+      rollbackLaunch(store, previous);
       appendLifecycle(lifecycleRecord, 'launch-failed', {
         error: launchResult?.message || 'unknown error',
       });
@@ -466,8 +541,14 @@ async function resumeExecution(store, identifier, deps = {}) {
     containerId = launchResult.containerId || null;
   } else {
     for (const step of plan.steps) {
-      const result = runner(step.command, step.args);
+      let result;
+      try {
+        result = runner(step.command, step.args);
+      } catch (error) {
+        result = { success: false, error: error.message };
+      }
       if (!result.success) {
+        rollbackLaunch(store, previous);
         const detail =
           (result.stderr || '').trim() ||
           result.error ||
@@ -489,8 +570,16 @@ async function resumeExecution(store, identifier, deps = {}) {
 
   const previousSessionName = plan.newSessionName ? plan.sessionName : null;
   attempt.launchAcceptedAt = new Date().toISOString();
-  const updated = applyResumeToRecord(record, plan, containerId, attempt);
-  store.save(updated);
+  updated.options.launchPending = false;
+  if (containerId) {
+    updated.options.containerId = containerId;
+  }
+  let persistenceError = null;
+  try {
+    store.save(updated);
+  } catch (error) {
+    persistenceError = error;
+  }
   appendLifecycle(updated, 'launch-accepted');
 
   if (plan.backend === 'docker') {
@@ -513,24 +602,48 @@ async function resumeExecution(store, identifier, deps = {}) {
       if (watcher === false) {
         throw new Error('Watcher process could not be started');
       }
-      const current = patchAttempt(store, updated, {
-        watcherAttachedAt: new Date().toISOString(),
-      });
+      const current = persistenceError
+        ? null
+        : patchAttempt(store, updated, {
+            watcherAttachedAt: new Date().toISOString(),
+          });
       if (current) {
         appendLifecycle(current, 'watcher-attached');
       }
     } catch (error) {
-      const current = patchAttempt(store, updated, {
-        watcherError: error.message,
-      });
+      if (persistenceError) {
+        return {
+          success: false,
+          error: failLaunchedPersistence(
+            store,
+            updated,
+            runner,
+            persistenceError
+          ),
+        };
+      }
+      const current = persistenceError
+        ? null
+        : patchAttempt(store, updated, {
+            watcherError: error.message,
+          });
       appendLifecycle(current || updated, 'watcher-attachment-failed', {
         error: error.message,
       });
       return {
         success: false,
-        error: `Launch accepted, but completion watcher attachment failed: ${error.message}`,
+        error: `Launch accepted for container ${activeSessionName(plan)}, but completion watcher attachment failed: ${error.message}`,
       };
     }
+  }
+
+  if (persistenceError) {
+    // The reservation remains durable and the watcher is attached. Stop the
+    // new container rather than allow an untracked command to keep running.
+    return {
+      success: false,
+      error: failLaunchedPersistence(store, updated, runner, persistenceError),
+    };
   }
 
   return {

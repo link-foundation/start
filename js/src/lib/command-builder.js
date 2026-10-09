@@ -57,6 +57,46 @@ function buildNextLevelCommand(options, command) {
   // Docker runtime options are flat (not per-level); forward them only when a
   // remaining level still uses docker so the nested $ invocation can apply them.
   if (remainingStack.includes('docker')) {
+    for (const [key, flag] of [
+      ['memory', '--memory'],
+      ['memorySwap', '--memory-swap'],
+      ['cpus', '--cpus'],
+      ['onKillResumeMemory', '--on-kill-resume-memory'],
+    ]) {
+      if (options[key] !== null && options[key] !== undefined) {
+        parts.push(
+          `${flag} ${require('./shell-utils').quoteShellArg(String(options[key]))}`
+        );
+      }
+    }
+    if (options.cpuPenaltyConfig) {
+      parts.push('--cpu-penalty');
+      for (const [key, flag] of [
+        ['cpus', '--cpu-penalty-cpus'],
+        ['trigger', '--cpu-penalty-trigger'],
+        ['triggerWindowMs', '--cpu-penalty-trigger-window'],
+        ['release', '--cpu-penalty-release'],
+        ['releaseWindowMs', '--cpu-penalty-release-window'],
+      ]) {
+        parts.push(
+          `${flag} ${options.cpuPenaltyConfig[key]}${key.endsWith('Ms') ? 'ms' : ''}`
+        );
+      }
+    }
+    if (options.onKillResume !== null && options.onKillResume !== undefined) {
+      parts.push(`--on-kill-resume ${options.onKillResume}`);
+    }
+    if (
+      options.onKillResumeDelay !== null &&
+      options.onKillResumeDelay !== undefined
+    ) {
+      parts.push(`--on-kill-resume-delay ${options.onKillResumeDelay}`);
+    }
+    if (options.recoveryCommand) {
+      parts.push(
+        `--recovery-command ${require('./shell-utils').quoteShellArg(options.recoveryCommand)}`
+      );
+    }
     for (const volume of options.volumes || []) {
       parts.push(`--volume "${volume}"`);
     }

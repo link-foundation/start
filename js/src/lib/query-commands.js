@@ -55,9 +55,19 @@ function handleAttachQuery(store, identifier, readOnly) {
   return reportResult(attachExecution(store, identifier, { readOnly }));
 }
 
-async function handleResumeQuery(store, identifier, command, outputFormat) {
+async function handleResumeQuery(
+  store,
+  identifier,
+  command,
+  outputFormat,
+  resourceOptions = {}
+) {
   return reportResult(
-    await resumeExecution(store, identifier, { command, outputFormat })
+    await resumeExecution(store, identifier, {
+      command,
+      outputFormat,
+      resourceOptions,
+    })
   );
 }
 
@@ -174,7 +184,8 @@ async function dispatchQueryCommand(options, context = {}) {
       store,
       options.resume,
       context.command || null,
-      outputFormat
+      outputFormat,
+      options
     );
   }
   if (options.resumeAll) {

@@ -368,7 +368,8 @@ esac
       probe: () => ({ alive: false, state: SessionState.MISSING }),
       runIsolated: (backend, command, options) => {
         expect(options.deferCompletionWatcher).toBe(true);
-        expect(store.get(record.uuid).status).toBe('executed');
+        expect(store.get(record.uuid).status).toBe('executing');
+        expect(store.get(record.uuid).options.launchPending).toBe(true);
         return { success: true, containerId: 'replacement-container' };
       },
       startWatcher: () => {

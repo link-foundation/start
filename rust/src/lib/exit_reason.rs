@@ -152,20 +152,27 @@ pub fn resolve_memory_exhaustion(
         Some(code) if code != 0 => {}
         _ => return None,
     }
-    if let Some(marker) = detect_memory_marker(log_tail) {
+    let (main_oom, daemon_restart) = crate::exit_evidence::from_log(log_tail);
+    if daemon_restart {
+        return None;
+    }
+    if let Some(marker) = detect_memory_marker(log_tail)
+        .filter(|m| !m.reason.contains("kernel-oom-killer") || main_oom)
+    {
         return Some(MemoryExhaustion {
             memory_exhausted: true,
             memory_exhausted_reason: marker.line,
         });
     }
-    if oom_killed == Some(true) && is_oom_kill_of_command(exit_code, oom_killed, None) {
+    let main_oom = main_oom && exit_code.is_some_and(|code| code == 137 || code < 0);
+    if oom_killed == Some(true) && main_oom {
         return Some(MemoryExhaustion {
             memory_exhausted: true,
             memory_exhausted_reason: "Docker reported State.OOMKilled=true".to_string(),
         });
     }
     let kills = oom_kills.unwrap_or(0);
-    if kills > 0 && is_oom_kill_of_command(exit_code, None, oom_kills) {
+    if kills > 0 && main_oom {
         return Some(MemoryExhaustion {
             memory_exhausted: true,
             memory_exhausted_reason: format!("cgroup memory.events reported oom_kill={}", kills),
@@ -192,16 +199,9 @@ pub fn is_oom_kill_of_command(
     oom_killed: Option<bool>,
     oom_kills: Option<u64>,
 ) -> bool {
-    let observed = oom_killed == Some(true) || oom_kills.unwrap_or(0) > 0;
-    if !observed {
-        return false;
-    }
-    match exit_code {
-        None => true,
-        Some(code) => {
-            code < 0 || signal_name_for_exit_code(Some(code)).as_deref() == Some("SIGKILL")
-        }
-    }
+    // Without attempt-scoped evidence this legacy signature cannot attribute OOM.
+    let _ = (exit_code, oom_killed, oom_kills);
+    false
 }
 
 /// Text used wherever a fact could not be observed at all.
@@ -273,15 +273,32 @@ pub fn resolve_exit_reason(
     oom_killed: Option<bool>,
     oom_kills: Option<u64>,
 ) -> Option<String> {
-    if let Some(reason) = detect_exit_reason(log_tail) {
+    let (main_oom, daemon_restart) = crate::exit_evidence::from_log(log_tail);
+    if daemon_restart {
+        return Some("killed (docker daemon restart)".into());
+    }
+    if let Some(reason) =
+        detect_exit_reason(log_tail).filter(|r| !r.contains("kernel-oom-killer") || main_oom)
+    {
         return Some(reason);
     }
 
-    if is_oom_kill_of_command(exit_code, oom_killed, oom_kills) {
+    let _ = (oom_killed, oom_kills);
+    if main_oom && exit_code.is_none_or(|code| code < 0 || code == 137) {
         return Some(CGROUP_OOM_EXIT_REASON.to_string());
     }
 
-    signal_name_for_exit_code(exit_code).map(|name| format!("signal ({})", name))
+    signal_name_for_exit_code(exit_code).map(|name| {
+        format!(
+            "signal ({}{})",
+            name,
+            if name == "SIGKILL" {
+                "; cause unknown"
+            } else {
+                ""
+            }
+        )
+    })
 }
 
 #[cfg(test)]
@@ -387,8 +404,13 @@ mod tests {
 
     #[test]
     fn memory_exhaustion_falls_back_to_the_container_flag() {
-        let observed = resolve_memory_exhaustion(Some(137), Some("no marker"), Some(true), None)
-            .expect("observed");
+        let observed = resolve_memory_exhaustion(
+            Some(137),
+            Some(crate::exit_evidence::MAIN_OOM),
+            Some(true),
+            None,
+        )
+        .expect("observed");
         assert_eq!(
             observed.memory_exhausted_reason,
             "Docker reported State.OOMKilled=true"
@@ -402,7 +424,12 @@ mod tests {
     #[test]
     fn falls_back_to_cgroup_observation_then_signal() {
         assert_eq!(
-            resolve_exit_reason(Some(137), None, Some(true), None),
+            resolve_exit_reason(
+                Some(137),
+                Some(crate::exit_evidence::MAIN_OOM),
+                Some(true),
+                None
+            ),
             Some("memory-exhaustion (cgroup-oom-killer)".to_string())
         );
         assert_eq!(

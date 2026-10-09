@@ -100,9 +100,11 @@ function runWatcher({ policy, running, state, withLog = true }) {
     [
       '#!/bin/sh',
       `dir='${dir}'`,
+      '[ "$START_COMMAND_CGROUP_SAMPLING" = 1 ] && exit 1',
       'case "$1" in',
       '  inspect)',
       '    case "$3" in',
+      '      *HostConfig*) exit 1 ;;',
       '      *State.Running*)',
       '        answer=$(head -n 1 "$dir/running")',
       '        if [ "$(wc -l < "$dir/running")" -gt 1 ]; then',
@@ -173,7 +175,7 @@ describe('issue #174: docker logs -f returning is not the container exiting', ()
     });
 
     expect(run.status).toBe(0);
-    expect(run.calls).toContain('wait');
+    expect(run.calls).toContain('inspect-running false');
     expect(run.calls.indexOf('wait')).toBeGreaterThan(
       run.calls.indexOf('logs')
     );

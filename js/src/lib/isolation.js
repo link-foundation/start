@@ -547,6 +547,23 @@ function runInDocker(command, options = {}) {
     });
   }
 
+  if (!options.resolvedLimits) {
+    try {
+      Object.assign(
+        options,
+        require('./docker-resource-options').resolveResourceOptions(
+          options,
+          require('./execution-control').runCommand
+        )
+      );
+    } catch (error) {
+      return Promise.resolve({
+        success: false,
+        containerName: null,
+        message: error.message,
+      });
+    }
+  }
   const containerName = options.session || generateSessionName('docker');
   const containerExistedBeforeLaunch =
     readDockerContainerStatus(containerName) !== null;
@@ -665,7 +682,7 @@ function runInDocker(command, options = {}) {
           cleanupPolicy,
           options.logPath,
           options.executionId || null,
-          { recoverOnKill: Boolean(options.onKillResume) }
+          { recoverOnKill: Boolean(options.onKillResume), cpuOptions: options }
         );
       }
 
@@ -745,9 +762,14 @@ function runInDocker(command, options = {}) {
         const launchArgs = needsNetworkSetup
           ? ['start', '-a', '-i', containerName]
           : dockerArgs;
+        const diagnostics =
+          require('./attached-diagnostics').startAttachedDiagnostics(
+            containerName,
+            options
+          );
         const child = spawnAttachedDocker(launchArgs, options.logPath);
 
-        child.on('exit', (code) => {
+        child.on('exit', async (code) => {
           const durationMs = Date.now() - startTime;
           const exitCode = code ?? 1;
           let message = `Docker container "${containerName}" exited with code ${exitCode}`;
@@ -762,6 +784,7 @@ function runInDocker(command, options = {}) {
           }
 
           const dockerState = readDockerContainerState(containerName);
+          const diagnosticFacts = await diagnostics.finish(dockerState);
           const oomKilled = dockerState ? dockerState.oomKilled : null;
           const postMortem = (removed) =>
             recordAttachedDockerPostMortem({
@@ -806,12 +829,14 @@ function runInDocker(command, options = {}) {
           resolve({
             success: exitCode === 0,
             containerName,
+            diagnostics: diagnosticFacts,
             message,
             exitCode,
           });
         });
 
-        child.on('error', (err) => {
+        child.on('error', async (err) => {
+          await diagnostics.finish(null);
           resolve({
             success: false,
             containerName,

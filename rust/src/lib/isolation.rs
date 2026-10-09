@@ -22,6 +22,7 @@ use crate::docker_network_lifecycle::{connect_and_start, create_and_connect};
 /// Result of an isolation run
 #[derive(Debug, Default, Clone)]
 pub struct IsolationResult {
+    pub diagnostics: Option<crate::attached_diagnostics::DiagnosticFacts>,
     /// Whether the run succeeded
     pub success: bool,
     /// Session or container name
@@ -59,6 +60,7 @@ pub struct IsolationOptions {
     pub network_aliases: Vec<String>,
     /// Docker resource limits in `--flag=value` form (issue #176)
     pub resource_limits: Vec<String>,
+    pub cpu_penalty_config: Option<crate::cpu_penalty::Config>,
     /// Resume up to N times when the docker main process is killed (issue #176)
     pub on_kill_resume: Option<u32>,
     /// Command run in the same container on such a resume (issue #176)
@@ -103,6 +105,7 @@ impl Default for IsolationOptions {
             networks: Vec::new(),
             network_aliases: Vec::new(),
             resource_limits: Vec::new(),
+            cpu_penalty_config: None,
             on_kill_resume: None,
             recovery_command: None,
             endpoint: None,
@@ -704,6 +707,9 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                     );
                 }
 
+                if options.execution_id.is_none() {
+                    crate::cpu_penalty_monitor::spawn_standalone(&container_name, options);
+                }
                 let mut message = format!(
                     "Command started in detached docker container: {}",
                     container_name
@@ -803,6 +809,8 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         }
 
         let start_args = ["start", "-a", "-i", &container_name];
+        let diagnostics =
+            crate::attached_diagnostics::AttachedDiagnostics::start(&container_name, options);
         let child = if needs_network_setup {
             spawn_attached_docker(&start_args, options.log_path.as_ref())
         } else {
@@ -812,6 +820,8 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         match child {
             Ok(child) => match child.wait() {
                 Ok(s) => {
+                    let diagnostic_facts =
+                        diagnostics.finish(&container_name, options.log_path.as_ref());
                     let exit_code = s.code().unwrap_or(1);
                     let mut message = format!(
                         "Docker container \"{}\" exited with code {}",
@@ -827,6 +837,7 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                     );
 
                     IsolationResult {
+                        diagnostics: Some(diagnostic_facts),
                         success: s.success(),
                         session_name: Some(container_name.clone()),
                         message,
@@ -834,19 +845,25 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                         ..Default::default()
                     }
                 }
-                Err(e) => IsolationResult {
+                Err(e) => {
+                    diagnostics.finish(&container_name, options.log_path.as_ref());
+                    IsolationResult {
+                        success: false,
+                        session_name: Some(container_name),
+                        message: format!("Failed to wait for docker: {}", e),
+                        ..Default::default()
+                    }
+                }
+            },
+            Err(e) => {
+                diagnostics.finish(&container_name, options.log_path.as_ref());
+                IsolationResult {
                     success: false,
                     session_name: Some(container_name),
-                    message: format!("Failed to wait for docker: {}", e),
+                    message: format!("Failed to start docker: {}", e),
                     ..Default::default()
-                },
-            },
-            Err(e) => IsolationResult {
-                success: false,
-                session_name: Some(container_name),
-                message: format!("Failed to start docker: {}", e),
-                ..Default::default()
-            },
+                }
+            }
         }
     }
 }

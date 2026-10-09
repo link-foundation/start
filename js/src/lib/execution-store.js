@@ -24,6 +24,7 @@ const path = require('path');
 const os = require('os');
 const { execFileSync, spawnSync } = require('child_process');
 const crypto = require('crypto');
+const { atomicWrite } = require('./atomic-write');
 
 // Synchronous wrapper using Bun's native ESM support
 // This works because Bun handles ESM/CJS interop
@@ -51,8 +52,7 @@ const DEFAULT_APP_FOLDER = path.join(os.homedir(), '.start-command');
 const LINO_DB_FILE = 'executions.lino';
 const LINKS_DB_FILE = 'executions.links';
 const LOCK_FILE = 'executions.lock';
-const LOCK_TIMEOUT_MS = 30000; // 30 second timeout for lock acquisition
-const LOCK_STALE_MS = 60000; // Consider lock stale after 60 seconds
+const { LockManager } = require('./store-lock');
 
 /**
  * Execution status enumeration
@@ -128,6 +128,7 @@ class ExecutionRecord {
     this.shell = options.shell || process.env.SHELL || '/bin/sh';
     this.platform = options.platform || process.platform;
     this.options = options.options || {};
+    this.cpuPenalty = options.cpuPenalty;
   }
 
   /**
@@ -154,6 +155,9 @@ class ExecutionRecord {
       startTime: this.startTime,
       endTime: this.endTime,
     };
+    if (this.cpuPenalty) {
+      obj.cpuPenalty = this.cpuPenalty;
+    }
     if (this.attempt) {
       obj.attempt = this.attempt;
     }
@@ -207,123 +211,6 @@ class ExecutionRecord {
    */
   static fromObject(obj) {
     return new ExecutionRecord(obj);
-  }
-}
-
-/**
- * File-based lock manager
- */
-class LockManager {
-  constructor(lockFilePath) {
-    this.lockFilePath = lockFilePath;
-    this.lockAcquired = false;
-  }
-
-  /**
-   * Acquire an exclusive lock
-   * @param {number} timeout - Maximum time to wait for lock in ms
-   * @returns {boolean} True if lock acquired
-   */
-  acquire(timeout = LOCK_TIMEOUT_MS) {
-    const startTime = Date.now();
-
-    while (Date.now() - startTime < timeout) {
-      try {
-        // Check if existing lock is stale
-        if (fs.existsSync(this.lockFilePath)) {
-          const lockData = this.readLockFile();
-          if (lockData && this.isLockStale(lockData)) {
-            // Remove stale lock
-            fs.unlinkSync(this.lockFilePath);
-          }
-        }
-
-        // Try to create lock file exclusively
-        const lockData = {
-          pid: process.pid,
-          timestamp: Date.now(),
-          hostname: os.hostname(),
-        };
-
-        fs.writeFileSync(this.lockFilePath, JSON.stringify(lockData), {
-          flag: 'wx', // Fail if file exists
-        });
-
-        this.lockAcquired = true;
-        return true;
-      } catch (err) {
-        if (err.code === 'EEXIST') {
-          // Lock file exists, wait and retry
-          this.sleep(100);
-          continue;
-        }
-        throw err;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Release the lock
-   */
-  release() {
-    if (this.lockAcquired) {
-      try {
-        fs.unlinkSync(this.lockFilePath);
-      } catch {
-        // Ignore errors during release
-      }
-      this.lockAcquired = false;
-    }
-  }
-
-  /**
-   * Read lock file data
-   */
-  readLockFile() {
-    try {
-      const content = fs.readFileSync(this.lockFilePath, 'utf8');
-      return JSON.parse(content);
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Check if lock is stale
-   */
-  isLockStale(lockData) {
-    if (!lockData || !lockData.timestamp) {
-      return true;
-    }
-
-    // Check if lock is too old
-    if (Date.now() - lockData.timestamp > LOCK_STALE_MS) {
-      return true;
-    }
-
-    // Check if the process that holds the lock is still running
-    if (lockData.pid && lockData.hostname === os.hostname()) {
-      try {
-        process.kill(lockData.pid, 0); // Signal 0 just checks if process exists
-        return false; // Process exists, lock is valid
-      } catch {
-        return true; // Process doesn't exist, lock is stale
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Simple sleep function
-   */
-  sleep(ms) {
-    const end = Date.now() + ms;
-    while (Date.now() < end) {
-      // Busy wait (not ideal but works for short durations)
-    }
   }
 }
 
@@ -412,7 +299,7 @@ class ExecutionStore {
   writeLinoRecords(records) {
     const data = records.map((r) => r.toObject());
     const content = encodeSync(data);
-    fs.writeFileSync(this.linoDbPath, content, 'utf8');
+    atomicWrite(this.linoDbPath, content);
     this.log(`Wrote ${records.length} records to lino file`);
   }
 
@@ -529,7 +416,7 @@ class ExecutionStore {
    * @param {ExecutionRecord} record
    * @returns {boolean}
    */
-  save(record) {
+  save(record, previous = null) {
     const lock = new LockManager(this.lockFilePath);
 
     if (!lock.acquire()) {
@@ -542,6 +429,16 @@ class ExecutionStore {
 
       // Find existing record index
       const existingIndex = records.findIndex((r) => r.uuid === record.uuid);
+      if (previous) {
+        const current = records[existingIndex];
+        if (
+          !current ||
+          require('./launch-owner').hasActiveLaunch(current) ||
+          (current.attempt?.number || 0) !== (previous.attempt?.number || 0)
+        ) {
+          throw new Error('A different resume already reserved this execution');
+        }
+      }
 
       if (existingIndex >= 0) {
         // Update existing record
@@ -563,6 +460,10 @@ class ExecutionStore {
     } finally {
       lock.release();
     }
+  }
+
+  reserveLaunch(record, previous) {
+    return this.save(record, previous);
   }
 
   // Merge watcher metadata under the database lock without replacing terminal state.
@@ -689,6 +590,9 @@ class ExecutionStore {
     const staleRecords = [];
 
     for (const record of executingRecords) {
+      if (require('./launch-owner').hasActiveLaunch(record)) {
+        continue;
+      }
       let isStale = false;
       let reason = '';
 

@@ -275,10 +275,13 @@ function buildAttachedDockerKeptMessage({
   oomKilled,
   logPath,
 }) {
+  const logTail = logPath
+    ? readLogTail(logPath, FATAL_MARKER_TAIL_BYTES)
+    : null;
   let message;
   if (oomKilled !== true) {
     message = `\nContainer kept because the command failed.`;
-  } else if (isOomKillOfCommand({ exitCode, oomKilled })) {
+  } else if (isOomKillOfCommand({ exitCode, oomKilled, logTail })) {
     message = `\nContainer kept because Docker reports it was OOM-killed.`;
   } else {
     // The flag is container-wide (#180): a child was OOM-killed, the command
@@ -287,7 +290,7 @@ function buildAttachedDockerKeptMessage({
   }
   const memory = resolveMemoryExhaustion({
     exitCode,
-    logTail: logPath ? readLogTail(logPath, FATAL_MARKER_TAIL_BYTES) : null,
+    logTail,
     oomKilled,
   });
   if (memory) {
@@ -360,7 +363,17 @@ function buildDetachedDockerCompletionScript(
   const quotedName = shellQuote(containerName);
   // The container's cgroup disappears with it, so its memory counters are
   // sampled while it runs (issue #182).
+  const cpuMonitor = require('./cpu-penalty-monitor');
   const parts = [buildCgroupSamplerStartSnippet(containerName)];
+  const cpuStart = cpuMonitor.startSnippet(
+    executionId,
+    containerName,
+    watcherOptions.attemptNumber || 1,
+    watcherOptions.cpuOptions
+  );
+  if (cpuStart) {
+    parts.push(cpuStart);
+  }
   // Everything that assumes the container has exited: cleanup, footer and
   // finalization. Guarded as a whole by `.State.Running` below.
   const exited = [];
@@ -393,8 +406,15 @@ function buildDetachedDockerCompletionScript(
       );
     }
     parts.push(buildDockerWaitForExitSnippet(containerName, quotedLogPath));
+    parts.push(cpuMonitor.stopSnippet());
     parts.push(buildCgroupSamplerStopSnippet());
     parts.push(buildDockerStateSnippet(containerName));
+    parts.push(
+      require('./exit-evidence').buildExitEvidenceSnippet(
+        containerName,
+        quotedLogPath
+      )
+    );
     if (policy === DOCKER_CONTAINER_CLEANUP_POLICY.ALWAYS) {
       exited.push(remove);
     } else if (
@@ -414,6 +434,7 @@ function buildDetachedDockerCompletionScript(
   } else {
     parts.push(`docker wait ${quotedName} >/dev/null 2>&1`);
     parts.push(buildDockerWaitForExitSnippet(containerName));
+    parts.push(cpuMonitor.stopSnippet());
     parts.push(buildCgroupSamplerStopSnippet());
     parts.push(buildDockerStateSnippet(containerName));
     if (policy === DOCKER_CONTAINER_CLEANUP_POLICY.ALWAYS) {

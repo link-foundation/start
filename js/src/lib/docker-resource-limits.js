@@ -200,8 +200,36 @@ function buildResourceLimitsStatusLine(value) {
     : null;
 }
 
+/** Preserve Docker's CPU representation: an existing quota cannot become NanoCPUs in place. */
+function cpuCount(limits) {
+  const get = (prefix) =>
+    positive(limits.find((s) => s.startsWith(prefix))?.slice(prefix.length));
+  return (
+    get('--cpus=') ||
+    (get('--cpu-quota=')
+      ? get('--cpu-quota=') / (get('--cpu-period=') || 100000)
+      : null)
+  );
+}
+function cpuUpdateArgs(limits, cpus) {
+  return !limits.some((s) => s.startsWith('--cpus=')) &&
+    limits.some((s) => /^--cpu-(quota|period)=/.test(s))
+    ? ['--cpu-period=100000', `--cpu-quota=${Math.ceil(cpus * 100000)}`]
+    : ['--cpus', String(cpus)];
+}
+function withCpuLimit(limits, cpus) {
+  const args = cpuUpdateArgs(limits, cpus);
+  return [
+    ...limits.filter((s) => !/^--(?:cpus|cpu-quota|cpu-period)=/.test(s)),
+    ...(args[0] === '--cpus' ? [`--cpus=${args[1]}`] : args),
+  ];
+}
+
 module.exports = {
   DEFAULT_SHM_SIZE,
+  cpuCount,
+  cpuUpdateArgs,
+  withCpuLimit,
   buildResourceLimitsStatusLine,
   formatDockerBytes,
   formatDockerCpus,

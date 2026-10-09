@@ -103,6 +103,14 @@ pub struct WrapperOptions {
     pub recovery_command: Option<String>,
     /// Random `<min>[-<max>]` seconds to wait before each such resume (issue #181)
     pub on_kill_resume_delay: Option<String>,
+    pub cpu_penalty: bool,
+    pub cpu_penalty_config: Option<crate::cpu_penalty::Config>,
+    pub memory: Option<String>,
+    pub memory_swap: Option<String>,
+    pub cpus: Option<String>,
+    pub on_kill_resume_memory: Option<String>,
+    pub resource_limits: Vec<String>,
+    pub resolved_limits: serde_json::Value,
     /// SSH endpoint (e.g., user@host)
     pub endpoint: Option<String>,
     /// Create isolated user
@@ -172,6 +180,14 @@ impl Default for WrapperOptions {
             on_kill_resume: None,
             recovery_command: None,
             on_kill_resume_delay: None,
+            cpu_penalty: false,
+            cpu_penalty_config: None,
+            memory: None,
+            memory_swap: None,
+            cpus: None,
+            on_kill_resume_memory: None,
+            resource_limits: Vec::new(),
+            resolved_limits: serde_json::json!({}),
             endpoint: None,
             user: false,
             user_name: None,
@@ -566,6 +582,14 @@ fn parse_option(
         return Ok(1);
     }
 
+    let cpu_consumed = crate::cpu_penalty::parse(args, index, options)?;
+    if cpu_consumed > 0 {
+        return Ok(cpu_consumed);
+    }
+    let resource_consumed = crate::docker_resource_options::parse(args, index, options)?;
+    if resource_consumed > 0 {
+        return Ok(resource_consumed);
+    }
     // Launch-time kill recovery (--on-kill-resume, --recovery-command)
     let recovery_consumed = parse_docker_recovery_option(args, index, options)?;
     if recovery_consumed > 0 {
@@ -730,6 +754,8 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
 
     // Query/control option combinations (--status, --attach, --resume, ...)
     validate_query_options(options)?;
+    crate::docker_resource_options::validate(options)?;
+    crate::cpu_penalty::validate(options)?;
 
     // Validate shell option
     if !VALID_SHELLS.contains(&options.shell.as_str()) {

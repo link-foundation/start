@@ -403,9 +403,11 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
             error: normalize_container_error(&facts.container_error),
         })
     ));
-    if let Some(line) = format_cgroup_memory_log_line(&facts.cgroup_memory) {
-        log(&format!("{}\n", line));
-    }
+    let memory_line = format_cgroup_memory_log_line(&facts.cgroup_memory).unwrap_or_else(|| {
+        let limit = runner.run(&docker_command().to_string_lossy(), &["inspect".into(),"-f".into(),"{{.HostConfig.Memory}}".into(),container_name.clone()]);
+        format!("Memory:     unavailable (local cgroup hidden; remote sampling requires private cgroup namespace and sh) memory.limit={} (HostConfig)", if limit.success {limit.stdout.trim()} else {"unknown"})
+    });
+    log(&format!("{}\n", memory_line));
     let recovery_command = option_str(&record, "recoveryCommand").map(str::to_string);
     log(&format_recovery_separator(&RecoverySeparator {
         attempt,
@@ -441,7 +443,60 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
     // Docker keeps `docker update` limits in the HostConfig across restarts;
     // they are read back so the log and `--status` show what the resumed run
     // is held to, and so a later relaunch can re-apply them.
-    let resource_limits = read_docker_resource_limits(&container_name, runner).unwrap_or_default();
+    let mut resource_limits = crate::resume_resources::restore_base_cpu(
+        read_docker_resource_limits(&container_name, runner).unwrap_or_else(|| {
+            crate::docker_resource_limits::normalize_resource_limits(
+                record.options.get("resourceLimits"),
+            )
+        }),
+        &record,
+    );
+    if record.options.contains_key("cpuPenaltyConfig") {
+        resource_limits =
+            match crate::resume_resources::clamp_cpu_to_daemon(resource_limits, runner) {
+                Ok(limits) => limits,
+                Err(error) => return give_up(error),
+            };
+    }
+    let tail = crate::execution_attempt::read_attempt_log_tail(
+        &record,
+        crate::isolation::isolation_log::FATAL_MARKER_TAIL_BYTES,
+    );
+    let (_, daemon_restart) = crate::exit_evidence::from_log(tail.as_deref());
+    let terminal_oom = !daemon_restart
+        && facts.oom_killed == "true"
+        && crate::exit_evidence::recent_oom_delta(&facts.cgroup_memory, &facts.finished_at);
+    let memory_spec = option_str(&record, "onKillResumeMemory").map(str::to_string);
+    let recovery_limits = if terminal_oom {
+        memory_spec.as_ref().map(|spec| {
+            crate::docker_resource_options::resolve(
+                &json!({"memory":spec}),
+                &resource_limits,
+                runner,
+                crate::docker_resource_options::random_fraction,
+            )
+        })
+    } else {
+        None
+    };
+    let resolved = match recovery_limits {
+        Some(Ok((limits, values))) => {
+            log(&format!(
+                "Recovery memory limit: {} -> {} ({})\n",
+                resource_limits
+                    .iter()
+                    .find(|s| s.starts_with("--memory="))
+                    .map(String::as_str)
+                    .unwrap_or("unlimited"),
+                values["memory"],
+                memory_spec.as_deref().unwrap_or("")
+            ));
+            resource_limits = limits;
+            Some(values)
+        }
+        Some(Err(error)) => return give_up(format!("recovery limit failed: {}", error)),
+        None => None,
+    };
     if let Some(line) = build_resource_limits_status_line(&resource_limits) {
         log(&format!("{}\n", line));
     }
@@ -466,23 +521,6 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
         lifecycle.attempt = Some(attempt.clone());
         crate::execution_attempt::append_lifecycle(&lifecycle, "resume-started", json!({}));
     }
-    let started = runner.run(
-        &docker_command().to_string_lossy(),
-        &["start".to_string(), container_name.clone()],
-    );
-    if !started.success {
-        if let Some(attempt) = next_attempt.as_ref() {
-            let mut lifecycle = record.clone();
-            lifecycle.attempt = Some(attempt.clone());
-            crate::execution_attempt::append_lifecycle(
-                &lifecycle,
-                "launch-failed",
-                json!({"error": failure_detail(&started)}),
-            );
-        }
-        return give_up(format!("docker start failed: {}", failure_detail(&started)));
-    }
-
     let described = describe_exit_code_str(&facts.exit_code);
     if let Some(attempt) = next_attempt.as_mut() {
         record.status = ExecutionStatus::Executed;
@@ -492,7 +530,7 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
         record.oom_killed = oom_killed;
         record.cgroup_memory = parse_cgroup_memory_sample(&facts.cgroup_memory);
         crate::execution_attempt::archive_attempt(&mut record);
-        attempt.launch_accepted_at = Some(Utc::now().to_rfc3339());
+
         record.attempt = Some(attempt.clone());
     }
     let mut history = record
@@ -531,6 +569,25 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
         since
     )));
     let options = &mut record.options;
+    if let Some(values) = &resolved {
+        let mut combined = options
+            .get("resolvedLimits")
+            .filter(|v| v.is_object())
+            .cloned()
+            .unwrap_or_else(|| json!({}));
+        for (k, v) in values.as_object().unwrap() {
+            combined[k] = v.clone();
+        }
+        options.insert("resolvedLimits".into(), combined);
+        let mut specs = options
+            .get("resourceLimitSpecs")
+            .filter(|v| v.is_object())
+            .cloned()
+            .unwrap_or_else(|| json!({}));
+        specs["memory"] = json!(memory_spec);
+        options.insert("resourceLimitSpecs".into(), specs);
+    }
+    options.remove("exitEvidence");
     options.insert("recoveryAttempts".to_string(), json!(attempt));
     options.insert("recoveryHistory".to_string(), Value::Array(history));
     options.insert("lastRecoveryAt".to_string(), json!(since));
@@ -538,7 +595,7 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
         options.insert("lastRecoveryDelayMs".to_string(), json!(delay_ms));
     }
     if !resource_limits.is_empty() {
-        options.insert("resourceLimits".to_string(), json!(resource_limits));
+        options.insert("resourceLimits".to_string(), json!(&resource_limits));
     }
     record.status = ExecutionStatus::Executing;
     record.exit_code = None;
@@ -552,9 +609,72 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
     record.observed_at = None;
     record.stale_detected_at = None;
     record.container_started_at = None;
-    // The container is already running again; even if the save fails, the new
-    // watcher still follows it and finalizes the record when it ends.
-    let _ = store.save(&record);
+    let previous = store.get(execution_id).unwrap_or_else(|| record.clone());
+    crate::launch_owner::mark_launch(&mut record);
+    if let Err(error) = store.reserve_launch(&record, &previous) {
+        return give_up(format!("launch reservation failed: {}", error));
+    }
+    if resolved.is_some() || record.options.contains_key("cpuPenaltyConfig") {
+        let mut args = vec!["update".into()];
+        args.extend(
+            resource_limits
+                .iter()
+                .filter(|s| {
+                    [
+                        "--memory=",
+                        "--memory-swap=",
+                        "--cpus=",
+                        "--cpu-quota=",
+                        "--cpu-period=",
+                    ]
+                    .iter()
+                    .any(|f| s.starts_with(f))
+                })
+                .cloned(),
+        );
+        args.push(container_name.clone());
+        let updated = runner.run(&docker_command().to_string_lossy(), &args);
+        if !updated.success {
+            let _ = store.save(&previous);
+            return give_up(format!(
+                "docker update failed: {}",
+                failure_detail(&updated)
+            ));
+        }
+    }
+    let started = runner.run(
+        &docker_command().to_string_lossy(),
+        &["start".to_string(), container_name.clone()],
+    );
+    if !started.success {
+        if let Some(attempt) = next_attempt.as_ref() {
+            let mut lifecycle = record.clone();
+            lifecycle.attempt = Some(attempt.clone());
+            crate::execution_attempt::append_lifecycle(
+                &lifecycle,
+                "launch-failed",
+                json!({"error": failure_detail(&started)}),
+            );
+        }
+        let _ = store.save(&previous);
+        return give_up(format!("docker start failed: {}", failure_detail(&started)));
+    }
+
+    if record.options.contains_key("cpuPenaltyConfig") {
+        let mut resolved = record
+            .options
+            .get("resolvedLimits")
+            .filter(|v| v.is_object())
+            .cloned()
+            .unwrap_or(json!({}));
+        resolved["cpus"] = json!(crate::docker_resource_limits::cpu_count(&resource_limits));
+        record.options.insert("resolvedLimits".into(), resolved);
+    }
+    record.options.insert("launchPending".into(), json!(false));
+    if let Some(attempt) = record.attempt.as_mut() {
+        attempt.launch_accepted_at = Some(Utc::now().to_rfc3339());
+    }
+    let persistence_error = store.save(&record).err();
 
     if next_attempt.is_some() {
         crate::execution_attempt::append_lifecycle(&record, "launch-accepted", json!({}));
@@ -568,7 +688,7 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
             attempt_number: next_attempt.as_ref().map(|attempt| attempt.number),
         },
     );
-    if let Some(attempt) = next_attempt {
+    if let Some(attempt) = next_attempt.filter(|_| persistence_error.is_none()) {
         if let Ok(Some(current)) = store.patch_attempt(
             &record.uuid,
             attempt.number,
@@ -576,6 +696,24 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
         ) {
             crate::execution_attempt::append_lifecycle(&current, "watcher-attached", json!({}));
         }
+    }
+    if let Some(error) = persistence_error {
+        let stopped = runner.run(
+            &docker_command().to_string_lossy(),
+            &["stop".into(), container_name.clone()],
+        );
+        if stopped.success {
+            record.status = ExecutionStatus::Executed;
+            record.exit_code = Some(-1);
+            record.end_time = Some(Utc::now().to_rfc3339());
+            record.options.insert("launchPending".into(), json!(false));
+            let _ = store.save(&record);
+        }
+        let warning = json!({"code": "LAUNCH_PERSISTENCE_FAILED", "uuid": execution_id,
+            "containerName": container_name, "running": !stopped.success, "error": error})
+        .to_string();
+        log(&format!("[Recovery] {}\n", warning));
+        return RecoveryOutcome::not(&warning);
     }
     RecoveryOutcome {
         recovered: true,

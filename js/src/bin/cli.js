@@ -241,6 +241,18 @@ const sessionId = wrapperOptions.sessionId || generateUUID();
     process.exit(queryExitCode === null ? 0 : queryExitCode);
   }
 
+  if (wrapperOptions.isolated === 'docker') {
+    const {
+      resolveResourceOptions,
+    } = require('../lib/docker-resource-options');
+    Object.assign(
+      wrapperOptions,
+      resolveResourceOptions(
+        wrapperOptions,
+        require('../lib/execution-control').runCommand
+      )
+    );
+  }
   // Check if running in isolation mode or with user isolation
   if (hasIsolation(wrapperOptions) || wrapperOptions.user) {
     await runWithIsolation(
@@ -419,14 +431,21 @@ async function runWithIsolation(
   // Save initial execution record and set global reference for signal cleanup
   if (executionRecord && store) {
     currentExecutionRecord = executionRecord;
+    require('../lib/launch-owner').markLaunch(executionRecord);
     try {
       store.save(executionRecord);
     } catch (err) {
-      if (config.verbose) {
-        console.error(
-          `[Tracking] Warning: Could not save execution record: ${err.message}`
-        );
-      }
+      console.error(
+        JSON.stringify({
+          code: 'LAUNCH_RESERVATION_FAILED',
+          uuid: executionRecord.uuid,
+          containerName: sessionName,
+          error: err.message,
+        })
+      );
+      currentExecutionRecord = null;
+      process.exitCode = 1;
+      return 1;
     }
   }
 
@@ -458,6 +477,7 @@ async function runWithIsolation(
     // Note: Isolation environments currently use native spawn/execSync
     // Future: Add command-stream support with raw() function for multiplexers
     result = await runIsolated(environment, cmd, {
+      ...options,
       session: sessionName,
       image: effectiveImage,
       endpoint: options.endpoint,
@@ -502,6 +522,11 @@ async function runWithIsolation(
 
   // Update execution record: detached keeps "executing" (resolved at query time)
   if (executionRecord && store) {
+    executionRecord.options.launchPending = false;
+    if (result.diagnostics) {
+      executionRecord.cgroupMemory = result.diagnostics.cgroupMemory;
+      executionRecord.options.exitEvidence = result.diagnostics.exitEvidence;
+    }
     if (result.containerId) {
       executionRecord.options.containerId = result.containerId;
     }
@@ -515,11 +540,22 @@ async function runWithIsolation(
           : executionRecord
       );
     } catch (err) {
-      if (config.verbose) {
+      if (environment === 'docker' && mode === 'detached' && result.success) {
         console.error(
-          `[Tracking] Warning: Could not update execution record: ${err.message}`
+          require('../lib/launch-persistence').failLaunchedPersistence(
+            store,
+            executionRecord,
+            require('../lib/execution-control').runCommand,
+            err
+          )
         );
+        currentExecutionRecord = null;
+        process.exitCode = 1;
+        return 1;
       }
+      console.error(
+        `[Tracking] Could not update execution record: ${err.message}`
+      );
     }
     currentExecutionRecord = null;
   }

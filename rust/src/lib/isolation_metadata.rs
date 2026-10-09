@@ -70,6 +70,12 @@ pub fn docker_runtime_status_lines_for_options(options: &WrapperOptions) -> Vec<
         &options.networks,
         &options.network_aliases,
     );
+    if let Some(line) = crate::docker_resource_options::log_line(
+        &crate::docker_resource_options::specs(options),
+        &options.resolved_limits,
+    ) {
+        lines.push(line);
+    }
     lines.extend(recovery_status_lines_with_delay(
         options.on_kill_resume,
         options.recovery_command.as_deref(),
@@ -243,6 +249,25 @@ pub fn build_isolation_options_map(
         options.on_kill_resume_delay.as_deref(),
     )) {
         opts_map.insert(k, v);
+    }
+    if let Some(config) = &options.cpu_penalty_config {
+        opts_map.insert("cpuPenaltyConfig".into(), serde_json::json!(config));
+        opts_map.insert(
+            "baseResourceLimits".into(),
+            serde_json::json!(options.resource_limits),
+        );
+    }
+    opts_map.insert(
+        "resourceLimits".into(),
+        serde_json::json!(options.resource_limits),
+    );
+    opts_map.insert("resolvedLimits".into(), options.resolved_limits.clone());
+    opts_map.insert(
+        "resourceLimitSpecs".into(),
+        crate::docker_resource_options::specs(options),
+    );
+    if let Some(value) = &options.on_kill_resume_memory {
+        opts_map.insert("onKillResumeMemory".into(), serde_json::json!(value));
     }
     if let Some(v) = &options.endpoint {
         opts_map.insert("endpoint".to_string(), str_val(v));

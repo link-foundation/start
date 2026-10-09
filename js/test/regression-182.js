@@ -285,9 +285,13 @@ describe('issue #182: the watcher samples the cgroup while the container runs', 
       timeout: 20000,
     });
     expect(result.status).toBe(0);
-    expect(fs.readFileSync(path.join(host.dir, 'sample'), 'utf8')).toBe(
-      OOM_SAMPLE
-    );
+    expect(
+      fs
+        .readFileSync(path.join(host.dir, 'sample'), 'utf8')
+        .split(' ')
+        .slice(0, 4)
+        .join(' ')
+    ).toBe(OOM_SAMPLE);
     expect(fs.readFileSync(logPath, 'utf8')).toBe(
       `${formatCgroupMemoryLogLine(OOM_SAMPLE)}\n`
     );

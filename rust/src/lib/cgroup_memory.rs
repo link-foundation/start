@@ -95,52 +95,16 @@ pub struct CgroupMemory {
 /// unrelated local cgroup. `START_COMMAND_CGROUP_ROOT` and
 /// `START_COMMAND_PROC_ROOT` replace `/sys/fs/cgroup` and `/proc` (tests).
 pub fn build_cgroup_functions_snippet() -> String {
-    [
-        concat!(
-            "__start_command_cgroup_dir() { __scd_id=$(docker inspect -f '{{.Id}}' \"$1\" 2>/dev/null); ",
-            "[ -n \"$__scd_id\" ] || return 1; ",
-            "__scd_pid=$(docker inspect -f '{{.State.Pid}}' \"$1\" 2>/dev/null); __scd_rel=''; ",
-            "case \"$__scd_pid\" in ''|0|*[!0-9]*) ;; ",
-            "*) __scd_rel=$(sed -n 's/^0:://p' \"${START_COMMAND_PROC_ROOT:-/proc}/$__scd_pid/cgroup\" 2>/dev/null);; esac; ",
-            "__scd_root=${START_COMMAND_CGROUP_ROOT:-/sys/fs/cgroup}; ",
-            "for __scd_dir in ${__scd_rel:+\"$__scd_root$__scd_rel\"} ",
-            "\"$__scd_root/system.slice/docker-$__scd_id.scope\" \"$__scd_root/docker/$__scd_id\"; do ",
-            "case \"$__scd_dir\" in *\"$__scd_id\"*) if [ -r \"$__scd_dir/memory.events\" ]; then ",
-            "printf '%s' \"$__scd_dir\"; return 0; fi;; esac; done; return 1; }",
-        ),
-        concat!(
-            "__start_command_cgroup_read() { __scr_events=$(cat \"$1/memory.events\" 2>/dev/null) || return 1; ",
-            "__scr_oom=$(printf '%s\\n' \"$__scr_events\" | sed -n 's/^oom //p'); ",
-            "__scr_kill=$(printf '%s\\n' \"$__scr_events\" | sed -n 's/^oom_kill //p'); ",
-            "__scr_max=$(cat \"$1/memory.max\" 2>/dev/null); __scr_peak=$(cat \"$1/memory.peak\" 2>/dev/null); ",
-            "printf '%s %s %s %s %s\\n' \"${__scr_max:--}\" \"${__scr_peak:--}\" ",
-            "\"${__scr_oom:--}\" \"${__scr_kill:--}\" \"$1\"; }",
-        ),
-    ]
-    .join("; ")
+    r###"__start_command_cgroup_dir() { __scd_id=$(docker inspect -f '{{.Id}}' "$1" 2>/dev/null); [ -n "$__scd_id" ] || return 1; __scd_pid=$(docker inspect -f '{{.State.Pid}}' "$1" 2>/dev/null); __scd_rel=''; case "$__scd_pid" in ''|0|*[!0-9]*) ;; *) __scd_rel=$(sed -n 's/^0:://p' "${START_COMMAND_PROC_ROOT:-/proc}/$__scd_pid/cgroup" 2>/dev/null);; esac; __scd_root=${START_COMMAND_CGROUP_ROOT:-/sys/fs/cgroup}; for __scd_dir in ${__scd_rel:+"$__scd_root$__scd_rel"} "$__scd_root/system.slice/docker-$__scd_id.scope" "$__scd_root/docker/$__scd_id"; do case "$__scd_dir" in *"$__scd_id"*) if [ -r "$__scd_dir/memory.events" ]; then printf '%s' "$__scd_dir"; return 0; fi;; esac; done; return 1; }; __start_command_cgroup_read() { __scr_events=$(cat "$1/memory.events" 2>/dev/null) || return 1; __scr_oom=$(printf '%s\n' "$__scr_events" | sed -n 's/^oom //p'); __scr_kill=$(printf '%s\n' "$__scr_events" | sed -n 's/^oom_kill //p'); case "$__scr_oom:$__scr_kill" in *[!0-9:]*|:*|*:) return 1;; esac; __scr_max=$(cat "$1/memory.max" 2>/dev/null); __scr_peak=$(cat "$1/memory.peak" 2>/dev/null); printf '%s %s %s %s %s\n' "${__scr_max:--}" "${__scr_peak:--}" "${__scr_oom:--}" "${__scr_kill:--}" "$1"; }"###.to_string()
 }
 
 /// Shell fragment starting the background sampler. It writes each sample to a
 /// temp file with `mv`, so the watcher never reads a half-written line, and
 /// ends by itself once the cgroup is gone.
 pub fn build_cgroup_sampler_start_snippet(container_name: &str) -> String {
-    use cgroup_shell_vars::{FILE, SAMPLER};
-    [
-        build_cgroup_functions_snippet(),
-        format!("{}=\"${{TMPDIR:-/tmp}}/start-command-cgroup.$$\"", FILE),
-        format!("rm -f \"${f}\" \"${f}.tmp\"", f = FILE),
-        format!(
-            "( __scs_dir=$(__start_command_cgroup_dir {name}) || exit 0; \
-             while __scs_line=$(__start_command_cgroup_read \"$__scs_dir\"); do \
-             printf '%s\\n' \"$__scs_line\" > \"${f}.tmp\" && mv -f \"${f}.tmp\" \"${f}\"; \
-             sleep {interval}; done ) >/dev/null 2>&1 & {sampler}=$!",
-            name = shell_quote(container_name),
-            f = FILE,
-            interval = CGROUP_SAMPLE_INTERVAL_SECONDS,
-            sampler = SAMPLER,
-        ),
-    ]
-    .join("; ")
+    r###"__start_command_cgroup_dir() { __scd_id=$(docker inspect -f '{{.Id}}' "$1" 2>/dev/null); [ -n "$__scd_id" ] || return 1; __scd_pid=$(docker inspect -f '{{.State.Pid}}' "$1" 2>/dev/null); __scd_rel=''; case "$__scd_pid" in ''|0|*[!0-9]*) ;; *) __scd_rel=$(sed -n 's/^0:://p' "${START_COMMAND_PROC_ROOT:-/proc}/$__scd_pid/cgroup" 2>/dev/null);; esac; __scd_root=${START_COMMAND_CGROUP_ROOT:-/sys/fs/cgroup}; for __scd_dir in ${__scd_rel:+"$__scd_root$__scd_rel"} "$__scd_root/system.slice/docker-$__scd_id.scope" "$__scd_root/docker/$__scd_id"; do case "$__scd_dir" in *"$__scd_id"*) if [ -r "$__scd_dir/memory.events" ]; then printf '%s' "$__scd_dir"; return 0; fi;; esac; done; return 1; }; __start_command_cgroup_read() { __scr_events=$(cat "$1/memory.events" 2>/dev/null) || return 1; __scr_oom=$(printf '%s\n' "$__scr_events" | sed -n 's/^oom //p'); __scr_kill=$(printf '%s\n' "$__scr_events" | sed -n 's/^oom_kill //p'); case "$__scr_oom:$__scr_kill" in *[!0-9:]*|:*|*:) return 1;; esac; __scr_max=$(cat "$1/memory.max" 2>/dev/null); __scr_peak=$(cat "$1/memory.peak" 2>/dev/null); printf '%s %s %s %s %s\n' "${__scr_max:--}" "${__scr_peak:--}" "${__scr_oom:--}" "${__scr_kill:--}" "$1"; }; __start_command_cgroup_file="${TMPDIR:-/tmp}/start-command-cgroup.$"; rm -f "$__start_command_cgroup_file" "$__start_command_cgroup_file.tmp" "$__start_command_cgroup_file.reason"; __start_command_memory_limit=$(docker inspect -f '{{.HostConfig.Memory}}' '__SC_NAME__' 2>/dev/null); __start_command_sample_name='__SC_NAME__'; ( export START_COMMAND_CGROUP_SAMPLING=1; __scs_previous=''; __scs_previous_at=0; __scs_changed=0; __scs_dir=$(__start_command_cgroup_dir '__SC_NAME__'); while :; do __scs_line=""; if [ -n "$__scs_dir" ]; then __scs_line=$(__start_command_cgroup_read "$__scs_dir"); fi; if [ -z "$__scs_line" ]; then __scs_ns=$(docker inspect -f '{{.HostConfig.CgroupnsMode}}' '__SC_NAME__' 2>/dev/null); if [ "$__scs_ns" = private ]; then __scs_remote=$(docker exec '__SC_NAME__' sh -c '__start_command_cgroup_dir() { __scd_id=$(docker inspect -f '\''{{.Id}}'\'' "$1" 2>/dev/null); [ -n "$__scd_id" ] || return 1; __scd_pid=$(docker inspect -f '\''{{.State.Pid}}'\'' "$1" 2>/dev/null); __scd_rel='\'''\''; case "$__scd_pid" in '\'''\''|0|*[!0-9]*) ;; *) __scd_rel=$(sed -n '\''s/^0:://p'\'' "${START_COMMAND_PROC_ROOT:-/proc}/$__scd_pid/cgroup" 2>/dev/null);; esac; __scd_root=${START_COMMAND_CGROUP_ROOT:-/sys/fs/cgroup}; for __scd_dir in ${__scd_rel:+"$__scd_root$__scd_rel"} "$__scd_root/system.slice/docker-$__scd_id.scope" "$__scd_root/docker/$__scd_id"; do case "$__scd_dir" in *"$__scd_id"*) if [ -r "$__scd_dir/memory.events" ]; then printf '\''%s'\'' "$__scd_dir"; return 0; fi;; esac; done; return 1; }; __start_command_cgroup_read() { __scr_events=$(cat "$1/memory.events" 2>/dev/null) || return 1; __scr_oom=$(printf '\''%s\n'\'' "$__scr_events" | sed -n '\''s/^oom //p'\''); __scr_kill=$(printf '\''%s\n'\'' "$__scr_events" | sed -n '\''s/^oom_kill //p'\''); case "$__scr_oom:$__scr_kill" in *[!0-9:]*|:*|*:) return 1;; esac; __scr_max=$(cat "$1/memory.max" 2>/dev/null); __scr_peak=$(cat "$1/memory.peak" 2>/dev/null); printf '\''%s %s %s %s %s\n'\'' "${__scr_max:--}" "${__scr_peak:--}" "${__scr_oom:--}" "${__scr_kill:--}" "$1"; }; __start_command_cgroup_read /sys/fs/cgroup' 2>&1); __scs_exit=$?; if [ "$__scs_exit" = 0 ]; then __scs_line=$__scs_remote; else __scs_detail=$(printf "%s" "$__scs_remote" | sed -n "1p" | cut -c 1-240); printf '%s
+' "local cgroup unavailable; Docker exec exit=$__scs_exit: ${__scs_detail:-private cgroup v2 counters unreadable}" > "$__start_command_cgroup_file.reason"; fi; else printf '%s
+' "local cgroup unavailable; container cgroup namespace=${__scs_ns:-unavailable}, private required" > "$__start_command_cgroup_file.reason"; fi; fi; __scs_now=$(date +%s); if [ -n "$__scs_line" ]; then __scs_kill=$(printf "%s" "$__scs_line" | cut -d " " -f 4); if [ -n "$__scs_previous" ] && [ "$__scs_kill" -gt "$__scs_previous" ] 2>/dev/null && [ "$((__scs_now-__scs_previous_at))" -le 3 ]; then __scs_changed=$__scs_now; fi; __scs_previous=$__scs_kill; __scs_previous_at=$__scs_now; __scs_fields=$(printf "%s" "$__scs_line" | cut -d " " -f 1-4); printf '%s %s %s %s\n' "$__scs_fields" "$__scs_changed" "$__scs_now" "$__scs_dir" > "$__start_command_cgroup_file.tmp" && mv -f "$__start_command_cgroup_file.tmp" "$__start_command_cgroup_file"; fi; if [ "$(docker inspect -f '{{.State.Running}}' '__SC_NAME__' 2>/dev/null)" = false ]; then break; fi; sleep 1; done ) >/dev/null 2>&1 & __start_command_cgroup_sampler=$!"###.replace("'__SC_NAME__'", &shell_quote(container_name))
 }
 
 /// Shell fragment stopping the sampler once the container has exited and
@@ -148,40 +112,13 @@ pub fn build_cgroup_sampler_start_snippet(container_name: &str) -> String {
 /// `$__start_command_cgroup`. The cgroup can outlive the main process for a
 /// moment, so it is read one last time when it still exists.
 pub fn build_cgroup_sampler_stop_snippet() -> String {
-    use cgroup_shell_vars::{FILE, SAMPLE, SAMPLER};
-    [
-        format!("kill \"${}\" 2>/dev/null", SAMPLER),
-        format!("wait \"${}\" 2>/dev/null", SAMPLER),
-        format!("{}=$(cat \"${}\" 2>/dev/null)", SAMPLE, FILE),
-        format!("__scs_dir=$(printf '%s' \"${}\" | cut -s -d ' ' -f 5-)", SAMPLE),
-        format!(
-            "if [ -n \"$__scs_dir\" ] && __scs_line=$(__start_command_cgroup_read \"$__scs_dir\"); then {}=$__scs_line; fi",
-            SAMPLE
-        ),
-        format!("rm -f \"${f}\" \"${f}.tmp\"", f = FILE),
-        format!(
-            "{s}=$(printf '%s' \"${s}\" | cut -d ' ' -f 1-4)",
-            s = SAMPLE
-        ),
-    ]
-    .join("; ")
+    r###"kill "$__start_command_cgroup_sampler" 2>/dev/null; wait "$__start_command_cgroup_sampler" 2>/dev/null; __start_command_cgroup=$(cat "$__start_command_cgroup_file" 2>/dev/null); __start_command_memory_unavailable=$(cat "$__start_command_cgroup_file.reason" 2>/dev/null); __scs_dir=$(printf '%s' "$__start_command_cgroup" | cut -s -d ' ' -f 7-); if [ -n "$__scs_dir" ] && __scs_line=$(__start_command_cgroup_read "$__scs_dir"); then __scs_old=$(printf '%s' "$__start_command_cgroup" | cut -d ' ' -f 4); __scs_at=$(printf '%s' "$__start_command_cgroup" | cut -d ' ' -f 6); __scs_changed=$(printf '%s' "$__start_command_cgroup" | cut -d ' ' -f 5); __scs_now=$(date +%s); __scs_new=$(printf '%s' "$__scs_line" | cut -d ' ' -f 4); if [ "$__scs_new" -gt "$__scs_old" ] 2>/dev/null && [ "$((__scs_now-__scs_at))" -le 3 ]; then __scs_changed=$__scs_now; fi; __start_command_cgroup="$(printf '%s' "$__scs_line" | cut -d ' ' -f 1-4) $__scs_changed $__scs_now"; fi; rm -f "$__start_command_cgroup_file" "$__start_command_cgroup_file.tmp" "$__start_command_cgroup_file.reason"; __start_command_cgroup=$(printf '%s' "$__start_command_cgroup" | cut -d ' ' -f 1-6)"###.to_string()
 }
 
 /// Shell fragment appending the `Memory:` line of the post-mortem when a
 /// sample exists. `quoted_log_path` must already be shell-quoted.
 pub fn build_cgroup_memory_log_snippet(quoted_log_path: &str) -> String {
-    let sample = cgroup_shell_vars::SAMPLE;
-    // A function, so `$1`.. of the watcher script itself stay untouched.
-    format!(
-        "__start_command_cgroup_log() {{ __scm_note=''; \
-         if [ \"$4\" -gt 0 ] 2>/dev/null; then __scm_note=' ({unknown})'; fi; \
-         printf 'Memory:     memory.max=%s memory.peak=%s oom=%s oom_kill=%s%s\\n' \
-         \"$1\" \"$2\" \"$3\" \"$4\" \"$__scm_note\"; }}; \
-         if [ -n \"${sample}\" ]; then __start_command_cgroup_log ${sample} >> {log}; fi",
-        unknown = OomScope::Unknown.note(),
-        sample = sample,
-        log = quoted_log_path,
-    )
+    r###"__start_command_cgroup_log() { __scm_note=''; if [ "$4" -gt 0 ] 2>/dev/null; then __scm_note=' (OOM kill scope unknown)'; fi; printf 'Memory:     memory.max=%s memory.peak=%s oom=%s oom_kill=%s%s\n' "$1" "$2" "$3" "$4" "$__scm_note"; }; if [ -n "$__start_command_cgroup" ]; then __start_command_cgroup_log $__start_command_cgroup >> __SC_LOG__; else printf 'Memory:     unavailable (%s) memory.limit=%s (HostConfig)\n' "${__start_command_memory_unavailable:-sampler stopped before a reading; local cgroup unavailable}" "${__start_command_memory_limit:-unknown}" >> __SC_LOG__; fi"###.replace("__SC_LOG__", quoted_log_path)
 }
 
 fn parse_counter(text: &str) -> Option<u64> {

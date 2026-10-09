@@ -200,6 +200,20 @@ pub fn finalize_detached_execution_with_attempt(
     if let Some(cgroup_memory) = parse_cgroup_memory_sample(&facts.cgroup_memory) {
         record.cgroup_memory = Some(cgroup_memory);
     }
+    let tail = read_attempt_log_tail(&record, FATAL_MARKER_TAIL_BYTES);
+    let (logged_main, daemon) = crate::exit_evidence::from_log(tail.as_deref());
+    let main = !daemon
+        && (logged_main
+            || (record.oom_killed == Some(true)
+                && record.exit_code.is_some_and(|code| code == 137 || code < 0)
+                && crate::exit_evidence::recent_oom_delta(
+                    &facts.cgroup_memory,
+                    &facts.finished_at,
+                )));
+    record.options.insert(
+        "exitEvidence".into(),
+        serde_json::json!({"mainOom": main, "daemonRestart": daemon}),
+    );
     let reason =
         resolve_reason(&record).or_else(|| lost.then(|| WATCHER_LOST_CONTAINER.to_string()));
     if let Some(reason) = reason {
@@ -239,6 +253,7 @@ fn resolve_reason(record: &ExecutionRecord) -> Option<String> {
     } else {
         read_attempt_log_tail(record, FATAL_MARKER_TAIL_BYTES)
     };
+    let tail = crate::exit_evidence::record_tail(record, tail);
     resolve_exit_reason(
         record.exit_code,
         tail.as_deref(),

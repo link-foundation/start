@@ -70,20 +70,20 @@ describe('issue #180: the sticky OOMKilled flag is not an exit reason', () => {
     {
       exitCode: 137,
       oomKilled: true,
-      reason: CGROUP_OOM_EXIT_REASON,
-      memory: true,
+      reason: 'signal (SIGKILL; cause unknown)',
+      memory: false,
     },
     {
       exitCode: 137,
       oomKilled: false,
-      reason: 'signal (SIGKILL)',
+      reason: 'signal (SIGKILL; cause unknown)',
       memory: false,
     },
     {
       exitCode: -1,
       oomKilled: true,
-      reason: CGROUP_OOM_EXIT_REASON,
-      memory: true,
+      reason: null,
+      memory: false,
     },
     {
       exitCode: 139,
@@ -104,10 +104,17 @@ describe('issue #180: the sticky OOMKilled flag is not an exit reason', () => {
     });
   }
 
-  it('blames the flag on the command only for SIGKILL or an unknown exit', () => {
-    expect(isOomKillOfCommand({ exitCode: 137, oomKilled: true })).toBe(true);
-    expect(isOomKillOfCommand({ exitCode: null, oomKilled: true })).toBe(true);
-    expect(isOomKillOfCommand({ exitCode: -1, oomKilled: true })).toBe(true);
+  it('requires fresh attribution in addition to SIGKILL or an unknown exit', () => {
+    expect(isOomKillOfCommand({ exitCode: 137, oomKilled: true })).toBe(false);
+    expect(
+      isOomKillOfCommand({
+        exitCode: 137,
+        oomKilled: true,
+        exitEvidence: { mainOom: true },
+      })
+    ).toBe(true);
+    expect(isOomKillOfCommand({ exitCode: null, oomKilled: true })).toBe(false);
+    expect(isOomKillOfCommand({ exitCode: -1, oomKilled: true })).toBe(false);
     expect(isOomKillOfCommand({ exitCode: 0, oomKilled: true })).toBe(false);
     expect(isOomKillOfCommand({ exitCode: 1, oomKilled: true })).toBe(false);
     expect(isOomKillOfCommand({ exitCode: 137, oomKilled: false })).toBe(false);
@@ -191,6 +198,6 @@ describe('issue #180: the sticky OOMKilled flag is not an exit reason', () => {
       oomKilled: true,
       logPath: null,
     });
-    expect(main).toContain('Docker reports it was OOM-killed.');
+    expect(main).toContain('Docker reports a process in it was OOM-killed.');
   });
 });

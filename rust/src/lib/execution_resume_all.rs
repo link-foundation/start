@@ -223,6 +223,16 @@ pub fn resume_all_executions_with<R: CommandRunner, H: ResumeHooks>(
 
     for record in store.get_executing() {
         let probe = probe_session(&record, runner);
+        if crate::launch_owner::has_active_launch(&record) {
+            entries.push(describe_record(
+                &record,
+                &probe,
+                ResumeAllAction::Running,
+                "Launch is reserved; no watcher or duplicate launch was started.".into(),
+                None,
+            ));
+            continue;
+        }
         let session_name = probe.session_name.clone().unwrap_or_default();
 
         if probe.alive && probe.backend.as_deref() == Some("docker") {
