@@ -15,6 +15,8 @@ The final review also corrected the reusable Docker probes to accept either succ
 
 The second push, `bcc5133aaf29858d8f9a8869f734d4c1aedeae47`, triggered runs at **2026-10-09 21:25:00 UTC**. Workflow checks and all three JavaScript platforms passed. [Rust run 37993313071](https://github.com/link-foundation/start/actions/runs/37993313071) failed before tests because concurrent anonymous ECR pulls were also throttled: `rust-linux-37993313071.log` line 508 and `rust-coverage-37993313071.log` line 545 report `toomanyrequests: Rate exceeded`. The helper now uses already-cached tags, tries [Google's Docker Hub cache](https://docs.cloud.google.com/artifact-registry/docs/pull-cached-dockerhub-images), ECR and Docker Hub, and makes at most three attempts per registry with bounded backoff. Exhausting every source still fails the job. The offline `experiments/issue-195-ci-image-preparation.py` regression verifies fallback, no pulls for cached tags and finite failure after nine unsuccessful pulls.
 
+The third push, `9379afabbc87d7497539eee00ffd61194a7112c0`, triggered runs at **2026-10-09 21:32:25 UTC**. All four Linux image-preparation jobs passed, as did the full Rust pipeline. [JavaScript run 37994062448](https://github.com/link-foundation/start/actions/runs/37994062448) exposed an existing Windows shell integration test that checked only whether the Docker client was installed. In `javascript-37994062448.log`, lines 3125–3127 show an Alpine pull rate limit, lines 3144–3145 show three shell probes exhausting the existing 30-second test budget, and line 3149 shows a registry authentication timeout. Both Alpine shell tests now use the repository's existing `canRunLinuxDockerImages()` check, matching its other Linux-container integration tests. The offline `experiments/issue-195-ci-docker-capability.py` fixture failed before this change by observing three container runs without a usable daemon; it now verifies that both an unavailable daemon and a Windows-mode daemon cause only capability checks, without pulls or runs. The real shell tests continue to run against the prepared images on Linux.
+
 Local verification after these corrections includes both full suites, the existing workflow invariants, formatting/lint, native Actionlint with ShellCheck/Pyflakes, shell checks for both new helpers, and ordinary Docker smoke tests in both CLIs. Finalization requires every relevant check on the latest pushed SHA to pass; older placeholder or intermediate runs are not accepted as evidence for the final commit.
 
 To reproduce the CI preparation and workflow lint locally on Linux:
@@ -26,4 +28,5 @@ bash scripts/install-actionlint.sh /tmp/start-actionlint
 /tmp/start-actionlint/actionlint -color
 shellcheck scripts/install-actionlint.sh scripts/prepare-docker-test-images.sh
 python3 experiments/issue-195-ci-image-preparation.py
+python3 experiments/issue-195-ci-docker-capability.py
 ```
