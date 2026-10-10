@@ -171,6 +171,42 @@ describe('log sanitization', () => {
     }
   });
 
+  it('enforces private permissions at creation even with a permissive umask', () => {
+    if (process.platform === 'win32') {
+      return;
+    }
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sanitize-creation-'));
+    const source = path.join(dir, 'source.log');
+    fs.writeFileSync(source, 'ordinary output');
+    const originalOpen = fs.openSync;
+    const originalUmask = process.umask(0);
+    let creationChecked = false;
+    let copy;
+    fs.openSync = (...args) => {
+      if (args[1] !== 'wx') {
+        return originalOpen(...args);
+      }
+      assert.strictEqual(
+        fs.statSync(path.dirname(args[0])).mode & 0o777,
+        0o700
+      );
+      const descriptor = originalOpen(...args);
+      assert.strictEqual(fs.fstatSync(descriptor).mode & 0o777, 0o600);
+      creationChecked = true;
+      return descriptor;
+    };
+    try {
+      copy = sanitizeLogToTemp(source, { env: {} });
+      assert.ok(creationChecked);
+      assert.strictEqual(fs.readFileSync(copy.path, 'utf8'), 'ordinary output');
+    } finally {
+      fs.openSync = originalOpen;
+      process.umask(originalUmask);
+      copy?.cleanup();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('fails closed on invalid source and excessive environment secret sizes', () => {
     assert.throws(
       () => sanitizeLogToTemp('/does-not-exist', { env: {} }),

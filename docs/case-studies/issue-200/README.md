@@ -42,6 +42,8 @@ Each sanitizer works on bytes so multibyte UTF-8 and invalid input bytes survive
 
 Known environment values longer than 64KiB block publication instead of increasing memory without a limit. Empty values are ignored. The default Rust path reads Unix environment values as bytes, including values that cannot be decoded as UTF-8. Temporary copies are cleaned on normal completion and failed uploads; the original log and recorded command remain local and unchanged.
 
+Windows CI on 2026-10-10 exposed a platform-specific build error: the directory builder was mutable on every platform but only mutated by Unix permission setup. Under `-Dwarnings`, the non-Unix build rejected `unused_mut`. The constructor now uses an immutable outer binding and shadows it with a mutable binding only inside the Unix branch. Unix directory mode `0700` is still set before creation. A finite standalone Rust compiler probe extracts that production constructor and checks both branches on a Unix host without a Cargo build; before/after logs are archived in `data/windows-dirbuilder-*.log`. The mirrored JavaScript test verifies directory `0700` and file `0600` immediately at creation with a permissive umask, ensuring that fixing portability retains the private staging boundary.
+
 The guarantee covers maintained formats and active conventional secret environment values. No pattern-based sanitizer can identify every arbitrary unknown password or every deliberately encoded credential. The explicit opt-out publishes raw log contents and must therefore be intentional. Private upload visibility is a second safeguard: GitHub documents that secret gists remain accessible to anyone holding their URL. [GitHub gist documentation](https://docs.github.com/en/get-started/writing-on-github/editing-and-sharing-content-with-gists/creating-gists)
 
 ## Existing components and reuse assessment
@@ -65,6 +67,7 @@ node --test js/test/log-sanitizer.js
 cargo test --manifest-path rust/Cargo.toml --test log_sanitizer --test failure_handler
 node --max-old-space-size=96 experiments/issue-200/large-log.js
 bash experiments/issue-200/large-log-rust.sh
+node experiments/issue-200/check-directory-builder.mjs
 ```
 
 The finite large-file fixture is 115,343,360 bytes (110MiB). Node sanitized it in 16.4 seconds with maximum RSS 89,012KiB under a 96MiB old-generation limit; the uploaded-copy scan found no assembled fake token. Rust sanitized the same finite fixture in 29.6 seconds under a 256MiB process address-space limit, also without leaking the fake token. These are local measurements, not cross-platform performance guarantees. Test and experiment output is preserved in `data/`.

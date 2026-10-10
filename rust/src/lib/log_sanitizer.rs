@@ -297,12 +297,14 @@ fn sanitize_log_to_temp_with_bytes(
         return Err(blocked_at("source"));
     }
     let directory = std::env::temp_dir().join(format!("start-sanitized-{}", uuid::Uuid::new_v4()));
-    let mut builder = DirBuilder::new();
+    let builder = DirBuilder::new();
     #[cfg(unix)]
-    {
+    let builder = {
         use std::os::unix::fs::DirBuilderExt;
+        let mut builder = builder;
         builder.mode(0o700);
-    }
+        builder
+    };
     builder
         .create(&directory)
         .map_err(|_| blocked_at("private-file"))?;

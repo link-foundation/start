@@ -1,0 +1,65 @@
+bun test v1.4.2 (744846f84)
+
+test/log-sanitizer.js:
+(pass) log sanitization > redacts required formats and environment values at every chunk boundary [206.51ms]
+(pass) log sanitization > bounds memory for long tokens and authorization values without releasing suffixes [152.72ms]
+(pass) log sanitization > retains full header continuation when an inner token reaches the same block boundary [7.63ms]
+(pass) log sanitization > redacts AWS assignment values enclosed in either quote style [0.29ms]
+(pass) log sanitization > redacts multiline and short known secrets, preserving unrelated bytes [0.28ms]
+(pass) log sanitization > merges overlapping environment secrets and preserves ordinary domain names [16.25ms]
+(pass) log sanitization > creates a private sanitized copy and removes it without changing the source [19.38ms]
+(pass) log sanitization > enforces private permissions at creation even with a permissive umask [55.12ms]
+(pass) log sanitization > fails closed on invalid source and excessive environment secret sizes [1.39ms]
+(pass) log sanitization > blocks both upload paths on read or write failure and does not expose exception text [32.45ms]
+(pass) log sanitization > sanitizes manual and automatic uploads, explicitly requests private visibility, and cleans copies [198.49ms]
+
+test/failure-handler.js:
+(pass) failure-handler > parseGitUrl > should parse HTTPS GitHub URL [0.36ms]
+(pass) failure-handler > parseGitUrl > should parse HTTPS URL with .git suffix [0.07ms]
+(pass) failure-handler > parseGitUrl > should parse SSH git@ URL [0.05ms]
+(pass) failure-handler > parseGitUrl > should parse git+https URL format [0.05ms]
+(pass) failure-handler > parseGitUrl > should return null for empty string [0.03ms]
+(pass) failure-handler > parseGitUrl > should return null for null/undefined input [0.06ms]
+(pass) failure-handler > parseGitUrl > should return null for non-github URL [0.06ms]
+(pass) failure-handler > parseGitUrl > should return null for invalid/random string [0.06ms]
+(pass) failure-handler > parseGitUrl > should normalize URL to https://github.com format [0.05ms]
+(pass) failure-handler > parseGitUrl > should handle URL with subdirectory (only owner/repo captured) [0.04ms]
+(pass) failure-handler > parseGitUrl > should return object with owner, repo, url keys [0.07ms]
+(pass) failure-handler > createIssue > passes the title and body to gh as separate arguments [64.63ms]
+(pass) failure-handler > createIssue > keeps the failing command verbatim and does not escape it [62.12ms]
+(pass) failure-handler > createIssue > sanitizes credentials in the issue title and body [61.36ms]
+(pass) failure-handler > createIssue > writes real newlines into the issue body [59.73ms]
+
+(pass) failure-handler > handleFailure > should return early when disableAutoIssue is true [0.60ms]
+
+Auto-issue creation disabled via START_DISABLE_AUTO_ISSUE
+(pass) failure-handler > handleFailure > should return early when disableAutoIssue is true (verbose mode) [0.10ms]
+
+test/status-query.js:
+=== Status Query Integration Tests ===
+(pass) --status query functionality > links-notation format (default) > should output status in links-notation indented format by default [115.40ms]
+(pass) --status query functionality > links-notation format (default) > should output status in links-notation format with explicit flag [128.62ms]
+(pass) --status query functionality > json format > should output status in JSON format [136.41ms]
+(pass) --status query functionality > text format > should output status in human-readable text format [129.56ms]
+(pass) --status query functionality > error handling > should show error for non-existent UUID [103.04ms]
+(pass) --status query functionality > error handling > should show error when tracking is disabled [92.28ms]
+(pass) --status query functionality > --list query functionality > should output all tracked executions in links-notation format by default [138.46ms]
+(pass) --status query functionality > --list query functionality > should output all tracked executions in JSON format [168.96ms]
+(pass) --status query functionality > --list query functionality > should show count zero when no records are stored [104.31ms]
+(pass) --status query functionality > --list query functionality > should show error when tracking is disabled [85.58ms]
+(pass) --status query functionality > --upload-log functionality > should upload a private sanitized copy and preserve the stored log [224.76ms]
+(pass) --status query functionality > --upload-log functionality > should install gh-upload-log when it is missing before uploading [225.73ms]
+(pass) --status query functionality > --upload-log functionality > should upload the original privately only with explicit --no-sanitize [189.21ms]
+(pass) --status query functionality > --upload-log functionality > should show an error when the stored log file is missing [140.89ms]
+(pass) --status query functionality > executing status > should show executing status for ongoing commands [130.61ms]
+(pass) --status query functionality > executing status > should include currentTime for executing commands (JSON) [121.11ms]
+(pass) --status query functionality > executing status > should not include currentTime for completed commands (JSON) [119.82ms]
+(pass) --status query functionality > executing status > should include currentTime in links-notation for executing commands [119.83ms]
+(pass) --status query functionality > executing status > should indent nested process ID arrays in links-notation [242.18ms]
+(pass) --status query functionality > executing status > should include Current Time in text format for executing commands [119.38ms]
+(pass) --status query functionality > executing status > should not include Current Time in text format for completed commands [127.62ms]
+
+ 49 pass
+ 0 fail
+ 109 expect() calls
+Ran 49 tests across 3 files. [3.97s]
