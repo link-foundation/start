@@ -1,194 +1,194 @@
    Compiling start-command v0.23.0 (/tmp/gh-issue-solver-1791653332998/rust)
-    Finished `test` profile [unoptimized] target(s) in 45.97s
+    Finished `test` profile [unoptimized] target(s) in 57.26s
      Running unittests src/lib/mod.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/start_command-947cfd901b56e234)
 
 running 279 tests
-test args_parser::tests::test_cleanup_option ... ok
-test args_parser::tests::test_docker_env_repeatable ... ok
-test args_parser::tests::test_cleanup_dry_run_option ... ok
-test args_parser::tests::test_docker_combined_runtime_options ... ok
 test args_parser::tests::test_docker_env_eq_form ... ok
-test args_parser::tests::test_attached_detached_conflict ... ok
+test args_parser::tests::test_docker_env_repeatable ... ok
 test args_parser::tests::test_docker_env_short_flag ... ok
+test args_parser::tests::test_cleanup_dry_run_option ... ok
+test args_parser::tests::test_attached_detached_conflict ... ok
+test args_parser::tests::test_cleanup_option ... ok
+test args_parser::tests::test_docker_combined_runtime_options ... ok
 test args_parser::tests::test_docker_mount_eq_form ... ok
-test args_parser::tests::test_docker_network_alias_repeatable ... ok
-test args_parser::tests::test_docker_network_forms_preserve_child_args ... ok
 test args_parser::tests::test_docker_runtime_options_default_empty ... ok
 test args_parser::tests::test_docker_mounts_repeatable ... ok
 test args_parser::tests::test_docker_uses_default_image ... ok
-test args_parser::tests::test_docker_privileged ... ok
 test args_parser::tests::test_docker_volume_eq_form ... ok
 test args_parser::tests::test_docker_volumes_repeatable ... ok
-test args_parser::tests::test_env_rejected_for_non_docker ... ok
 test args_parser::tests::test_env_requires_argument ... ok
-test args_parser::tests::test_generate_session_name_with_prefix ... ok
-test args_parser::tests::test_generate_session_name ... ok
-test args_parser::tests::test_isolated_user ... ok
+test args_parser::tests::test_docker_network_alias_repeatable ... ok
+test args_parser::tests::test_docker_network_forms_preserve_child_args ... ok
+test args_parser::tests::test_docker_privileged ... ok
 test args_parser::tests::test_get_effective_mode ... ok
-test args_parser::tests::test_invalid_output_format ... ok
 test args_parser::tests::test_has_isolation ... ok
+test args_parser::tests::test_generate_session_name_with_prefix ... ok
+test args_parser::tests::test_isolated_user ... ok
 test args_parser::tests::test_docker_with_image ... ok
-test args_parser::tests::test_list_with_output_format ... ok
+test args_parser::tests::test_invalid_output_format ... ok
 test args_parser::tests::test_keep_user_requires_user ... ok
-test args_parser::tests::test_isolated_user_with_name ... ok
-test args_parser::tests::test_mount_requires_argument ... ok
-test args_parser::tests::test_network_options_rejected_without_docker ... ok
-test args_parser::tests::test_mount_rejected_for_non_docker ... ok
-test args_parser::tests::test_output_format_equals_syntax ... ok
+test args_parser::tests::test_generate_session_name ... ok
+test args_parser::tests::test_env_rejected_for_non_docker ... ok
 test args_parser::tests::test_list_option ... ok
-test args_parser::tests::test_output_format_requires_format ... ok
-test args_parser::tests::test_parse_shorthand ... ok
-test args_parser::tests::test_parse_isolated_option ... ok
-test args_parser::tests::test_parse_simple_command ... ok
-test args_parser::tests::test_privileged_rejected_without_docker ... ok
-test args_parser::tests::test_query_and_control_modes_are_mutually_exclusive ... ok
-test args_parser::tests::test_shell_bash ... ok
-test args_parser::tests::test_shell_default_is_auto ... ok
-test args_parser::tests::test_shell_lowercase_normalization ... ok
-test args_parser::tests::test_shell_missing_argument ... ok
-test args_parser::tests::test_shell_sh ... ok
-test args_parser::tests::test_shell_equals_syntax ... ok
-test args_parser::tests::test_shell_invalid ... ok
-test args_parser::tests::test_shell_with_ssh ... ok
-test args_parser::tests::test_parse_with_separator ... ok
+test args_parser::tests::test_list_with_output_format ... ok
+test args_parser::tests::test_mount_rejected_for_non_docker ... ok
 test args_parser::tests::test_output_format_without_status ... ok
+test args_parser::tests::test_mount_requires_argument ... ok
+test args_parser::tests::test_output_format_requires_format ... ok
+test args_parser::tests::test_parse_simple_command ... ok
+test args_parser::tests::test_parse_shorthand ... ok
+test args_parser::tests::test_parse_with_separator ... ok
+test args_parser::tests::test_parse_isolated_option ... ok
+test args_parser::tests::test_query_and_control_modes_are_mutually_exclusive ... ok
+test args_parser::tests::test_output_format_equals_syntax ... ok
+test args_parser::tests::test_network_options_rejected_without_docker ... ok
 test args_parser::tests::test_shell_auto ... ok
-test args_parser::tests::test_status_equals_syntax ... ok
+test args_parser::tests::test_shell_default_is_auto ... ok
+test args_parser::tests::test_isolated_user_with_name ... ok
+test args_parser::tests::test_shell_equals_syntax ... ok
+test args_parser::tests::test_shell_missing_argument ... ok
+test args_parser::tests::test_privileged_rejected_without_docker ... ok
+test args_parser::tests::test_shell_invalid ... ok
+test args_parser::tests::test_shell_sh ... ok
+test args_parser::tests::test_shell_lowercase_normalization ... ok
+test args_parser::tests::test_shell_with_ssh ... ok
 test args_parser::tests::test_ssh_with_endpoint ... ok
 test args_parser::tests::test_ssh_requires_endpoint ... ok
-test args_parser::tests::test_status_option ... ok
 test args_parser::tests::test_shell_zsh ... ok
+test args_parser::tests::test_status_equals_syntax ... ok
+test args_parser::tests::test_status_option ... ok
 test args_parser::tests::test_status_requires_uuid ... ok
-test args_parser::tests::test_status_with_output_format ... ok
 test args_parser::tests::test_status_with_links_notation ... ok
-test args_parser::tests::test_stop_equals_syntax ... ok
-test args_parser::tests::test_stop_requires_identifier ... ok
+test args_parser::tests::test_status_with_output_format ... ok
+test args_parser::tests::test_shell_bash ... ok
 test args_parser::tests::test_stop_option ... ok
+test args_parser::tests::test_stop_requires_identifier ... ok
+test args_parser::tests::test_stop_equals_syntax ... ok
 test args_parser::tests::test_terminate_equals_syntax ... ok
-test args_parser::tests::test_upload_log_and_control_modes_are_mutually_exclusive ... ok
 test args_parser::tests::test_terminate_option ... ok
 test args_parser::tests::test_terminate_requires_identifier ... ok
-test args_parser::tests::test_status_with_text_format ... ok
+test args_parser::tests::test_upload_log_and_control_modes_are_mutually_exclusive ... ok
 test args_parser::tests::test_upload_log_equals_syntax ... ok
-test args_parser::tests::test_upload_log_requires_identifier ... ok
 test args_parser::tests::test_upload_log_option ... ok
+test args_parser::tests::test_upload_log_requires_identifier ... ok
 test args_parser::tests::test_use_command_stream ... ok
+test args_parser::tests::test_status_with_text_format ... ok
 test args_parser::tests::test_volume_rejected_for_non_docker ... ok
 test args_parser::tests::test_volume_requires_argument ... ok
-test cgroup_memory::tests::parses_counters_and_treats_max_as_no_limit ... ok
 test cgroup_memory::tests::normalizes_floats_strings_and_nulls ... ok
+test cgroup_memory::tests::parses_counters_and_treats_max_as_no_limit ... ok
 test docker_cleanup::tests::always_kept_containers_still_get_a_post_mortem ... ok
-test docker_cleanup::tests::always_removed_containers_get_the_removal_note ... ok
-test docker_cleanup::tests::attached_runs_read_every_documented_fact_in_one_inspect ... ok
-test docker_cleanup::tests::attached_runs_reject_the_zero_time_of_a_container_that_never_started ... ok
-test docker_cleanup::tests::attached_runs_survive_an_inspect_that_answered_nothing_useful ... ok
 test docker_cleanup::tests::attached_kept_reason_names_a_child_oom_kill_not_the_command ... ok
 test docker_cleanup::tests::attached_kept_containers_get_the_post_mortem_block_in_their_log ... ok
+test docker_cleanup::tests::always_removed_containers_get_the_removal_note ... ok
 test docker_cleanup::tests::attached_removed_containers_get_the_one_line_note ... ok
-test docker_cleanup::tests::attached_runs_stay_silent_when_docker_could_not_be_inspected ... ok
-test docker_cleanup::tests::default_policy_keeps_abnormal_containers ... ok
-test docker_cleanup::tests::detached_watcher_inspects_oom_killed_before_default_cleanup ... ok
-test docker_cleanup::tests::explicit_always_policy_cleans_abnormal_containers ... ok
-test docker_cleanup::tests::detached_watcher_writes_the_post_mortem_on_both_paths ... ok
-test docker_cleanup::tests::detached_watcher_invokes_the_finalizer_with_the_inspected_facts ... ok
+test docker_cleanup::tests::attached_runs_read_every_documented_fact_in_one_inspect ... ok
+test docker_cleanup::tests::attached_runs_reject_the_zero_time_of_a_container_that_never_started ... ok
 test docker_cleanup::tests::detached_watcher_computes_the_kept_reason ... ok
+test docker_cleanup::tests::detached_watcher_inspects_oom_killed_before_default_cleanup ... ok
+test docker_cleanup::tests::attached_runs_stay_silent_when_docker_could_not_be_inspected ... ok
+test docker_cleanup::tests::attached_runs_survive_an_inspect_that_answered_nothing_useful ... ok
+test docker_cleanup::tests::default_policy_keeps_abnormal_containers ... ok
 test docker_cleanup::tests::detached_watcher_stays_backward_compatible_without_an_execution_id ... ok
+test docker_cleanup::tests::detached_watcher_writes_the_post_mortem_on_both_paths ... ok
+test docker_cleanup::tests::explicit_always_policy_cleans_abnormal_containers ... ok
 test docker_cleanup::tests::keep_on_fail_policy_keeps_oom_killed_containers ... ok
-test docker_cleanup::tests::kept_footer_stays_plain_for_other_exits_and_real_oom_kills ... ok
-test docker_network_lifecycle::tests::ignores_an_empty_networks_list_and_falls_back_to_network ... ok
+test docker_cleanup::tests::detached_watcher_invokes_the_finalizer_with_the_inspected_facts ... ok
 test atomic_write::tests::partial_disk_full_write_preserves_reservation_and_removes_temporary_file ... ok
-test docker_cleanup::tests::kept_footer_does_not_assert_a_bare_oom_false_for_self_aborts ... ok
+test docker_cleanup::tests::kept_footer_stays_plain_for_other_exits_and_real_oom_kills ... ok
 test docker_network_lifecycle::tests::keeps_verbose_output_switched_off_by_default ... ok
 test docker_network_lifecycle::tests::prefers_the_explicit_networks_list_over_the_single_network ... ok
 test docker_network_lifecycle::tests::returns_an_empty_list_when_no_network_is_requested ... ok
+test docker_network_lifecycle::tests::wraps_a_single_network_into_a_list ... ok
 test docker_snapshot_safety::tests::checks_both_roots_and_refuses_insufficient_containerd_disk ... ok
+test docker_network_lifecycle::tests::ignores_an_empty_networks_list_and_falls_back_to_network ... ok
 test docker_snapshot_safety::tests::reads_only_top_level_containerd_root ... ok
 test execution_attach::tests::attach_execution_reports_disabled_tracking ... ok
-test docker_network_lifecycle::tests::wraps_a_single_network_into_a_list ... ok
+test docker_cleanup::tests::kept_footer_does_not_assert_a_bare_oom_false_for_self_aborts ... ok
 test execution_attach::tests::attach_execution_reports_a_missing_execution ... ok
-test docker_command_handoff::tests::handoff_preserves_direct_shell_argv_and_compound_status ... ok
+test execution_attach::tests::attaches_to_a_running_docker_container ... ok
 test execution_attach::tests::attaches_to_a_running_screen_session ... ok
 test execution_attach::tests::follows_docker_logs_in_read_only_mode ... ok
 test execution_attach::tests::follows_the_log_for_ssh_sessions ... ok
 test execution_attach::tests::follows_the_stored_log_for_a_read_only_screen_attach ... ok
-test execution_attach::tests::attaches_to_a_running_docker_container ... ok
 test execution_attach::tests::format_attach_result_emits_a_nested_links_notation_block ... ok
-test execution_attach::tests::rejects_attached_non_detached_executions ... ok
-test execution_attach::tests::rejects_records_without_a_session_name ... ok
-test execution_attach::tests::reports_a_removed_container_distinctly ... ok
 test docker_command_handoff::tests::selector_preserves_argv_and_replaces_only_the_command ... ok
+test execution_attach::tests::points_at_resume_when_the_session_is_not_running ... ok
+test docker_command_handoff::tests::handoff_preserves_direct_shell_argv_and_compound_status ... ok
+test execution_attach::tests::reports_a_removed_container_distinctly ... ok
 test execution_attach::tests::uses_tmux_read_only_attach_for_read_only ... ok
+test execution_attach::tests::rejects_attached_non_detached_executions ... ok
+test execution_resume::resume_flow::tests::build_resumed_session_name_appends_the_resume_counter ... ok
+test execution_attach::tests::attach_execution_runs_the_interactive_attach_command ... ok
+test execution_attach::tests::attach_execution_surfaces_plan_errors ... ok
+test execution_attach::tests::rejects_records_without_a_session_name ... ok
 test execution_resume::resume_flow::tests::build_snapshot_image_name_produces_a_lowercase_docker_safe_tag ... ok
 test execution_resume::resume_flow::tests::carries_stored_docker_runtime_options_into_the_snapshot_run ... ok
-test execution_resume::resume_flow::tests::build_resumed_session_name_appends_the_resume_counter ... ok
 test execution_resume::resume_flow::tests::format_resume_result_emits_a_nested_links_notation_block ... ok
-test execution_attach::tests::points_at_resume_when_the_session_is_not_running ... ok
 test execution_resume::resume_flow::tests::increments_the_counter_across_repeated_resumes ... ok
 test execution_resume::resume_flow::tests::rebuilds_a_multi_network_snapshot_with_create_connect_start ... ok
-test execution_attach::tests::attach_execution_runs_the_interactive_attach_command ... ok
-test execution_resume::resume_flow::tests::rejects_non_detached_executions ... ok
 test execution_resume::resume_flow::tests::refuses_to_resume_a_live_session_and_points_at_attach ... ok
-test execution_resume::resume_flow::tests::rejects_records_without_a_session_name ... ok
+test execution_resume::resume_flow::tests::rejects_non_detached_executions ... ok
 test execution_resume::resume_flow::tests::rejects_records_with_no_command_to_resume ... ok
+test execution_resume::resume_flow::tests::rejects_records_without_a_session_name ... ok
 test execution_resume::resume_flow::tests::relaunches_a_dead_screen_session ... ok
 test execution_resume::resume_flow::tests::relaunches_when_the_container_is_gone ... ok
-test execution_attach::tests::attach_execution_surfaces_plan_errors ... ok
 test execution_resume::resume_flow::tests::restarts_a_stopped_container_with_the_stored_command ... ok
 test execution_resume::resume_flow::tests::resume_execution_fails_when_a_docker_step_fails ... ok
 test execution_resume::resume_flow::tests::handoff_resume_keeps_container_identity_and_never_snapshots ... ok
-test execution_resume::resume_flow::tests::remove_original_is_non_forced_and_runs_only_after_successor_start ... ok
 test execution_resume::resume_flow::tests::changed_labels_force_a_guarded_snapshot_for_the_stored_command ... ok
-test execution_resume::resume_flow::tests::resume_execution_reports_disabled_tracking ... ok
 test execution_resume::resume_flow::tests::resume_execution_reports_an_unknown_identifier ... ok
-test execution_resume::resume_flow::tests::resume_execution_keeps_the_same_uuid_and_remembers_the_previous_session_name ... ok
+test execution_resume::resume_flow::tests::remove_original_is_non_forced_and_runs_only_after_successor_start ... ok
+test execution_resume::resume_flow::tests::resume_execution_reports_disabled_tracking ... ok
 test execution_resume::resume_flow::tests::resume_execution_surfaces_relaunch_failures ... ok
-test execution_resume::resume_flow::tests::resume_execution_relaunches_through_the_isolation_backend_when_the_container_is_gone ... ok
+test execution_resume::resume_flow::tests::resume_execution_keeps_the_same_uuid_and_remembers_the_previous_session_name ... ok
 test execution_resume::resume_flow::tests::snapshots_a_stopped_container_to_run_a_new_command ... ok
-test execution_resume::resume_flow::tests::resume_execution_starts_a_stopped_container_and_reattaches_the_watcher ... ok
-test execution_resume::resume_flow::tests::repeated_snapshot_successors_retain_original_root_session_attribution ... ok
 test execution_resume_all::tests::formats_an_empty_report_as_text ... ok
-test execution_resume_all::tests::re_attaches_watchers_for_live_docker_sessions ... ok
+test execution_resume::resume_flow::tests::resume_execution_relaunches_through_the_isolation_backend_when_the_container_is_gone ... ok
+test execution_resume::resume_flow::tests::resume_execution_starts_a_stopped_container_and_reattaches_the_watcher ... ok
 test execution_resume_all::tests::formats_the_report_as_json ... ok
 test execution_resume_all::tests::formats_the_report_as_text ... ok
+test execution_resume_all::tests::re_attaches_watchers_for_live_docker_sessions ... ok
+test execution_resume_all::tests::reports_an_empty_set ... ok
 test execution_resume_all::tests::leaves_live_screen_sessions_untouched ... ok
 test execution_resume_all::tests::reports_disabled_tracking ... ok
-test execution_resume_all::tests::reports_an_empty_set ... ok
+test execution_resume::resume_flow::tests::repeated_snapshot_successors_retain_original_root_session_attribution ... ok
 test execution_store::tests::test_execution_record_complete ... ok
 test execution_store::tests::test_execution_record_json_roundtrip ... ok
 test execution_store::tests::test_execution_record_new ... ok
-test execution_resume_all::tests::reports_backends_that_cannot_be_probed_locally ... ok
 test execution_resume::resume_flow::tests::snapshot_disk_shortage_restores_the_original_without_commit_or_remove ... ok
+test execution_resume_all::tests::reports_backends_that_cannot_be_probed_locally ... ok
 test execution_resume_all::tests::reconciles_executions_whose_session_is_gone ... ok
 test execution_resume_all::tests::reports_sessions_that_cannot_be_finalized ... ok
 test execution_store::tests::test_store_delete ... ok
 test execution_store::tests::test_store_clear ... ok
 test execution_store::tests::test_store_get_all ... ok
 test execution_store::tests::test_store_save_and_get ... ok
-test exit_reason::tests::detects_kernel_oom_killer ... ok
-test exit_reason::tests::detects_v8_heap_limit_from_the_incident_log ... ok
 test execution_store::tests::test_store_update ... ok
-test exit_reason::tests::log_marker_wins_over_signal_and_cgroup_flag ... ok
-test exit_reason::tests::detects_other_runtimes_reporting_their_own_exhaustion ... ok
-test exit_reason::tests::maps_signal_exit_codes ... ok
 test execution_store::tests::test_store_get_by_status ... ok
-test exit_reason::tests::memory_exhaustion_explains_only_abnormal_exits ... ok
-test exit_reason::tests::memory_marker_returns_the_whole_matched_line ... ok
 test execution_store::tests::test_store_get_stats ... ok
+test exit_reason::tests::log_marker_wins_over_signal_and_cgroup_flag ... ok
+test exit_reason::tests::detects_kernel_oom_killer ... ok
+test exit_reason::tests::maps_signal_exit_codes ... ok
+test exit_reason::tests::detects_v8_heap_limit_from_the_incident_log ... ok
+test exit_reason::tests::memory_exhaustion_explains_only_abnormal_exits ... ok
 test exit_reason::tests::memory_marker_line_is_length_bounded ... ok
-test failure_handler::tests::test_parse_git_url_invalid ... ok
+test exit_reason::tests::memory_marker_returns_the_whole_matched_line ... ok
 test failure_handler::tests::test_parse_git_url_https ... ok
+test failure_handler::tests::test_parse_git_url_invalid ... ok
 test failure_handler::tests::test_parse_git_url_ssh ... ok
-test isolation::tests::test_build_docker_runtime_args_empty ... ok
+test exit_reason::tests::memory_exhaustion_falls_back_to_the_container_flag ... ok
+test exit_reason::tests::detects_other_runtimes_reporting_their_own_exhaustion ... ok
 test isolation::tests::test_build_docker_runtime_args_order ... ok
-test failure_handler::tests::test_parse_git_url_with_git_suffix ... ok
+test isolation::tests::test_build_docker_runtime_args_empty ... ok
 test isolation::tests::test_create_log_path ... ok
+test isolation::tests::test_generate_log_filename ... ok
 test isolation::tests::test_get_shell ... ok
 test isolation::tests::test_get_timestamp ... ok
-test isolation::tests::test_generate_log_filename ... ok
+test failure_handler::tests::test_parse_git_url_with_git_suffix ... ok
 test isolation::tests::test_is_command_available ... ok
 test exit_reason::tests::returns_none_for_ordinary_output ... ok
 test exit_reason::tests::falls_back_to_cgroup_observation_then_signal ... ok
-test exit_reason::tests::memory_exhaustion_falls_back_to_the_container_flag ... ok
 test isolation::tests::test_wrap_command_with_user ... ok
 test isolation_metadata::tests::test_build_isolation_options_map_basic ... ok
 test isolation_metadata::tests::test_build_isolation_options_map_includes_runtime_options ... ok
@@ -204,17 +204,17 @@ test lino_value_json::tests::converts_json_scalars_to_lino_values ... ok
 test lino_value_json::tests::converts_lino_values_to_json ... ok
 test lino_value_json::tests::converts_non_finite_lino_float_to_json_null ... ok
 test output_blocks::tests::test_create_command_line ... ok
-test isolation::tests::test_run_in_screen_captures_exit_code ... ok
+test isolation::tests::test_run_in_screen_captures_stderr ... ok
 test isolation::tests::test_run_in_screen_captures_version_output ... ok
 test output_blocks::tests::test_create_timeline_line ... ok
 test output_blocks::tests::test_escape_for_links_notation ... ok
 test output_blocks::tests::test_format_duration ... ok
 test output_blocks::tests::test_generate_isolation_lines_docker ... ok
-test output_blocks::tests::test_create_finish_block_with_isolation ... ok
-test output_blocks::tests::test_generate_isolation_lines_tmux ... ok
 test output_blocks::tests::test_generate_isolation_lines_screen ... ok
 test output_blocks::tests::test_create_start_block_with_isolation ... ok
-test output_blocks::tests::test_parse_isolation_metadata_screen ... ok
+test output_blocks::tests::test_generate_isolation_lines_tmux ... ok
+test output_blocks::tests::test_create_finish_block_with_isolation ... ok
+test isolation::tests::test_run_in_screen_captures_exit_code ... ok
 test recovery_delay::tests::system_random_stays_in_the_unit_interval ... ok
 test sequence_parser::tests::test_distribute_option_empty_returns_nulls ... ok
 test sequence_parser::tests::test_distribute_option_sequence_with_matching_length ... ok
@@ -240,50 +240,50 @@ test sequence_parser::tests::test_parse_sequence_multiple ... ok
 test sequence_parser::tests::test_parse_sequence_multiple_spaces ... ok
 test sequence_parser::tests::test_parse_sequence_single ... ok
 test sequence_parser::tests::test_parse_sequence_trims_whitespace ... ok
+test output_blocks::tests::test_parse_isolation_metadata_screen ... ok
 test sequence_parser::tests::test_parse_sequence_with_underscores ... ok
 test sequence_parser::tests::test_shift_sequence_empty ... ok
 test sequence_parser::tests::test_shift_sequence_removes_first ... ok
 test sequence_parser::tests::test_shift_sequence_single_element ... ok
 test sequence_parser::tests::test_shift_sequence_with_nulls ... ok
+test output_blocks::tests::test_parse_isolation_metadata_tmux ... ok
 test session_probe::tests::map_docker_status_to_state_maps_empty_to_unknown ... ok
 test session_probe::tests::map_docker_status_to_state_maps_exited_and_created_to_stopped ... ok
 test session_probe::tests::map_docker_status_to_state_maps_running ... ok
-test session_probe::tests::parse_screen_session_state_does_not_match_a_partial_name ... ok
-test session_probe::tests::parse_screen_session_state_finds_a_detached_session ... ok
+test output_blocks::tests::test_parse_isolation_metadata_docker ... ok
 test session_probe::tests::parse_screen_session_state_reports_missing_sessions ... ok
+test session_probe::tests::parse_screen_session_state_finds_a_detached_session ... ok
 test session_probe::tests::probe_session_detects_a_dead_tmux_session ... ok
-test session_probe::tests::probe_session_detects_a_live_screen_session ... ok
-test session_probe::tests::probe_session_detects_a_live_tmux_session ... ok
 test session_probe::tests::probe_session_detects_a_removed_docker_container ... ok
+test session_probe::tests::probe_session_detects_a_live_screen_session ... ok
 test session_probe::tests::probe_session_detects_a_running_docker_container ... ok
+test session_probe::tests::parse_screen_session_state_does_not_match_a_partial_name ... ok
+test session_probe::tests::probe_session_detects_a_live_tmux_session ... ok
 test session_probe::tests::probe_session_detects_a_stopped_docker_container ... ok
 test session_probe::tests::probe_session_reports_records_without_a_session_name_as_unknown ... ok
-test session_probe::tests::probe_session_reports_ssh_sessions_as_unknown ... ok
 test signal_handler::tests::test_set_and_clear_current_execution ... ok
+test session_probe::tests::probe_session_reports_ssh_sessions_as_unknown ... ok
 test signal_handler::tests::test_signal_received_initially_false ... ok
-test output_blocks::tests::test_parse_isolation_metadata_docker ... ok
 test status_formatter::tests::links_notation_indents_nested_process_id_arrays ... ok
-test isolation::tests::test_run_in_screen_captures_stderr ... ok
-test substitution::tests::test_case_insensitive_matching ... ok
-test output_blocks::tests::test_parse_isolation_metadata_tmux ... ok
-test substitution::tests::test_create_rule ... ok
-test substitution::tests::test_match_and_substitute_multiple_vars ... ok
 test substitution::tests::test_match_and_substitute_basic ... ok
 test substitution::tests::test_match_and_substitute_no_match ... ok
+test substitution::tests::test_case_insensitive_matching ... ok
+test substitution::tests::test_match_and_substitute_multiple_vars ... ok
+test substitution::tests::test_create_rule ... ok
 test user_manager::tests::test_generate_isolated_username ... ok
 test user_manager::tests::test_generate_isolated_username_with_prefix ... ok
 test user_manager::tests::test_get_current_user ... ok
-test substitution::tests::test_specificity_matching ... ok
-test substitution::tests::test_parse_lino_content ... ok
 test user_manager::tests::test_get_current_user_groups ... ok
-test user_manager::tests::test_user_exists_root ... ok
-test user_manager::tests::test_user_not_exists ... ok
-test user_manager::tests::test_group_exists ... ok
-test substitution::tests::test_sort_rules_by_specificity ... ok
 test isolation::tests::test_run_in_screen_detached_writes_to_provided_log_path ... ok
+test user_manager::tests::test_group_exists ... ok
+test user_manager::tests::test_user_not_exists ... ok
+test user_manager::tests::test_user_exists_root ... ok
+test substitution::tests::test_specificity_matching ... ok
+test substitution::tests::test_sort_rules_by_specificity ... ok
+test substitution::tests::test_parse_lino_content ... ok
 test docker_command_handoff::tests::auto_handoff_chooses_an_installed_shell_inside_the_container ... ok
 
-test result: ok. 279 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.27s
+test result: ok. 279 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.78s
 
      Running unittests src/bin/main.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/start-67dbe50bcbf6fbc0)
 
@@ -294,159 +294,159 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running tests/args_parser.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/args_parser-eeacfecac2578c87)
 
 running 89 tests
-test basic_command_parsing::should_default_new_cleanup_flags_to_false ... ok
-test basic_command_parsing::should_default_keep_alive_to_false ... ok
-test basic_command_parsing::should_error_for_auto_remove_without_docker_isolation ... ok
-test basic_command_parsing::should_error_for_auto_remove_without_isolation ... ok
-test basic_command_parsing::should_error_for_endpoint_with_non_ssh_backend ... ok
-test basic_command_parsing::should_error_for_image_with_non_docker_backend ... ok
+test basic_command_parsing::keep_alive_should_work_with_detached_mode ... ok
+test basic_command_parsing::auto_remove_and_keep_alive_can_coexist ... ok
 test basic_command_parsing::keep_alive_should_work_with_docker ... ok
+test basic_command_parsing::should_default_auto_remove_docker_container_to_false ... ok
+test basic_command_parsing::should_default_new_cleanup_flags_to_false ... ok
+test basic_command_parsing::should_error_for_auto_remove_without_docker_isolation ... ok
+test basic_command_parsing::should_error_for_keep_alive_without_isolation ... ok
 test basic_command_parsing::should_error_for_missing_backend_argument ... ok
 test basic_command_parsing::should_error_for_new_cleanup_flags_without_docker_isolation ... ok
-test basic_command_parsing::keep_alive_should_work_with_detached_mode ... ok
 test basic_command_parsing::should_error_for_new_cleanup_flags_without_isolation ... ok
-test basic_command_parsing::should_error_for_unknown_wrapper_option_without_separator ... ok
 test basic_command_parsing::should_error_for_unknown_wrapper_option_before_separator ... ok
-test basic_command_parsing::should_error_for_keep_alive_without_isolation ... ok
-test basic_command_parsing::auto_remove_and_keep_alive_can_coexist ... ok
-test basic_command_parsing::should_parse_always_cleanup_container_flag ... ok
-test basic_command_parsing::should_parse_attached_flag ... ok
-test basic_command_parsing::should_default_auto_remove_docker_container_to_false ... ok
-test basic_command_parsing::should_parse_auto_remove_docker_container_flag ... ok
-test basic_command_parsing::should_parse_a_shorthand ... ok
+test basic_command_parsing::should_error_for_unknown_wrapper_option_without_separator ... ok
 test basic_command_parsing::should_handle_mixed_options_and_command ... ok
-test basic_command_parsing::should_parse_command_after_options_without_separator ... ok
-test basic_command_parsing::should_error_for_session_without_isolation ... ok
 test basic_command_parsing::should_normalize_backend_to_lowercase ... ok
-test basic_command_parsing::should_parse_d_shorthand ... ok
+test basic_command_parsing::should_error_for_session_without_isolation ... ok
+test basic_command_parsing::should_error_for_endpoint_with_non_ssh_backend ... ok
+test basic_command_parsing::should_error_for_auto_remove_without_isolation ... ok
+test basic_command_parsing::should_error_for_image_with_non_docker_backend ... ok
+test basic_command_parsing::should_parse_always_cleanup_container_flag ... ok
+test basic_command_parsing::should_parse_a_shorthand ... ok
+test basic_command_parsing::should_default_keep_alive_to_false ... ok
+test basic_command_parsing::should_parse_attached_flag ... ok
+test basic_command_parsing::should_parse_auto_remove_docker_container_flag ... ok
+test basic_command_parsing::should_parse_endpoint_equals_format ... ok
 test basic_command_parsing::should_parse_detached_flag ... ok
 test basic_command_parsing::should_parse_empty_command_correctly ... ok
-test basic_command_parsing::should_parse_endpoint_equals_format ... ok
-test basic_command_parsing::should_parse_isolated_equals_value_format ... ok
 test basic_command_parsing::should_parse_image_equals_format ... ok
-test basic_command_parsing::should_parse_isolation_alias_before_command_without_separator ... ok
-test basic_command_parsing::should_parse_isolation_equals_alias_format ... ok
+test basic_command_parsing::should_parse_isolated_equals_value_format ... ok
 test basic_command_parsing::should_parse_isolation_alias_with_value ... ok
-test basic_command_parsing::should_parse_k_shorthand ... ok
+test basic_command_parsing::should_parse_isolation_equals_alias_format ... ok
+test basic_command_parsing::should_parse_command_after_options_without_separator ... ok
 test basic_command_parsing::should_parse_keep_alive_flag ... ok
-test basic_command_parsing::should_parse_keep_container_flag ... ok
-test basic_command_parsing::should_parse_keep_container_on_fail_flag ... ok
+test basic_command_parsing::should_parse_d_shorthand ... ok
 test basic_command_parsing::should_parse_session_equals_format ... ok
+test basic_command_parsing::should_parse_session_shorthand ... ok
+test basic_command_parsing::should_parse_keep_container_on_fail_flag ... ok
 test basic_command_parsing::should_provide_helpful_error_for_mode_conflict ... ok
 test cleanup_cases::should_default_cleanup_to_false ... ok
-test keep_user_tests::should_default_keep_user_to_false ... ok
-test basic_command_parsing::should_reject_conflicting_docker_cleanup_options ... ok
-test list_tests::should_normalize_output_format_with_list ... ok
-test list_tests::should_parse_list_flag ... ok
-test list_tests::should_default_list_to_false ... ok
-test status_tests::should_accept_all_valid_output_formats ... ok
-test status_tests::should_default_output_format_to_none ... ok
-test status_tests::should_default_status_to_none ... ok
 test keep_user_tests::keep_user_should_work_with_user_and_isolation_options ... ok
-test basic_command_parsing::should_parse_session_shorthand ... ok
+test keep_user_tests::should_default_keep_user_to_false ... ok
 test keep_user_tests::should_error_for_keep_user_without_user ... ok
 test keep_user_tests::should_parse_keep_user_flag ... ok
+test list_tests::should_default_list_to_false ... ok
+test list_tests::should_normalize_output_format_with_list ... ok
+test list_tests::should_parse_list_flag ... ok
 test list_tests::should_parse_list_with_json_output_format ... ok
+test status_tests::should_accept_all_valid_output_formats ... ok
+test basic_command_parsing::should_reject_conflicting_docker_cleanup_options ... ok
+test basic_command_parsing::should_parse_keep_container_flag ... ok
+test basic_command_parsing::should_parse_isolation_alias_before_command_without_separator ... ok
+test status_tests::should_default_status_to_none ... ok
 test status_tests::should_error_for_status_with_flag_as_next_arg ... ok
-test status_tests::should_error_for_stop_with_empty_equals_identifier ... ok
-test status_tests::should_error_for_stop_without_identifier ... ok
+test status_tests::should_default_output_format_to_none ... ok
 test status_tests::should_error_for_terminate_with_empty_equals_identifier ... ok
-test status_tests::should_normalize_output_format_to_lowercase ... ok
-test status_tests::should_parse_stop_equals_format ... ok
-test status_tests::should_parse_stop_with_identifier ... ok
-test status_tests::should_parse_terminate_equals_format ... ok
-test status_tests::should_error_for_upload_log_without_identifier ... ok
-test status_tests::should_parse_terminate_with_identifier ... ok
-test status_tests::should_parse_upload_log_with_identifier ... ok
-test status_tests::should_parse_upload_log_equals_format ... ok
-test use_command_stream_tests::should_default_use_command_stream_to_false ... ok
-test status_tests::should_error_for_upload_log_with_empty_equals_identifier ... ok
-test use_command_stream_tests::should_work_with_other_options ... ok
 test status_tests::should_error_for_terminate_without_identifier ... ok
-test user_isolation_cases::should_error_for_user_with_docker_isolation ... ok
-test user_isolation_cases::should_parse_u_shorthand ... ok
+test status_tests::should_error_for_stop_with_empty_equals_identifier ... ok
+test basic_command_parsing::should_parse_k_shorthand ... ok
+test status_tests::should_error_for_upload_log_without_identifier ... ok
 test status_tests::should_error_when_combining_query_and_control_modes ... ok
+test status_tests::should_error_for_upload_log_with_empty_equals_identifier ... ok
+test status_tests::should_normalize_output_format_to_lowercase ... ok
+test status_tests::should_parse_terminate_equals_format ... ok
+test status_tests::should_parse_terminate_with_identifier ... ok
+test status_tests::should_parse_stop_with_identifier ... ok
+test status_tests::should_parse_stop_equals_format ... ok
+test status_tests::should_error_for_stop_without_identifier ... ok
+test use_command_stream_tests::should_default_use_command_stream_to_false ... ok
+test status_tests::should_parse_upload_log_equals_format ... ok
+test status_tests::should_parse_upload_log_with_identifier ... ok
 test use_command_stream_tests::should_parse_use_command_stream_flag ... ok
+test use_command_stream_tests::should_work_with_other_options ... ok
+test user_isolation_cases::should_parse_u_shorthand ... ok
 test user_isolation_cases::should_work_with_tmux_isolation ... ok
-test user_isolation_cases::should_parse_isolated_user_equals_value_format ... ok
-test user_isolation_cases::should_parse_u_with_custom_username ... ok
+test user_isolation_cases::should_error_for_user_with_docker_isolation ... ok
 test user_isolation_cases::should_work_without_isolation ... ok
-test valid_backends_tests::should_error_for_invalid_backend ... ok
-test valid_backends_tests::should_accept_all_valid_backends ... ok
-test valid_output_formats_tests::should_include_json ... ok
+test valid_backends_tests::error_should_list_valid_backends ... ok
 test valid_backends_tests::should_include_docker ... ok
+test valid_backends_tests::should_accept_all_valid_backends ... ok
+test user_isolation_cases::should_parse_isolated_user_equals_value_format ... ok
+test valid_backends_tests::should_error_for_invalid_backend ... ok
 test valid_backends_tests::should_include_screen ... ok
 test valid_backends_tests::should_include_tmux ... ok
-test valid_backends_tests::error_should_list_valid_backends ... ok
-test valid_output_formats_tests::should_include_links_notation ... ok
+test valid_output_formats_tests::should_include_json ... ok
+test valid_output_formats_tests::should_include_text ... ok
 test validate_options_tests::should_error_for_attached_and_detached_together ... ok
 test validate_options_tests::should_pass_for_docker_with_image ... ok
+test valid_output_formats_tests::should_include_links_notation ... ok
+test user_isolation_cases::should_parse_u_with_custom_username ... ok
 test validate_options_tests::should_pass_for_valid_options ... ok
-test valid_output_formats_tests::should_include_text ... ok
 
-test result: ok. 89 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 89 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
 
      Running tests/args_parser_shell.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/args_parser_shell-6f99e19df1a5073c)
 
 running 15 tests
-test shell_option_tests::should_default_shell_to_auto ... ok
-test shell_option_tests::should_error_for_missing_shell_argument ... ok
-test shell_option_tests::should_parse_shell_auto ... ok
-test shell_option_tests::should_error_for_invalid_shell ... ok
-test shell_option_tests::should_normalize_shell_to_lowercase ... ok
 test shell_option_tests::error_should_list_valid_shells ... ok
-test shell_option_tests::should_parse_shell_sh ... ok
-test shell_option_tests::should_parse_shell_zsh ... ok
-test valid_shells_tests::should_include_bash ... ok
-test shell_option_tests::should_work_with_ssh_isolation ... ok
-test valid_shells_tests::should_include_auto ... ok
-test valid_shells_tests::should_include_sh ... ok
-test valid_shells_tests::should_include_zsh ... ok
-test shell_option_tests::should_parse_shell_equals_value_format ... ok
+test shell_option_tests::should_error_for_missing_shell_argument ... ok
+test shell_option_tests::should_normalize_shell_to_lowercase ... ok
+test shell_option_tests::should_parse_shell_auto ... ok
+test shell_option_tests::should_default_shell_to_auto ... ok
+test shell_option_tests::should_error_for_invalid_shell ... ok
 test shell_option_tests::should_parse_shell_bash ... ok
+test valid_shells_tests::should_include_auto ... ok
+test shell_option_tests::should_work_with_ssh_isolation ... ok
+test shell_option_tests::should_parse_shell_equals_value_format ... ok
+test shell_option_tests::should_parse_shell_sh ... ok
+test valid_shells_tests::should_include_bash ... ok
+test valid_shells_tests::should_include_zsh ... ok
+test valid_shells_tests::should_include_sh ... ok
+test shell_option_tests::should_parse_shell_zsh ... ok
 
-test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests/check_file_size.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/check_file_size-d7fc4045f702b320)
 
 running 5 tests
-test still_checks_rust_sources_outside_the_archive ... ok
-test reports_paths_with_forward_slashes_on_every_platform ... ok
-test fails_on_an_oversized_file_in_the_repository_source ... ok
 test passes_when_every_file_is_within_the_limit ... ok
+test fails_on_an_oversized_file_in_the_repository_source ... ok
+test reports_paths_with_forward_slashes_on_every_platform ... ok
 test ignores_archived_evidence_under_dev_log ... ok
+test still_checks_rust_sources_outside_the_archive ... ok
 
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
 
      Running tests/ci_workflow_invariants.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/ci_workflow_invariants-ca6007b42cd5bcb2)
 
 running 24 tests
-test configures_git_before_checkout_so_no_init_hints_are_printed ... ok
-test aggregates_every_job_into_a_pipeline_status_gate ... ok
-test finds_every_workflow_file ... ok
 test coverage_step_enables_pipefail_so_tee_cannot_hide_failures ... ok
-test declares_a_least_privilege_default_permission_set ... ok
-test link_workflow_checks_links_and_falls_back_to_the_web_archive ... ok
 test audits_both_dependency_graphs_for_advisories ... ok
+test configures_git_before_checkout_so_no_init_hints_are_printed ... ok
+test declares_a_least_privilege_default_permission_set ... ok
+test finds_every_workflow_file ... ok
+test gives_every_job_its_own_concurrency_group ... ok
+test aggregates_every_job_into_a_pipeline_status_gate ... ok
+test link_workflow_checks_links_and_falls_back_to_the_web_archive ... ok
 test lints_and_audits_the_workflows_themselves ... ok
 test lints_the_repository_level_scripts_directory ... ok
-test gives_every_job_its_own_concurrency_group ... ok
-test gives_every_job_a_timeout ... ok
-test pins_third_party_actions_to_a_commit_hash ... ok
 test never_puts_concurrency_at_workflow_level ... ok
-test never_swallows_a_failing_command_in_a_quality_gate ... ok
-test read_only_checks_protect_main_and_the_gated_rust_stage ... ok
 test does_not_persist_credentials_on_read_only_checkouts ... ok
+test gives_every_job_a_timeout ... ok
 test parses_coverage_through_the_tested_helper_not_an_inline_grep ... ok
-test security_workflow_scans_code_dependencies_and_secrets ... ok
+test never_swallows_a_failing_command_in_a_quality_gate ... ok
 test rust_workflow_keeps_the_test_parity_gate ... ok
-test uses_not_cancelled_rather_than_always_outside_the_status_job ... ok
-test writers_share_the_main_writer_group_and_are_not_cancellable ... ok
+test pins_third_party_actions_to_a_commit_hash ... ok
+test read_only_checks_protect_main_and_the_gated_rust_stage ... ok
 test scopes_codeql_to_this_projects_own_code ... ok
-test references_only_helper_scripts_that_exist ... ok
 test never_interpolates_untrusted_context_into_a_run_block ... ok
+test security_workflow_scans_code_dependencies_and_secrets ... ok
+test uses_not_cancelled_rather_than_always_outside_the_status_job ... ok
+test references_only_helper_scripts_that_exist ... ok
+test writers_share_the_main_writer_group_and_are_not_cancellable ... ok
 
-test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
 
      Running tests/cleanup.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/cleanup-70eeff489da1376d)
 
@@ -457,7 +457,7 @@ test test_cleanup_stale_custom_max_age ... ok
 test test_cleanup_stale_only_executing_records ... ok
 test test_cleanup_stale_actual_cleanup ... ok
 
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.46s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
 
      Running tests/docker_network.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/docker_network-cf6a9def1cf63fcc)
 
@@ -466,7 +466,7 @@ test multi_network_probe_is_hermetic ... ok
 ping: bad address 'formal-ai'
 test named_network_alias_is_private_and_missing_network_leaves_no_orphan ... ok
 
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.20s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.03s
 
      Running tests/echo_integration.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/echo_integration-384700f9468fc5de)
 
@@ -484,26 +484,26 @@ test screen_isolation_mode::detached::test_reattach_instructions_in_detached_scr
 test tmux_isolation_mode::detached::test_echo_hi_in_detached_tmux_mode ... ok
 test tmux_isolation_mode::detached::test_echo_with_quotes_in_detached_tmux ... ok
 test tmux_isolation_mode::detached::test_reattach_instructions_in_detached_tmux ... ok
-test docker_isolation_mode::attached::test_exit_code_in_attached_docker ... ok
-test docker_isolation_mode::attached::test_echo_hi_in_attached_docker_mode ... ok
-test docker_isolation_mode::detached::test_echo_hi_in_detached_docker_mode ... ok
 test docker_isolation_mode::attached::test_echo_with_quotes_in_attached_docker ... ok
 test docker_isolation_mode::detached::test_reattach_instructions_in_detached_docker ... ok
+test docker_isolation_mode::attached::test_echo_hi_in_attached_docker_mode ... ok
+test docker_isolation_mode::detached::test_echo_hi_in_detached_docker_mode ... ok
+test docker_isolation_mode::attached::test_exit_code_in_attached_docker ... ok
 
-test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.64s
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.13s
 
      Running tests/execution_control.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/execution_control-c547764b65224f72)
 
 running 7 tests
-test parses_screen_pid_from_screen_ls_output ... ok
 test collects_screen_and_descendant_process_ids ... ok
+test parses_screen_pid_from_screen_ls_output ... ok
 test screen_stop_maps_to_ctrl_c_injection ... ok
 test stop_sends_docker_stop ... ok
 test non_detached_records_are_rejected ... ok
 test stop_sends_screen_control_command ... ok
 test terminate_sends_docker_kill ... ok
 
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
 
      Running tests/execution_store.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/execution_store-2f375c1a52cba7f4)
 
@@ -512,77 +512,77 @@ test execution_record_tests::should_create_new_execution_record_with_default_val
 test execution_record_tests::should_create_execution_record_with_custom_values ... ok
 test execution_record_tests::should_mark_execution_as_completed ... ok
 test execution_status_tests::executed_status_as_str ... ok
+test execution_record_tests::should_mark_execution_as_failed ... ok
 test execution_status_tests::executing_status_as_str ... ok
 test execution_store_cases::should_create_app_folder_on_initialization ... ok
-test execution_record_tests::should_mark_execution_as_failed ... ok
 test execution_store_cases::should_handle_special_characters_in_command ... ok
-test execution_store_cases::should_handle_unicode_characters ... ok
 test execution_store_cases::should_delete_a_record ... ok
 test execution_store_cases::should_return_empty_cleanup_result_when_no_stale_records_exist ... ok
-test execution_store_cases::should_get_all_records ... ok
 test execution_store_cases::should_get_records_by_status ... ok
+test execution_store_cases::should_get_all_records ... ok
+test execution_store_cases::should_handle_unicode_characters ... ok
 test execution_store_cases::should_return_false_when_deleting_non_existent_record ... ok
-test execution_store_cases::should_save_and_retrieve_an_execution_record ... ok
-test execution_store_cases::should_update_an_existing_record ... ok
-test execution_store_cases::should_get_statistics ... ok
 test execution_status_tests::should_get_recent_records ... ok
+test execution_store_cases::should_save_and_retrieve_an_execution_record ... ok
+test execution_store_cases::should_get_statistics ... ok
+test execution_store_cases::should_update_an_existing_record ... ok
 
-test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
 
      Running tests/failure_handler.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/failure_handler-74b9d9eaf44f84ae)
 
 running 25 tests
-test config_tests::should_allow_setting_disable_auto_issue ... ok
 test config_tests::should_allow_setting_disable_log_upload ... ok
+test config_tests::should_allow_setting_disable_auto_issue ... ok
 test config_tests::should_allow_setting_verbose ... ok
 test create_issue_tests::helper_process_calls_create_issue ... ignored, helper process, driven by create_issue_with_fake_gh
 test config_tests::should_have_correct_default_values ... ok
 test handle_failure_tests::should_not_panic_when_disable_auto_issue_is_true ... ok
 test handle_failure_tests::should_not_panic_when_verbose_and_disable_auto_issue ... ok
-test create_issue_tests::sanitizes_credentials_in_issue_metadata_and_supports_unicode_commands ... ok
 test create_issue_tests::keeps_the_failing_command_verbatim_and_writes_real_newlines ... ok
+test create_issue_tests::sanitizes_credentials_in_issue_metadata_and_supports_unicode_commands ... ok
 test is_gh_upload_log_available_tests::return_value_is_bool_type ... ok
 test is_gh_upload_log_available_tests::should_return_a_bool ... ok
-test create_issue_tests::passes_the_title_and_body_as_separate_arguments ... ok
 test parse_git_url_tests::should_normalize_url_to_https ... ok
 test parse_git_url_tests::should_parse_git_at_format ... ok
+test create_issue_tests::passes_the_title_and_body_as_separate_arguments ... ok
 test parse_git_url_tests::should_parse_https_url ... ok
-test parse_git_url_tests::should_parse_ssh_url ... ok
-test parse_git_url_tests::should_return_none_for_empty_string ... ok
 test parse_git_url_tests::should_parse_npm_style_git_url ... ok
-test parse_git_url_tests::should_return_none_for_non_github_url ... ok
+test parse_git_url_tests::should_return_none_for_empty_string ... ok
+test parse_git_url_tests::should_parse_ssh_url ... ok
 test parse_git_url_tests::should_return_none_for_invalid_url ... ok
 test parse_git_url_tests::should_strip_git_suffix_from_repo ... ok
-test can_create_issue_tests::should_return_bool ... ok
+test parse_git_url_tests::should_return_none_for_non_github_url ... ok
 test is_gh_authenticated_tests::return_value_is_bool_type ... ok
-test is_gh_authenticated_tests::should_return_a_bool ... ok
 test can_create_issue_tests::should_return_false_for_invalid_repo ... ok
+test is_gh_authenticated_tests::should_return_a_bool ... ok
+test can_create_issue_tests::should_return_bool ... ok
 
-test result: ok. 24 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.85s
+test result: ok. 24 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.98s
 
      Running tests/integration.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/integration-67fde1fe989e3930)
 
 running 18 tests
-test args_parser_integration_cases::test_parse_with_separator ... ok
 test args_parser_integration_cases::test_docker_with_image ... ok
 test args_parser_integration_cases::test_parse_detached_mode ... ok
-test args_parser_integration_cases::test_parse_simple_command_integration ... ok
-test args_parser_integration_cases::test_parse_with_session_name ... ok
 test args_parser_integration_cases::test_parse_isolated_mode_integration ... ok
+test args_parser_integration_cases::test_parse_with_separator ... ok
+test args_parser_integration_cases::test_parse_with_session_name ... ok
 test args_parser_integration_cases::test_validate_options_valid_backends ... ok
 test public_exports_tests::test_execution_record_export ... ok
+test args_parser_integration_cases::test_parse_simple_command_integration ... ok
 test public_exports_tests::test_execution_record_options_export ... ok
 test public_exports_tests::test_execution_status_export ... ok
 test public_exports_tests::test_execution_store_options_export ... ok
+test version_tests::test_package_has_description ... ok
+test version_tests::test_cargo_version_format ... ok
+test version_tests::test_package_name ... ok
 test public_exports_tests::test_is_clink_installed_export ... ok
 test public_exports_tests::test_execution_stats_export ... ok
 test public_exports_tests::test_execution_store_export ... ok
-test version_tests::test_cargo_version_format ... ok
-test version_tests::test_package_name ... ok
-test version_tests::test_package_has_description ... ok
 test public_exports_tests::test_full_workflow ... ok
 
-test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
 
      Running tests/isolation.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/isolation-4da7093f048d8c0c)
 
@@ -592,220 +592,220 @@ test test_get_default_docker_image_returns_known_images ... ok
 test test_docker_pull_image_records_prep_phase_in_log ... ok
 test test_docker_pull_image_without_log_path ... ok
 
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
 
      Running tests/isolation_log.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/isolation_log-5e358088de9cb4ae)
 
 running 30 tests
-test create_log_footer_tests::should_contain_exit_code ... ok
-test create_log_footer_tests::should_contain_end_time ... ok
 test create_log_header_tests::should_contain_environment ... ok
-test create_log_footer_tests::should_contain_finished_label ... ok
 test create_log_header_tests::should_contain_command ... ok
+test create_log_footer_tests::should_contain_finished_label ... ok
+test create_log_footer_tests::should_contain_exit_code ... ok
 test create_log_header_tests::should_contain_image_when_provided ... ok
 test create_log_header_tests::should_contain_start_command_log_header ... ok
-test create_log_footer_tests::should_contain_exit_code_label ... ok
-test create_log_header_tests::should_contain_user_when_provided ... ok
-test create_log_header_tests::should_contain_session_name ... ok
-test create_log_path_tests::should_return_path_ending_in_dot_log ... ok
-test create_log_path_tests::should_contain_environment_in_path ... ok
 test create_log_path_tests::should_create_stable_direct_path_without_duplicate_environment ... ok
-test generate_log_filename_tests::should_contain_environment_name ... ok
-test generate_log_filename_tests::should_end_with_dot_log ... ok
 test create_log_path_tests::should_create_stable_isolation_path_for_execution_id ... ok
+test create_log_path_tests::should_return_path_ending_in_dot_log ... ok
+test create_log_footer_tests::should_contain_end_time ... ok
+test create_log_footer_tests::should_contain_exit_code_label ... ok
+test generate_log_filename_tests::should_contain_environment_name ... ok
+test create_log_path_tests::should_contain_environment_in_path ... ok
+test create_log_header_tests::should_contain_session_name ... ok
 test generate_log_filename_tests::should_start_with_start_command_prefix ... ok
+test generate_log_filename_tests::should_end_with_dot_log ... ok
+test get_default_docker_image_tests::should_return_image_with_tag ... ok
+test create_log_header_tests::should_contain_user_when_provided ... ok
+test get_log_dir_tests::should_return_temp_dir_by_default ... ok
+test generate_log_filename_tests::should_be_unique_for_same_environment ... ok
+test get_timestamp_tests::should_contain_time_separator ... ok
+test get_log_dir_tests::should_return_a_valid_path ... ok
 test get_default_docker_image_tests::should_return_non_empty_string ... ok
 test get_timestamp_tests::should_contain_date_separator ... ok
-test get_log_dir_tests::should_return_temp_dir_by_default ... ok
-test get_log_dir_tests::should_return_a_valid_path ... ok
-test generate_log_filename_tests::should_be_unique_for_same_environment ... ok
 test get_default_docker_image_tests::should_return_known_base_image ... ok
-test get_default_docker_image_tests::should_return_image_with_tag ... ok
-test get_timestamp_tests::should_contain_year ... ok
 test get_timestamp_tests::should_return_non_empty_string ... ok
-test get_timestamp_tests::should_contain_time_separator ... ok
+test get_timestamp_tests::should_contain_year ... ok
 test write_log_file_tests::should_return_false_for_invalid_path ... ok
-test write_log_file_tests::should_return_true_when_writing_to_temp_path ... ok
 test write_log_file_tests::should_append_to_existing_log_file ... ok
+test write_log_file_tests::should_return_true_when_writing_to_temp_path ... ok
 
 test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests/isolation_unit.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/isolation_unit-341e8c112144bd00)
 
 running 42 tests
-test build_shell_with_args_cmd_args_tests::should_preserve_positional_arguments_after_script ... ok
-test detect_shell_in_environment_tests::should_read_shell_preference_from_options_shell ... ok
-test detect_shell_in_environment_tests::should_return_sh_when_preference_is_sh ... ok
-test detect_shell_in_environment_tests::should_return_the_forced_shell_when_preference_is_not_auto ... ok
-test build_shell_with_args_cmd_args_tests::should_return_full_args_for_bash_c_echo ... ok
 test build_shell_with_args_cmd_args_tests::should_handle_bash_i_c_cmd ... ok
-test detect_shell_in_environment_tests::should_return_sh_fallback_for_unknown_environment ... ok
-test build_shell_with_args_cmd_args_tests::should_return_all_parts_when_no_c_flag ... ok
+test build_shell_with_args_cmd_args_tests::should_return_full_args_for_bash_c_echo ... ok
+test build_shell_with_args_cmd_args_tests::should_preserve_positional_arguments_after_script ... ok
+test detect_shell_in_environment_tests::should_return_sh_when_preference_is_sh ... ok
+test detect_shell_in_environment_tests::should_read_shell_preference_from_options_shell ... ok
+test detect_shell_in_environment_tests::should_return_the_forced_shell_when_preference_is_not_auto ... ok
 test detect_shell_in_environment_tests::should_return_zsh_when_preference_is_zsh ... ok
+test build_shell_with_args_cmd_args_tests::should_return_all_parts_when_no_c_flag ... ok
 test get_default_docker_image_tests::should_return_a_valid_docker_image_string ... ok
+test get_default_docker_image_tests::should_return_a_known_base_image ... ok
 test get_default_docker_image_tests::should_return_an_image_with_a_tag ... ok
+test detect_shell_in_environment_tests::should_return_sh_fallback_for_unknown_environment ... ok
 test is_interactive_shell_command_tests::should_return_false_for_bash_c_echo ... ok
 test is_interactive_shell_command_tests::should_return_false_for_bash_c_echo_hi_quoted ... ok
-test is_interactive_shell_command_tests::should_return_false_for_echo_hello ... ok
 test is_interactive_shell_command_tests::should_return_false_for_empty_string ... ok
 test is_interactive_shell_command_tests::should_return_false_for_ls_la ... ok
-test get_default_docker_image_tests::should_return_a_known_base_image ... ok
+test is_interactive_shell_command_tests::should_return_false_for_echo_hello ... ok
 test is_interactive_shell_command_tests::should_return_false_for_npm_test ... ok
 test is_interactive_shell_command_tests::should_return_false_for_whitespace_only ... ok
 test is_interactive_shell_command_tests::should_return_true_for_bash ... ok
 test is_interactive_shell_command_tests::should_return_true_for_bash_l_login_flag_no_c ... ok
-test is_command_available_tests::should_return_false_for_empty_command ... ok
-test is_interactive_shell_command_tests::should_return_true_for_slash_usr_bin_zsh ... ok
+test is_interactive_shell_command_tests::should_return_true_for_sh ... ok
 test is_interactive_shell_command_tests::should_return_true_for_slash_bin_bash ... ok
 test is_interactive_shell_command_tests::should_return_true_for_zsh ... ok
 test is_shell_invocation_with_args_tests::should_return_false_for_empty_string ... ok
-test is_interactive_shell_command_tests::should_return_true_for_sh ... ok
+test is_interactive_shell_command_tests::should_return_true_for_slash_usr_bin_zsh ... ok
+test is_command_available_tests::should_return_false_for_non_existent_command ... ok
+test is_command_available_tests::should_return_true_for_common_commands_echo ... ok
+test is_command_available_tests::should_return_false_for_empty_command ... ok
 test is_shell_invocation_with_args_tests::should_return_false_for_npm_run_test ... ok
 test is_command_available_tests::should_return_a_boolean ... ok
-test is_shell_invocation_with_args_tests::should_return_true_for_bash_c_echo ... ok
-test is_shell_invocation_with_args_tests::should_return_true_for_bash_i_c_cmd ... ok
 test is_shell_invocation_with_args_tests::should_return_true_for_slash_bin_bash_c ... ok
-test is_shell_invocation_with_args_tests::should_return_true_for_zsh_c_cmd ... ok
+test isolation_options_tests::should_allow_custom_shell ... ok
 test isolation_options_tests::should_allow_detached_mode ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_bash_i_c_cmd ... ok
+test isolation_options_tests::should_have_correct_defaults ... ok
 test wrap_command_with_user_tests::should_escape_single_quotes_in_command ... ok
 test wrap_command_with_user_tests::should_use_non_interactive_sudo ... ok
-test wrap_command_with_user_tests::should_wrap_command_with_sudo_when_user_is_specified ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_bash_c_echo ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_zsh_c_cmd ... ok
 test wrap_command_with_user_tests::should_return_command_unchanged_when_user_is_null ... ok
-test is_command_available_tests::should_return_false_for_non_existent_command ... ok
-test isolation_options_tests::should_allow_custom_shell ... ok
-test isolation_options_tests::should_have_correct_defaults ... ok
-test is_command_available_tests::should_return_true_for_common_commands_echo ... ok
+test wrap_command_with_user_tests::should_wrap_command_with_sudo_when_user_is_specified ... ok
 
-test result: ok. 42 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 42 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
 
      Running tests/log_sanitizer.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/log_sanitizer-d25918c120de2b34)
 
 running 11 tests
 test large_log_experiment ... ignored, bounded 110MiB experiment; run with experiments/issue-200/large-log-rust.sh
 test fails_closed_on_invalid_source_and_excessive_environment_values ... ok
-test private_copy_does_not_modify_source_and_is_removed_on_drop ... ok
 test quoted_aws_assignment_values_are_redacted ... ok
 test redacts_multiline_and_short_environment_values_and_preserves_invalid_utf8 ... ok
+test private_copy_does_not_modify_source_and_is_removed_on_drop ... ok
 test upload_child ... ok
 test both_upload_paths_use_private_sanitized_copies_and_manual_optout_is_explicit ... ok
-test overlapping_token_preserves_broader_header_continuation ... ok
 test overlapping_environment_values_are_fully_redacted_without_hiding_domains ... ok
+test overlapping_token_preserves_broader_header_continuation ... ok
 test bounds_memory_and_redacts_long_token_and_header_suffixes ... ok
 test redacts_required_credentials_across_chunk_boundaries ... ok
 
-test result: ok. 10 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.53s
+test result: ok. 10 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.86s
 
      Running tests/output_blocks.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/output_blocks-66418eac2a0d9d4a)
 
 running 22 tests
 test test_create_finish_block_without_duration ... ok
-test test_create_finish_block_failure ... ok
 test test_create_finish_block ... ok
 test test_create_start_block ... ok
+test test_create_finish_block_failure ... ok
 test test_escape_for_links_notation_no_quoting ... ok
 test test_escape_for_links_notation_with_colon ... ok
-test test_escape_for_links_notation_with_double_quotes ... ok
 test test_escape_for_links_notation_with_single_quotes ... ok
 test test_escape_for_links_notation_with_space ... ok
+test test_escape_for_links_notation_with_double_quotes ... ok
 test test_format_duration ... ok
 test test_get_result_marker ... ok
-test test_create_start_block_with_docker_isolation ... ok
-test test_parse_isolation_metadata ... ok
-test test_timeline_constants ... ok
 test test_create_finish_block_with_isolation_repeated ... ok
+test test_create_start_block_with_defer_command ... ok
+test test_timeline_constants ... ok
 test test_create_start_block_with_isolation ... ok
 test test_visual_continuity_output_formatting ... ok
 test test_finish_block_log_session_last ... ok
-test test_create_start_block_with_defer_command ... ok
-test test_start_block_ends_with_empty_timeline_when_defer_command_true ... ok
-test test_visual_continuity_command_output_pattern ... ok
+test test_create_start_block_with_docker_isolation ... ok
+test test_parse_isolation_metadata ... ok
 test test_visual_continuity_start_block_for_docker_isolation ... ok
+test test_visual_continuity_command_output_pattern ... ok
+test test_start_block_ends_with_empty_timeline_when_defer_command_true ... ok
 
-test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
 
      Running tests/output_blocks_extended.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/output_blocks_extended-cfe6abcca674f5d3)
 
 running 29 tests
-test create_timeline_line_tests::should_pad_labels_to_10_characters ... ok
-test create_command_line_tests::should_create_a_line_with_dollar_prefix ... ok
-test create_timeline_line_tests::should_create_a_line_with_timeline_marker_prefix_and_padded_label ... ok
-test create_timeline_line_tests::create_spine_line_should_work_as_alias ... ok
-test create_empty_timeline_line_tests::should_create_just_the_timeline_marker_character ... ok
 test create_empty_timeline_line_tests::create_empty_spine_line_should_work_as_alias ... ok
-test create_virtual_command_tests::should_create_virtual_command_block ... ok
-test escape_for_links_notation_tests::should_not_quote_simple_values ... ok
-test escape_for_links_notation_tests::should_quote_values_with_colons ... ok
-test create_virtual_command_tests::should_create_virtual_command_result ... ok
-test escape_for_links_notation_tests::should_quote_values_with_spaces ... ok
+test create_timeline_line_tests::create_spine_line_should_work_as_alias ... ok
 test create_timeline_separator_tests::should_create_a_separator_line ... ok
+test create_empty_timeline_line_tests::should_create_just_the_timeline_marker_character ... ok
+test create_timeline_line_tests::should_pad_labels_to_10_characters ... ok
+test create_virtual_command_tests::should_create_virtual_command_result ... ok
+test escape_for_links_notation_tests::should_not_quote_simple_values ... ok
+test create_command_line_tests::should_create_a_line_with_dollar_prefix ... ok
+test create_virtual_command_tests::should_create_virtual_command_block ... ok
+test escape_for_links_notation_tests::should_quote_values_with_colons ... ok
 test format_duration_tests::should_format_longer_durations_with_less_precision ... ok
 test format_duration_tests::should_format_millisecond_durations ... ok
-test format_value_for_links_notation_tests::should_format_simple_objects ... ok
+test format_duration_tests::should_format_second_durations ... ok
+test escape_for_links_notation_tests::should_quote_values_with_spaces ... ok
+test format_duration_tests::should_format_very_small_durations ... ok
+test create_timeline_line_tests::should_create_a_line_with_timeline_marker_prefix_and_padded_label ... ok
+test generate_isolation_lines_tests::should_generate_lines_for_docker_isolation ... ok
 test format_value_for_links_notation_tests::should_handle_null_values ... ok
+test format_value_for_links_notation_tests::should_format_simple_objects ... ok
 test generate_isolation_lines_tests::should_generate_lines_for_screen_isolation ... ok
 test get_result_marker_tests::should_return_failure_marker_for_non_zero_exit_codes ... ok
-test get_result_marker_tests::should_return_success_marker_for_exit_code_0 ... ok
-test generate_isolation_lines_tests::should_generate_lines_for_docker_isolation ... ok
-test format_duration_tests::should_format_second_durations ... ok
-test format_duration_tests::should_format_very_small_durations ... ok
 test timeline_constants_tests::should_export_result_markers ... ok
+test get_result_marker_tests::should_return_success_marker_for_exit_code_0 ... ok
 test timeline_constants_tests::should_export_spine_as_alias_for_backward_compatibility ... ok
 test timeline_constants_tests::should_export_timeline_marker_character ... ok
 test parse_isolation_metadata_tests::should_parse_docker_image ... ok
-test parse_isolation_metadata_tests::should_parse_environment_and_mode ... ok
 test parse_isolation_metadata_tests::should_parse_session_name ... ok
 test parse_isolation_metadata_tests::should_parse_all_fields_together ... ok
+test parse_isolation_metadata_tests::should_parse_environment_and_mode ... ok
 
-test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
 
      Running tests/regression_150.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_150-ebaea5f5bcce8126)
 
 running 11 tests
+test test_ignores_bare_exit_code_line_without_footer_block ... ok
 test test_ignores_exit_code_substring_in_command_output ... ok
 test test_ignores_exit_code_in_the_middle_of_a_line ... ok
-test test_last_anchored_footer_wins ... ok
 test test_partial_first_line_of_the_tail_is_dropped ... ok
-test test_ignores_bare_exit_code_line_without_footer_block ... ok
-test test_finds_footer_at_the_end_of_a_large_log ... ok
-test test_reads_the_real_footer ... ok
-test test_reads_crlf_and_negative_codes ... ok
+test test_last_anchored_footer_wins ... ok
 test test_returns_none_without_footer_or_file ... ok
+test test_reads_crlf_and_negative_codes ... ok
+test test_reads_the_real_footer ... ok
+test test_finds_footer_at_the_end_of_a_large_log ... ok
 test test_forged_output_does_not_terminate_an_executing_record ... ok
 test test_genuine_footer_terminates_the_record ... ok
 
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
 
      Running tests/regression_162.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_162-4f1ea31397d223e2)
 
 running 14 tests
+test test_attach_fails_with_a_clear_error_for_an_unknown_identifier ... ok
 test test_read_only_is_rejected_without_attach ... ok
 test test_resume_accepts_a_replacement_command_after_the_separator ... ok
-test test_attach_fails_with_a_clear_error_for_an_unknown_identifier ... ok
 test test_resume_fails_with_a_clear_error_for_an_unknown_identifier ... ok
 test test_attach_refuses_a_non_isolated_execution ... ok
-test test_resume_all_succeeds_with_an_empty_report_when_nothing_is_running ... ok
 test test_running_is_rejected_without_list ... ok
-test test_resume_refuses_a_non_isolated_execution ... ok
 test test_list_running_reports_only_executions_that_are_still_running ... ok
+test test_resume_all_succeeds_with_an_empty_report_when_nothing_is_running ... ok
+test test_resume_refuses_a_non_isolated_execution ... ok
 test test_status_explains_a_139_exit_caused_by_heap_exhaustion ... ok
 test test_status_does_not_invent_a_reason_for_a_clean_exit ... ok
 test test_attach_points_at_resume_when_the_session_is_already_gone ... ok
-test test_status_keeps_addressing_one_logical_session_by_its_previous_name ... ok
 test test_resume_all_reconciles_executions_whose_session_no_longer_exists ... ok
+test test_status_keeps_addressing_one_logical_session_by_its_previous_name ... ok
 
-test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.46s
 
      Running tests/regression_164.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_164-8d3935dda7bb394b)
 
 running 33 tests
-test build_command_string_tests::escapes_embedded_single_quotes_for_powershell_by_doubling ... ok
-test build_command_string_tests::quotes_characters_only_powershell_treats_specially ... ok
 test build_command_string_tests::escapes_embedded_single_quotes_for_posix_shell ... ok
+test build_command_string_tests::quotes_characters_only_powershell_treats_specially ... ok
+test build_command_string_tests::escapes_embedded_single_quotes_for_powershell_by_doubling ... ok
 test build_command_string_tests::returns_empty_string_for_empty_argv ... ok
 test build_command_string_tests::quotes_empty_argument ... ok
 test build_command_string_tests::round_trips_through_split_shell_words_in_both_dialects ... ok
 test build_command_string_tests::uses_host_shell_dialect_by_default ... ok
-test cli_end_to_end::keeps_arithmetic_expansion_in_bash_c ... ok
+test cli_end_to_end::keeps_bash_c_scripts_intact_on_direct_path ... ok
 test display_command_tests::re_quotes_argument_quoted_by_the_parser ... ok
 test display_command_tests::re_quotes_argument_with_shell_metacharacters ... ok
 test display_command_tests::shows_single_argument_script_verbatim ... ok
@@ -827,119 +827,119 @@ test split_shell_words_tests::reads_doubled_quote_inside_powershell_string_as_on
 test split_shell_words_tests::returns_none_for_unbalanced_quotes ... ok
 test split_shell_words_tests::splits_on_unquoted_whitespace ... ok
 test cli_end_to_end::runs_node_e_with_quoted_script ... ok
-test cli_end_to_end::keeps_bash_c_scripts_intact_on_direct_path ... ok
 test cli_end_to_end::still_runs_single_quoted_argument_as_shell_script ... ok
-test cli_end_to_end::displays_command_with_user_typed_quoting ... ok
 test cli_end_to_end::preserves_repeated_spaces_in_quoted_argument ... ok
+test cli_end_to_end::displays_command_with_user_typed_quoting ... ok
+test cli_end_to_end::keeps_arithmetic_expansion_in_bash_c ... ok
 
-test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.52s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.75s
 
      Running tests/regression_165.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_165-4b471633f81283ae)
 
 running 6 tests
-test test_status_shows_the_observation_in_the_human_readable_output ... ok
 test test_status_finds_a_marker_pushed_far_from_the_end_of_the_log ... ok
-test test_status_never_turns_a_clean_run_into_a_memory_failure ... ok
+test test_status_shows_the_observation_in_the_human_readable_output ... ok
 test test_status_reports_memory_exhaustion_for_a_self_aborted_run ... ok
+test test_status_never_turns_a_clean_run_into_a_memory_failure ... ok
 test test_status_leaves_an_ordinary_failure_without_a_memory_observation ... ok
 test test_status_detects_a_rust_allocation_failure ... ok
 
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
 
      Running tests/regression_170.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_170-517a209aa8f18d41)
 
 running 9 tests
 test finalize_never_fails_when_the_record_is_gone ... ok
 test cleanup_stale_sets_stale_detected_at_and_leaves_end_time_unknown ... ok
-test keeps_an_already_recorded_end_time_and_its_provenance ... ok
-test rejects_footer_timestamps_that_are_not_real_timestamps ... ok
-test finalize_writes_status_exit_code_end_time_and_provenance_into_the_store ... ok
-test finalize_falls_back_to_observation_time_when_docker_reports_no_finish_time ... ok
 test falls_back_to_the_log_footer_finished_line_when_docker_is_gone ... ok
+test rejects_footer_timestamps_that_are_not_real_timestamps ... ok
+test finalize_falls_back_to_observation_time_when_docker_reports_no_finish_time ... ok
+test finalize_writes_status_exit_code_end_time_and_provenance_into_the_store ... ok
 test derives_end_time_from_docker_finished_at_for_a_stopped_container ... ok
+test keeps_an_already_recorded_end_time_and_its_provenance ... ok
 test marks_the_observation_time_fallback_instead_of_pretending_it_is_a_finish_time ... ok
 
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
 
      Running tests/regression_171.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_171-e980e26b35710e33)
 
 running 14 tests
-test decodes_128_plus_n_into_the_signal_name ... ok
-test computes_the_container_lifetime ... ok
-test asks_docker_for_exit_code_oom_flag_and_both_timestamps ... ok
 test formats_the_post_mortem_block_in_the_documented_shape ... ok
+test computes_the_container_lifetime ... ok
+test decodes_128_plus_n_into_the_signal_name ... ok
 test formats_the_removal_note_as_a_single_line ... ok
-test leaves_ordinary_exit_codes_alone ... ok
 test rejects_the_docker_zero_time_sentinel ... ok
+test asks_docker_for_exit_code_oom_flag_and_both_timestamps ... ok
 test renders_unknown_facts_instead_of_empty_fields ... ok
 test reports_unknown_for_a_missing_code ... ok
-test shell::survives_an_inspect_failure_without_writing_garbage ... ok
-test shell::appends_a_one_line_note_for_a_removed_container ... ok
+test leaves_ordinary_exit_codes_alone ... ok
 test shell::appends_the_post_mortem_block_for_a_kept_container ... ok
+test shell::appends_a_one_line_note_for_a_removed_container ... ok
+test shell::survives_an_inspect_failure_without_writing_garbage ... ok
 test shell::keeps_sub_second_lifetimes_exact_on_a_bsd_date_host ... ok
 test shell::keeps_the_lifetime_exact_on_a_host_whose_date_is_bsd ... ok
 
-test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
 
      Running tests/regression_174.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_174-4a4408cf0cb47f7b)
 
 running 10 tests
 test finalize_refuses_a_record_whose_container_is_still_running ... ok
-test finalize_does_not_trust_exit_0_without_a_finished_at ... ok
 test finalize_still_records_a_real_exit_0 ... ok
+test finalize_does_not_trust_exit_0_without_a_finished_at ... ok
 test shell::never_removes_a_running_container_without_a_log_either ... ok
-test shell::never_removes_footers_or_finalizes_a_running_container ... ok
-test shell::applies_the_same_wait_to_the_no_log_watcher ... ok
 test shell::a_zero_finished_at_keeps_the_container_and_records_no_success ... ok
+test shell::never_removes_footers_or_finalizes_a_running_container ... ok
+test shell::only_removes_the_container_once_it_has_really_exited ... ok
+test shell::applies_the_same_wait_to_the_no_log_watcher ... ok
 test shell::keeps_waiting_across_a_failed_docker_inspect ... ok
 test shell::waits_for_the_real_exit_after_docker_logs_fails ... ok
-test shell::only_removes_the_container_once_it_has_really_exited ... ok
 
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.03s
 
      Running tests/regression_176.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_176-c83aa926f83f8bd9)
 
 running 17 tests
-test covers_quota_period_cpusets_shm_storage_options_and_ulimits ... ok
-test defaults_to_one_attempt_when_only_a_recovery_command_is_given ... ok
 test a_docker_start_resume_keeps_the_kill_recovery ... ok
-test describes_the_recovery_in_isolation_lines_and_metadata ... ok
-test emits_nothing_for_an_unlimited_container ... ok
-test formats_sizes_and_cpus_the_way_docker_run_accepts_them ... ok
 test carries_stored_limits_into_a_relaunch ... ok
+test covers_quota_period_cpusets_shm_storage_options_and_ulimits ... ok
+test emits_nothing_for_an_unlimited_container ... ok
+test defaults_to_one_attempt_when_only_a_recovery_command_is_given ... ok
+test describes_the_recovery_in_isolation_lines_and_metadata ... ok
+test keeps_stored_limits_as_flags_including_commas_in_cpusets ... ok
+test falls_back_to_the_limits_stored_in_the_record ... ok
 test never_emits_memory_swap_without_memory ... ok
 test passes_the_live_limits_to_docker_run_of_the_resume_n_container ... ok
-test rejects_invalid_counts_and_missing_values ... ok
-test reads_the_host_config_with_docker_inspect ... ok
-test requires_a_detached_docker_only_session ... ok
-test translates_the_host_config_from_the_issue_into_run_flags ... ok
-test falls_back_to_the_limits_stored_in_the_record ... ok
-test keeps_stored_limits_as_flags_including_commas_in_cpusets ... ok
 test parses_both_options_in_separate_and_equals_forms ... ok
+test formats_sizes_and_cpus_the_way_docker_run_accepts_them ... ok
+test rejects_invalid_counts_and_missing_values ... ok
+test translates_the_host_config_from_the_issue_into_run_flags ... ok
+test requires_a_detached_docker_only_session ... ok
+test reads_the_host_config_with_docker_inspect ... ok
 test inspects_the_old_container_before_the_commit_and_records_the_limits ... ok
 
-test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
 
      Running tests/regression_176_recovery.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_176_recovery-830dd5a155d63150)
 
 running 15 tests
+test formats_the_recovery_separator ... ok
 test builds_the_recovery_branch_only_when_requested ... ok
 test detects_a_kill_by_exit_137_or_oom_killed_without_an_exit_code ... ok
-test formats_the_recovery_separator ... ok
 test does_not_undo_a_deliberate_stop ... ok
 test runs_the_main_command_until_a_recovery_is_marked ... ok
 test ignores_ordinary_failures_and_sessions_without_recovery ... ok
-test reports_a_failed_docker_start_in_the_log ... ok
-test marks_the_container_restarts_it_and_keeps_the_same_uuid_and_log ... ok
 test re_runs_the_original_command_when_no_recovery_command_is_set ... ok
+test marks_the_container_restarts_it_and_keeps_the_same_uuid_and_log ... ok
+test reports_a_failed_docker_start_in_the_log ... ok
 test wraps_the_main_argv_after_the_recovery_parameters ... ok
 test stops_after_n_attempts ... ok
 test marks_a_stop_so_the_watcher_does_not_resume_it ... ok
 test shell::finalizes_a_stopped_session_instead_of_resuming_it ... ok
-test shell::finalizes_an_ordinary_failure_without_resuming ... ok
 test shell::finalizes_once_the_attempts_are_used_up ... ok
+test shell::finalizes_an_ordinary_failure_without_resuming ... ok
 
-test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.63s
 
      Running tests/regression_178.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_178-57c3d9b0a7da9ce4)
 
@@ -950,19 +950,19 @@ test shell::the_watcher_shell_condition_agrees_with_is_killed_exit ... ok
 test shell::the_watcher_finalizes_exit_0_with_oom_killed_without_resuming ... ok
 test shell::the_watcher_finalizes_exit_1_with_oom_killed_without_resuming ... ok
 
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
 
      Running tests/regression_180.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_180-d2f80fd548d7c226)
 
 running 6 tests
-test status_drops_a_stale_cgroup_reason_stored_before_the_fix ... ok
-test status_reports_the_incident_record_without_a_memory_verdict ... ok
 test the_sticky_flag_is_an_exit_reason_only_for_sigkill_or_an_unknown_exit ... ok
+test status_drops_a_stale_cgroup_reason_stored_before_the_fix ... ok
 test blames_the_flag_on_the_command_only_for_sigkill_or_an_unknown_exit ... ok
+test status_reports_the_incident_record_without_a_memory_verdict ... ok
 test still_trusts_a_memory_marker_the_command_printed_itself ... ok
 test the_finalizer_does_not_record_the_flag_as_the_reason_for_exit_1 ... ok
 
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
 
      Running tests/regression_181.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_181-b3fb87b6aabd31cc)
 
@@ -974,42 +974,42 @@ test picks_uniformly_within_the_range ... ok
 test rejects_malformed_and_reversed_ranges ... ok
 test requires_on_kill_resume_or_recovery_command ... ok
 test shows_the_delay_in_the_isolation_line_and_stores_it ... ok
-test really_blocks_the_thread_for_the_real_sleep ... ok
-test waits_in_short_steps_and_stops_as_soon_as_it_is_cancelled ... ok
 test a_terminate_of_the_exited_container_still_cancels_the_recovery ... ok
+test waits_in_short_steps_and_stops_as_soon_as_it_is_cancelled ... ok
+test really_blocks_the_thread_for_the_real_sleep ... ok
 test a_stop_during_the_wait_cancels_the_pending_recovery ... ok
 test a_failed_terminate_for_another_reason_still_restores_the_marker ... ok
 test keeps_the_old_behaviour_and_history_format_without_a_delay ... ok
 test waits_before_docker_start_and_records_delay_ms_in_the_history ... ok
 
-test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 
      Running tests/regression_182.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_182-b4d5aafc51f9e5b7)
 
 running 11 tests
-test leaves_oom_scope_unknown_with_only_raw_counters ... ok
 test formats_the_counters_for_status_and_for_the_log ... ok
+test leaves_oom_scope_unknown_with_only_raw_counters ... ok
 test parses_the_sample_the_watcher_writes ... ok
 test record_field_round_trips_and_reads_javascript_values_leniently ... ok
 test explains_an_unknown_exit_with_the_per_run_oom_kill_count ... ok
-test records_nothing_without_a_cgroup_v2_sample ... ok
 test starts_the_sampler_first_and_stops_it_before_reading_the_state ... ok
+test records_nothing_without_a_cgroup_v2_sample ... ok
 test recovery_logs_them_and_notes_them_in_recovery_history ... ok
 test shell::keeps_the_last_sample_once_the_cgroup_is_gone ... ok
 test shell::notes_the_counters_of_a_removed_container_too ... ok
 test shell::writes_the_counters_into_the_post_mortem_and_the_record ... ok
 
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.88s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.91s
 
      Running tests/regression_185.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_185-eb4c874d4516509f)
 
 running 4 tests
-test retains_the_exit_code_guard_for_earlier_child_oom_kills ... ok
-test preserves_raw_counters_without_attributing_scope ... ok
 test does_not_report_an_oom_scope_when_kills_are_zero_or_unknown ... ok
+test preserves_raw_counters_without_attributing_scope ... ok
+test retains_the_exit_code_guard_for_earlier_child_oom_kills ... ok
 test writes_the_same_unknown_scope_from_the_posix_watcher_shell ... ok
 
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
 
      Running tests/regression_187.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_187-26f8c39ae8dd9e63)
 
@@ -1017,20 +1017,20 @@ running 15 tests
 test explicit_resume_clears_and_archives_previous_memory_evidence ... ok
 test failed_launch_preserves_prior_evidence_and_logs_failure ... ok
 test failed_watcher_attachment_keeps_accepted_launch_state ... ok
-test byte_reads_are_bounded_and_ignore_prior_evidence_after_truncation ... ok
 test explicit_resume_archives_all_terminal_fields_and_byte_boundary ... ok
+test byte_reads_are_bounded_and_ignore_prior_evidence_after_truncation ... ok
 test attachment_metadata_preserves_terminal_state_and_rejects_stale_attempts ... ok
 test automatic_recovery_after_explicit_resume_keeps_scoped_evidence ... ok
+test relaunch_defers_watcher_until_after_persistence ... ok
 test snapshot_resume_records_both_container_names ... ok
 test quiet_status_and_list_do_not_reuse_previous_footer_or_memory_marker ... ok
 test fresh_exit_139_cannot_reuse_old_fatal_memory_text ... ok
-test relaunch_defers_watcher_until_after_persistence ... ok
-test stale_attempt_finalizer_cannot_replace_current_state ... ok
 test real_watcher_shell_captures_output_and_finalizes_the_current_attempt ... ok
+test stale_attempt_finalizer_cannot_replace_current_state ... ok
 test watcher_immediate_completion_is_never_overwritten ... ok
 test output_timestamp_requires_fresh_timestamped_command_output ... ok
 
-test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.56s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.93s
 
      Running tests/regression_189.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_189-293b42f42d6c7d51)
 
@@ -1042,7 +1042,7 @@ test cpu_penalty_settings_are_opt_in_and_parse_durations ... ok
 test legacy_cpu_base_is_preserved_without_nano_cpu_conversion ... ok
 test monitor_applies_lifts_and_reapplies_without_tracking ... ok
 
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.66s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.98s
 
      Running tests/regression_190.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_190-36fdd015a458360a)
 
@@ -1056,11 +1056,11 @@ test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 running 4 tests
 test failed_update_never_releases_the_command ... ok
-test manual_memory_override_is_updated_before_start_and_persisted ... ok
 test snapshot_override_is_applied_at_creation ... ok
+test manual_memory_override_is_updated_before_start_and_persisted ... ok
 test recovery_changes_memory_only_for_a_fresh_qualifying_oom ... ok
 
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
 
      Running tests/regression_192.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_192-cf614852c15185ca)
 
@@ -1068,7 +1068,7 @@ running 2 tests
 test remote_samples_and_explicit_unavailable_diagnostics ... ok
 test real_shell_remote_missing_shell_outage_and_shared_namespace ... ok
 
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.25s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.52s
 
      Running tests/regression_193.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_193-c703d0a3311aa7a8)
 
@@ -1080,7 +1080,7 @@ test accepted_launch_with_failed_final_save_attaches_watcher_and_stops_with_iden
 test launch_is_reserved_without_holding_store_lock_over_docker ... ok
 test concurrent_database_writers_preserve_all_records ... ok
 
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.82s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.77s
 
      Running tests/regression_194.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_194-ff026bccc63dc4f0)
 
@@ -1088,18 +1088,18 @@ running 6 tests
 test daemon_restart_requires_matching_container_and_service_evidence ... ok
 test historical_child_oom_does_not_explain_later_sigkill ... ok
 test only_fresh_well_formed_deltas_qualify ... ok
+test finalization_preserves_logged_main_evidence_without_a_sample ... ok
 test ordinary_exits_remain_final_even_with_a_main_evidence_marker ... ok
 test finalization_keeps_evidence_even_without_a_log ... ok
-test finalization_preserves_logged_main_evidence_without_a_sample ... ok
 
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
 
      Running tests/regression_199.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_199-56509a92804b4fbf)
 
 running 3 tests
 test replacement_container_labels_keep_root_and_uuid ... ok
-test docker_labels_are_parsed_and_persisted ... ok
 test invalid_or_reserved_labels_are_rejected ... ok
+test docker_labels_are_parsed_and_persisted ... ok
 
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
@@ -1108,39 +1108,39 @@ test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 running 1 test
 test wrapper_help_prints_usage_and_preserves_command_help ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 
      Running tests/regression_202.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_202-0d4bb2379a43de13)
 
 running 4 tests
-test shell_script_and_positional_arguments_are_distinct ... ok
-test compound_shell_commands_are_not_direct_invocations ... ok
 test literal_shell_escapes_are_preserved ... ok
+test compound_shell_commands_are_not_direct_invocations ... ok
+test shell_script_and_positional_arguments_are_distinct ... ok
 test actual_shell_output_and_exit_status_are_preserved ... ok
 
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
 
      Running tests/regression_84.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_84-80c9cffc8d3a7f92)
 
 running 19 tests
 test build_cmd_args_regression_84_cases::bash_should_get_i_flag_not_wrapped_in_shell_c ... ok
-test build_cmd_args_regression_84_cases::npm_test_should_be_wrapped_in_shell_c ... ok
-test is_interactive_shell_command_tests::should_return_false_for_bash_c_echo_hello ... ok
-test is_interactive_shell_command_tests::should_return_false_for_echo_hello ... ok
-test build_cmd_args_regression_84_cases::sh_should_not_get_i_flag_not_wrapped_in_shell_c ... ok
-test is_interactive_shell_command_tests::should_return_false_for_empty_string ... ok
-test is_interactive_shell_command_tests::should_return_false_for_npm_test ... ok
 test build_cmd_args_regression_84_cases::bash_already_has_i_flag_no_duplicate ... ok
-test is_interactive_shell_command_tests::should_return_true_for_bash ... ok
-test is_interactive_shell_command_tests::should_return_true_for_fish ... ok
-test is_interactive_shell_command_tests::should_return_true_for_full_path_bash ... ok
+test build_cmd_args_regression_84_cases::npm_test_should_be_wrapped_in_shell_c ... ok
+test build_cmd_args_regression_84_cases::sh_should_not_get_i_flag_not_wrapped_in_shell_c ... ok
 test build_cmd_args_regression_84_cases::echo_hello_should_be_wrapped_in_shell_c ... ok
+test build_cmd_args_regression_84_cases::zsh_should_get_i_flag_not_wrapped_in_shell_c ... ok
 test is_interactive_shell_command_tests::should_return_true_for_bash_i_interactive_flag ... ok
+test is_interactive_shell_command_tests::should_return_false_for_bash_c_echo_hello ... ok
+test is_interactive_shell_command_tests::should_return_true_for_bash ... ok
+test is_interactive_shell_command_tests::should_return_false_for_empty_string ... ok
+test is_interactive_shell_command_tests::should_return_false_for_echo_hello ... ok
+test is_interactive_shell_command_tests::should_return_false_for_npm_test ... ok
+test is_interactive_shell_command_tests::should_return_true_for_fish ... ok
 test is_interactive_shell_command_tests::should_return_true_for_bash_norc ... ok
 test is_interactive_shell_command_tests::should_return_true_for_dash ... ok
-test build_cmd_args_regression_84_cases::zsh_should_get_i_flag_not_wrapped_in_shell_c ... ok
-test is_interactive_shell_command_tests::should_return_true_for_sh ... ok
+test is_interactive_shell_command_tests::should_return_true_for_full_path_bash ... ok
 test is_interactive_shell_command_tests::should_return_true_for_zsh ... ok
+test is_interactive_shell_command_tests::should_return_true_for_sh ... ok
 test is_interactive_shell_command_tests::should_return_true_for_zsh_no_rcs ... ok
 
 test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
@@ -1148,129 +1148,129 @@ test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fin
      Running tests/regression_91.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_91-6929a440ae787024)
 
 running 24 tests
-test build_shell_with_args_cmd_args_tests::should_handle_slash_bin_bash_i_c_with_multi_word_script ... ok
-test build_shell_with_args_cmd_args_tests::should_reconstruct_bash_c_echo_hello ... ok
 test build_shell_with_args_cmd_args_tests::should_handle_single_word_script_bash_c_ls ... ok
+test build_shell_with_args_cmd_args_tests::should_handle_slash_bin_bash_i_c_with_multi_word_script ... ok
 test build_shell_with_args_cmd_args_tests::should_handle_zsh_with_c ... ok
-test build_shell_with_args_cmd_args_tests::should_reconstruct_bash_i_c_nvm_version ... ok
+test build_shell_with_args_cmd_args_tests::should_reconstruct_bash_c_echo_hello ... ok
 test docker_attached_cmd_args_regression_91_cases::bare_bash_should_still_get_i_flag ... ok
 test docker_attached_cmd_args_regression_91_cases::bash_c_echo_hello_should_pass_directly ... ok
-test docker_attached_cmd_args_regression_91_cases::bash_i_c_nvm_version_should_pass_directly ... ok
 test docker_attached_cmd_args_regression_91_cases::mutual_exclusion_bare_shell_and_shell_with_args ... ok
-test docker_attached_cmd_args_regression_91_cases::npm_test_still_wrapped_in_outer_shell ... ok
-test docker_attached_cmd_args_regression_91_cases::zsh_c_nvm_version_should_pass_directly ... ok
-test is_shell_invocation_with_args_tests::should_return_false_for_bare_bash ... ok
+test build_shell_with_args_cmd_args_tests::should_reconstruct_bash_i_c_nvm_version ... ok
 test build_shell_with_args_cmd_args_tests::should_not_include_c_argument_inside_script_no_double_c ... ok
+test docker_attached_cmd_args_regression_91_cases::bash_i_c_nvm_version_should_pass_directly ... ok
 test docker_attached_cmd_args_regression_91_cases::should_not_introduce_second_bash_layer ... ok
-test is_shell_invocation_with_args_tests::should_return_false_for_bash_norc ... ok
+test is_shell_invocation_with_args_tests::should_return_false_for_bare_bash ... ok
 test is_shell_invocation_with_args_tests::should_return_false_for_non_shell_commands ... ok
-test is_shell_invocation_with_args_tests::should_return_true_for_bash_c_echo_hello_no_quotes ... ok
 test is_shell_invocation_with_args_tests::should_return_false_for_bash_i ... ok
-test is_shell_invocation_with_args_tests::should_return_true_for_bash_i_c_nvm_version ... ok
-test is_shell_invocation_with_args_tests::should_return_true_for_bash_c_echo_hello ... ok
+test is_shell_invocation_with_args_tests::should_return_false_for_bash_norc ... ok
 test docker_attached_cmd_args_regression_91_cases::npm_test_should_be_wrapped_in_outer_shell_c ... ok
-test is_shell_invocation_with_args_tests::should_return_true_for_sh_c_ls ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_bash_c_echo_hello ... ok
+test docker_attached_cmd_args_regression_91_cases::npm_test_still_wrapped_in_outer_shell ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_bash_c_echo_hello_no_quotes ... ok
+test docker_attached_cmd_args_regression_91_cases::zsh_c_nvm_version_should_pass_directly ... ok
 test is_shell_invocation_with_args_tests::should_return_true_for_slash_bin_bash_c_echo_hi ... ok
 test is_shell_invocation_with_args_tests::should_return_true_for_zsh_c_nvm_version ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_sh_c_ls ... ok
+test is_shell_invocation_with_args_tests::should_return_true_for_bash_i_c_nvm_version ... ok
 
 test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests/sequence_parser.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/sequence_parser-b2c8f96c8ecf339a)
 
 running 29 tests
-test distribute_option_tests::should_err_on_length_mismatch ... ok
 test distribute_option_tests::should_handle_empty_value ... ok
 test distribute_option_tests::should_parse_sequence_with_matching_length ... ok
 test distribute_option_tests::should_replicate_single_value_for_all_levels ... ok
-test format_isolation_chain_tests::should_add_ssh_endpoint ... ok
 test format_isolation_chain_tests::should_add_docker_image_short_name ... ok
-test format_isolation_chain_tests::should_handle_empty_array ... ok
+test format_isolation_chain_tests::should_add_ssh_endpoint ... ok
 test format_isolation_chain_tests::should_format_simple_chain ... ok
+test format_isolation_chain_tests::should_handle_empty_array ... ok
 test format_isolation_chain_tests::should_handle_placeholders ... ok
-test get_value_at_level_tests::should_get_value_at_valid_index ... ok
+test format_sequence_tests::should_format_array_with_nulls_as_underscores ... ok
 test format_sequence_tests::should_format_array_with_values ... ok
 test get_value_at_level_tests::should_handle_null_value ... ok
 test format_sequence_tests::should_handle_empty_array ... ok
-test format_sequence_tests::should_format_array_with_nulls_as_underscores ... ok
+test get_value_at_level_tests::should_get_value_at_valid_index ... ok
 test get_value_at_level_tests::should_return_none_for_out_of_bounds ... ok
+test is_sequence_tests::should_return_false_for_empty_string ... ok
 test is_sequence_tests::should_return_false_for_single_value ... ok
 test is_sequence_tests::should_return_true_for_space_separated_values ... ok
 test parse_sequence_tests::should_handle_all_underscores ... ok
-test is_sequence_tests::should_return_false_for_empty_string ... ok
 test parse_sequence_tests::should_handle_empty_string ... ok
 test parse_sequence_tests::should_handle_multiple_spaces_between_values ... ok
 test parse_sequence_tests::should_parse_sequence_with_underscores_as_null ... ok
 test parse_sequence_tests::should_parse_single_value ... ok
 test parse_sequence_tests::should_parse_space_separated_sequence ... ok
+test parse_sequence_tests::should_trim_whitespace ... ok
 test shift_sequence_tests::should_handle_empty_array ... ok
 test shift_sequence_tests::should_handle_nulls ... ok
 test shift_sequence_tests::should_handle_single_element ... ok
 test shift_sequence_tests::should_remove_first_element ... ok
-test parse_sequence_tests::should_trim_whitespace ... ok
+test distribute_option_tests::should_err_on_length_mismatch ... ok
 
 test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests/session_name_status.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/session_name_status-6c74946d9778c374)
 
 running 28 tests
-test test_attach_current_time_returns_none_for_executed_record ... ok
 test test_attach_current_time_does_not_mutate_record ... ok
 test test_attach_current_time_returns_some_for_executing_record ... ok
 test test_enrich_detached_status_non_detached ... ok
+test test_attach_current_time_returns_none_for_executed_record ... ok
 test test_enrich_detached_status_marks_dead_session_as_executed ... ok
 test test_enrich_flips_to_executing_when_no_terminal_record ... ok
 test test_get_by_session_name ... ok
 test test_get_by_uuid ... ok
 test test_enrich_honors_log_footer_when_no_recorded_exit_code ... ok
-test test_get_nonexistent_session_name ... ok
 test test_get_most_recent_session_name_match ... ok
-test test_get_prefers_uuid_over_session_name ... ok
+test test_get_nonexistent_session_name ... ok
 test test_get_record_without_session_name ... ok
 test test_is_detached_session_alive_no_session_name ... ok
 test test_is_detached_session_alive_non_detached ... ok
-test test_is_detached_session_alive_nonexistent_screen ... ok
-test test_query_status_by_session_name ... ok
+test test_get_prefers_uuid_over_session_name ... ok
 test test_enrich_keeps_recorded_exit_code_when_session_lingers ... ok
+test test_is_detached_session_alive_nonexistent_screen ... ok
 test test_query_status_json_includes_current_time_for_executing ... ok
+test test_query_status_by_session_name ... ok
 test test_query_status_json_omits_current_time_for_executed ... ok
 test test_query_status_nonexistent_session_name ... ok
-test test_query_status_links_notation_includes_current_time_for_executing ... ok
 test test_query_status_text_includes_current_time_for_executing ... ok
+test test_query_status_links_notation_includes_current_time_for_executing ... ok
 test test_query_status_text_omits_current_time_for_executed ... ok
 test test_enrich_keeps_executing_when_docker_container_not_visible ... ok
 test test_is_detached_session_alive_unknown_docker_container_is_none ... ok
-test test_enrich_stopped_docker_container_uses_real_exit_code ... ok
 test test_enrich_running_docker_container_stays_executing ... ok
+test test_enrich_stopped_docker_container_uses_real_exit_code ... ok
 
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.94s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.00s
 
      Running tests/shared_golden.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/shared_golden-2330e7f1441b4598)
 
 running 5 tests
 test executes_generated_rust_parity_policy ... ok
-test status_output_matches_shared_goldens ... ok
-test cli_parsing_matches_shared_goldens ... ok
 test isolation_arguments_match_shared_goldens ... ok
 test execution_record_format_matches_shared_goldens ... ok
+test cli_parsing_matches_shared_goldens ... ok
+test status_output_matches_shared_goldens ... ok
 
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests/signal_handler.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/signal_handler-57e478618563057d)
 
 running 6 tests
-test clear_current_execution_does_not_panic ... ok
-test get_signal_exit_code_initial_value_is_zero ... ok
-test setup_signal_handlers_can_be_called_multiple_times ... ok
 test get_signal_exit_code_returns_i32 ... ok
-test was_signal_received_returns_bool ... ok
 test clear_current_execution_can_be_called_multiple_times ... ok
+test clear_current_execution_does_not_panic ... ok
+test setup_signal_handlers_can_be_called_multiple_times ... ok
+test was_signal_received_returns_bool ... ok
+test get_signal_exit_code_initial_value_is_zero ... ok
 
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
      Running tests/status_formatter.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/status_formatter-c877a714f7017d32)
 
 running 27 tests
-test docker_oom_killed_is_terminal_once_the_container_is_gone ... ok
+test docker_oom_killed_is_exposed_in_status_and_list_output ... ok
 test test_attach_current_time_none_for_completed ... ok
 test test_attach_current_time_some_for_executing ... ok
 test test_format_record_as_json ... ok
@@ -1283,55 +1283,55 @@ test test_json_format_includes_current_time_when_provided ... ok
 test test_json_format_no_current_time_when_absent ... ok
 test test_links_notation_includes_current_time_when_provided ... ok
 test test_links_notation_no_current_time_when_absent ... ok
-test docker_oom_killed_uses_the_container_exit_code_when_it_stops ... ok
 test test_list_executions_empty_store ... ok
-test test_list_executions_no_store ... ok
-test test_query_status_default_format ... ok
-test test_query_status_no_store ... ok
-test test_query_status_not_found ... ok
-test test_list_executions_json_includes_all_records ... ok
-test test_text_format_includes_current_time_when_provided ... ok
-test test_text_format_no_current_time_when_absent ... ok
-test test_query_status_success ... ok
-test docker_oom_killed_is_exposed_in_status_and_list_output ... ok
 test docker_oom_killed_prefers_the_log_footer_over_the_137_fallback ... ok
+test test_list_executions_no_store ... ok
+test test_list_executions_json_includes_all_records ... ok
+test test_query_status_no_store ... ok
 test docker_oom_killed_never_synthesizes_137_for_a_running_container ... ok
+test test_query_status_not_found ... ok
+test test_text_format_includes_current_time_when_provided ... ok
+test test_query_status_default_format ... ok
+test test_text_format_no_current_time_when_absent ... ok
+test docker_oom_killed_uses_the_container_exit_code_when_it_stops ... ok
+test test_query_status_success ... ok
 test docker_oom_killed_keeps_running_container_executing ... ok
+test docker_oom_killed_is_terminal_once_the_container_is_gone ... ok
 
-test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
 
      Running tests/user_manager.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/user_manager-1e20fd7401a18194)
 
 running 11 tests
-test generate_isolated_username_with_no_prefix_starts_with_start_dash ... ok
-test generate_isolated_username_with_no_prefix_length_at_most_31 ... ok
 test generate_isolated_username_with_custom_prefix ... ok
+test generate_isolated_username_with_no_prefix_length_at_most_31 ... ok
+test generate_isolated_username_with_no_prefix_starts_with_start_dash ... ok
 test generate_isolated_username_returns_unique_names ... ok
 test generate_isolated_username_draws_the_suffix_from_a_csprng ... ok
+test get_current_user_returns_non_empty_string ... ok
+test get_current_user_returns_known_user ... ok
 test get_current_user_groups_returns_non_empty_vec ... ok
 test get_current_user_groups_returns_strings ... ok
-test get_current_user_returns_known_user ... ok
 test user_exists_returns_false_for_nonexistent_user ... ok
-test get_current_user_returns_non_empty_string ... ok
 test user_exists_returns_true_for_root ... ok
 
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
 
      Running tests/utils.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/utils-28a8dfde852fb395)
 
 running 12 tests
+test generate_session_name_tests::should_return_non_empty_string ... ok
 test generate_session_name_tests::should_use_default_prefix_start ... ok
+test generate_session_name_tests::should_use_custom_prefix ... ok
 test generate_uuid_tests::should_return_a_non_empty_string ... ok
 test generate_uuid_tests::should_return_a_string_matching_uuid_v4_format ... ok
 test generate_uuid_tests::should_return_unique_uuids ... ok
-test generate_session_name_tests::should_use_custom_prefix ... ok
-test generate_session_name_tests::should_return_non_empty_string ... ok
 test is_valid_uuid_tests::should_return_false_for_non_uuid_string ... ok
 test generate_session_name_tests::should_return_unique_names ... ok
+test is_valid_uuid_tests::should_return_false_for_uuid_with_wrong_length ... ok
+test is_valid_uuid_tests::should_return_true_for_valid_uuid ... ok
 test is_valid_uuid_tests::should_return_false_for_empty_string ... ok
 test generate_uuid_tests::should_pass_is_valid_uuid_check ... ok
-test is_valid_uuid_tests::should_return_true_for_valid_uuid ... ok
-test is_valid_uuid_tests::should_return_false_for_uuid_with_wrong_length ... ok
 
 test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 
@@ -1339,11 +1339,11 @@ test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fin
 
 running 6 tests
 test src/lib/sequence_parser.rs - sequence_parser::is_sequence (line 77) ... ok
-test src/lib/sequence_parser.rs - sequence_parser::format_sequence (line 40) ... ok
-test src/lib/sequence_parser.rs - sequence_parser::shift_sequence (line 61) ... ok
-test src/lib/sequence_parser.rs - sequence_parser::distribute_option (line 96) ... ok
-test src/lib/sequence_parser.rs - sequence_parser::parse_sequence (line 15) ... ok
 test src/lib/sequence_parser.rs - sequence_parser::format_isolation_chain (line 152) ... ok
+test src/lib/sequence_parser.rs - sequence_parser::format_sequence (line 40) ... ok
+test src/lib/sequence_parser.rs - sequence_parser::distribute_option (line 96) ... ok
+test src/lib/sequence_parser.rs - sequence_parser::shift_sequence (line 61) ... ok
+test src/lib/sequence_parser.rs - sequence_parser::parse_sequence (line 15) ... ok
 
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.28s
 

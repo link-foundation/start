@@ -52,7 +52,7 @@ can be considered complete by changing only one implementation.
 
 ## Final local verification
 
-The stable implementation passed all 1,197 JavaScript tests across 76 files and
+The stable implementation passed all 1,198 JavaScript tests across 76 files and
 all 1,026 Rust tests across 53 suites. Two native experiments remain explicitly
 ignored in the ordinary suite; the finite 110 MiB sanitizer experiment was run
 separately under its memory limit. JavaScript lint, formatting, script checks
@@ -64,4 +64,5 @@ Real Docker evidence covers all twelve JS/Rust attached/detached shell cases
 with matching stored exit codes, and a separate bounded resume/snapshot/cleanup
 smoke. Main was freshly fetched and already an ancestor of this branch. Final
 reads of all seven issue comment lists and all three PR comment/review endpoints
-returned no additional requirements. Final same-SHA CI is recorded after the coordinated verification batch.
+returned no additional requirements. The CI owner records final same-SHA
+statuses and verified gate timestamps on [PR 204](https://github.com/link-foundation/start/pull/204).
