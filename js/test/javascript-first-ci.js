@@ -44,6 +44,13 @@ describe('JavaScript first CI gate', () => {
       },
     ],
     [
+      'an alternative that bypasses the successful stage',
+      (files) => {
+        files['js.yml'].jobs['rust-stage'].if =
+          "${{ !cancelled() && needs.pipeline-status.result == 'success' || true }}";
+      },
+    ],
+    [
       'Rust-only path filter',
       (files) => {
         files['js.yml'].on.pull_request.paths = ['js/**'];
@@ -67,6 +74,43 @@ describe('JavaScript first CI gate', () => {
                   with: { languages: 'rust' },
                 },
               ],
+            },
+          },
+        };
+      },
+    ],
+    [
+      'comma-delimited Rust CodeQL bypass',
+      (files) => {
+        files['new.yml'] = {
+          jobs: {
+            scan: {
+              steps: [
+                {
+                  uses: 'github/codeql-action/init@v4',
+                  with: { languages: 'javascript-typescript,rust' },
+                },
+              ],
+            },
+          },
+        };
+      },
+    ],
+    [
+      'Rust CodeQL matrix include bypass',
+      (files) => {
+        files['security.yml'].jobs.codeql.strategy.matrix = {
+          include: [{ language: 'rust' }],
+        };
+      },
+    ],
+    [
+      'independent Rustup tooling',
+      (files) => {
+        files['new.yml'] = {
+          jobs: {
+            install: {
+              steps: [{ run: 'rustup toolchain install stable' }],
             },
           },
         };

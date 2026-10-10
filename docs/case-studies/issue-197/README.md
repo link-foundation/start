@@ -71,6 +71,8 @@ The first solver push was one batched command at 18:07:43–18:07:47 UTC, head `
 
 Finite regression probes also verify the tooling itself. `issue-197-regeneration-drift.mjs` deliberately changes the generated file, confirms genuine regeneration rejects the drift, and restores it. `issue-197-argument-forwarding.mjs` invokes a fake Cargo process without compiling: its Clippy argument case failed before the local wrapper fix and now proves `-j 2` stays before `--`, preserving flags passed through to rustc. The latter runs in the JavaScript parity stage.
 
+Final guard review added four failing mutation regressions before tightening the parser checks: a success-condition expression with an alternative `|| true`, comma-delimited CodeQL languages containing Rust, Rust selected through a matrix `include`, and independent `rustup` tooling. The gate condition is now exact after whitespace normalization; Rust language detection recursively checks matrix values and splits language lists. `logs/gate-hardening-before.txt` preserves all four failures and `logs/gate-hardening-after.txt` records 51 passing focused checks.
+
 ## Protection scope and operational limits
 
 The ruleset bypass applies to repository deploy keys, not to arbitrary GitHub Actions runs. At setup the repository had no keys; the only added key is release key `166030970`. Its secret metadata and main deployment branch restriction are saved, while private bytes were never printed or committed and temporary files were unlinked. Only main version-writing jobs receive the environment; default `GITHUB_TOKEN` remains the API credential for release metadata. Adding another writable deploy key would expand the bypass and requires repository administration review.

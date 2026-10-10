@@ -9,6 +9,19 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const asList = (value) =>
   value === undefined ? [] : Array.isArray(value) ? value : [value];
 
+function includesRustLanguage(value) {
+  if (typeof value === 'string') {
+    return value
+      .toLowerCase()
+      .split(/[\s,]+/)
+      .includes('rust');
+  }
+  if (value && typeof value === 'object') {
+    return Object.values(value).some(includesRustLanguage);
+  }
+  return false;
+}
+
 export function checkJavaScriptFirst(workflows) {
   const errors = [];
   const js = workflows['js.yml'];
@@ -33,7 +46,8 @@ export function checkJavaScriptFirst(workflows) {
     !call ||
     call.uses !== './.github/workflows/rust.yml' ||
     asList(call.needs).join(',') !== 'pipeline-status' ||
-    !String(call.if).includes("needs.pipeline-status.result == 'success'") ||
+    String(call.if).replace(/\s/g, '') !==
+      "${{!cancelled()&&needs.pipeline-status.result=='success'}}" ||
     call.concurrency?.['cancel-in-progress'] !== false
   ) {
     errors.push(
@@ -96,13 +110,13 @@ export function checkJavaScriptFirst(workflows) {
         );
       }
       const startsRust =
-        /\bcargo\b|\brustc\b|rust-toolchain|cargo-audit|cargo-tarpaulin/.test(
+        /\bcargo\b|\brustc\b|\brustup\b|rust-toolchain|cargo-audit|cargo-tarpaulin/.test(
           serialized
         ) ||
         (serialized.includes('codeql-action') &&
-          (asList(job.strategy?.matrix?.language).includes('rust') ||
+          (includesRustLanguage(job.strategy?.matrix) ||
             (job.steps || []).some((step) =>
-              asList(step.with?.languages).includes('rust')
+              includesRustLanguage(step.with?.languages)
             )));
       if (startsRust && filename !== 'rust.yml') {
         errors.push(

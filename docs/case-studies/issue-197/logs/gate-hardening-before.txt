@@ -1,0 +1,107 @@
+bun test v1.4.2 (744846f84)
+
+js/test/javascript-first-ci.js:
+(pass) JavaScript first CI gate > validates every current workflow using parsed YAML [8.41ms]
+(pass) JavaScript first CI gate > rejects independent Rust PR trigger [4.26ms]
+(pass) JavaScript first CI gate > rejects removed successful-stage condition [3.53ms]
+139 |     ],
+140 |   ]) {
+141 |     it(`rejects ${name}`, () => {
+142 |       const files = workflows();
+143 |       mutate(files);
+144 |       assert.ok(checkJavaScriptFirst(files).length > 0);
+                   ^
+AssertionError: false == true
+ generatedMessage: true,
+     actual: false,
+   expected: true,
+   operator: "==",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1791653332998/js/test/javascript-first-ci.js:144:14
+      at run (node:async_hooks:144:29)
+      at node:test:1445:26
+      at executeTestNode (node:test:1448:45)
+      at node:test:1591:20
+(fail) JavaScript first CI gate > rejects an alternative that bypasses the successful stage [5.53ms]
+(pass) JavaScript first CI gate > rejects Rust-only path filter [3.39ms]
+(pass) JavaScript first CI gate > rejects Rust security matrix bypass [5.14ms]
+(pass) JavaScript first CI gate > rejects direct Rust CodeQL bypass [4.62ms]
+139 |     ],
+140 |   ]) {
+141 |     it(`rejects ${name}`, () => {
+142 |       const files = workflows();
+143 |       mutate(files);
+144 |       assert.ok(checkJavaScriptFirst(files).length > 0);
+                   ^
+AssertionError: false == true
+ generatedMessage: true,
+     actual: false,
+   expected: true,
+   operator: "==",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1791653332998/js/test/javascript-first-ci.js:144:14
+      at run (node:async_hooks:144:29)
+      at node:test:1445:26
+      at executeTestNode (node:test:1448:45)
+      at node:test:1591:20
+(fail) JavaScript first CI gate > rejects comma-delimited Rust CodeQL bypass [4.82ms]
+139 |     ],
+140 |   ]) {
+141 |     it(`rejects ${name}`, () => {
+142 |       const files = workflows();
+143 |       mutate(files);
+144 |       assert.ok(checkJavaScriptFirst(files).length > 0);
+                   ^
+AssertionError: false == true
+ generatedMessage: true,
+     actual: false,
+   expected: true,
+   operator: "==",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1791653332998/js/test/javascript-first-ci.js:144:14
+      at run (node:async_hooks:144:29)
+      at node:test:1445:26
+      at executeTestNode (node:test:1448:45)
+      at node:test:1591:20
+(fail) JavaScript first CI gate > rejects Rust CodeQL matrix include bypass [4.23ms]
+139 |     ],
+140 |   ]) {
+141 |     it(`rejects ${name}`, () => {
+142 |       const files = workflows();
+143 |       mutate(files);
+144 |       assert.ok(checkJavaScriptFirst(files).length > 0);
+                   ^
+AssertionError: false == true
+ generatedMessage: true,
+     actual: false,
+   expected: true,
+   operator: "==",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1791653332998/js/test/javascript-first-ci.js:144:14
+      at run (node:async_hooks:144:29)
+      at node:test:1445:26
+      at executeTestNode (node:test:1448:45)
+      at node:test:1591:20
+(fail) JavaScript first CI gate > rejects independent Rustup tooling [6.04ms]
+(pass) JavaScript first CI gate > rejects release key outside main environment [7.85ms]
+(pass) JavaScript first CI gate > rejects a new ungated Rust workflow [3.08ms]
+(pass) JavaScript first CI gate > rejects conditional parity [3.36ms]
+(pass) JavaScript first CI gate > rejects a failure required JavaScript check [18.75ms]
+(pass) JavaScript first CI gate > rejects a cancelled required JavaScript check [13.27ms]
+(pass) JavaScript first CI gate > rejects a skipped required JavaScript check [20.08ms]
+(pass) JavaScript first CI gate > opens the gate only after all required checks succeed [22.11ms]
+(pass) JavaScript first CI gate > rejects a change to only one implementation of a feature [0.69ms]
+(pass) JavaScript first CI gate > makes Rust callable only after the complete JavaScript stage [3.94ms]
+(pass) JavaScript first CI gate > always runs JavaScript and its behavioral parity gate on Rust-only changes [2.63ms]
+
+ 16 pass
+ 4 fail
+Ran 20 tests across 1 file. [201.00ms]
