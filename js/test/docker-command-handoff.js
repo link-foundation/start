@@ -43,10 +43,11 @@ test('handoff preserves argv and accepts a replacement without executing it on t
   try {
     const args = buildCommandHandoffArgs(
       ['sh', '-c', 'printf original'],
-      marker
+      'command'
     );
+    const shellOptions = { cwd: dir, encoding: 'utf8' };
     assert.equal(
-      spawnSync(args[0], args.slice(1), { encoding: 'utf8' }).stdout,
+      spawnSync(args[0], args.slice(1), shellOptions).stdout,
       'original'
     );
     let script;
@@ -58,7 +59,11 @@ test('handoff preserves argv and accepts a replacement without executing it on t
         assert.equal(argv[2], `box:${commandHandoffPath('box')}`);
         script = fs.readFileSync(argv[1], 'utf8');
         fs.copyFileSync(argv[1], marker);
-        assert.equal(fs.statSync(argv[1]).mode & 0o777, 0o644);
+        fs.accessSync(argv[1], fs.constants.R_OK);
+        // Windows chmod supports write permission, not Unix mode bits.
+        if (process.platform !== 'win32') {
+          assert.equal(fs.statSync(argv[1]).mode & 0o777, 0o644);
+        }
         return { success: true };
       },
       { shell: 'sh' }
@@ -66,12 +71,12 @@ test('handoff preserves argv and accepts a replacement without executing it on t
     assert.equal(copied.success, true);
     assert.ok(script.includes('new $value'));
     assert.equal(
-      spawnSync(args[0], args.slice(1), { encoding: 'utf8' }).stdout,
+      spawnSync(args[0], args.slice(1), shellOptions).stdout,
       'new $value'
     );
     // docker start without another replacement runs the current stored command.
     assert.equal(
-      spawnSync(args[0], args.slice(1), { encoding: 'utf8' }).stdout,
+      spawnSync(args[0], args.slice(1), shellOptions).stdout,
       'new $value'
     );
   } finally {

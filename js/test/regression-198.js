@@ -173,12 +173,13 @@ test('snapshot failure removes a completed image and restores the original execu
 
 test('watcher removes its generated image after the cleanup policy removes its container', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cleanup-198-'));
-  const docker = path.join(dir, 'docker');
+  const watcher = path.join(dir, 'watcher.sh');
   const events = path.join(dir, 'events');
   try {
     fs.writeFileSync(
-      docker,
+      watcher,
       `#!/bin/sh
+docker() {
 case "$1" in
   wait) echo 0 ;;
   inspect) case "$3" in
@@ -187,30 +188,21 @@ case "$1" in
     *snapshot-image*) echo 'start-command-resume/box:1' ;;
     *) echo '' ;;
   esac ;;
-  rm|rmi) echo "$*" >> "$TEST_EVENTS" ;;
+  rm|rmi) printf '%s\\n' "$*" >> events ;;
 esac
-`,
-      { mode: 0o755 }
+}
+${buildDetachedDockerCompletionScript(
+  'box-resume-1',
+  DOCKER_CONTAINER_CLEANUP_POLICY.ALWAYS,
+  null
+)}
+`
     );
-    const result = spawnSync(
-      'sh',
-      [
-        '-c',
-        buildDetachedDockerCompletionScript(
-          'box-resume-1',
-          DOCKER_CONTAINER_CLEANUP_POLICY.ALWAYS,
-          null
-        ),
-      ],
-      {
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          PATH: `${dir}${path.delimiter}${process.env.PATH}`,
-          TEST_EVENTS: events,
-        },
-      }
-    );
+    // Keep POSIX quoting inside a file, out of Windows process argv/PATH.
+    const result = spawnSync('sh', ['watcher.sh'], {
+      cwd: dir,
+      encoding: 'utf8',
+    });
     assert.equal(result.status, 0, result.stderr);
     assert.deepEqual(fs.readFileSync(events, 'utf8').trim().split('\n'), [
       'rm -f box-resume-1',

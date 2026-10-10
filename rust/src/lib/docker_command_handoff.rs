@@ -118,11 +118,12 @@ mod tests {
         let marker = dir.path().join("command");
         let args = build_command_handoff_args(
             &["sh".into(), "-c".into(), "printf original".into()],
-            &marker.to_string_lossy(),
+            "command",
         );
         let run = || {
             Command::new(&args[0])
                 .args(&args[1..])
+                .current_dir(dir.path())
                 .output()
                 .unwrap()
                 .stdout
