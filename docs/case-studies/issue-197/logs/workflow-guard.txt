@@ -1,0 +1,1 @@
+Every Rust job uses the successful JavaScript stage on the same commit.

@@ -1,0 +1,13 @@
+{
+  "repository": "https://github.com/link-foundation/meta-language.git",
+  "revision": "eb0574d5528babd3b4aadece81590d8e2230b99b",
+  "generated": [
+    {
+      "javascript": "scripts/parity-threshold.mjs",
+      "rust": "rust/src/lib/generated/parity_threshold.rs",
+      "constructs": ["typed numeric function", "arithmetic multiplication"]
+    }
+  ],
+  "manualRustManifest": "parity/features.json",
+  "limitations": "docs/case-studies/issue-197/translation.md"
+}

@@ -1,0 +1,51 @@
+node:internal/modules/run_main:111
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
+    'clippy',
+    '--all-targets',
+    '--all-features',
+-   '-j',
+-   '2',
+    '--',
+    '-D',
+    'warnings',
++   '-j',
++   '2'
+  ]
+
+    at file:///tmp/gh-issue-solver-1791653332998/experiments/issue-197-bounded-cargo.mjs:39:12
+    at ModuleJob.run (node:internal/modules/esm/module_job:569:25)
+    at async node:internal/modules/esm/loader:650:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:105:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [
+    'clippy',
+    '--all-targets',
+    '--all-features',
+    '--',
+    '-D',
+    'warnings',
+    '-j',
+    '2'
+  ],
+  expected: [
+    'clippy',
+    '--all-targets',
+    '--all-features',
+    '-j',
+    '2',
+    '--',
+    '-D',
+    'warnings'
+  ],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.11.0

@@ -22,6 +22,9 @@ export default [
       // Collected CI logs and analysis artefacts.
       'dev/**',
       'node_modules/**',
+      // Pinned translator checkout and bounded local native build artifacts.
+      '.translation/**',
+      '.cargo-target/**',
     ],
   },
 ];

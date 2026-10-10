@@ -1,0 +1,112 @@
+[
+  {
+    "construct": "arithmetic",
+    "items": [
+      {
+        "term": "comment",
+        "status": "translated",
+        "reason": null
+      },
+      {
+        "term": "export_statement",
+        "status": "translated",
+        "reason": null
+      }
+    ]
+  },
+  {
+    "construct": "runtimeImport",
+    "items": [
+      {
+        "term": "import_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      },
+      {
+        "term": "export_statement",
+        "status": "carried",
+        "reason": "type"
+      }
+    ]
+  },
+  {
+    "construct": "commonJs",
+    "items": [
+      {
+        "term": "lexical_declaration",
+        "status": "carried",
+        "reason": "unsupported"
+      },
+      {
+        "term": "function_declaration",
+        "status": "carried",
+        "reason": "type"
+      },
+      {
+        "term": "expression_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      }
+    ]
+  },
+  {
+    "construct": "optional",
+    "items": [
+      {
+        "term": "export_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      }
+    ]
+  },
+  {
+    "construct": "objects",
+    "items": [
+      {
+        "term": "export_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      }
+    ]
+  },
+  {
+    "construct": "arrays",
+    "items": [
+      {
+        "term": "export_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      }
+    ]
+  },
+  {
+    "construct": "regex",
+    "items": [
+      {
+        "term": "export_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      }
+    ]
+  },
+  {
+    "construct": "exceptions",
+    "items": [
+      {
+        "term": "export_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      }
+    ]
+  },
+  {
+    "construct": "asynchronous",
+    "items": [
+      {
+        "term": "export_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      }
+    ]
+  }
+]

@@ -1,0 +1,6 @@
+
+/tmp/gh-issue-solver-1791653332998/experiments/issue-197-bounded-cargo.mjs
+  0:0  warning  File ignored because of a matching ignore pattern. Use "--no-ignore" to disable file ignore settings or use "--no-warn-ignored" to suppress this warning
+
+✖ 1 problem (0 errors, 1 warning)
+

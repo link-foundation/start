@@ -1,0 +1,13 @@
+35 |   }
+36 |   const output = `// Generated from ${entry.javascript} by meta-language ${revision}.\n// Do not edit: run node scripts/generate-rust.mjs.\n${translated.code}`;
+37 |   const destination = resolve(root, entry.rust);
+38 |   if (process.argv.includes('--check')) {
+39 |     if (readFileSync(destination, 'utf8') !== output) {
+40 |       throw new Error(`${entry.rust} drifted; regenerate from JavaScript`);
+                     ^
+error: rust/src/lib/generated/parity_threshold.rs drifted; regenerate from JavaScript
+      at /tmp/gh-issue-solver-1791653332998/scripts/generate-rust.mjs:40:17
+
+Bun v1.4.2 (Linux x64)
+
+Actual upstream regeneration rejected modified output.

@@ -4,28 +4,11 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'README.md'
-      - 'REQUIREMENTS.md'
-      - 'ARCHITECTURE.md'
-      - 'docs/**'
-      - 'examples/**'
-      - 'experiments/**'
-      - 'js/**'
-      - 'scripts/**'
-      - '.github/workflows/js.yml'
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - 'README.md'
-      - 'REQUIREMENTS.md'
-      - 'ARCHITECTURE.md'
-      - 'docs/**'
-      - 'examples/**'
-      - 'experiments/**'
-      - 'js/**'
-      - 'scripts/**'
-      - '.github/workflows/js.yml'
+  schedule:
+    # Keep weekly Rust dependency/CodeQL security checks behind the same gate.
+    - cron: '0 6 * * 1'
   workflow_dispatch:
     inputs:
       release_mode:
@@ -74,7 +57,7 @@ jobs:
   syntax-check:
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-syntax-check
-      cancel-in-progress: true
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     name: Syntax Pre-Check (.mjs)
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -102,7 +85,7 @@ jobs:
   detect-changes:
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-detect-changes
-      cancel-in-progress: true
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     name: Detect Changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -138,7 +121,7 @@ jobs:
   version-check:
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-version-check
-      cancel-in-progress: true
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     name: Check for Manual Version Changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -184,7 +167,7 @@ jobs:
   changeset-check:
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-changeset-check
-      cancel-in-progress: true
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     name: Check for Changesets
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -225,21 +208,12 @@ jobs:
   lint:
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-lint
-      cancel-in-progress: true
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     name: Lint and Format Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [detect-changes]
-    if: |
-      !cancelled() && (
-        github.event_name == 'push' ||
-        github.event_name == 'workflow_dispatch' ||
-        needs.detect-changes.outputs.js-changed == 'true' ||
-        needs.detect-changes.outputs.mjs-changed == 'true' ||
-        needs.detect-changes.outputs.package-changed == 'true' ||
-        needs.detect-changes.outputs.docs-changed == 'true' ||
-        needs.detect-changes.outputs.workflow-changed == 'true'
-      )
+    if: ${{ !cancelled() }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -280,7 +254,7 @@ jobs:
   test:
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-test-${{ matrix.os }}
-      cancel-in-progress: true
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     name: Test (Bun on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -448,7 +422,7 @@ jobs:
   coverage:
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-coverage
-      cancel-in-progress: true
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     name: Code Coverage (JavaScript)
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -499,6 +473,7 @@ jobs:
     name: Release
     needs: [lint, test]
     if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint.result == 'success' && needs.test.result == 'success' }}
+    environment: release-main
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -512,6 +487,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ssh-key: ${{ secrets.START_RELEASE_SSH_KEY }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -599,7 +575,8 @@ jobs:
       group: main-writer-${{ github.repository }}-main
       cancel-in-progress: false
     name: Instant Release
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'instant'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.event.inputs.release_mode == 'instant'
+    environment: release-main
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -613,6 +590,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ssh-key: ${{ secrets.START_RELEASE_SSH_KEY }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -732,12 +710,44 @@ jobs:
             2. Merge this PR to main
             3. The automated release workflow will publish to npm and create a GitHub release
 
+  # Behavioral parity and generated Rust are checked before any Rust tooling.
+  parity:
+    name: Behavioral Parity and Translation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: check-js-parity-${{ github.ref }}
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - name: Check the JavaScript gate across every workflow
+        run: bun scripts/check-javascript-first.mjs
+      - name: Verify per-feature evidence and changes in both languages
+        env:
+          PARITY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/check-feature-parity.mjs
+      - name: Prepare pinned meta-language translation tooling
+        run: node scripts/setup-translation.mjs
+      - name: Regenerate Rust and compare exact output
+        run: node scripts/generate-rust.mjs --check
+      - name: Check shared JavaScript golden contracts
+        run: bun test ./js/test/shared-golden.js ./js/test/javascript-first-ci.js
+      - name: Verify local argument forwarding without compiling
+        run: node experiments/issue-197-argument-forwarding.mjs
+
   # === PIPELINE STATUS ===
   # Aggregates every job so a run cannot look green while a job failed or was
   # silently cancelled. A job killed by `timeout-minutes` is reported as
   # `cancelled`, which would otherwise hide the failure (issue #158).
   pipeline-status:
-    name: Pipeline Status
+    name: JavaScript Stage
     needs:
       - syntax-check
       - detect-changes
@@ -746,6 +756,7 @@ jobs:
       - lint
       - test
       - coverage
+      - parity
       - release
       - instant-release
       - changeset-pr
@@ -761,4 +772,25 @@ jobs:
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
           IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
-        run: bash scripts/check-pipeline-status.sh
+        run: node scripts/check-stage-status.mjs --required syntax-check,lint,test,coverage,parity
+
+  # Same checkout SHA and event context; skipped/failed/cancelled JS never calls Rust.
+  rust-stage:
+    name: Rust CI/CD
+    needs: [pipeline-status]
+    if: ${{ !cancelled() && needs.pipeline-status.result == 'success' }}
+    uses: ./.github/workflows/rust.yml # zizmor: ignore[self-repository] -- Relative same-commit call is required and validated by our gate.
+    permissions:
+      contents: write
+      actions: read
+      security-events: write
+    secrets:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
+    concurrency:
+      group: check-rust-stage-${{ github.ref }}
+      cancel-in-progress: false
+    with:
+      release_mode: ${{ inputs.release_mode || 'instant' }}
+      bump_type: ${{ inputs.bump_type || 'patch' }}
+      description: ${{ inputs.description || '' }}

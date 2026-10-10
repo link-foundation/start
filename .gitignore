@@ -143,3 +143,8 @@ vite.config.ts.timestamp-*
 rust/target/
 Cargo.lock
 !rust/Cargo.lock
+
+# Pinned upstream translation tooling and bounded shared local Cargo outputs
+.translation/
+.cargo-target/
+.cargo-target.lock

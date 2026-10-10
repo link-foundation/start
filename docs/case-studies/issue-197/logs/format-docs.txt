@@ -1,0 +1,6 @@
+AGENTS.md 174ms (unchanged)
+CLAUDE.md 37ms (unchanged)
+CONTRIBUTING.md 121ms (unchanged)
+docs/case-studies/issue-197/README.md 400ms
+docs/case-studies/issue-197/translation.md 57ms
+eslint.config.mjs 153ms (unchanged)
