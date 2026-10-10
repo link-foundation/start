@@ -1,3 +1,4 @@
+CHECK: js-check7.log
 $ bun run lint && bun run lint:scripts && bun run format:check && bun run format:check:scripts && bun run check:file-size
 $ eslint .
 $ cd .. && eslint .
@@ -12,4 +13,25 @@ $ bun ../scripts/check-file-size.mjs
 Checking JavaScript and Rust files for maximum 1000 lines...
 
 ✓ All files are within the line limit
+
+
+
+CHECK: rust-format3.log
+
+
+CHECK: rust-clippy4.log
+    Checking start-command v0.23.0 (/tmp/gh-issue-solver-1791653332998/rust)
+    Finished `dev` profile [unoptimized] target(s) in 13.16s
+
+
+CHECK: final-feature-parity.log
+Verified 20 features, source inventory and behavior evidence.
+
+
+CHECK: final-workflow-guard.log
+Every Rust job uses the successful JavaScript stage on the same commit.
+
+
+CHECK: final-generation.log
+Verified rust/src/lib/generated/parity_threshold.rs
 

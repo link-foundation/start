@@ -26,6 +26,19 @@ the containerd differ; it does not establish universal timings for every Docker
 storage driver. Avoiding commit addresses both the wrapper's disk amplification
 and the need to traverse the filesystem.
 
+The linked [hive-mind incident #2889](https://github.com/link-foundation/hive-mind/issues/2889)
+and its complete discussion are archived as [the issue](data/hive-mind-2889.json)
+and [comments](data/hive-mind-2889-comments.json). The original incident also
+records an earlier Docker daemon OOM and explains which failures happened before
+and after restart. Its retained [concurrent snapshot log](data/concurrent-snapshot-resume-start-0.36.0.txt)
+shows two independent commits starting within one second and retaining both
+original containers and generated images. The upstream [handoff experiment](data/docker-start-handoff-experiment.txt)
+preserves a container ID and files without an image commit. Those logs and the
+[original bounded snapshot script](data/upstream-concurrent-snapshot-resume.sh.txt)
+were downloaded from the incident's linked branch; they are historical evidence,
+not new measurements. The independent bounded smoke below verifies the current
+implementation.
+
 The minimal reproduction in
 [experiments/issue-198-resume-reproduction.js](../../../experiments/issue-198-resume-reproduction.js)
 loads the previously committed JavaScript planner and requests a replacement
@@ -119,6 +132,27 @@ disk refusal and non-forced predecessor removal. Full verification evidence is
 tracked in the [umbrella case study](../issue-203/README.md); an earlier
 276-test library run is preserved in
 [data/rust-lib-tests.log](data/rust-lib-tests.txt).
+
+The [first pushed JavaScript run](https://github.com/link-foundation/start/actions/runs/38074537352)
+started at 18:07:51 UTC on 2026-10-10 for commit
+`412f498070ea880fc6f6f8550fdab0da3c72ac4b` and completed with Windows failures
+at 18:10:15 UTC. Its two issue-specific failures were an exact Unix `0644`
+assertion reporting Windows `0666`, and the fake-Docker watcher shell returning
+127 with `_`: command not found. The raw failure excerpts and source line
+numbers are preserved in [data/windows-ci-failures.txt](data/windows-ci-failures.txt).
+
+[Node's filesystem documentation](https://nodejs.org/api/fs.html#fschmodpath-mode-callback)
+confirms Windows does not implement distinct owner/group/other permissions.
+The handoff test now checks readability everywhere and exact `0644` only on
+Unix. Its shell uses a relative marker in its temporary working directory.
+The watcher fixture defines a mocked `docker` function inside a script file,
+then runs that file from its working directory, avoiding a long quoted Windows
+process argument and a Windows-delimited PATH passed to a POSIX shell. It still
+executes the real generated watcher and verifies container removal precedes
+image removal. Both focused Node and Bun runs pass all 17 tests locally; see
+[Node results](data/windows-fix-node-focused.txt) and
+[Bun results](data/windows-fix-bun-focused.txt). Windows confirmation comes from
+the subsequent CI run; these local results were collected on Linux.
 
 The real-Docker probe
 [experiments/issue-198-docker-smoke.js](../../../experiments/issue-198-docker-smoke.js)

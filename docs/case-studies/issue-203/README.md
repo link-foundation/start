@@ -33,14 +33,14 @@ None contained comments at the initial read on 2026-10-10.
 
 ## Scope map
 
-| Issue | Required result | Detailed evidence and requirement checklist |
-| --- | --- | --- |
-| 197 | JavaScript-first CI, behavior parity, translation boundaries, bounded Rust builds, agent/push rules, main protection, measurements | [Case study](../issue-197/README.md) |
-| 198 | Copy-free Docker command resume; guarded, serialized legacy snapshots; cleanup and accurate hints | [Case study](../issue-198/README.md) |
-| 199 | Repeated Docker labels, durable attribution and resume inheritance | [Case study](../issue-199/README.md) |
-| 200 | Streaming, private, fail-closed sanitized uploads everywhere, explicit opt-out | [Case study](../issue-200/README.md) |
-| 201 | Successful wrapper help in JavaScript and Rust, command help preserved | [Case study](../issue-201/README.md) |
-| 202 | Preserve shell script/positional argv, compound command semantics and exit codes in every backend/display path | [Case study](../issue-202/README.md) |
+| Issue | Required result                                                                                                                    | Detailed evidence and requirement checklist |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| 197   | JavaScript-first CI, behavior parity, translation boundaries, bounded Rust builds, agent/push rules, main protection, measurements | [Case study](../issue-197/README.md)        |
+| 198   | Copy-free Docker command resume; guarded, serialized legacy snapshots; cleanup and accurate hints                                  | [Case study](../issue-198/README.md)        |
+| 199   | Repeated Docker labels, durable attribution and resume inheritance                                                                 | [Case study](../issue-199/README.md)        |
+| 200   | Streaming, private, fail-closed sanitized uploads everywhere, explicit opt-out                                                     | [Case study](../issue-200/README.md)        |
+| 201   | Successful wrapper help in JavaScript and Rust, command help preserved                                                             | [Case study](../issue-201/README.md)        |
+| 202   | Preserve shell script/positional argv, compound command semantics and exit codes in every backend/display path                     | [Case study](../issue-202/README.md)        |
 
 ## Initial observations
 
@@ -52,7 +52,7 @@ can be considered complete by changing only one implementation.
 
 ## Final local verification
 
-The stable implementation passed all 1,193 JavaScript tests across 76 files and
+The stable implementation passed all 1,197 JavaScript tests across 76 files and
 all 1,026 Rust tests across 53 suites. Two native experiments remain explicitly
 ignored in the ordinary suite; the finite 110 MiB sanitizer experiment was run
 separately under its memory limit. JavaScript lint, formatting, script checks
