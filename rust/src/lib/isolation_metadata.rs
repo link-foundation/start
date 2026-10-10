@@ -19,11 +19,13 @@ pub fn docker_attribution_labels(
 ) -> Vec<String> {
     let mut labels = options.labels.clone();
     let mut inferred_root = session;
-    while let Some((prefix, count)) = inferred_root.rsplit_once("-resume-") {
-        if count.is_empty() || !count.bytes().all(|byte| byte.is_ascii_digit()) {
-            break;
+    if options.resume_count > 0 {
+        while let Some((prefix, count)) = inferred_root.rsplit_once("-resume-") {
+            if count.is_empty() || !count.bytes().all(|byte| byte.is_ascii_digit()) {
+                break;
+            }
+            inferred_root = prefix;
         }
-        inferred_root = prefix;
     }
     let root = options.root_session.as_deref().unwrap_or(inferred_root);
     let uuid = options

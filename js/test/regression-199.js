@@ -10,6 +10,9 @@ describe('Docker attribution labels (#199)', () => {
   it('attributes replacement containers to their stable root and execution', () => {
     const { dockerLabels } = require('../src/lib/docker-labels');
     expect(
+      dockerLabels({ session: 'demo-resume-1', sessionId: 'uuid' })
+    ).toContain('start-command.root-session=demo-resume-1');
+    expect(
       dockerLabels({
         session: 'demo-resume-1-resume-2',
         sessionId: 'uuid',

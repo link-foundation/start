@@ -1,0 +1,11 @@
+   Compiling start-command v0.23.0 (/tmp/gh-issue-solver-1791653332998/rust)
+    Finished `test` profile [unoptimized] target(s) in 6.62s
+     Running tests/regression_199.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_199-56509a92804b4fbf)
+
+running 3 tests
+test invalid_or_reserved_labels_are_rejected ... ok
+test replacement_container_labels_keep_root_and_uuid ... ok
+test docker_labels_are_parsed_and_persisted ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

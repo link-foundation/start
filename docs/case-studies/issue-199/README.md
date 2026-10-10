@@ -18,15 +18,15 @@ server-side label filter. The reproducing tests were added before implementation
 
 ## Every requirement and implementation plan
 
-| Requirement | Considered solutions | Applied solution and verification |
-| --- | --- | --- |
-| Repeatable Docker-only `--label KEY=VALUE`, like `--env` | Add to existing parser; replace parser with a CLI framework | Extend both existing parsers, accept inline `--label=...`, preserve additional equals signs and empty values, reject empty keys and non-Docker launches; regression-199 tests |
-| Apply labels to initial `docker run` and snapshot resumes | Rely on snapshot image inheritance; explicitly pass labels | Shared runtime argv builders pass each label explicitly in both languages; shared golden and runtime tests |
-| Persist labels alongside `env` | Infer labels from daemon state on every resume; store caller intent | Execution metadata stores caller labels and resume planning carries them forward, including replaced image configuration |
-| Always add session, root-session, execution UUID and resume-count labels | Caller supplies attribution; wrapper owns namespace | Wrapper adds all four `start-command.*` labels, protects that namespace against spoofing, and updates attribution on replacement containers |
-| Attribute a whole session chain using `docker ps --filter label=...` | Inspect every container's environment; filter labels | Stable root-session and UUID let a supervisor filter live containers without trusting the execution-store status |
-| Optionally use Docker liveness when a stored status is terminal | Broaden status reconciliation; expose independent daemon attribution | Existing status reconciliation stays available; this optional extension is deferred because labels directly address the required independent discovery mechanism |
-| Apply throughout the codebase and investigate related work | JavaScript-only patch; parallel native behavior | JavaScript and Rust parsing, nested isolation, argv, metadata, and snapshot-resume paths are covered |
+| Requirement                                                              | Considered solutions                                                 | Applied solution and verification                                                                                                                                             |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repeatable Docker-only `--label KEY=VALUE`, like `--env`                 | Add to existing parser; replace parser with a CLI framework          | Extend both existing parsers, accept inline `--label=...`, preserve additional equals signs and empty values, reject empty keys and non-Docker launches; regression-199 tests |
+| Apply labels to initial `docker run` and snapshot resumes                | Rely on snapshot image inheritance; explicitly pass labels           | Shared runtime argv builders pass each label explicitly in both languages; shared golden and runtime tests                                                                    |
+| Persist labels alongside `env`                                           | Infer labels from daemon state on every resume; store caller intent  | Execution metadata stores caller labels and resume planning carries them forward, including replaced image configuration                                                      |
+| Always add session, root-session, execution UUID and resume-count labels | Caller supplies attribution; wrapper owns namespace                  | Wrapper adds all four `start-command.*` labels, protects that namespace against spoofing, and updates attribution on replacement containers                                   |
+| Attribute a whole session chain using `docker ps --filter label=...`     | Inspect every container's environment; filter labels                 | Stable root-session and UUID let a supervisor filter live containers without trusting the execution-store status                                                              |
+| Optionally use Docker liveness when a stored status is terminal          | Broaden status reconciliation; expose independent daemon attribution | Existing status reconciliation stays available; this optional extension is deferred because labels directly address the required independent discovery mechanism              |
+| Apply throughout the codebase and investigate related work               | JavaScript-only patch; parallel native behavior                      | JavaScript and Rust parsing, nested isolation, argv, metadata, and snapshot-resume paths are covered                                                                          |
 
 An in-place resume from issue #198 restarts the same container. Docker labels
 are immutable for its lifetime, so its labels describe its creation: its session,
@@ -35,6 +35,11 @@ creation. A snapshot replacement gets the new session and resume-count. A caller
 changing labels on resume needs a replacement container and therefore the
 guarded snapshot path. Labels are visible through Docker inspection and should
 contain attribution, not credentials.
+
+An initial session name may itself end in `-resume-1`. Both runtimes preserve
+that complete root name when the resume count is zero; suffix inference is
+limited to resumed sessions without explicit root metadata. Matching regression
+assertions failed in both languages before this final-review correction.
 
 ```sh
 $ -i docker -d --session demo --label hive-mind.tool=codex -- sleep 60

@@ -1,0 +1,27 @@
+bun test v1.4.2 (744846f84)
+
+test/regression-199.js:
+ 9 | describe('Docker attribution labels (#199)', () => {
+10 |   it('attributes replacement containers to their stable root and execution', () => {
+11 |     const { dockerLabels } = require('../src/lib/docker-labels');
+12 |     expect(
+13 |       dockerLabels({ session: 'demo-resume-1', sessionId: 'uuid' })
+14 |     ).toContain('start-command.root-session=demo-resume-1');
+           ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "start-command.root-session=demo-resume-1"
+Received: [ "start-command.session=demo-resume-1", "start-command.root-session=demo", "start-command.resume-count=0",
+  "start-command.uuid=uuid"
+]
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-199.js:14:7)
+(fail) Docker attribution labels (#199) > attributes replacement containers to their stable root and execution [5.05ms]
+(pass) Docker attribution labels (#199) > parses repeated labels and preserves equals signs and empty values [3.74ms]
+(pass) Docker attribution labels (#199) > rejects malformed, reserved and non-Docker labels [0.34ms]
+(pass) Docker attribution labels (#199) > forwards labels safely through nested Docker isolation [1.14ms]
+
+ 3 pass
+ 1 fail
+ 11 expect() calls
+Ran 4 tests across 1 file. [78.00ms]

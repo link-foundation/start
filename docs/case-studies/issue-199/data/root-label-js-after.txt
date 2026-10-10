@@ -1,0 +1,12 @@
+bun test v1.4.2 (744846f84)
+
+test/regression-199.js:
+(pass) Docker attribution labels (#199) > attributes replacement containers to their stable root and execution [0.96ms]
+(pass) Docker attribution labels (#199) > parses repeated labels and preserves equals signs and empty values [12.53ms]
+(pass) Docker attribution labels (#199) > rejects malformed, reserved and non-Docker labels [0.46ms]
+(pass) Docker attribution labels (#199) > forwards labels safely through nested Docker isolation [0.95ms]
+
+ 4 pass
+ 0 fail
+ 12 expect() calls
+Ran 4 tests across 1 file. [74.00ms]

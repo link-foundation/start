@@ -3,6 +3,12 @@ use start_command::parse_args;
 
 #[test]
 fn replacement_container_labels_keep_root_and_uuid() {
+    let initial_options = start_command::isolation::IsolationOptions::default();
+    let initial_labels = start_command::isolation_metadata::docker_attribution_labels(
+        &initial_options,
+        "demo-resume-1",
+    );
+    assert!(initial_labels.contains(&"start-command.root-session=demo-resume-1".to_string()));
     let options = start_command::isolation::IsolationOptions {
         uuid: Some("uuid".to_string()),
         resume_count: 2,

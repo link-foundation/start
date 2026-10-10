@@ -14,9 +14,13 @@ function dockerLabels(options = {}) {
   const labels = [...(options.labels || [])];
   const session = options.containerName || options.session;
   if (session) {
+    const inferredRoot =
+      Number(options.resumeCount) > 0
+        ? session.replace(/(?:-resume-\d+)+$/, '')
+        : session;
     labels.push(`start-command.session=${session}`);
     labels.push(
-      `start-command.root-session=${options.rootSession || session.replace(/(?:-resume-\d+)+$/, '')}`
+      `start-command.root-session=${options.rootSession || inferredRoot}`
     );
     labels.push(`start-command.resume-count=${options.resumeCount || 0}`);
   }
