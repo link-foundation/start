@@ -1,0 +1,142 @@
+{
+  "headSha": "f34eb799412c2019dce35aac8b48bd474f946095",
+  "capturedAt": "2026-10-10T18:31:56.407092+00:00",
+  "runUrl": "https://github.com/link-foundation/start/actions/runs/38075533078",
+  "javaScriptStageCompletedAt": "2026-10-10T18:25:13Z",
+  "allExecutedRustJobsStartedAfterJavaScriptSuccess": true,
+  "earliestRustStart": "2026-10-10T18:25:15Z",
+  "rustJobs": [
+    {
+      "name": "Rust CI/CD / Cargo Audit",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-10T18:25:15Z",
+      "completed_at": "2026-10-10T18:25:25Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114282068132"
+    },
+    {
+      "name": "Rust CI/CD / CodeQL (Rust)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-10T18:25:15Z",
+      "completed_at": "2026-10-10T18:28:54Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114282068190"
+    },
+    {
+      "name": "Rust CI/CD / Detect Changes",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-10T18:25:15Z",
+      "completed_at": "2026-10-10T18:25:22Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114282068197"
+    },
+    {
+      "name": "Rust CI/CD / Check for Manual Version Changes",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-10T18:25:15Z",
+      "completed_at": "2026-10-10T18:25:21Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114282068251"
+    },
+    {
+      "name": "Rust CI/CD / Syntax Pre-Check (.mjs)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-10T18:25:15Z",
+      "completed_at": "2026-10-10T18:25:27Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114282068253"
+    },
+    {
+      "name": "Rust CI/CD / Feature Parity and Test Count Signal",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-10T18:25:25Z",
+      "completed_at": "2026-10-10T18:25:30Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114282102655"
+    },
+    {
+      "name": "Rust CI/CD / Changelog Fragment Check",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-10T18:25:24Z",
+      "completed_at": "2026-10-10T18:25:29Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114282102704"
+    },
+    {
+      "name": "Rust CI/CD / Lint and Format Check",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-10T18:25:24Z",
+      "completed_at": "2026-10-10T18:25:42Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114282102774"
+    },
+    {
+      "name": "Rust CI/CD / Test (ubuntu-latest)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-10T18:25:31Z",
+      "completed_at": "2026-10-10T18:26:49Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114282123560"
+    },
+    {
+      "name": "Rust CI/CD / Code Coverage (Rust, Linux only)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-10T18:25:31Z",
+      "completed_at": "2026-10-10T18:30:32Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114282123601"
+    },
+    {
+      "name": "Rust CI/CD / Test (macos-latest)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-10T18:25:35Z",
+      "completed_at": "2026-10-10T18:27:09Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114282123639"
+    },
+    {
+      "name": "Rust CI/CD / Test (windows-latest)",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-10-10T18:25:31Z",
+      "completed_at": "2026-10-10T18:26:44Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114282123726"
+    },
+    {
+      "name": "Rust CI/CD / Rust Stage",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-10-10T18:30:34Z",
+      "completed_at": "2026-10-10T18:30:38Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114283117909"
+    }
+  ],
+  "actualRequiredContexts": [
+    {
+      "name": "Rust CI/CD / Rust Stage",
+      "head_sha": "f34eb799412c2019dce35aac8b48bd474f946095",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-10-10T18:30:34Z",
+      "completed_at": "2026-10-10T18:30:38Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114283117909",
+      "integrationId": 15368
+    },
+    {
+      "name": "JavaScript Stage",
+      "head_sha": "f34eb799412c2019dce35aac8b48bd474f946095",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-10T18:25:05Z",
+      "completed_at": "2026-10-10T18:25:13Z",
+      "html_url": "https://github.com/link-foundation/start/actions/runs/38075533078/job/114282033103",
+      "integrationId": 15368
+    }
+  ],
+  "counts": {
+    "solverPushes": 2,
+    "failedRuns": 2,
+    "cancelledRuns": 0,
+    "latestPendingRuns": 0
+  }
+}
