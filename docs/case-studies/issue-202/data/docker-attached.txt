@@ -1,0 +1,24 @@
+│ session   5217bf44-59b9-46f1-b67b-1ce592f3e5cf
+│ start     2026-10-10 17:39:18.536
+│
+│ isolation docker
+│ mode      attached
+│ image     alpine:3.23
+│ container issue203-smoke
+│
+$ sh -c 'exit 7'; echo after $?
+
+after 7
+
+✓
+│ finish    2026-10-10 17:39:20.490
+│ duration  1.998s
+│ exit      0
+│
+│ isolation docker
+│ mode      attached
+│ image     alpine:3.23
+│ container issue203-smoke
+│
+│ log       /tmp/start-command/logs/isolation/docker/5217bf44-59b9-46f1-b67b-1ce592f3e5cf.log
+│ session   5217bf44-59b9-46f1-b67b-1ce592f3e5cf

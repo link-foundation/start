@@ -1,0 +1,6 @@
+{"version":"before","command":"sh -c 'exit 7'; echo after $?","argv":["sh","-c","exit 7; echo after $?"],"stdout":"","status":7,"signal":null}
+{"version":"after","command":"sh -c 'exit 7'; echo after $?","argv":["sh","-c","sh -c 'exit 7'; echo after $?"],"stdout":"after 7\n","status":0,"signal":null}
+{"version":"before","command":"sh -c 'echo $0 $1' a b","argv":["sh","-c","echo $0 $1 a b"],"stdout":"sh a b\n","status":0,"signal":null}
+{"version":"after","command":"sh -c 'echo $0 $1' a b","argv":["sh","-c","echo $0 $1","a","b"],"stdout":"a b\n","status":0,"signal":null}
+{"version":"before","command":"sh -c 'kill -9 $$'; exit $?","argv":["sh","-c","kill -9 $$; exit $?"],"stdout":"","status":null,"signal":"SIGKILL"}
+{"version":"after","command":"sh -c 'kill -9 $$'; exit $?","argv":["sh","-c","sh -c 'kill -9 $$'; exit $?"],"stdout":"","status":137,"signal":null}

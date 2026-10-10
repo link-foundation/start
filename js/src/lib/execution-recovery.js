@@ -357,7 +357,14 @@ function recoverKilledExecution(params = {}) {
   if (opts.recoveryCommand) {
     let copied;
     try {
-      copied = writeRecoveryMarker(containerName, attempt, runner);
+      copied = opts.commandHandoff
+        ? require('./docker-command-handoff').writeCommandHandoff(
+            containerName,
+            `export ${RECOVERY_ATTEMPT_ENV}=${attempt}; ${opts.recoveryCommand}`,
+            runner,
+            opts
+          )
+        : writeRecoveryMarker(containerName, attempt, runner);
     } catch (err) {
       copied = { success: false, error: err.message };
     }

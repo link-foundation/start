@@ -83,7 +83,7 @@ function getDockerContainerCleanupInstructions(containerName) {
     `Container kept for investigation: ${containerName}`,
     `Re-enter while running: $ --attach ${containerName}`,
     `Continue the stored command: $ --resume ${containerName}`,
-    `Run another command in the same container: $ --resume ${containerName} -- <command>`,
+    `Run another command (legacy containers snapshot the filesystem into a new container): $ --resume ${containerName} -- <command>`,
     `Remove when done: docker rm -f ${containerName}`,
   ].join('\n');
 }
@@ -306,7 +306,7 @@ function buildDockerKeptLogSnippet(containerName, quotedLogPath) {
     `printf '\\nContainer kept for investigation: %s\\nReason: %s\\n` +
     `Re-enter while running: $ --attach %s\\n` +
     `Continue the stored command: $ --resume %s\\n` +
-    `Run another command in the same container: $ --resume %s -- <command>\\n` +
+    `Run another command (legacy containers snapshot the filesystem into a new container): $ --resume %s -- <command>\\n` +
     `Remove when done: docker rm -f %s\\n' ` +
     `${quotedName} "$__start_command_reason" ` +
     `${quotedName} ${quotedName} ${quotedName} ${quotedName} >> ${quotedLogPath}`
@@ -361,6 +361,11 @@ function buildDetachedDockerCompletionScript(
   watcherOptions = {}
 ) {
   const quotedName = shellQuote(containerName);
+  const imageCleanup =
+    require('./docker-snapshot-safety').snapshotImageCleanupSnippet(
+      containerName,
+      logPath ? `>> ${shellQuote(logPath)} 2>&1` : '>/dev/null 2>&1'
+    );
   // The container's cgroup disappears with it, so its memory counters are
   // sampled while it runs (issue #182).
   const cpuMonitor = require('./cpu-penalty-monitor');
@@ -389,7 +394,7 @@ function buildDetachedDockerCompletionScript(
       quotedLogPath
     );
     const memory = buildCgroupMemoryLogSnippet(quotedLogPath);
-    const remove = `docker rm -f ${quotedName} >> ${quotedLogPath} 2>&1 || true; ${removalNote}; ${memory}`;
+    const remove = `${imageCleanup.capture}; if docker rm -f ${quotedName} >> ${quotedLogPath} 2>&1; then ${imageCleanup.remove}; fi; ${removalNote}; ${memory}`;
     const keep = `${postMortem}; ${memory}; ${buildDockerKeptLogSnippet(containerName, quotedLogPath)}`;
 
     const since = watcherOptions.since
@@ -438,13 +443,15 @@ function buildDetachedDockerCompletionScript(
     parts.push(buildCgroupSamplerStopSnippet());
     parts.push(buildDockerStateSnippet(containerName));
     if (policy === DOCKER_CONTAINER_CLEANUP_POLICY.ALWAYS) {
-      exited.push(`docker rm -f ${quotedName} >/dev/null 2>&1 || true`);
+      exited.push(
+        `${imageCleanup.capture}; if docker rm -f ${quotedName} >/dev/null 2>&1; then ${imageCleanup.remove}; fi`
+      );
     } else if (
       policy === DOCKER_CONTAINER_CLEANUP_POLICY.DEFAULT ||
       policy === DOCKER_CONTAINER_CLEANUP_POLICY.KEEP_ON_FAIL
     ) {
       exited.push(
-        `if ${buildSuccessfulNonOomCondition()}; then docker rm -f ${quotedName} >/dev/null 2>&1 || true; fi`
+        `if ${buildSuccessfulNonOomCondition()}; then ${imageCleanup.capture}; if docker rm -f ${quotedName} >/dev/null 2>&1; then ${imageCleanup.remove}; fi; fi`
       );
     }
   }

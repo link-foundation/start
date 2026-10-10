@@ -1,0 +1,1 @@
+{"sourceBytes":115343360,"sanitizedBytes":64496960,"secretLeaked":false,"elapsedMs":16409,"maxRssKiB":89012,"heapLimitMiB":96}

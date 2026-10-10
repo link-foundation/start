@@ -69,7 +69,7 @@ function buildAttachedCmdArgs(command, shellToUse = '/bin/bash') {
 describe('isShellInvocationWithArgs (issue #91)', () => {
   it('should return true for "bash -i -c nvm --version"', () => {
     assert.strictEqual(
-      isShellInvocationWithArgs('bash -i -c nvm --version'),
+      isShellInvocationWithArgs('bash -i -c "nvm --version"'),
       true
     );
   });
@@ -79,11 +79,14 @@ describe('isShellInvocationWithArgs (issue #91)', () => {
   });
 
   it('should return true for "bash -c echo hello"', () => {
-    assert.strictEqual(isShellInvocationWithArgs('bash -c echo hello'), true);
+    assert.strictEqual(isShellInvocationWithArgs('bash -c "echo hello"'), true);
   });
 
   it('should return true for "zsh -c nvm --version"', () => {
-    assert.strictEqual(isShellInvocationWithArgs('zsh -c nvm --version'), true);
+    assert.strictEqual(
+      isShellInvocationWithArgs('zsh -c "nvm --version"'),
+      true
+    );
   });
 
   it('should return true for "sh -c ls"', () => {
@@ -115,12 +118,12 @@ describe('isShellInvocationWithArgs (issue #91)', () => {
 
 describe('buildShellWithArgsCmdArgs (issue #91)', () => {
   it('should reconstruct "bash -i -c nvm --version" correctly', () => {
-    const result = buildShellWithArgsCmdArgs('bash -i -c nvm --version');
+    const result = buildShellWithArgsCmdArgs('bash -i -c "nvm --version"');
     assert.deepStrictEqual(result, ['bash', '-i', '-c', 'nvm --version']);
   });
 
   it('should reconstruct "bash -c echo hello" correctly', () => {
-    const result = buildShellWithArgsCmdArgs('bash -c echo hello');
+    const result = buildShellWithArgsCmdArgs('bash -c "echo hello"');
     assert.deepStrictEqual(result, ['bash', '-c', 'echo hello']);
   });
 
@@ -130,13 +133,13 @@ describe('buildShellWithArgsCmdArgs (issue #91)', () => {
   });
 
   it('should handle zsh with -c', () => {
-    const result = buildShellWithArgsCmdArgs('zsh -c nvm --version');
+    const result = buildShellWithArgsCmdArgs('zsh -c "nvm --version"');
     assert.deepStrictEqual(result, ['zsh', '-c', 'nvm --version']);
   });
 
   it('should handle /bin/bash -i -c with multi-word script', () => {
     const result = buildShellWithArgsCmdArgs(
-      '/bin/bash -i -c node -e process.version'
+      '/bin/bash -i -c "node -e process.version"'
     );
     assert.deepStrictEqual(result, [
       '/bin/bash',
@@ -147,7 +150,7 @@ describe('buildShellWithArgsCmdArgs (issue #91)', () => {
   });
 
   it('should not include -c argument inside script argument (no double -c)', () => {
-    const result = buildShellWithArgsCmdArgs('bash -i -c nvm --version');
+    const result = buildShellWithArgsCmdArgs('bash -i -c "nvm --version"');
     // The script arg must be 'nvm --version', not '-c nvm --version'
     assert.strictEqual(result[result.length - 1], 'nvm --version');
     assert.strictEqual(result.indexOf('-c'), 2);
@@ -159,13 +162,13 @@ describe('Regression: No Double-Wrapping for Shell With -c (issue #91)', () => {
   // Each test verifies that `bash -i -c "cmd"` style commands are NOT re-wrapped
   // in another outer shell -c invocation.
   //
-  // Before fix: buildAttachedCmdArgs('bash -i -c nvm --version')
-  //   → ['/bin/bash', '-i', '-c', 'bash -i -c nvm --version']   (WRONG: double-wrap)
-  // After fix:  buildAttachedCmdArgs('bash -i -c nvm --version')
+  // Before fix: buildAttachedCmdArgs('bash -i -c "nvm --version"')
+  //   → ['/bin/bash', '-i', '-c', 'bash -i -c "nvm --version"']   (WRONG: double-wrap)
+  // After fix:  buildAttachedCmdArgs('bash -i -c "nvm --version"')
   //   → ['bash', '-i', '-c', 'nvm --version']                   (CORRECT: direct pass)
 
   it('should pass "bash -i -c nvm --version" directly without outer shell wrapper', () => {
-    const args = buildAttachedCmdArgs('bash -i -c nvm --version');
+    const args = buildAttachedCmdArgs('bash -i -c "nvm --version"');
     // Must start with 'bash', not with '/bin/bash' (the outer shellToUse)
     assert.strictEqual(args[0], 'bash');
     // Must not wrap in outer bash -i -c
@@ -182,7 +185,7 @@ describe('Regression: No Double-Wrapping for Shell With -c (issue #91)', () => {
   });
 
   it('should pass "zsh -c nvm --version" directly without outer shell wrapper', () => {
-    const args = buildAttachedCmdArgs('zsh -c nvm --version', '/bin/zsh');
+    const args = buildAttachedCmdArgs('zsh -c "nvm --version"', '/bin/zsh');
     assert.deepStrictEqual(args, ['zsh', '-c', 'nvm --version']);
     assert.ok(
       args.filter((a) => a === '-c').length === 1,
@@ -191,12 +194,12 @@ describe('Regression: No Double-Wrapping for Shell With -c (issue #91)', () => {
   });
 
   it('should pass "bash -c echo hello" directly', () => {
-    const args = buildAttachedCmdArgs('bash -c echo hello');
+    const args = buildAttachedCmdArgs('bash -c "echo hello"');
     assert.deepStrictEqual(args, ['bash', '-c', 'echo hello']);
   });
 
   it('should not introduce a second bash layer (no shell-inside-shell)', () => {
-    const args = buildAttachedCmdArgs('bash -i -c nvm --version');
+    const args = buildAttachedCmdArgs('bash -i -c "nvm --version"');
     // The first element of the docker image command args must NOT be the outer shell
     // i.e., must not be ['/bin/bash', '-i', '-c', 'bash ...']
     assert.notStrictEqual(
@@ -206,7 +209,7 @@ describe('Regression: No Double-Wrapping for Shell With -c (issue #91)', () => {
     );
     // Must not contain the original full command string as an argument
     assert.ok(
-      !args.includes('bash -i -c nvm --version'),
+      !args.includes('bash -i -c "nvm --version"'),
       'Must not contain the full command string as a single argument (double-wrap)'
     );
   });
@@ -241,7 +244,7 @@ describe('isShellInvocationWithArgs is mutually exclusive with isInteractiveShel
     'bash',
     'bash -i',
     'bash --norc',
-    'bash -i -c nvm --version',
+    'bash -i -c "nvm --version"',
     'bash -c echo hi',
     'zsh -c ls',
     'nvm --version',
@@ -263,14 +266,14 @@ describe('isShellInvocationWithArgs is mutually exclusive with isInteractiveShel
 describe('buildDisplayCommand (issue #91 display fix)', () => {
   it('should quote the -c script argument when it contains spaces', () => {
     assert.strictEqual(
-      buildDisplayCommand('bash -i -c nvm --version'),
+      buildDisplayCommand('bash -i -c "nvm --version"'),
       'bash -i -c "nvm --version"'
     );
   });
 
   it('should quote the -c script argument for plain "bash -c echo hello"', () => {
     assert.strictEqual(
-      buildDisplayCommand('bash -c echo hello'),
+      buildDisplayCommand('bash -c "echo hello"'),
       'bash -c "echo hello"'
     );
   });
@@ -289,7 +292,7 @@ describe('buildDisplayCommand (issue #91 display fix)', () => {
 
   it('should handle zsh -c with spaces', () => {
     assert.strictEqual(
-      buildDisplayCommand('zsh -c echo hello world'),
+      buildDisplayCommand('zsh -c "echo hello world"'),
       'zsh -c "echo hello world"'
     );
   });

@@ -13,6 +13,7 @@ pub fn print_usage() {
        start --resume-all [--output-format <format>]
 
 Options:
+  --help, -h           Show this usage and exit successfully
   --isolated, --isolation, -i <env>  Run in isolated environment (screen, tmux, docker, ssh)
   --attached, -a        Run in attached mode (foreground)
   --detached, -d        Run in detached mode (background)
@@ -23,6 +24,7 @@ Options:
   --volume, -v <spec>   Docker bind mount/volume host:container[:mode] (repeatable, docker only)
   --mount <spec>        Docker --mount spec (repeatable, docker only)
   --env, -e <KEY=VALUE> Environment variable for docker container (repeatable, docker only)
+  --label <KEY=VALUE>   Container attribution (repeatable, docker only; start-command.* reserved)
   --privileged          Run docker container in privileged mode (docker only)
   --network <name>      Connect to a named network (repeatable, docker only)
   --network-alias <alias> Add alias to the first network (repeatable, docker only)
@@ -53,13 +55,15 @@ Options:
   --status <id>         Show status of execution by UUID or session name (--output-format: links-notation|json|text)
   --list                List all tracked executions (--output-format: links-notation|json|text)
   --running             With --list, only report executions that are still running
-  --upload-log <id>     Upload the stored log for an execution UUID or session name
+  --upload-log <id>     Upload a sanitized copy of the stored log privately
+  --no-sanitize        With --upload-log, explicitly upload without secret redaction
   --stop <id>           Ask a detached isolated execution to stop gracefully
   --terminate <id>      Terminate a detached isolated execution immediately
   --attach <id>         Attach to a running detached isolated execution
   --read-only           With --attach, follow output without sending input
   --resume <id>         Restart a stopped detached execution in the same environment
                         (append -- <command> to run a different command there)
+  --remove-original    With legacy snapshot resume, remove the stopped original after launch
   --resume-all          Re-attach or reconcile every execution still marked running
   --cleanup             Clean up stale "executing" records (crashed/killed processes)
   --cleanup-dry-run     Show stale records that would be cleaned up (without cleaning)

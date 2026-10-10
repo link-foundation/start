@@ -1,0 +1,46 @@
+
+
+Auto-issue creation disabled via START_DISABLE_AUTO_ISSUE
+▶ failure-handler
+  ▶ parseGitUrl
+    ✔ should parse HTTPS GitHub URL (1.636183ms)
+    ✔ should parse HTTPS URL with .git suffix (0.387833ms)
+    ✔ should parse SSH git@ URL (0.272027ms)
+    ✔ should parse git+https URL format (0.294159ms)
+    ✔ should return null for empty string (0.236691ms)
+    ✔ should return null for null/undefined input (0.565716ms)
+    ✔ should return null for non-github URL (0.317152ms)
+    ✔ should return null for invalid/random string (0.235941ms)
+    ✔ should normalize URL to https://github.com format (1.633218ms)
+    ✔ should handle URL with subdirectory (only owner/repo captured) (0.286194ms)
+    ✔ should return object with owner, repo, url keys (0.172623ms)
+  ✔ parseGitUrl (8.203637ms)
+  ▶ createIssue
+    ✔ passes the title and body to gh as separate arguments (170.479071ms)
+    ✔ keeps the failing command verbatim and does not escape it (132.223258ms)
+    ✔ sanitizes credentials in the issue title and body (138.773331ms)
+    ✔ writes real newlines into the issue body (105.098186ms)
+  ✔ createIssue (547.555226ms)
+  ▶ handleFailure
+    ✔ should return early when disableAutoIssue is true (5.597064ms)
+    ✔ should return early when disableAutoIssue is true (verbose mode) (0.51451ms)
+  ✔ handleFailure (6.583724ms)
+✔ failure-handler (563.476182ms)
+▶ log sanitization
+  ✔ redacts required formats and environment values at every chunk boundary (956.776982ms)
+  ✔ bounds memory for long tokens and authorization values without releasing suffixes (199.249906ms)
+  ✔ redacts multiline and short known secrets, preserving unrelated bytes (2.135354ms)
+  ✔ merges overlapping environment secrets and preserves ordinary domain names (58.858224ms)
+  ✔ creates a private sanitized copy and removes it without changing the source (17.522826ms)
+  ✔ fails closed on invalid source and excessive environment secret sizes (5.577257ms)
+  ✔ blocks both upload paths on read or write failure and does not expose exception text (135.201556ms)
+  ✔ sanitizes manual and automatic uploads, explicitly requests private visibility, and cleans copies (704.910118ms)
+✔ log sanitization (2084.584071ms)
+ℹ tests 25
+ℹ suites 5
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2328.554451

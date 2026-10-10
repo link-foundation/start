@@ -22,7 +22,9 @@ mod is_shell_invocation_with_args_tests {
 
     #[test]
     fn should_return_true_for_bash_i_c_nvm_version() {
-        assert!(is_shell_invocation_with_args("bash -i -c nvm --version"));
+        assert!(is_shell_invocation_with_args(
+            "bash -i -c \"nvm --version\""
+        ));
     }
 
     #[test]
@@ -32,12 +34,12 @@ mod is_shell_invocation_with_args_tests {
 
     #[test]
     fn should_return_true_for_bash_c_echo_hello_no_quotes() {
-        assert!(is_shell_invocation_with_args("bash -c echo hello"));
+        assert!(is_shell_invocation_with_args("bash -c \"echo hello\""));
     }
 
     #[test]
     fn should_return_true_for_zsh_c_nvm_version() {
-        assert!(is_shell_invocation_with_args("zsh -c nvm --version"));
+        assert!(is_shell_invocation_with_args("zsh -c \"nvm --version\""));
     }
 
     #[test]
@@ -78,13 +80,13 @@ mod build_shell_with_args_cmd_args_tests {
 
     #[test]
     fn should_reconstruct_bash_i_c_nvm_version() {
-        let result = build_shell_with_args_cmd_args("bash -i -c nvm --version");
+        let result = build_shell_with_args_cmd_args("bash -i -c \"nvm --version\"");
         assert_eq!(result, vec!["bash", "-i", "-c", "nvm --version"]);
     }
 
     #[test]
     fn should_reconstruct_bash_c_echo_hello() {
-        let result = build_shell_with_args_cmd_args("bash -c echo hello");
+        let result = build_shell_with_args_cmd_args("bash -c \"echo hello\"");
         assert_eq!(result, vec!["bash", "-c", "echo hello"]);
     }
 
@@ -96,19 +98,19 @@ mod build_shell_with_args_cmd_args_tests {
 
     #[test]
     fn should_handle_zsh_with_c() {
-        let result = build_shell_with_args_cmd_args("zsh -c nvm --version");
+        let result = build_shell_with_args_cmd_args("zsh -c \"nvm --version\"");
         assert_eq!(result, vec!["zsh", "-c", "nvm --version"]);
     }
 
     #[test]
     fn should_handle_slash_bin_bash_i_c_with_multi_word_script() {
-        let result = build_shell_with_args_cmd_args("/bin/bash -i -c echo hello world");
+        let result = build_shell_with_args_cmd_args("/bin/bash -i -c \"echo hello world\"");
         assert_eq!(result, vec!["/bin/bash", "-i", "-c", "echo hello world"]);
     }
 
     #[test]
     fn should_not_include_c_argument_inside_script_no_double_c() {
-        let result = build_shell_with_args_cmd_args("bash -i -c nvm --version");
+        let result = build_shell_with_args_cmd_args("bash -i -c \"nvm --version\"");
         // The script argument should be "nvm --version", not "nvm" with "--version" separate
         let script = result.last().unwrap();
         assert_eq!(script, "nvm --version");
@@ -162,26 +164,26 @@ mod docker_attached_cmd_args_regression_91_cases {
 
     #[test]
     fn bash_i_c_nvm_version_should_pass_directly() {
-        let args = build_attached_cmd_args("bash -i -c nvm --version", "/bin/bash");
+        let args = build_attached_cmd_args("bash -i -c \"nvm --version\"", "/bin/bash");
         assert_eq!(args, vec!["bash", "-i", "-c", "nvm --version"]);
     }
 
     #[test]
     fn zsh_c_nvm_version_should_pass_directly() {
-        let args = build_attached_cmd_args("zsh -c nvm --version", "/bin/bash");
+        let args = build_attached_cmd_args("zsh -c \"nvm --version\"", "/bin/bash");
         assert_eq!(args, vec!["zsh", "-c", "nvm --version"]);
     }
 
     #[test]
     fn bash_c_echo_hello_should_pass_directly() {
-        let args = build_attached_cmd_args("bash -c echo hello", "/bin/bash");
+        let args = build_attached_cmd_args("bash -c \"echo hello\"", "/bin/bash");
         assert_eq!(args, vec!["bash", "-c", "echo hello"]);
     }
 
     #[test]
     fn should_not_introduce_second_bash_layer() {
-        let args = build_attached_cmd_args("bash -i -c nvm --version", "/bin/bash");
-        // Should NOT be: ["/bin/bash", "-i", "-c", "bash -i -c nvm --version"]
+        let args = build_attached_cmd_args("bash -i -c \"nvm --version\"", "/bin/bash");
+        // Should NOT be: ["/bin/bash", "-i", "-c", "bash -i -c \"nvm --version\""]
         // It SHOULD be: ["bash", "-i", "-c", "nvm --version"]
         // First element should be "bash" (user's command), not "/bin/bash" (outer shell)
         assert_eq!(args[0], "bash", "Should not be wrapped: {:?}", args);
@@ -225,7 +227,7 @@ mod docker_attached_cmd_args_regression_91_cases {
             "zsh",
             "bash -i",
             "bash -c echo hi",
-            "bash -i -c nvm --version",
+            "bash -i -c \"nvm --version\"",
             "npm test",
             "echo hello",
         ];

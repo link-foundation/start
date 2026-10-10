@@ -182,7 +182,20 @@ pub fn dispatch_query_command(
         ));
     }
     if let Some(ref identifier) = options.upload_log {
-        return Some(handle_upload_log_query(store, identifier));
+        return Some(
+            match crate::log_uploader::upload_execution_log_with_options(
+                store,
+                identifier,
+                options.no_sanitize,
+                std::env::var("START_VERBOSE").is_ok_and(|value| value == "1" || value == "true"),
+            ) {
+                Ok(code) => code,
+                Err(error) => {
+                    eprintln!("Error: {}", error);
+                    1
+                }
+            },
+        );
     }
     if let Some(ref identifier) = options.stop {
         return Some(report_result(

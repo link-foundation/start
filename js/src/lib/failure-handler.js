@@ -9,6 +9,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const { getTimestamp } = require('./isolation');
+const { sanitizeLogToTemp, StreamingSanitizer } = require('./log-sanitizer');
 
 /**
  * Handle command failure - detect repository, upload log, create issue
@@ -55,7 +56,7 @@ function handleFailure(config, cmdName, fullCommand, exitCode, logPath) {
       console.log('Log upload disabled via START_DISABLE_LOG_UPLOAD');
     }
   } else if (isGhUploadLogAvailable()) {
-    logUrl = uploadLog(logPath);
+    logUrl = uploadLog(logPath, { verbose: config.verbose });
     if (logUrl) {
       console.log(`Log uploaded: ${logUrl}`);
     }
@@ -273,9 +274,11 @@ function isGhUploadLogAvailable() {
  * @param {string} logPath - Path to the log file
  * @returns {string|null} URL of the uploaded log or null
  */
-function uploadLog(logPath) {
+function uploadLog(logPath, options = {}) {
+  let prepared;
   try {
-    const result = execFileSync('gh-upload-log', [logPath, '--public'], {
+    prepared = sanitizeLogToTemp(logPath, { verbose: options.verbose });
+    const result = execFileSync('gh-upload-log', [prepared.path, '--private'], {
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -293,9 +296,13 @@ function uploadLog(logPath) {
     }
 
     return null;
-  } catch (err) {
-    console.log(`Warning: Log upload failed - ${err.message}`);
+  } catch {
+    console.log('Warning: Log preparation or upload failed; upload blocked.');
     return null;
+  } finally {
+    if (prepared) {
+      prepared.cleanup();
+    }
   }
 }
 
@@ -327,6 +334,9 @@ function canCreateIssue(owner, repo) {
  */
 function createIssue(repoInfo, fullCommand, exitCode, logUrl) {
   try {
+    fullCommand = new StreamingSanitizer()
+      .push(Buffer.from(fullCommand), true)
+      .toString();
     const title = `Command failed with exit code ${exitCode}: ${fullCommand.substring(0, 50)}${fullCommand.length > 50 ? '...' : ''}`;
 
     // Get runtime information

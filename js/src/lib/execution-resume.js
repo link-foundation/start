@@ -7,13 +7,13 @@
  * addressing one logical session across restarts.
  *
  * Three strategies, chosen from the probed session state:
- * - DOCKER_START:    the container still exists and the stored command is
- *                    re-run by `docker start` (its original entrypoint).
- * - DOCKER_SNAPSHOT: the container still exists but a new command was given,
- *                    so its filesystem is committed to an image and a derived
- *                    container runs the new command. This avoids
- *                    `docker start -ai`, which would re-run the original
- *                    entrypoint from scratch.
+ * - DOCKER_START:    the container still exists. Newly managed containers
+ *                    accept replacement commands through a small handoff
+ *                    script, then restart in place without a snapshot.
+ * - DOCKER_SNAPSHOT: a legacy container needs a replacement command, or
+ *                    immutable labels need changing. After disk preflight,
+ *                    its filesystem is committed under a host-wide lock and
+ *                    a derived container runs the command.
  * - RELAUNCH:        nothing is left of the session, so the command is
  *                    launched again through the stored isolation options.
  */
@@ -44,6 +44,16 @@ const {
 } = require('./launch-persistence');
 const { SessionState, probeSession } = require('./session-probe');
 const { getDockerNetworks } = require('./docker-network-lifecycle');
+const {
+  writeCommandHandoff,
+  buildCommandHandoffArgs,
+  commandHandoffPath,
+} = require('./docker-command-handoff');
+const {
+  acquireSnapshotLock,
+  preflightSnapshot,
+  SNAPSHOT_IMAGE_LABEL,
+} = require('./docker-snapshot-safety');
 const {
   ResumeAllAction,
   resumeAllExecutions,
@@ -94,6 +104,11 @@ function buildLaunchOptions(record) {
   const opts = record.options || {};
   return {
     ...opts,
+    labels: opts.labels || [],
+    sessionId: record.uuid,
+    rootSession:
+      opts.rootSession || opts.sessionNameHistory?.[0] || opts.sessionName,
+    resumeCount: (Number(opts.resumeCount) || 0) + 1,
     image: opts.image || null,
     session: opts.sessionName,
     detached: true,
@@ -214,12 +229,13 @@ function buildResumePlan(
   const attempt = (Number(opts.resumeCount) || 0) + 1;
 
   if (backend === 'docker' && probe.state === SessionState.STOPPED) {
-    if (!newCommand) {
+    if (!opts.forceSnapshot && (!newCommand || opts.commandHandoff)) {
       return {
         mode: ResumeMode.DOCKER_START,
         backend,
         sessionName,
         command,
+        ...(newCommand ? { handoffCommand: command } : {}),
         attempt,
         steps: [
           {
@@ -228,7 +244,9 @@ function buildResumePlan(
             description: `Start stopped container ${sessionName}`,
           },
         ],
-        message: `Resumed detached docker container: ${sessionName}`,
+        message: newCommand
+          ? `Resumed new command in the same detached docker container: ${sessionName} (no filesystem snapshot)`
+          : `Resumed detached docker container: ${sessionName}`,
       };
     }
 
@@ -261,12 +279,24 @@ function buildResumePlan(
           containerArgs: [
             '--name',
             newSessionName,
+            '--label',
+            `${SNAPSHOT_IMAGE_LABEL}=${snapshotImage}`,
             ...(opts.user ? ['--user', opts.user] : []),
-            ...buildDockerRuntimeArgs({ ...opts, resourceLimits }),
+            ...buildDockerRuntimeArgs({
+              ...opts,
+              resourceLimits,
+              session: newSessionName,
+              containerName: newSessionName,
+              sessionId: record.uuid,
+              rootSession:
+                opts.rootSession || opts.sessionNameHistory?.[0] || sessionName,
+              resumeCount: attempt,
+            }),
             snapshotImage,
-            'sh',
-            '-c',
-            command,
+            ...buildCommandHandoffArgs(
+              ['sh', '-c', command],
+              commandHandoffPath(newSessionName)
+            ),
           ],
           extraNetworks: getDockerNetworks(opts).slice(1),
           newSessionName,
@@ -360,6 +390,10 @@ function applyResumeToRecord(
   archiveAttempt(record);
   record.attempt = attempt;
   const options = { ...(record.options || {}) };
+  options.rootSession =
+    options.rootSession ||
+    options.sessionNameHistory?.[0] ||
+    options.sessionName;
   options.resumeCount = plan.attempt;
   options.resumedAt = attempt.startedAt;
   // A resume is a new deliberate start: launch-time recovery applies again.
@@ -378,6 +412,12 @@ function applyResumeToRecord(
   }
   if (plan.snapshotImage) {
     options.image = plan.snapshotImage;
+    options.snapshotImage = plan.snapshotImage;
+    // Every new detached container, including a snapshot successor, supports handoff.
+    options.commandHandoff = true;
+  }
+  if (plan.mode === ResumeMode.RELAUNCH && plan.backend === 'docker') {
+    options.commandHandoff = true;
   }
   if (containerId) {
     options.containerId = containerId;
@@ -445,12 +485,34 @@ async function resumeExecution(store, identifier, deps = {}) {
   } catch (error) {
     return { success: false, error: error.message };
   }
-  const planningRecord = resources
-    ? {
-        ...record,
-        options: { ...opts, resourceLimits: resources.resourceLimits },
-      }
-    : record;
+  const requestedLabels = deps.resourceOptions?.labels || [];
+  const labels = [...(opts.labels || [])];
+  for (const label of requestedLabels) {
+    const key = label.split('=')[0];
+    const existing = labels.findIndex((value) => value.split('=')[0] === key);
+    if (existing >= 0) {
+      labels[existing] = label;
+    } else {
+      labels.push(label);
+    }
+  }
+  if (requestedLabels.length && opts.isolated !== 'docker') {
+    return {
+      success: false,
+      error: 'Docker labels require a Docker execution when resuming.',
+    };
+  }
+  const labelsChanged =
+    JSON.stringify(labels) !== JSON.stringify(opts.labels || []);
+  const planningRecord = {
+    ...record,
+    options: {
+      ...opts,
+      ...(resources ? { resourceLimits: resources.resourceLimits } : {}),
+      ...(requestedLabels.length ? { labels } : {}),
+      ...(labelsChanged ? { forceSnapshot: true } : {}),
+    },
+  };
   const plan = buildResumePlan(
     planningRecord,
     deps.command || null,
@@ -485,6 +547,9 @@ async function resumeExecution(store, identifier, deps = {}) {
   };
   appendLifecycle(lifecycleRecord, 'resume-started');
   const updated = applyResumeToRecord(record, plan, null, attempt);
+  if (requestedLabels.length) {
+    updated.options.labels = labels;
+  }
   if (resources) {
     updated.options.resolvedLimits = resources.resolvedLimits;
     updated.options.resourceLimitSpecs = resources.resourceLimitSpecs;
@@ -540,26 +605,108 @@ async function resumeExecution(store, identifier, deps = {}) {
     }
     containerId = launchResult.containerId || null;
   } else {
-    for (const step of plan.steps) {
-      let result;
-      try {
-        result = runner(step.command, step.args);
-      } catch (error) {
-        result = { success: false, error: error.message };
+    let snapshotLock;
+    let snapshotCreated = false;
+    let derivedCreated = false;
+    try {
+      if (plan.mode === ResumeMode.DOCKER_SNAPSHOT) {
+        snapshotLock = acquireSnapshotLock(deps.snapshotOptions);
+        const preflight = preflightSnapshot(
+          plan.sessionName,
+          runner,
+          deps.snapshotOptions
+        );
+        plan.message += `\n${preflight.message}`;
+        if (record.logPath) {
+          appendLogFile(record.logPath, `${preflight.message}\n`);
+        }
       }
-      if (!result.success) {
-        rollbackLaunch(store, previous);
-        const detail =
-          (result.stderr || '').trim() ||
-          result.error ||
-          `exit code ${result.status}`;
-        appendLifecycle(lifecycleRecord, 'launch-failed', { error: detail });
-        return {
-          success: false,
-          error: `Failed to resume ${plan.backend} session "${plan.sessionName}": ${detail}`,
-        };
+      if (plan.handoffCommand) {
+        const copied = writeCommandHandoff(
+          plan.sessionName,
+          plan.handoffCommand,
+          runner,
+          opts
+        );
+        if (!copied.success) {
+          throw new Error(
+            (copied.stderr || '').trim() ||
+              copied.error ||
+              'Could not copy replacement command into the stopped container'
+          );
+        }
       }
-      containerId = (result.stdout || '').trim() || containerId;
+      for (const step of plan.steps) {
+        let result;
+        try {
+          result = runner(step.command, step.args);
+        } catch (error) {
+          result = { success: false, error: error.message };
+        }
+        if (!result.success) {
+          const detail =
+            (result.stderr || '').trim() ||
+            result.error ||
+            `exit code ${result.status}`;
+          throw new Error(detail);
+        }
+        if (step.args[0] === 'commit') {
+          snapshotCreated = true;
+        }
+        if (step.args[0] === 'create') {
+          derivedCreated = true;
+        }
+        // commit returns an image ID; cp/update/network commands are not IDs.
+        if (['run', 'create'].includes(step.args[0])) {
+          containerId = (result.stdout || '').trim() || containerId;
+        }
+      }
+      if (plan.mode === ResumeMode.DOCKER_SNAPSHOT && deps.removeOriginal) {
+        const running = runner(getDockerCommand(), [
+          'inspect',
+          '-f',
+          '{{.State.Running}}',
+          plan.newSessionName,
+        ]);
+        if (running.success && String(running.stdout).trim() === 'true') {
+          const removed = runner(getDockerCommand(), ['rm', plan.sessionName]);
+          const note = removed.success
+            ? `Stopped original container removed: ${plan.sessionName}`
+            : `Original container retained: ${(removed.stderr || removed.error || 'docker rm failed').trim()}`;
+          plan.message += `\n${note}`;
+          if (record.logPath) {
+            appendLogFile(record.logPath, `${note}\n`);
+          }
+        } else {
+          plan.message +=
+            '\nOriginal container retained: the snapshot container is not running.';
+        }
+      }
+    } catch (error) {
+      if (derivedCreated) {
+        runner(getDockerCommand(), ['rm', plan.newSessionName]);
+      }
+      if (snapshotCreated) {
+        runner(getDockerCommand(), ['rmi', plan.snapshotImage]);
+      }
+      if (plan.handoffCommand) {
+        // A failed start must not leave a replacement hidden behind the old record.
+        try {
+          writeCommandHandoff(plan.sessionName, previous.command, runner, opts);
+        } catch {
+          /* Next explicit command can still repair the handoff. */
+        }
+      }
+      rollbackLaunch(store, previous);
+      appendLifecycle(lifecycleRecord, 'launch-failed', {
+        error: error.message,
+      });
+      return {
+        success: false,
+        error: `Failed to resume ${plan.backend} session "${plan.sessionName}": ${error.message}`,
+      };
+    } finally {
+      snapshotLock?.release();
     }
 
     const limitsLine = buildResourceLimitsStatusLine(plan.resourceLimits);

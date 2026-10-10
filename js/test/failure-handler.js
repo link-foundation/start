@@ -175,6 +175,17 @@ describe('failure-handler', () => {
       assert.ok(!body.includes('\\"'), 'body must not contain escaped quotes');
     });
 
+    it('sanitizes credentials in the issue title and body', () => {
+      if (process.platform === 'win32') {
+        return;
+      }
+      const token = `gh${'p_'}${'a'.repeat(36)}`;
+      const { argv } = createIssueWithFakeGh(`echo ${token}`);
+      assert.ok(!argv[5].includes(token));
+      assert.ok(!argv[7].includes(token));
+      assert.ok(argv[7].includes('[REDACTED]'));
+    });
+
     it('writes real newlines into the issue body', () => {
       if (process.platform === 'win32') {
         return;

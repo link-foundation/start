@@ -11,11 +11,11 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 use crate::args_parser::generate_session_name;
+pub use crate::docker_cleanup::build_docker_runtime_args;
 use crate::docker_cleanup::{
     append_attached_docker_cleanup_message, append_docker_container_cleanup_policy_message,
-    build_docker_runtime_args, docker_networks, get_docker_container_cleanup_policy,
-    remove_docker_container, spawn_attached_docker, start_detached_docker_completion_watcher_with,
-    DockerWatcherOptions,
+    docker_networks, get_docker_container_cleanup_policy, remove_docker_container,
+    spawn_attached_docker, start_detached_docker_completion_watcher_with, DockerWatcherOptions,
 };
 use crate::docker_network_lifecycle::{connect_and_start, create_and_connect};
 
@@ -50,6 +50,10 @@ pub struct IsolationOptions {
     pub mounts: Vec<String>,
     /// Docker environment variables (-e/--env, KEY=VALUE)
     pub env: Vec<String>,
+    pub labels: Vec<String>,
+    pub uuid: Option<String>,
+    pub root_session: Option<String>,
+    pub resume_count: u32,
     /// Run docker container in privileged mode
     pub privileged: bool,
     /// First Docker network name (compatibility accessor)
@@ -100,6 +104,10 @@ impl Default for IsolationOptions {
             volumes: Vec::new(),
             mounts: Vec::new(),
             env: Vec::new(),
+            labels: Vec::new(),
+            uuid: None,
+            root_session: None,
+            resume_count: 0,
             privileged: false,
             network: None,
             networks: Vec::new(),
@@ -609,6 +617,10 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         .session
         .clone()
         .unwrap_or_else(|| generate_session_name(Some("docker")));
+    let mut attributed_options = options.clone();
+    attributed_options.labels =
+        crate::isolation_metadata::docker_attribution_labels(options, &container_name);
+    let options = &attributed_options;
     let container_existed_before_launch =
         crate::docker_cleanup::read_docker_container_status(&container_name).is_some();
     let cleanup_policy = get_docker_container_cleanup_policy(options);
@@ -649,12 +661,11 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         args.extend(build_docker_runtime_args(options));
 
         args.push(&image);
-        let mut main_args = vec![shell_to_use.clone()];
-        main_args.extend(shell_interactive_flag.map(str::to_string));
-        main_args.extend(["-c".to_string(), effective_command.clone()]);
+        let main_args =
+            isolation_shell::docker_shell_args(&effective_command, &shell_to_use, false);
         // A recovery command is selected by a marker that `docker cp` drops
         // into the container before it is started again (issue #176).
-        let cmd_args = match options.recovery_command.as_deref() {
+        let recovery_args = match options.recovery_command.as_deref() {
             Some(recovery) => crate::execution_recovery::build_recovery_selector_args(
                 &main_args,
                 &shell_to_use,
@@ -667,6 +678,10 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
             ),
             None => main_args,
         };
+        let cmd_args = crate::docker_command_handoff::build_command_handoff_args(
+            &recovery_args,
+            &crate::docker_command_handoff::command_handoff_path(&container_name),
+        );
         args.extend(cmd_args.iter().map(String::as_str));
 
         if is_debug() {
@@ -787,11 +802,8 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         }
 
         args.push(&image);
-        args.push(&shell_to_use);
-        if let Some(flag) = shell_interactive_flag {
-            args.push(flag);
-        }
-        args.extend(&["-c", command]);
+        let attached_args = isolation_shell::docker_shell_args(command, &shell_to_use, true);
+        args.extend(attached_args.iter().map(String::as_str));
 
         if needs_network_setup {
             let setup_result = create_and_connect(&args, &container_name, options);
@@ -912,7 +924,7 @@ pub fn run_as_isolated_user(command: &str, username: &str) -> IsolationResult {
 #[path = "isolation_log.rs"]
 pub mod isolation_log;
 #[path = "isolation_shell.rs"]
-mod isolation_shell;
+pub(crate) mod isolation_shell;
 pub use self::isolation_log::{
     append_log_file, create_log_footer, create_log_header, create_log_path,
     create_log_path_for_execution, generate_log_filename, get_default_docker_image, get_log_dir,

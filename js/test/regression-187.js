@@ -76,7 +76,15 @@ function fixture() {
 }
 
 const stopped = () => ({ alive: false, state: SessionState.STOPPED });
-const accepted = () => ({ success: true, stdout: 'container-id\n', status: 0 });
+const accepted = (_bin, args = []) => ({
+  success: true,
+  stdout: args.includes('--size')
+    ? '1024'
+    : args[0] === 'info'
+      ? JSON.stringify({ DockerRootDir: os.tmpdir() })
+      : 'container-id\n',
+  status: 0,
+});
 
 describe('issue #187: explicit resume attempts', () => {
   it('reattaches the current attempt without enabling kill recovery for snapshot commands', async () => {

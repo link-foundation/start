@@ -1,0 +1,7 @@
+{
+  "baseline": "working tree",
+  "mode": "docker-start",
+  "commands": [
+    "start"
+  ]
+}

@@ -101,12 +101,8 @@ describe('buildResumePlan', () => {
       '--name',
       'box-resume-1',
     ]);
-    assert.deepStrictEqual(runArgs.slice(-4), [
-      'start-command-resume/box:1',
-      'sh',
-      '-c',
-      'npm run build',
-    ]);
+    assert.ok(runArgs.includes('start-command-resume/box:1'));
+    assert.deepStrictEqual(runArgs.slice(-3), ['sh', '-c', 'npm run build']);
   });
 
   test('carries stored docker runtime options into the snapshot run', () => {
@@ -289,9 +285,15 @@ describe('resumeExecution', () => {
     const result = await resumeExecution(store, 'box', {
       command: 'npm run build',
       probe: () => probeWith(SessionState.STOPPED, 'exited'),
-      runner: () => ({
+      snapshotOptions: { freeBytes: () => 100 * 1024 ** 3 },
+      runner: (_bin, args) => ({
         success: true,
-        stdout: 'deadbeef\n',
+        stdout:
+          args[0] === 'info'
+            ? JSON.stringify({ DockerRootDir: '/docker' })
+            : args.includes('--size')
+              ? '1024'
+              : 'deadbeef\n',
         stderr: '',
         status: 0,
       }),

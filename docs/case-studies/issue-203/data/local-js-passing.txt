@@ -1,0 +1,1709 @@
+$ bun ../scripts/run-js-tests.mjs
+bun test v1.4.2 (744846f84)
+
+test/args-parser-attach-resume.js:
+(pass) --attach > accepts a session identifier as a separate argument [14.05ms]
+(pass) --attach > accepts the --attach=<id> form [3.90ms]
+(pass) --attach > supports --read-only [0.30ms]
+(pass) --attach > rejects --read-only without --attach [1.31ms]
+(pass) --attach > requires an identifier argument [0.23ms]
+(pass) --attach > rejects an empty --attach= value [0.29ms]
+(pass) --resume > accepts a session identifier [0.20ms]
+(pass) --resume > accepts a replacement command after the -- separator [0.83ms]
+(pass) --resume > accepts the --resume=<id> form with a replacement command [0.16ms]
+(pass) --resume > supports --output-format [0.13ms]
+(pass) --resume-all > is a boolean flag [3.74ms]
+(pass) --resume-all > supports --output-format [0.76ms]
+(pass) --list --running > sets the running filter [0.30ms]
+(pass) --list --running > rejects --running without --list [0.33ms]
+(pass) query mode exclusivity > rejects --attach a --resume b [0.34ms]
+(pass) query mode exclusivity > rejects --attach a --status b [0.22ms]
+(pass) query mode exclusivity > rejects --resume a --terminate b [0.19ms]
+(pass) query mode exclusivity > rejects --resume-all --list [0.16ms]
+(pass) query mode exclusivity > rejects --resume-all --cleanup [0.13ms]
+(pass) defaults > are all inactive without query options [0.25ms]
+
+test/args-parser-control.js:
+(pass) control options > should parse --stop with UUID or session name [0.50ms]
+(pass) control options > should parse --stop=value format [0.11ms]
+(pass) control options > should parse --terminate with UUID or session name [0.09ms]
+(pass) control options > should parse --terminate=value format [0.12ms]
+(pass) control options > should throw error for missing --stop argument [0.30ms]
+(pass) control options > should throw error for empty --stop=value argument [0.13ms]
+(pass) control options > should throw error for missing --terminate argument [0.15ms]
+(pass) control options > should throw error for empty --terminate=value argument [0.18ms]
+(pass) control options > should reject combining query and control modes [0.21ms]
+(pass) control options > should reject combining upload-log with control modes [0.17ms]
+(pass) control options > should reject output-format with control modes [0.77ms]
+(pass) control options > should default control options to null [0.62ms]
+
+test/args-parser-docker-cleanup.js:
+(pass) docker container cleanup options > should parse --auto-remove-docker-container flag [0.53ms]
+(pass) docker container cleanup options > should parse --always-cleanup-container flag [0.35ms]
+(pass) docker container cleanup options > should parse --keep-container flag [0.22ms]
+(pass) docker container cleanup options > should parse --keep-container-on-fail flag [0.19ms]
+(pass) docker container cleanup options > should default cleanup flags to false [0.16ms]
+(pass) docker container cleanup options > should throw error for docker cleanup options without docker isolation [0.79ms]
+(pass) docker container cleanup options > should throw error for docker cleanup options without isolation [0.29ms]
+(pass) docker container cleanup options > should work with keep-alive and auto-remove-docker-container [0.18ms]
+(pass) docker container cleanup options > should reject conflicting docker cleanup options [1.02ms]
+
+test/args-parser-isolation-alias.js:
+(pass) parseArgs --isolation alias > should parse --isolation alias with value [0.40ms]
+(pass) parseArgs --isolation alias > should parse --isolation=value alias format [0.22ms]
+(pass) parseArgs --isolation alias > should parse --isolation alias before command without separator [0.16ms]
+(pass) parseArgs unknown wrapper options > should throw for unknown wrapper option before separator [0.28ms]
+(pass) parseArgs unknown wrapper options > should throw for unknown wrapper option without separator [0.23ms]
+
+test/args-parser-shell.js:
+(pass) shell option > should default shell to auto [0.14ms]
+(pass) shell option > should parse --shell bash [0.22ms]
+(pass) shell option > should parse --shell zsh [0.19ms]
+(pass) shell option > should parse --shell sh [0.15ms]
+(pass) shell option > should parse --shell auto [0.15ms]
+(pass) shell option > should parse --shell=value format [0.17ms]
+(pass) shell option > should normalize shell to lowercase [0.16ms]
+(pass) shell option > should throw error for missing shell argument [0.20ms]
+(pass) shell option > should throw error for invalid shell [0.21ms]
+(pass) shell option > should list valid shells in error message [0.41ms]
+(pass) shell option > should work with ssh isolation [0.18ms]
+(pass) VALID_SHELLS > should include bash [0.05ms]
+(pass) VALID_SHELLS > should include zsh [0.06ms]
+(pass) VALID_SHELLS > should include sh [0.04ms]
+(pass) VALID_SHELLS > should include auto [3.07ms]
+
+test/args-parser.js:
+(pass) parseArgs > basic command parsing > should parse simple command without options [0.23ms]
+(pass) parseArgs > basic command parsing > should parse command with -- separator [0.11ms]
+(pass) parseArgs > basic command parsing > should parse empty command correctly [0.06ms]
+(pass) parseArgs > isolation options > should parse --isolated with value [0.09ms]
+(pass) parseArgs > isolation options > should parse -i shorthand [0.10ms]
+(pass) parseArgs > isolation options > should parse --isolated=value format [0.10ms]
+(pass) parseArgs > isolation options > should normalize backend to lowercase [0.09ms]
+(pass) parseArgs > isolation options > should throw error for missing backend argument [0.20ms]
+(pass) parseArgs > attached and detached modes > should parse --attached flag [0.17ms]
+(pass) parseArgs > attached and detached modes > should parse -a shorthand [0.12ms]
+(pass) parseArgs > attached and detached modes > should parse --detached flag [0.09ms]
+(pass) parseArgs > attached and detached modes > should parse -d shorthand [0.10ms]
+(pass) parseArgs > attached and detached modes > should throw error when both --attached and --detached are set [0.12ms]
+(pass) parseArgs > attached and detached modes > should provide helpful error message for mode conflict [0.13ms]
+(pass) parseArgs > session option > should parse --session with value [0.13ms]
+(pass) parseArgs > session option > should parse -s shorthand [0.09ms]
+(pass) parseArgs > session option > should parse --session=value format [0.08ms]
+(pass) parseArgs > session option > should throw error for session without isolation [3.26ms]
+(pass) parseArgs > docker image option > should parse --image with value [0.29ms]
+(pass) parseArgs > docker image option > should parse --image=value format [0.17ms]
+(pass) parseArgs > docker image option > should use default OS-matched image for docker without --image [0.24ms]
+(pass) parseArgs > docker image option > should throw error for image with non-docker backend [0.30ms]
+(pass) parseArgs > SSH endpoint option > should parse --endpoint with value [0.16ms]
+(pass) parseArgs > SSH endpoint option > should parse --endpoint=value format [0.14ms]
+(pass) parseArgs > SSH endpoint option > should throw error for ssh without endpoint [0.24ms]
+(pass) parseArgs > SSH endpoint option > should throw error for endpoint with non-ssh backend [0.17ms]
+(pass) parseArgs > keep-alive option > should parse --keep-alive flag [0.12ms]
+(pass) parseArgs > keep-alive option > should parse -k shorthand [0.13ms]
+(pass) parseArgs > keep-alive option > should default keepAlive to false [0.07ms]
+(pass) parseArgs > keep-alive option > should throw error for keep-alive without isolation [0.14ms]
+(pass) parseArgs > keep-alive option > should work with detached mode [2.53ms]
+(pass) parseArgs > keep-alive option > should work with docker [0.39ms]
+(pass) parseArgs > command without separator > should parse command after options without separator [0.11ms]
+(pass) parseArgs > command without separator > should handle mixed options and command [0.08ms]
+(pass) parseArgs > backend validation > should accept valid backends [0.35ms]
+(pass) parseArgs > backend validation > should throw error for invalid backend [0.49ms]
+(pass) parseArgs > backend validation > should list valid backends in error message [0.22ms]
+(pass) validateOptions > should pass for valid options [1.00ms]
+(pass) validateOptions > should throw for attached and detached together [0.15ms]
+(pass) validateOptions > should pass for docker with image [0.28ms]
+(pass) generateSessionName > should generate unique session names [0.41ms]
+(pass) generateSessionName > should use default prefix [0.10ms]
+(pass) generateSessionName > should use custom prefix [0.10ms]
+(pass) generateSessionName > should contain timestamp-like portion [0.13ms]
+(pass) hasIsolation > should return true when isolated is set [0.10ms]
+(pass) hasIsolation > should return false when isolated is null [0.05ms]
+(pass) getEffectiveMode > should return attached by default [0.08ms]
+(pass) getEffectiveMode > should return attached when explicitly set [0.04ms]
+(pass) getEffectiveMode > should return detached when set [0.03ms]
+(pass) VALID_BACKENDS > should include screen [0.03ms]
+(pass) VALID_BACKENDS > should include tmux [0.07ms]
+(pass) VALID_BACKENDS > should include docker [0.04ms]
+(pass) user isolation option > should parse --isolated-user without value (auto-generated username) [0.16ms]
+(pass) user isolation option > should parse --isolated-user with custom username [3.43ms]
+(pass) user isolation option > should parse -u shorthand [0.24ms]
+(pass) user isolation option > should parse -u with custom username [0.14ms]
+(pass) user isolation option > should parse --isolated-user=value format [0.13ms]
+(pass) user isolation option > should work with isolation options [0.17ms]
+(pass) user isolation option > should work without isolation (standalone user isolation) [0.09ms]
+(pass) user isolation option > should accept valid usernames [0.26ms]
+(pass) user isolation option > should reject invalid username formats with --isolated-user=value syntax [0.29ms]
+(pass) user isolation option > should not consume invalid username as argument (treats as command) [0.11ms]
+(pass) user isolation option > should throw error for user with docker isolation [0.16ms]
+(pass) user isolation option > should work with tmux isolation [0.10ms]
+(pass) use-command-stream option > should parse --use-command-stream flag [0.09ms]
+(pass) use-command-stream option > should default useCommandStream to false [0.09ms]
+(pass) use-command-stream option > should work with other options [0.08ms]
+(pass) use-command-stream option > should work without other options [0.05ms]
+(pass) keep-user option > should parse --keep-user flag [0.05ms]
+(pass) keep-user option > should default keepUser to false [0.06ms]
+(pass) keep-user option > should throw error for keep-user without user [0.11ms]
+(pass) keep-user option > should work with user and isolation options [0.13ms]
+(pass) status option > should parse --status with UUID [0.10ms]
+(pass) status option > should parse --status=value format [0.10ms]
+(pass) status option > should throw error for missing UUID argument [0.09ms]
+(pass) status option > should throw error for --status with -flag as next argument [0.13ms]
+(pass) status option > should default status to null [0.06ms]
+(pass) upload-log option > should parse --upload-log with UUID or session name [0.07ms]
+(pass) upload-log option > should parse --upload-log=value format [0.08ms]
+(pass) upload-log option > should throw error for missing --upload-log argument [0.07ms]
+(pass) upload-log option > should throw error for empty --upload-log=value argument [0.07ms]
+(pass) upload-log option > should default uploadLog to null [0.05ms]
+(pass) list option > should parse --list flag [0.06ms]
+(pass) list option > should parse --list with JSON output format [0.15ms]
+(pass) list option > should normalize output format with --list [0.07ms]
+(pass) list option > should default list to false [0.06ms]
+(pass) output-format option > should parse --output-format with --status [0.06ms]
+(pass) output-format option > should parse --output-format=value format [0.05ms]
+(pass) output-format option > should normalize format to lowercase [0.08ms]
+(pass) output-format option > should throw error for missing format argument [0.12ms]
+(pass) output-format option > should throw error for invalid format [0.14ms]
+(pass) output-format option > should throw error for output-format without status [0.08ms]
+(pass) output-format option > should accept all valid output formats [0.21ms]
+(pass) output-format option > should default outputFormat to null [0.06ms]
+(pass) VALID_OUTPUT_FORMATS > should include links-notation [0.03ms]
+(pass) VALID_OUTPUT_FORMATS > should include json [0.03ms]
+(pass) VALID_OUTPUT_FORMATS > should include text [0.02ms]
+(pass) cleanup options > should parse --cleanup flag [0.09ms]
+(pass) cleanup options > should parse --cleanup-dry-run flag [0.10ms]
+(pass) cleanup options > should default cleanup to false [0.05ms]
+
+test/check-file-size.js:
+✗ Found files exceeding the line limit:
+
+  scripts/huge.mjs: 1501 lines (exceeds 1000)
+
+Please refactor these files to be under 1000 lines
+
+(pass) check-file-size > fails on an oversized file in the repository source [148.10ms]
+(pass) check-file-size > passes when every file is within the limit [115.55ms]
+(pass) check-file-size > ignores archived evidence under dev/log [128.83ms]
+✗ Found files exceeding the line limit:
+
+  scripts/nested/huge.mjs: 1501 lines (exceeds 1000)
+
+Please refactor these files to be under 1000 lines
+
+(pass) check-file-size > reports paths with forward slashes on every platform [124.23ms]
+✗ Found files exceeding the line limit:
+
+  rust/src/huge.rs: 1501 lines (exceeds 1000)
+
+Please refactor these files to be under 1000 lines
+
+(pass) check-file-size > still checks Rust sources outside the archive [76.87ms]
+
+test/check-js-coverage.mjs:
+(pass) check-js-coverage > parses line coverage from a real Bun text report [0.35ms]
+(pass) check-js-coverage > reads the line column, not the function column [0.06ms]
+(pass) check-js-coverage > ignores the uncovered-lines column when picking numbers [0.07ms]
+(pass) check-js-coverage > returns null when no totals row is present [0.10ms]
+(pass) check-js-coverage > fails instead of skipping when coverage cannot be determined [0.14ms]
+(pass) check-js-coverage > passes when coverage meets the threshold [0.05ms]
+(pass) check-js-coverage > fails when coverage is below the threshold [0.07ms]
+
+test/ci-workflow-invariants.js:
+(pass) CI workflow invariants > finds every workflow file [1.13ms]
+(pass) CI workflow invariants > declares a least-privilege default permission set [6.70ms]
+(pass) CI workflow invariants > gives every job a timeout [3.12ms]
+(pass) CI workflow invariants > never puts concurrency at workflow level [0.45ms]
+(pass) CI workflow invariants > gives every job its own concurrency group [1.62ms]
+(pass) CI workflow invariants > protects main and the gated Rust stage from cancellation [4.20ms]
+(pass) CI workflow invariants > uses !cancelled() rather than always() outside the status job [0.86ms]
+(pass) CI workflow invariants > aggregates every job into a pipeline-status gate [6.15ms]
+(pass) CI workflow invariants > configures git before checkout so no init hints are printed [0.53ms]
+(pass) CI workflow invariants > never swallows a failing command in a quality gate [1.52ms]
+(pass) CI workflow invariants > references only helper scripts that exist [2.82ms]
+(pass) CI workflow invariants > lints and audits the workflows themselves [0.44ms]
+(pass) CI workflow invariants > never interpolates untrusted context into a run: block [250.10ms]
+(pass) CI workflow invariants > does not persist credentials on read-only checkouts [5.61ms]
+(pass) CI workflow invariants > pins third-party actions to a commit hash [0.77ms]
+(pass) CI workflow invariants > audits both dependency graphs for advisories [4.91ms]
+(pass) CI workflow invariants > lints the repository-level scripts/ directory [0.42ms]
+(pass) CI workflow invariants > scopes CodeQL to this project’s own code [0.49ms]
+(pass) CI workflow invariants > parses coverage through the tested helper, not an inline grep [0.25ms]
+
+test/cli.js:
+(pass) CLI version flag > should display version with --version [247.03ms]
+(pass) CLI version flag > should display version with -v [218.14ms]
+(pass) CLI version flag > should show correct package version [232.96ms]
+(pass) CLI basic behavior > should show usage when no arguments provided [107.37ms]
+(pass) CLI basic behavior > should show usage when no command provided after -- [108.91ms]
+(pass) CLI isolation output (issue #67) > should display screen session name when using screen isolation [375.87ms]
+  Skipping: tmux not installed
+(pass) CLI isolation output (issue #67) > should display tmux session name when using tmux isolation [7.14ms]
+(pass) CLI isolation output (issue #67) > should display docker container name when using docker isolation [4659.00ms]
+
+test/command-builder-docker-cleanup.js:
+(pass) command-builder docker cleanup forwarding > forwards cleanup policy flags when a remaining level uses docker [3.13ms]
+(pass) command-builder docker cleanup forwarding > does not forward docker cleanup flags after the docker level is consumed [0.54ms]
+
+test/create-github-release.mjs:
+(pass) create-github-release script > treats an existing GitHub release as an idempotent skip [286.36ms]
+(pass) create-github-release script > fails when gh api returns an unexpected error [328.83ms]
+
+test/docker-autoremove.js:
+(pass) Docker Container Cleanup Policy > cleanup decisions > should keep abnormal containers under the default policy [0.28ms]
+(pass) Docker Container Cleanup Policy > cleanup decisions > should keep OOM-killed containers with keepContainerOnFail [0.07ms]
+(pass) Docker Container Cleanup Policy > cleanup decisions > should honor explicit always-cleanup policy [0.05ms]
+(pass) Docker Container Cleanup Policy > cleanup decisions > should make the detached watcher inspect OOMKilled before default cleanup [21.91ms]
+$ echo "test" && sleep 0.5
+
+  ✓ Docker container auto-removed after exit (filesystem not preserved)
+(pass) Docker Container Cleanup Policy > auto-remove enabled > should automatically remove container when autoRemoveDockerContainer is true [5882.94ms]
+$ echo "test" && sleep 0.1
+
+(pass) Docker Container Cleanup Policy > default cleanup > should remove container filesystem by default [4673.45ms]
+$ echo "test" && sleep 0.1
+
+(pass) Docker Container Cleanup Policy > keep-container opt-out > should preserve container filesystem when keepContainer is true [3831.42ms]
+$ echo "test" && exit 7
+
+(pass) Docker Container Cleanup Policy > keep-container opt-out > should preserve failed containers when keepContainerOnFail is true [3889.12ms]
+$ printf "attached-log-line\n"
+
+attached-log-line
+(pass) Docker Container Cleanup Policy > attached mode logging > should write attached docker output to the provided host log path [4884.23ms]
+
+test/docker-command-handoff.js:
+(pass) new stopped containers choose a copy-free command handoff [0.84ms]
+(pass) handoff preserves argv and accepts a replacement without executing it on the host [29.74ms]
+(pass) handoff preserves direct shell positional argv and evaluates compound commands as scripts [19.88ms]
+(pass) auto handoff chooses an installed shell inside the existing container [1724.36ms]
+
+test/docker-network-integration.js:
+(pass) Docker named network integration > keeps the multi-network probe hermetic [0.35ms]
+$ ping -c 1 formal-ai && ping -c 1 formal-db && ip route | grep -q '^default '
+
+$ ping -c 1 formal-ai
+
+ping: bad address 'formal-ai'
+(pass) Docker named network integration > reaches a private sidecar on each of two networks [3837.50ms]
+$ echo should-not-run
+
+$ echo should-not-run
+
+$ echo should-not-run
+
+docker: Error response from daemon: failed to set up container networking: network start-network-fd15e1e5-absent not found
+
+Run 'docker run --help' for more information
+$ echo should-not-run
+
+(pass) Docker named network integration > fails for a missing network without orphaning a container [5680.12ms]
+
+test/docker-network-lifecycle.js:
+(pass) docker network lifecycle helpers > returns an empty list when no network is requested [0.12ms]
+(pass) docker network lifecycle helpers > wraps a single network into a list [0.05ms]
+(pass) docker network lifecycle helpers > prefers the explicit networks list over the single network [0.03ms]
+(pass) docker network lifecycle helpers > ignores an empty networks list and falls back to network [0.03ms]
+(pass) docker network lifecycle helpers > keeps verbose output switched off by default [0.14ms]
+
+test/docker-runtime-options.js:
+(pass) Docker runtime options parsing > should parse repeatable --volume and -v [0.48ms]
+(pass) Docker runtime options parsing > should parse --volume=value and -v=value [0.14ms]
+(pass) Docker runtime options parsing > should parse repeatable --mount [0.11ms]
+(pass) Docker runtime options parsing > should parse repeatable --env and -e [0.18ms]
+(pass) Docker runtime options parsing > should parse --privileged [0.08ms]
+(pass) Docker runtime options parsing > should parse repeatable --network forms without consuming child args [0.20ms]
+(pass) Docker runtime options parsing > should parse repeatable --network-alias value and equals forms [0.11ms]
+(pass) Docker runtime options parsing > should default runtime options to empty/false [0.10ms]
+(pass) Docker runtime options parsing > should throw when --volume requires an argument [0.30ms]
+(pass) Docker runtime options parsing > should throw when --env requires an argument [0.09ms]
+(pass) Docker runtime options validation > should reject --volume with non-docker backend [0.14ms]
+(pass) Docker runtime options validation > should reject --mount without isolation [1.31ms]
+(pass) Docker runtime options validation > should reject --env with non-docker backend [0.22ms]
+(pass) Docker runtime options validation > should reject --privileged without docker [0.09ms]
+(pass) Docker runtime options validation > should reject network options without docker [0.23ms]
+(pass) Docker runtime options validation > should accept runtime options when stack includes docker [0.32ms]
+(pass) buildDockerRuntimeArgs > should build empty args by default [0.11ms]
+(pass) buildDockerRuntimeArgs > should add --privileged first [0.06ms]
+(pass) buildDockerRuntimeArgs > should expand env, volumes, and mounts in order [0.11ms]
+(pass) buildDockerRuntimeStatusLines > should return no lines for empty options [0.34ms]
+(pass) buildDockerRuntimeStatusLines > should format volumes, mounts, env, and privileged lines [0.11ms]
+(pass) buildDockerRuntimeStatusLines > should join multiple volumes with a comma [0.06ms]
+(pass) buildDockerRuntimeMetadata > should null out empty collections and falsy privileged [0.18ms]
+(pass) buildDockerRuntimeMetadata > should pass through populated collections and privileged [0.09ms]
+
+test/docker-snapshot-safety.js:
+(pass) preflight refuses insufficient space before any snapshot [1.01ms]
+(pass) containerd image store checks Docker and containerd filesystems separately [0.27ms]
+(pass) preflight logs the layer size and rejects unknown sizes or roots [0.31ms]
+(pass) snapshot lock is separate from store locks and excludes concurrent processes [2242.10ms]
+
+test/echo-integration.js:
+=== Echo Integration Tests - Issue #55 ===
+Testing that "echo hi" works correctly across all isolation modes
+Coverage: No isolation, Screen (attached/detached), Tmux (attached/detached), Docker (attached/detached)
+
+  ✓ No isolation mode: echo hi works correctly
+(pass) Echo Integration Tests - Issue #55 > No Isolation Mode (Direct Execution) > should execute echo hi and show output with proper formatting [177.27ms]
+  ✓ No isolation mode: echo with single quotes works
+(pass) Echo Integration Tests - Issue #55 > No Isolation Mode (Direct Execution) > should execute echo with single quotes [161.92ms]
+  ✓ No isolation mode: echo with double quotes works
+(pass) Echo Integration Tests - Issue #55 > No Isolation Mode (Direct Execution) > should execute echo with double quotes [182.57ms]
+  ✓ Empty line formatting is consistent
+(pass) Echo Integration Tests - Issue #55 > No Isolation Mode (Direct Execution) > should have consistent empty line formatting [193.26ms]
+  ✓ Screen isolation (attached): echo hi works correctly
+(pass) Echo Integration Tests - Issue #55 > Screen Isolation Mode > Attached Mode > should execute echo hi in attached screen mode with proper formatting [404.56ms]
+  ✓ Screen isolation (attached): echo with quotes works
+(pass) Echo Integration Tests - Issue #55 > Screen Isolation Mode > Attached Mode > should execute echo with quotes in attached screen mode [512.85ms]
+  ✓ Screen isolation (attached): finish block displays correctly
+(pass) Echo Integration Tests - Issue #55 > Screen Isolation Mode > Attached Mode > should show exit code and finish block in attached screen mode [513.01ms]
+  ✓ Screen isolation (detached): echo hi starts correctly
+(pass) Echo Integration Tests - Issue #55 > Screen Isolation Mode > Detached Mode > should execute echo hi in detached screen mode [253.64ms]
+  ✓ Screen isolation (detached): session name displayed for reattaching
+(pass) Echo Integration Tests - Issue #55 > Screen Isolation Mode > Detached Mode > should show session name in detached screen mode for reattaching [201.25ms]
+  ⚠ tmux not installed, skipping tmux tests
+(pass) Echo Integration Tests - Issue #55 > Tmux Isolation Mode > should skip tmux tests when tmux is not installed [0.19ms]
+  ⚠ no TTY available, skipping attached docker tests
+(pass) Echo Integration Tests - Issue #55 > Docker Isolation Mode > Attached Mode > should skip attached docker tests when no TTY is available [0.04ms]
+  ✓ Docker isolation (detached): echo hi starts correctly
+(pass) Echo Integration Tests - Issue #55 > Docker Isolation Mode > Detached Mode > should execute echo hi in detached docker mode [5117.68ms]
+  ✓ Docker isolation (detached): session/container name displayed for reattaching
+(pass) Echo Integration Tests - Issue #55 > Docker Isolation Mode > Detached Mode > should show session/container name in detached docker mode for reattaching [4533.90ms]
+  ✓ Docker isolation (detached): echo with quotes works
+(pass) Echo Integration Tests - Issue #55 > Docker Isolation Mode > Detached Mode > should execute echo with quotes in detached docker mode [4688.28ms]
+  ✓ Log paths are not truncated
+(pass) Echo Integration Tests - Issue #55 > Output Block Formatting > should not truncate long log paths [239.46ms]
+  ✓ Session IDs are complete UUIDs in both blocks
+(pass) Echo Integration Tests - Issue #55 > Output Block Formatting > should show full session ID in both start and finish blocks [317.97ms]
+  ✓ Exit code formatting is consistent
+(pass) Echo Integration Tests - Issue #55 > Output Block Formatting > should have consistent exit code formatting [364.12ms]
+  ✓ Timing information is present in finish block
+(pass) Echo Integration Tests - Issue #55 > Output Block Formatting > should include timing information in finish block [276.37ms]
+
+test/execution-attach.js:
+(pass) buildAttachPlan > attaches to a running docker container [3.14ms]
+(pass) buildAttachPlan > follows docker logs in read-only mode [0.20ms]
+(pass) buildAttachPlan > attaches to a running screen session [0.07ms]
+(pass) buildAttachPlan > follows the stored log for a read-only screen attach [0.09ms]
+(pass) buildAttachPlan > uses tmux read-only attach for --read-only [0.07ms]
+(pass) buildAttachPlan > follows the log for ssh sessions [0.07ms]
+(pass) buildAttachPlan > points at --resume when the session is not running [0.17ms]
+(pass) buildAttachPlan > reports a removed container distinctly [0.12ms]
+(pass) buildAttachPlan > rejects records without a session name [0.07ms]
+(pass) buildAttachPlan > rejects attached (non-detached) executions [0.06ms]
+(pass) attachExecution > reports a missing execution [0.20ms]
+(pass) attachExecution > reports disabled tracking [0.06ms]
+(pass) attachExecution > runs the interactive attach command [0.90ms]
+(pass) attachExecution > surfaces plan errors [0.11ms]
+(pass) formatAttachResultAsLinksNotation > emits a nested links-notation block [0.12ms]
+
+test/execution-control.js:
+(pass) execution control > should map screen stop to CTRL+C injection [1.02ms]
+(pass) execution control > should send stop command to a detached screen session [109.04ms]
+(pass) execution control > should stop a detached docker container with docker stop [33.64ms]
+(pass) execution control > should send docker terminate through docker kill [11.00ms]
+(pass) execution control > should reject non-detached records [51.46ms]
+(pass) process id collection > should parse a GNU Screen process id from screen -ls output [0.22ms]
+(pass) process id collection > should collect wrapper, screen, and descendant process IDs [0.25ms]
+
+test/execution-resume.js:
+(pass) buildSnapshotImageName > produces a lowercase docker-safe tag [0.23ms]
+(pass) buildResumedSessionName > appends the resume counter [0.07ms]
+(pass) buildResumePlan > refuses to resume a live session and points at --attach [0.20ms]
+(pass) buildResumePlan > restarts a stopped container with the stored command [0.10ms]
+(pass) buildResumePlan > snapshots a stopped container to run a new command [0.37ms]
+(pass) buildResumePlan > carries stored docker runtime options into the snapshot run [0.79ms]
+(pass) buildResumePlan > rebuilds a multi-network snapshot with create/connect/start [0.27ms]
+(pass) buildResumePlan > increments the counter across repeated resumes [0.21ms]
+(pass) buildResumePlan > relaunches when the container is gone [0.21ms]
+(pass) buildResumePlan > relaunches a dead screen session [0.09ms]
+(pass) buildResumePlan > relaunches a dead screen session with a new command [0.08ms]
+(pass) buildResumePlan > rejects records without a session name [0.05ms]
+(pass) buildResumePlan > rejects non-detached executions [0.07ms]
+(pass) buildResumePlan > rejects records with no command to resume [0.10ms]
+(pass) resumeExecution > reports disabled tracking [10.84ms]
+(pass) resumeExecution > reports an unknown identifier [4.49ms]
+(pass) resumeExecution > starts a stopped container and re-attaches the watcher [7.20ms]
+(pass) resumeExecution > keeps the same UUID and remembers the previous session name [6.26ms]
+(pass) resumeExecution > fails when a docker step fails [1.81ms]
+(pass) resumeExecution > relaunches through the isolation backend when the container is gone [0.75ms]
+(pass) resumeExecution > surfaces relaunch failures [0.51ms]
+(pass) resumeAllExecutions > reports disabled tracking [0.41ms]
+(pass) resumeAllExecutions > reports an empty set [1.43ms]
+(pass) resumeAllExecutions > re-attaches watchers for live docker sessions [0.38ms]
+(pass) resumeAllExecutions > reconciles executions whose session is gone [0.29ms]
+(pass) resumeAllExecutions > leaves live screen sessions untouched [0.24ms]
+(pass) formatResumeResultAsLinksNotation > emits a nested links-notation block [0.12ms]
+
+test/execution-store.js:
+=== Execution Store Unit Tests ===
+(pass) ExecutionRecord > should create a new execution record with default values [0.26ms]
+(pass) ExecutionRecord > should create a new execution record with custom values [0.14ms]
+(pass) ExecutionRecord > should mark execution as completed [0.11ms]
+(pass) ExecutionRecord > should convert to plain object and back [0.12ms]
+(pass) LockManager > should acquire and release a lock [4.68ms]
+(pass) LockManager > should fail to acquire lock if already held by another process [5.64ms]
+(pass) LockManager > should detect stale locks [0.52ms]
+(pass) ExecutionStore > should create app folder on initialization [0.44ms]
+(pass) ExecutionStore > should save and retrieve an execution record [8.33ms]
+(pass) ExecutionStore > should update an existing record [44.80ms]
+(pass) ExecutionStore > should get all records [37.04ms]
+(pass) ExecutionStore > should get records by status [32.26ms]
+(pass) ExecutionStore > should get recent records [32.80ms]
+(pass) ExecutionStore > should delete a record [68.99ms]
+(pass) ExecutionStore > should return false when deleting non-existent record [6.24ms]
+(pass) ExecutionStore > should clear all records [34.24ms]
+(pass) ExecutionStore > should get statistics [162.18ms]
+(pass) ExecutionStore > should handle concurrent saves with locking [1257.59ms]
+(pass) ExecutionStore > should persist data to lino file [15.39ms]
+(pass) isClinkInstalled > should return a boolean [4.49ms]
+(pass) ExecutionStore with lino-objects-codec > should properly encode and decode complex options [12.88ms]
+(pass) ExecutionStore with lino-objects-codec > should handle special characters in command [8.09ms]
+(pass) ExecutionStore with lino-objects-codec > should handle unicode characters [13.76ms]
+(pass) ExecutionStore verifyConsistency > should report consistency status for lino-only store [64.26ms]
+(pass) ExecutionStore cleanupStale > should return empty result when no stale records exist [16.05ms]
+(pass) ExecutionStore cleanupStale > should detect stale records with non-existent PIDs [29.12ms]
+(pass) ExecutionStore cleanupStale > should detect stale records that exceed max age [13.74ms]
+(pass) ExecutionStore cleanupStale > should not detect records within max age as stale [25.43ms]
+(pass) ExecutionStore cleanupStale > should clean up stale records when dryRun is false [50.81ms]
+(pass) ExecutionStore cleanupStale > should handle custom max age [34.28ms]
+(pass) ExecutionStore.execClink > passes the query to clink as a single argument, quotes included [72.10ms]
+
+test/exit-reason.js:
+(pass) detectExitReason > should detect the V8 heap limit marker from the incident log [0.53ms]
+(pass) detectExitReason > should detect a bare JavaScript heap out of memory line [0.09ms]
+(pass) detectExitReason > should detect other runtimes reporting their own exhaustion [0.23ms]
+(pass) detectExitReason > should detect the kernel OOM killer marker [0.05ms]
+(pass) detectExitReason > should detect allocation failures [0.04ms]
+(pass) detectExitReason > should not invent a reason for ordinary output [0.03ms]
+(pass) signalNameForExitCode > should map 139 to SIGSEGV [0.03ms]
+(pass) signalNameForExitCode > should map 137 to SIGKILL [0.02ms]
+(pass) signalNameForExitCode > should ignore ordinary exit codes [0.03ms]
+(pass) resolveExitReason > should prefer the log marker over the signal fallback [0.19ms]
+(pass) resolveExitReason > should report the cgroup OOM observation when there is no marker [0.10ms]
+(pass) resolveExitReason > should fall back to the signal name for signal exit codes [0.09ms]
+(pass) resolveExitReason > should return null when nothing is known [0.07ms]
+(pass) detectMemoryMarker > should return the whole line carrying the marker [0.11ms]
+(pass) detectMemoryMarker > should bound an absurdly long line [0.08ms]
+(pass) resolveMemoryExhaustion > should report the evidence for an abnormal exit [0.15ms]
+(pass) resolveMemoryExhaustion > should fall back to the container flag when the log says nothing [0.05ms]
+(pass) resolveMemoryExhaustion > should stay silent for a clean or unfinished run [0.05ms]
+(pass) resolveMemoryExhaustion > should stay silent for an ordinary failure [0.11ms]
+
+test/failure-handler.js:
+(pass) failure-handler > parseGitUrl > should parse HTTPS GitHub URL [0.34ms]
+(pass) failure-handler > parseGitUrl > should parse HTTPS URL with .git suffix [0.09ms]
+(pass) failure-handler > parseGitUrl > should parse SSH git@ URL [0.04ms]
+(pass) failure-handler > parseGitUrl > should parse git+https URL format [0.04ms]
+(pass) failure-handler > parseGitUrl > should return null for empty string [0.02ms]
+(pass) failure-handler > parseGitUrl > should return null for null/undefined input [0.06ms]
+(pass) failure-handler > parseGitUrl > should return null for non-github URL [0.04ms]
+(pass) failure-handler > parseGitUrl > should return null for invalid/random string [0.03ms]
+(pass) failure-handler > parseGitUrl > should normalize URL to https://github.com format [0.04ms]
+(pass) failure-handler > parseGitUrl > should handle URL with subdirectory (only owner/repo captured) [0.05ms]
+(pass) failure-handler > parseGitUrl > should return object with owner, repo, url keys [0.08ms]
+(pass) failure-handler > createIssue > passes the title and body to gh as separate arguments [116.93ms]
+(pass) failure-handler > createIssue > keeps the failing command verbatim and does not escape it [87.76ms]
+(pass) failure-handler > createIssue > sanitizes credentials in the issue title and body [118.76ms]
+(pass) failure-handler > createIssue > writes real newlines into the issue body [119.20ms]
+
+(pass) failure-handler > handleFailure > should return early when disableAutoIssue is true [0.46ms]
+
+Auto-issue creation disabled via START_DISABLE_AUTO_ISSUE
+(pass) failure-handler > handleFailure > should return early when disableAutoIssue is true (verbose mode) [0.12ms]
+
+test/isolation-cleanup.js:
+  ✓ Screen session auto-exited (no sessions found in screen -ls)
+(pass) Isolation Resource Cleanup Verification > screen resource cleanup > should not list screen session after command completes (auto-exit by default) [236.58ms]
+  ✓ Screen session kept alive as expected with --keep-alive
+(pass) Isolation Resource Cleanup Verification > screen resource cleanup > should keep screen session alive when keepAlive is true [1106.62ms]
+  Skipping: tmux not installed
+(pass) Isolation Resource Cleanup Verification > tmux resource cleanup > should not list tmux session after command completes (auto-exit by default) [25.55ms]
+  Skipping: tmux not installed
+(pass) Isolation Resource Cleanup Verification > tmux resource cleanup > should keep tmux session alive when keepAlive is true [19.36ms]
+$ echo "test" && sleep 0.1
+
+  ✓ Docker container auto-exited and stopped (resources released, filesystem preserved)
+(pass) Isolation Resource Cleanup Verification > docker resource cleanup > should show docker container as exited after command completes (auto-exit by default) [11226.14ms]
+$ echo "test"
+
+  ✓ Docker container kept running as expected with --keep-alive
+(pass) Isolation Resource Cleanup Verification > docker resource cleanup > should keep docker container running when keepAlive is true [6493.99ms]
+
+test/isolation-log-utils.js:
+(pass) isolation-log-utils > getTimestamp > should return a non-empty string [0.49ms]
+(pass) isolation-log-utils > getTimestamp > should return a timestamp without T or Z (ISO-like but space-separated) [0.13ms]
+(pass) isolation-log-utils > getTimestamp > should contain date-like content (numbers and dashes) [0.53ms]
+(pass) isolation-log-utils > getTimestamp > should return different values on successive calls (or same within same ms) [0.07ms]
+(pass) isolation-log-utils > generateLogFilename > should return a string ending with .log [0.20ms]
+(pass) isolation-log-utils > generateLogFilename > should include the environment name in the filename [0.06ms]
+(pass) isolation-log-utils > generateLogFilename > should start with "start-command-" [0.06ms]
+(pass) isolation-log-utils > generateLogFilename > should generate unique filenames on successive calls [0.08ms]
+(pass) isolation-log-utils > generateLogFilename > should handle different environment names [0.21ms]
+(pass) isolation-log-utils > createLogHeader > should return a non-empty string [0.34ms]
+(pass) isolation-log-utils > createLogHeader > should include the command in the header [0.09ms]
+(pass) isolation-log-utils > createLogHeader > should include the environment in the header [0.04ms]
+(pass) isolation-log-utils > createLogHeader > should include the session name in the header [0.03ms]
+(pass) isolation-log-utils > createLogHeader > should include the mode in the header [0.05ms]
+(pass) isolation-log-utils > createLogHeader > should include image field when provided [0.05ms]
+(pass) isolation-log-utils > createLogHeader > should include user field when provided [0.06ms]
+(pass) isolation-log-utils > createLogHeader > should NOT include Image line when image is not provided [0.05ms]
+(pass) isolation-log-utils > createLogHeader > should contain separator line [0.04ms]
+(pass) isolation-log-utils > createLogFooter > should return a non-empty string [0.11ms]
+(pass) isolation-log-utils > createLogFooter > should include the exit code [0.05ms]
+(pass) isolation-log-utils > createLogFooter > should include exit code 0 [0.08ms]
+(pass) isolation-log-utils > createLogFooter > should include the end time [0.04ms]
+(pass) isolation-log-utils > createLogFooter > should contain separator line [0.05ms]
+(pass) isolation-log-utils > getLogDir > should return a string [0.54ms]
+(pass) isolation-log-utils > getLogDir > should return a non-empty path [0.05ms]
+(pass) isolation-log-utils > getLogDir > should use START_LOG_DIR env var when set [0.13ms]
+(pass) isolation-log-utils > getLogDir > should fall back to /tmp/start-command/logs when START_LOG_DIR is not set [0.10ms]
+(pass) isolation-log-utils > createLogPath > should return a string ending with .log [0.11ms]
+(pass) isolation-log-utils > createLogPath > should return an absolute path [0.04ms]
+(pass) isolation-log-utils > createLogPath > should include the environment name [0.04ms]
+(pass) isolation-log-utils > createLogPath > should be under the log directory [1.22ms]
+(pass) isolation-log-utils > createLogPath > should create stable isolation log path when execution id is provided [0.07ms]
+(pass) isolation-log-utils > createLogPath > should create stable direct log path without duplicated environment segment [0.09ms]
+
+test/isolation-stacking.js:
+(pass) Isolation Stacking - Args Parser > parseArgs with stacked --isolated > should parse single isolation (backward compatible) [0.98ms]
+(pass) Isolation Stacking - Args Parser > parseArgs with stacked --isolated > should parse multi-level isolation [7.81ms]
+(pass) Isolation Stacking - Args Parser > parseArgs with stacked --isolated > should parse 5-level isolation [0.19ms]
+(pass) Isolation Stacking - Args Parser > parseArgs with stacked --isolated > should parse --isolated=value syntax [0.19ms]
+(pass) Isolation Stacking - Args Parser > parseArgs with stacked --image > should parse single image (backward compatible) [0.12ms]
+(pass) Isolation Stacking - Args Parser > parseArgs with stacked --image > should parse image sequence with placeholders [0.06ms]
+(pass) Isolation Stacking - Args Parser > parseArgs with stacked --image > should parse --image=value syntax [0.05ms]
+(pass) Isolation Stacking - Args Parser > parseArgs with stacked --endpoint > should parse single endpoint (backward compatible) [0.05ms]
+(pass) Isolation Stacking - Args Parser > parseArgs with stacked --endpoint > should parse endpoint sequence with placeholders [0.12ms]
+(pass) Isolation Stacking - Args Parser > hasStackedIsolation > should return true for multi-level [0.39ms]
+(pass) Isolation Stacking - Args Parser > hasStackedIsolation > should return false for single level [0.09ms]
+(pass) Isolation Stacking - Args Parser > hasStackedIsolation > should return false for no isolation [0.16ms]
+(pass) Isolation Stacking - Validation > validateOptions > should validate single backend (backward compatible) [0.51ms]
+(pass) Isolation Stacking - Validation > validateOptions > should validate multi-level stack [1.38ms]
+(pass) Isolation Stacking - Validation > validateOptions > should throw on invalid backend in stack [0.47ms]
+(pass) Isolation Stacking - Validation > validateOptions > should throw on missing SSH endpoint [0.15ms]
+(pass) Isolation Stacking - Validation > validateOptions > should throw on image/stack length mismatch [0.16ms]
+(pass) Isolation Stacking - Validation > validateOptions > should throw on depth exceeding limit [0.13ms]
+(pass) Isolation Stacking - Validation > validateOptions > should distribute single image to all levels [0.22ms]
+(pass) Isolation Stacking - Validation > validateOptions > should apply default docker image for each docker level [0.16ms]
+(pass) Isolation Stacking - Validation > validateOptions > should throw if image provided but no docker in stack [0.11ms]
+(pass) Isolation Stacking - Validation > validateOptions > should throw if endpoint provided but no ssh in stack [0.15ms]
+(pass) Isolation Stacking - Backward Compatibility > should work with existing docker command [0.16ms]
+(pass) Isolation Stacking - Backward Compatibility > should work with existing ssh command [0.13ms]
+(pass) Isolation Stacking - Backward Compatibility > should work with existing screen command [0.12ms]
+(pass) Isolation Stacking - Backward Compatibility > should work with -i shorthand [0.07ms]
+(pass) Isolation Stacking - Backward Compatibility > should work with attached mode [0.04ms]
+(pass) Isolation Stacking - Backward Compatibility > should work with session name [0.06ms]
+(pass) Isolation Stacking - Backward Compatibility > should work with session-id [10.69ms]
+
+test/isolation.js:
+(pass) Isolation Module > wrapCommandWithUser > should return command unchanged when user is null [0.08ms]
+(pass) Isolation Module > wrapCommandWithUser > should wrap command with sudo when user is specified [0.06ms]
+(pass) Isolation Module > wrapCommandWithUser > should escape single quotes in command [0.03ms]
+(pass) Isolation Module > wrapCommandWithUser > should use non-interactive sudo [0.03ms]
+(pass) Isolation Module > isCommandAvailable > should return true for common commands (echo) [24.17ms]
+(pass) Isolation Module > isCommandAvailable > should return true for node [13.66ms]
+(pass) Isolation Module > isCommandAvailable > should return false for non-existent command [9.17ms]
+(pass) Isolation Module > isCommandAvailable > should return false for empty command [9.63ms]
+(pass) Isolation Module > hasTTY > should return a boolean [0.34ms]
+  hasTTY: false
+(pass) Isolation Module > hasTTY > should return false when running in test environment (no TTY) [0.12ms]
+  screen available: true
+(pass) Isolation Module > isolation environment checks > should check if screen is available [6.30ms]
+  tmux available: false
+(pass) Isolation Module > isolation environment checks > should check if tmux is available [12.20ms]
+  docker available: true
+(pass) Isolation Module > isolation environment checks > should check if docker is available [6.22ms]
+  ssh available: true
+(pass) Isolation Module > isolation environment checks > should check if ssh is available [5.81ms]
+  Detected screen version: 4.9.1
+(pass) Isolation Module > getScreenVersion > should return version object or null [64.71ms]
+(pass) Isolation Module > getScreenVersion > should cache the version result [41.24ms]
+  supportsLogfileOption: true
+(pass) Isolation Module > supportsLogfileOption > should return boolean [29.89ms]
+  Version 4.9.1: -Logfile supported = true
+(pass) Isolation Module > supportsLogfileOption > should return true for screen >= 4.5.1 [49.99ms]
+  Skipping: screen is installed
+(pass) Isolation Runner Error Handling > runInScreen > should return informative error if screen is not installed [12.24ms]
+(pass) Isolation Runner Error Handling > runInTmux > should return informative error if tmux is not installed [24.28ms]
+  Skipping: docker is installed
+(pass) Isolation Runner Error Handling > runInDocker > should return informative error if docker is not installed [9.61ms]
+(pass) Isolation Runner Error Handling > runInDocker > should require image option [744.84ms]
+  Skipping: ssh is installed
+(pass) Isolation Runner Error Handling > runInSsh > should return informative error if ssh is not installed [12.46ms]
+(pass) Isolation Runner Error Handling > runInSsh > should require endpoint option [7.28ms]
+(pass) Isolation Keep-Alive Behavior > runInScreen keep-alive messages > should include auto-exit message by default in detached mode [82.91ms]
+(pass) Isolation Keep-Alive Behavior > runInScreen keep-alive messages > should include keep-alive message when keepAlive is true [117.16ms]
+  Skipping: tmux not installed
+(pass) Isolation Keep-Alive Behavior > runInTmux keep-alive messages > should include auto-exit message by default in detached mode [16.80ms]
+  Skipping: tmux not installed
+(pass) Isolation Keep-Alive Behavior > runInTmux keep-alive messages > should include keep-alive message when keepAlive is true [20.70ms]
+$ echo test
+
+(pass) Isolation Keep-Alive Behavior > runInDocker keep-alive messages > should include auto-exit message by default in detached mode [4713.72ms]
+$ echo test
+
+(pass) Isolation Keep-Alive Behavior > runInDocker keep-alive messages > should include keep-alive message when keepAlive is true [6136.18ms]
+  Skipping: tmux not installed
+(pass) Isolation Runner with Available Backends > runInTmux (if available) > should run command in detached tmux session [7.17ms]
+(pass) Isolation Runner with Available Backends > runIsolated dispatcher > should dispatch to correct backend [0.52ms]
+$ echo test
+
+test
+(pass) Isolation Runner with Available Backends > runIsolated dispatcher > should pass options to backend [4564.48ms]
+(pass) Default Docker Image Detection > getDefaultDockerImage > should return a valid Docker image string [0.25ms]
+(pass) Default Docker Image Detection > getDefaultDockerImage > should return an image with a tag [0.24ms]
+(pass) Default Docker Image Detection > getDefaultDockerImage > should return a known base image [0.19ms]
+(pass) detectShellInEnvironment > should return the forced shell when shellPreference is not auto [1.97ms]
+(pass) detectShellInEnvironment > should return zsh when shellPreference is zsh [0.07ms]
+(pass) detectShellInEnvironment > should return sh when shellPreference is sh [0.04ms]
+(pass) detectShellInEnvironment > should return sh fallback when docker image is not provided [0.05ms]
+(pass) detectShellInEnvironment > should return sh fallback when ssh endpoint is not provided [0.02ms]
+(pass) detectShellInEnvironment > should return sh fallback for unknown environment [0.02ms]
+  Detected shell in alpine:latest: /bin/sh
+(pass) detectShellInEnvironment > should auto-detect shell in docker if docker is available [2676.13ms]
+(pass) detectShellInEnvironment > should read shell preference from options.shell [0.47ms]
+$ echo test
+
+  runInDocker with --shell sh result: true
+(pass) Shell option forwarding to isolation runners > runInDocker shell option > should accept shell option in options object [1123.10ms]
+(pass) Shell option forwarding to isolation runners > runInSsh shell option > should accept shell option in options object [7.05ms]
+(pass) Shell option forwarding to isolation runners > runInSsh shell option > should use auto mode when shell option is auto [10.18ms]
+(pass) isInteractiveShellCommand (issue #84) > should return true for "bash" [0.21ms]
+(pass) isInteractiveShellCommand (issue #84) > should return true for "zsh" [0.03ms]
+(pass) isInteractiveShellCommand (issue #84) > should return true for "sh" [0.08ms]
+(pass) isInteractiveShellCommand (issue #84) > should return true for "/bin/bash" [0.11ms]
+(pass) isInteractiveShellCommand (issue #84) > should return true for "/usr/bin/zsh" [0.04ms]
+(pass) isInteractiveShellCommand (issue #84) > should return true for "bash -l" (login flag, no -c) [0.03ms]
+(pass) isInteractiveShellCommand (issue #84) > should return false for "bash -c echo" [0.03ms]
+(pass) isInteractiveShellCommand (issue #84) > should return false for "bash -c 'echo hi'" [0.03ms]
+(pass) isInteractiveShellCommand (issue #84) > should return false for "npm test" [0.03ms]
+(pass) isInteractiveShellCommand (issue #84) > should return false for "echo hello" [0.05ms]
+(pass) isInteractiveShellCommand (issue #84) > should return false for "ls -la" [0.05ms]
+(pass) isInteractiveShellCommand (issue #84) > should return false for empty string [0.03ms]
+(pass) isInteractiveShellCommand (issue #84) > should return false for "  " [0.05ms]
+
+test/javascript-first-ci.js:
+(pass) JavaScript first CI gate > validates every current workflow using parsed YAML [16.28ms]
+(pass) JavaScript first CI gate > rejects independent Rust PR trigger [19.21ms]
+(pass) JavaScript first CI gate > rejects removed successful-stage condition [13.60ms]
+(pass) JavaScript first CI gate > rejects Rust-only path filter [8.65ms]
+(pass) JavaScript first CI gate > rejects Rust security matrix bypass [8.30ms]
+(pass) JavaScript first CI gate > rejects direct Rust CodeQL bypass [6.42ms]
+(pass) JavaScript first CI gate > rejects release key outside main environment [5.50ms]
+(pass) JavaScript first CI gate > rejects a new ungated Rust workflow [2.86ms]
+(pass) JavaScript first CI gate > rejects conditional parity [5.48ms]
+(pass) JavaScript first CI gate > rejects a failure required JavaScript check [23.74ms]
+(pass) JavaScript first CI gate > rejects a cancelled required JavaScript check [21.54ms]
+(pass) JavaScript first CI gate > rejects a skipped required JavaScript check [21.31ms]
+(pass) JavaScript first CI gate > opens the gate only after all required checks succeed [28.69ms]
+(pass) JavaScript first CI gate > rejects a change to only one implementation of a feature [0.46ms]
+(pass) JavaScript first CI gate > makes Rust callable only after the complete JavaScript stage [9.21ms]
+(pass) JavaScript first CI gate > always runs JavaScript and its behavioral parity gate on Rust-only changes [5.95ms]
+
+test/load-command-stream.mjs:
+(pass) load-command-stream > reproduces the Node 24 namespace that broke the release jobs [0.06ms]
+(pass) load-command-stream > resolves $ from the Node >= 22.12 CommonJS namespace [0.30ms]
+(pass) load-command-stream > resolves $ from the Node < 22.12 CommonJS namespace [0.03ms]
+(pass) load-command-stream > resolves $ when use-m already unwrapped the module [0.03ms]
+(pass) load-command-stream > resolves $ from an ESM namespace with named exports [0.03ms]
+(pass) load-command-stream > throws an actionable error instead of "$ is not a function" [0.90ms]
+(pass) load-command-stream > reports the received value when use-m resolved nothing [0.09ms]
+(pass) load-command-stream > loads command-stream through an injected use() implementation [0.30ms]
+
+test/log-sanitizer.js:
+(pass) log sanitization > redacts required formats and environment values at every chunk boundary [460.74ms]
+(pass) log sanitization > bounds memory for long tokens and authorization values without releasing suffixes [262.33ms]
+(pass) log sanitization > retains full header continuation when an inner token reaches the same block boundary [6.89ms]
+(pass) log sanitization > redacts AWS assignment values enclosed in either quote style [0.29ms]
+(pass) log sanitization > redacts multiline and short known secrets, preserving unrelated bytes [0.28ms]
+(pass) log sanitization > merges overlapping environment secrets and preserves ordinary domain names [15.64ms]
+(pass) log sanitization > creates a private sanitized copy and removes it without changing the source [9.20ms]
+(pass) log sanitization > fails closed on invalid source and excessive environment secret sizes [0.72ms]
+(pass) log sanitization > blocks both upload paths on read or write failure and does not expose exception text [9.32ms]
+(pass) log sanitization > sanitizes manual and automatic uploads, explicitly requests private visibility, and cleans copies [243.31ms]
+
+test/merge-changesets.mjs:
+Working directory: /tmp/merge-changesets-ErKb3Z
+Changeset directory: /tmp/merge-changesets-ErKb3Z/.changeset
+Package name: start-command
+Found 0 changeset file(s)
+No merging needed (0 or 1 changeset found)
+(pass) mergeChangesetsIn > does nothing with zero changesets [19.22ms]
+Working directory: /tmp/merge-changesets-41Zkru
+Changeset directory: /tmp/merge-changesets-41Zkru/.changeset
+Package name: start-command
+Found 1 changeset file(s)
+No merging needed (0 or 1 changeset found)
+(pass) mergeChangesetsIn > does nothing with a single changeset [1.56ms]
+Working directory: /tmp/merge-changesets-qIIWMM
+Changeset directory: /tmp/merge-changesets-qIIWMM/.changeset
+Package name: start-command
+Found 2 changeset file(s)
+Multiple changesets found, merging...
+  - a.md
+  - b.md
+
+Merge summary:
+  Bump types found: patch, minor
+  Using highest: minor
+  Descriptions to merge: 2
+
+Created merged changeset: merged-loud-river.md
+
+Removing original changeset files:
+  Removed: a.md
+  Removed: b.md
+
+Changeset merge completed successfully
+
+Merged changeset content:
+---
+'start-command': minor
+---
+
+Fix A
+
+Feature B
+
+(pass) mergeChangesetsIn > merges multiple changesets into a single file with the highest bump [6.15ms]
+Working directory: /tmp/merge-changesets-xBwH7N
+Changeset directory: /tmp/merge-changesets-xBwH7N/.changeset
+Package name: start-command
+Found 3 changeset file(s)
+Multiple changesets found, merging...
+  - c.md
+  - a.md
+  - b.md
+
+Merge summary:
+  Bump types found: minor, patch, major
+  Using highest: major
+  Descriptions to merge: 3
+
+Created merged changeset: merged-kind-cloud.md
+
+Removing original changeset files:
+  Removed: c.md
+  Removed: a.md
+  Removed: b.md
+
+Changeset merge completed successfully
+
+Merged changeset content:
+---
+'start-command': major
+---
+
+Feat
+
+Fix
+
+Breaking
+
+(pass) mergeChangesetsIn > chooses major over minor and patch [4.69ms]
+Working directory: /tmp/merge-changesets-other-GsipUM
+Changeset directory: /tmp/merge-changesets-other-GsipUM/.changeset
+Package name: some-other-pkg
+Found 2 changeset file(s)
+Multiple changesets found, merging...
+  - a.md
+  - b.md
+
+Merge summary:
+  Bump types found: minor, patch
+  Using highest: minor
+  Descriptions to merge: 2
+
+Created merged changeset: merged-bright-leaf.md
+
+Removing original changeset files:
+  Removed: a.md
+  Removed: b.md
+
+Changeset merge completed successfully
+
+Merged changeset content:
+---
+'some-other-pkg': minor
+---
+
+A
+
+B
+
+(pass) mergeChangesetsIn > reads package name from package.json (no hardcoded placeholder) [8.53ms]
+(pass) mergeChangesetsIn > throws when .changeset directory is missing [5.12ms]
+
+test/output-blocks.js:
+=== Output Blocks Unit Tests ===
+(pass) output-blocks module > timeline format constants > should export timeline marker character [0.03ms]
+(pass) output-blocks module > timeline format constants > should export spine as alias for backward compatibility [0.02ms]
+(pass) output-blocks module > timeline format constants > should export result markers [0.02ms]
+(pass) output-blocks module > createTimelineLine > should create a line with timeline marker prefix and padded label [0.13ms]
+(pass) output-blocks module > createTimelineLine > should pad labels to 10 characters [0.03ms]
+(pass) output-blocks module > createSpineLine (deprecated alias) > should work as alias for createTimelineLine [0.02ms]
+(pass) output-blocks module > createEmptyTimelineLine > should create just the timeline marker character [0.07ms]
+(pass) output-blocks module > createEmptySpineLine (deprecated alias) > should work as alias for createEmptyTimelineLine [0.04ms]
+(pass) output-blocks module > createCommandLine > should create a line with $ prefix [0.03ms]
+(pass) output-blocks module > getResultMarker > should return success marker for exit code 0 [0.02ms]
+(pass) output-blocks module > getResultMarker > should return failure marker for non-zero exit codes [0.02ms]
+(pass) output-blocks module > parseIsolationMetadata > should parse environment and mode [0.30ms]
+(pass) output-blocks module > parseIsolationMetadata > should parse session name [0.06ms]
+(pass) output-blocks module > parseIsolationMetadata > should parse docker image [0.04ms]
+(pass) output-blocks module > parseIsolationMetadata > should parse all fields together [0.09ms]
+(pass) output-blocks module > generateIsolationLines > should generate lines for docker isolation [0.16ms]
+(pass) output-blocks module > generateIsolationLines > should generate lines for screen isolation [0.05ms]
+(pass) output-blocks module > createStartBlock > should create a start block with session and timestamp [0.22ms]
+(pass) output-blocks module > createStartBlock > should include empty spine line before command [0.06ms]
+(pass) output-blocks module > createStartBlock > should include isolation metadata when provided [0.07ms]
+(pass) output-blocks module > createStartBlock > should include docker metadata correctly [0.06ms]
+(pass) output-blocks module > createFinishBlock > should create a finish block with result marker and metadata [0.25ms]
+(pass) output-blocks module > createFinishBlock > should use failure marker for non-zero exit code [0.10ms]
+(pass) output-blocks module > createFinishBlock > should omit duration when not provided [0.07ms]
+(pass) output-blocks module > createFinishBlock > should repeat isolation metadata in footer [0.12ms]
+(pass) output-blocks module > createFinishBlock > should have log and session as the last two lines [0.07ms]
+(pass) output-blocks module > formatDuration > should format very small durations [3.38ms]
+(pass) output-blocks module > formatDuration > should format millisecond durations [0.13ms]
+(pass) output-blocks module > formatDuration > should format second durations [0.04ms]
+(pass) output-blocks module > formatDuration > should format longer durations with less precision [0.03ms]
+(pass) output-blocks module > escapeForLinksNotation > should not quote simple values [0.09ms]
+(pass) output-blocks module > escapeForLinksNotation > should quote values with spaces [0.02ms]
+(pass) output-blocks module > escapeForLinksNotation > should quote values with colons [0.01ms]
+(pass) output-blocks module > escapeForLinksNotation > should use single quotes for values with double quotes [0.02ms]
+(pass) output-blocks module > escapeForLinksNotation > should use double quotes for values with single quotes [0.02ms]
+(pass) output-blocks module > escapeForLinksNotation > should escape quotes when both types are present [0.16ms]
+(pass) output-blocks module > escapeForLinksNotation > should handle null values [0.11ms]
+(pass) output-blocks module > formatAsNestedLinksNotation > should format simple objects [0.14ms]
+(pass) output-blocks module > formatAsNestedLinksNotation > should quote values with spaces [0.05ms]
+(pass) output-blocks module > formatAsNestedLinksNotation > should handle empty objects [0.07ms]
+(pass) output-blocks module > formatAsNestedLinksNotation > should handle null [0.03ms]
+(pass) output-blocks module > formatAsNestedLinksNotation > should indent nested arrays under their parent key [0.13ms]
+(pass) output-blocks module > Virtual Command API > createVirtualCommandBlock > should create a command line for virtual commands [0.08ms]
+(pass) output-blocks module > Virtual Command API > createVirtualCommandBlock > should behave like createCommandLine [0.02ms]
+(pass) output-blocks module > Virtual Command API > createVirtualCommandResult > should return success marker for true [0.06ms]
+(pass) output-blocks module > Virtual Command API > createVirtualCommandResult > should return failure marker for false [0.01ms]
+(pass) output-blocks module > Virtual Command API > createTimelineSeparator > should create an empty timeline line [0.02ms]
+(pass) output-blocks module > Virtual Command API > createTimelineSeparator > should behave like createEmptyTimelineLine [0.01ms]
+(pass) output-blocks module > createStartBlock with deferCommand > should include command line by default [0.09ms]
+(pass) output-blocks module > createStartBlock with deferCommand > should omit command line when deferCommand is true [0.03ms]
+(pass) output-blocks module > createStartBlock with deferCommand > should end with empty timeline line when deferCommand is true (issue #73) [0.12ms]
+(pass) output-blocks module > Visual Continuity (issue #73) > virtual command block should be followed by empty line for visual separation [0.02ms]
+(pass) output-blocks module > Visual Continuity (issue #73) > timeline separator should be empty timeline line for visual structure [0.01ms]
+(pass) output-blocks module > Visual Continuity (issue #73) > start block with docker isolation should end cleanly for virtual commands [0.05ms]
+(pass) output-blocks module > Visual Continuity (issue #73) > output formatting follows visual continuity pattern [0.04ms]
+
+test/public-exports.js:
+(pass) Public Exports > execution-store export > should export ExecutionStore class [0.09ms]
+(pass) Public Exports > execution-store export > should export ExecutionRecord class [0.04ms]
+(pass) Public Exports > execution-store export > should export ExecutionStatus enum [0.04ms]
+(pass) Public Exports > execution-store export > should export LockManager class [0.17ms]
+(pass) Public Exports > execution-store export > should export isClinkInstalled function [0.03ms]
+(pass) Public Exports > execution-store export > should export configuration constants [0.08ms]
+(pass) Public Exports > execution-store export > should allow creating and using ExecutionStore instance [35.54ms]
+
+test/publish-to-crates.mjs:
+(pass) publish-to-crates script > reports success without a token when the version is already published [249.92ms]
+(pass) publish-to-crates script > fails clearly when a missing version needs a crates token [233.90ms]
+(pass) publish-to-crates script > publishes a missing version with cargo publish [253.17ms]
+
+test/regression-138.js:
+invalid reference format
+(pass) docker pull is recorded in the session log (issue #138) > writes prep markers and the docker error into the log on a failed pull [261.88ms]
+latest: Pulling from library/hello-world
+4f55086f7dd0: Pulling fs layer
+4f55086f7dd0: Download complete
+4f55086f7dd0: Pull complete
+Digest: sha256:5e23090353324d887c48ad5e5c56d294eab81588df9605b07d1afe895f9cc8f8
+Status: Downloaded newer image for hello-world:latest
+docker.io/library/hello-world:latest
+(pass) docker pull is recorded in the session log (issue #138) > tees real pull output and an "Image ready" marker into the log [2117.39ms]
+invalid reference format
+(pass) docker pull is recorded in the session log (issue #138) > does not write prep markers when no logPath is given (backward compat) [617.72ms]
+(pass) runInDocker threads logPath into dockerPullImage (issue #138) > source passes options.logPath to dockerPullImage [0.44ms]
+(pass) runInDocker threads logPath into dockerPullImage (issue #138) > dockerPullImage tees output and writes prep markers in source [0.15ms]
+
+test/regression-150.js:
+(pass) anchored log footer parsing (issue #150) > ignores an `Exit Code:` substring inside the command output [44.90ms]
+(pass) anchored log footer parsing (issue #150) > ignores a bare `Exit Code:` line without the footer block around it [0.90ms]
+(pass) anchored log footer parsing (issue #150) > ignores an `Exit Code:` substring in the middle of a line [0.75ms]
+(pass) anchored log footer parsing (issue #150) > reads the real footer that `start` appends [19.91ms]
+(pass) anchored log footer parsing (issue #150) > reads the real footer even when the output forged one earlier [1.03ms]
+(pass) anchored log footer parsing (issue #150) > reads negative and multi-digit codes, and tolerates CRLF logs [12.62ms]
+(pass) anchored log footer parsing (issue #150) > returns null for a log without a footer and for a missing file [7.82ms]
+(pass) anchored log footer parsing (issue #150) > finds the footer at the end of a large log without reading it all [21.75ms]
+(pass) anchored log footer parsing (issue #150) > drops the partial first line of the tail so it cannot be a line start [1.27ms]
+(pass) detached status is not derailed by forged output (issue #150) > keeps an executing record executing when only the output claims an exit code [164.18ms]
+(pass) detached status is not derailed by forged output (issue #150) > marks the record executed once the genuine footer is appended [169.39ms]
+
+test/regression-162.js:
+(pass) Issue #162: attach, resume and exit reasons > --list --running > reports only executions that are still running [188.97ms]
+(pass) Issue #162: attach, resume and exit reasons > --list --running > is rejected without --list [112.42ms]
+(pass) Issue #162: attach, resume and exit reasons > --attach > fails with a clear error for an unknown identifier [83.96ms]
+(pass) Issue #162: attach, resume and exit reasons > --attach > refuses to attach to a non-isolated execution [90.30ms]
+(pass) Issue #162: attach, resume and exit reasons > --attach > points at --resume when the session is already gone [311.21ms]
+(pass) Issue #162: attach, resume and exit reasons > --resume > fails with a clear error for an unknown identifier [78.23ms]
+(pass) Issue #162: attach, resume and exit reasons > --resume > refuses to resume a non-isolated execution [164.92ms]
+(pass) Issue #162: attach, resume and exit reasons > --resume > accepts a replacement command after -- [75.31ms]
+(pass) Issue #162: attach, resume and exit reasons > --resume-all > succeeds with an empty report when nothing is running [88.37ms]
+(pass) Issue #162: attach, resume and exit reasons > --resume-all > reconciles executions whose session no longer exists [449.51ms]
+(pass) Issue #162: attach, resume and exit reasons > exit reason hint > explains a 139 exit caused by heap exhaustion [105.36ms]
+(pass) Issue #162: attach, resume and exit reasons > exit reason hint > does not invent a reason for a clean exit [116.74ms]
+(pass) Issue #162: attach, resume and exit reasons > session identity across resumes > keeps addressing one logical session by its previous name [694.67ms]
+
+test/regression-164.js:
+(pass) parseArgs keeps argv boundaries (issue #164) > quotes an argument that contains a shell metacharacter [2.48ms]
+(pass) parseArgs keeps argv boundaries (issue #164) > quotes an argument that contains repeated spaces [0.21ms]
+(pass) parseArgs keeps argv boundaries (issue #164) > keeps a single argument verbatim so shell scripts still work [0.08ms]
+(pass) parseArgs keeps argv boundaries (issue #164) > leaves ordinary arguments unquoted [0.05ms]
+(pass) parseArgs keeps argv boundaries (issue #164) > keeps boundaries after the -- separator [0.32ms]
+(pass) parseArgs keeps argv boundaries (issue #164) > returns an empty command when no command was given [0.38ms]
+(pass) buildCommandString and quoteShellArg (issue #164) > returns an empty string for empty argv [0.03ms]
+(pass) buildCommandString and quoteShellArg (issue #164) > escapes embedded single quotes for a POSIX shell [0.02ms]
+(pass) buildCommandString and quoteShellArg (issue #164) > escapes embedded single quotes for PowerShell by doubling them [0.06ms]
+(pass) buildCommandString and quoteShellArg (issue #164) > quotes characters PowerShell treats specially but a POSIX shell does not [0.04ms]
+(pass) buildCommandString and quoteShellArg (issue #164) > uses the host shell dialect by default [0.02ms]
+(pass) buildCommandString and quoteShellArg (issue #164) > quotes an empty argument so it survives as an argument [0.03ms]
+(pass) buildCommandString and quoteShellArg (issue #164) > round-trips through splitShellWords in both dialects [0.15ms]
+(pass) splitShellWords (issue #164) > splits on unquoted whitespace [0.05ms]
+(pass) splitShellWords (issue #164) > keeps double-quoted words together [0.02ms]
+(pass) splitShellWords (issue #164) > keeps single-quoted words together [0.02ms]
+(pass) splitShellWords (issue #164) > honours backslash escapes in a POSIX shell [0.02ms]
+(pass) splitShellWords (issue #164) > keeps backslashes literal for PowerShell, where they are separators [0.02ms]
+(pass) splitShellWords (issue #164) > reads a doubled quote inside a PowerShell string as one quote [0.02ms]
+(pass) splitShellWords (issue #164) > returns null when quoting is unbalanced [0.02ms]
+(pass) toShellWords (issue #164) > keeps a quoted bare-shell argument in one argv element [0.04ms]
+(pass) toShellWords (issue #164) > falls back to whitespace splitting when quoting is unbalanced [0.09ms]
+(pass) shell detection stays correct for quoted commands (issue #164) > still detects a bare shell invocation [0.06ms]
+(pass) shell detection stays correct for quoted commands (issue #164) > detects a shell invocation whose script argument is quoted [0.03ms]
+(pass) shell detection stays correct for quoted commands (issue #164) > passes the quoted script through as a single argv element [1.59ms]
+(pass) shell detection stays correct for quoted commands (issue #164) > reads the command name from the first shell word [0.16ms]
+(pass) buildDisplayCommand shows the argv the user typed (issue #164) > re-quotes an argument that was quoted by the parser [0.19ms]
+(pass) buildDisplayCommand shows the argv the user typed (issue #164) > re-quotes an argument containing shell metacharacters [0.11ms]
+(pass) buildDisplayCommand shows the argv the user typed (issue #164) > shows a single-argument shell script verbatim [0.03ms]
+(pass) CLI end to end (issue #164) > runs node -e with a quoted script [414.39ms]
+(pass) CLI end to end (issue #164) > preserves repeated spaces inside a quoted argument [137.50ms]
+(pass) CLI end to end (issue #164) > keeps `bash -c` scripts intact on the direct path (issue #91 shape) [145.14ms]
+(pass) CLI end to end (issue #164) > keeps arithmetic expansion inside `bash -c` intact [178.94ms]
+(pass) CLI end to end (issue #164) > still runs a single quoted argument as a shell script [195.34ms]
+(pass) CLI end to end (issue #164) > displays the command with the quoting the user typed [205.58ms]
+
+test/regression-165.js:
+(pass) Issue #165: memory exhaustion observed from the log > reports memoryExhausted for an attached docker session that self-aborted [102.93ms]
+(pass) Issue #165: memory exhaustion observed from the log > finds a marker pushed far from EOF by the native stack trace [133.81ms]
+(pass) Issue #165: memory exhaustion observed from the log > detects a Rust allocation failure [97.06ms]
+(pass) Issue #165: memory exhaustion observed from the log > never turns a clean run into a reported memory failure [126.12ms]
+(pass) Issue #165: memory exhaustion observed from the log > leaves an ordinary failure without a memory observation [118.70ms]
+(pass) Issue #165: memory exhaustion observed from the log > shows the observation in the human-readable and links-notation output [182.56ms]
+(pass) Issue #165: kept-container footer > does not assert a bare oomKilled=false for a self-abort exit code [5.41ms]
+(pass) Issue #165: kept-container footer > keeps the plain reason for other exit codes and for a real OOM kill [5.17ms]
+(pass) Issue #165: kept-container footer > embeds the reason computation in the detached completion script [0.49ms]
+(pass) Issue #165: attached kept-container message > names the evidence the runtime printed into the log [1.04ms]
+(pass) Issue #165: attached kept-container message > stays silent for an ordinary failure [0.52ms]
+
+test/regression-170.js:
+(pass) issue #170.2: endTime is never fabricated silently > derives endTime from docker State.FinishedAt for a stopped container [4.13ms]
+(pass) issue #170.2: endTime is never fabricated silently > falls back to the log footer Finished: line when docker is gone [3.25ms]
+(pass) issue #170.2: endTime is never fabricated silently > marks the observation-time fallback instead of pretending it is a finish time [3.48ms]
+(pass) issue #170.2: endTime is never fabricated silently > keeps an already recorded endTime and marks it as persisted [3.82ms]
+(pass) issue #170.3: cleanupStale records the detection time > sets staleDetectedAt and leaves endTime unknown [31.99ms]
+(pass) issue #170.1: the detached watcher persists the terminal state > invokes the finalizer with the inspected docker facts [0.97ms]
+(pass) issue #170.1: the detached watcher persists the terminal state > stays backward compatible when no execution id is supplied [0.25ms]
+(pass) issue #170.1: the detached watcher persists the terminal state > writes status, exitCode, endTime and provenance into the store [45.65ms]
+(pass) issue #170.1: the detached watcher persists the terminal state > falls back to observation time when docker reports no finish time [27.46ms]
+(pass) issue #170.1: the detached watcher persists the terminal state > never fails when the record is gone [3.19ms]
+
+test/regression-171.js:
+(pass) issue #171.4: one shared exit-code describer > decodes 128+n into the signal name [0.17ms]
+(pass) issue #171.4: one shared exit-code describer > leaves ordinary exit codes alone [0.04ms]
+(pass) issue #171.4: one shared exit-code describer > reports unknown for a non numeric code [0.10ms]
+(pass) issue #171.4: one shared exit-code describer > is re-exported from isolation-log-utils so both callers share it [0.03ms]
+(pass) issue #171: docker timestamp and lifetime helpers > rejects the docker zero-time sentinel [0.05ms]
+(pass) issue #171: docker timestamp and lifetime helpers > computes the container lifetime [0.18ms]
+(pass) issue #171.2: the kept-container log carries the post-mortem > formats the block in the documented shape [0.44ms]
+(pass) issue #171.2: the kept-container log carries the post-mortem > renders unknown facts instead of empty fields [0.07ms]
+(pass) issue #171.3: the removal path states the same facts > formats a single line [0.05ms]
+(pass) issue #171.1: the watcher collects the full state in one inspect > asks docker for exit code, oom flag and both timestamps [0.09ms]
+(pass) issue #171: the generated watcher shell writes the facts > appends the post-mortem block for a kept container [25.52ms]
+(pass) issue #171: the generated watcher shell writes the facts > appends a one line note for a removed container [21.65ms]
+(pass) issue #171: the generated watcher shell writes the facts > keeps the lifetime exact on a host whose date is BSD [63.60ms]
+(pass) issue #171: the generated watcher shell writes the facts > keeps sub-second lifetimes exact on a BSD date host [47.94ms]
+(pass) issue #171: the generated watcher shell writes the facts > survives an inspect failure without writing garbage [37.39ms]
+(pass) issue #171: the completion script wires the facts into every path > collects the full state and writes a post-mortem on the kept path [0.51ms]
+(pass) issue #171: the completion script wires the facts into every path > writes a post-mortem even when the container is always kept [0.21ms]
+(pass) issue #171: the completion script wires the facts into every path > writes the removal note when the container is always removed [0.16ms]
+(pass) issue #171: the attached path records the same facts > reads every documented fact in one inspect [11.19ms]
+(pass) issue #171: the attached path records the same facts > rejects the zero-time sentinel for a container that never started [18.77ms]
+(pass) issue #171: the attached path records the same facts > returns null when the container cannot be inspected at all [4.90ms]
+(pass) issue #171: the attached path records the same facts > appends the post-mortem block to a kept attached run log [1.45ms]
+(pass) issue #171: the attached path records the same facts > appends the one line note when the attached container is removed [2.26ms]
+(pass) issue #171: the attached path records the same facts > stays silent when docker could not be inspected [1.03ms]
+
+test/regression-174.js:
+(pass) issue #174: docker logs -f returning is not the container exiting > waits for the real exit after docker logs -f fails (ENOSPC) [282.41ms]
+(pass) issue #174: docker logs -f returning is not the container exiting > only removes the container once it has really exited [295.47ms]
+(pass) issue #174: docker logs -f returning is not the container exiting > keeps waiting across a failed docker inspect (dockerd restart) [384.64ms]
+(pass) issue #174: docker logs -f returning is not the container exiting > applies the same wait to the no-log watcher [316.52ms]
+(pass) issue #174: a container that is still running is left alone > never removes, footers or finalizes a running container [200.58ms]
+(pass) issue #174: a container that is still running is left alone > never removes a running container without a log either [161.46ms]
+(pass) issue #174: a zero FinishedAt is never an exit 0 > keeps the container and records no success in the watcher [227.71ms]
+(pass) issue #174: a zero FinishedAt is never an exit 0 > refuses to finalize a record whose container is still running [20.78ms]
+(pass) issue #174: a zero FinishedAt is never an exit 0 > does not trust exit 0 without a FinishedAt [51.26ms]
+(pass) issue #174: a zero FinishedAt is never an exit 0 > still records a real exit 0 [16.60ms]
+(pass) issue #174: a signal death is never exit 0 > maps a null code with a signal to 128+n [0.19ms]
+(pass) issue #174: a signal death is never exit 0 > maps a missing code without a signal to a failure [0.02ms]
+(pass) issue #174: a signal death is never exit 0 > keeps real exit codes, including 0 [0.02ms]
+(pass) issue #174: a signal death is never exit 0 > records a self-killed child as 137 in the node spawn path [7.36ms]
+
+test/regression-176.js:
+(pass) issue #176: resource limits read from docker inspect > formats sizes and CPUs the way docker run accepts them [0.22ms]
+(pass) issue #176: resource limits read from docker inspect > translates the HostConfig from the issue into run flags [0.27ms]
+(pass) issue #176: resource limits read from docker inspect > emits nothing for an unlimited container [0.05ms]
+(pass) issue #176: resource limits read from docker inspect > covers quota/period, cpusets, shm, storage options and ulimits [0.10ms]
+(pass) issue #176: resource limits read from docker inspect > never emits --memory-swap without --memory [0.02ms]
+(pass) issue #176: resource limits read from docker inspect > reads the HostConfig with docker inspect [0.29ms]
+(pass) issue #176: resource limits read from docker inspect > keeps stored limits as flags, including commas in cpusets [0.12ms]
+(pass) issue #176: snapshot resume keeps the resource limits > passes the live limits to docker run of the -resume-N container [0.31ms]
+(pass) issue #176: snapshot resume keeps the resource limits > falls back to the limits stored in the record [0.07ms]
+(pass) issue #176: snapshot resume keeps the resource limits > carries stored limits into a relaunch [0.10ms]
+(pass) issue #176: snapshot resume keeps the resource limits > inspects the old container before the commit and records the limits [4.00ms]
+(pass) issue #176: snapshot resume keeps the resource limits > shows the limits in [Isolation] lines and stores them as metadata [0.16ms]
+(pass) issue #176: --on-kill-resume / --recovery-command options > parses both options in separate and = forms [0.46ms]
+(pass) issue #176: --on-kill-resume / --recovery-command options > defaults to one attempt when only a recovery command is given [0.11ms]
+(pass) issue #176: --on-kill-resume / --recovery-command options > rejects invalid counts and missing values [0.53ms]
+(pass) issue #176: --on-kill-resume / --recovery-command options > requires a detached docker-only session [0.42ms]
+(pass) issue #176: --on-kill-resume / --recovery-command options > describes the recovery in [Isolation] lines and metadata [2.47ms]
+(pass) issue #176: recovery selector inside the container > runs the main command until a recovery is marked [21.52ms]
+(pass) issue #176: recovery selector inside the container > wraps the main argv after the recovery parameters [0.21ms]
+(pass) issue #176: resuming a killed session > detects a kill by exit 137, or OOMKilled without an exit code [0.23ms]
+(pass) issue #176: resuming a killed session > formats the [Recovery k/N] separator [0.50ms]
+(pass) issue #176: resuming a killed session > marks the container, restarts it and keeps the same UUID and log [48.73ms]
+(pass) issue #176: resuming a killed session > re-runs the original command when no recovery command is set [30.80ms]
+(pass) issue #176: resuming a killed session > stops after N attempts [15.21ms]
+(pass) issue #176: resuming a killed session > does not undo a deliberate --stop [11.01ms]
+(pass) issue #176: resuming a killed session > ignores ordinary failures and sessions without recovery [32.28ms]
+(pass) issue #176: resuming a killed session > reports a failed docker start in the log [50.78ms]
+(pass) issue #176: resuming a killed session > marks a --stop so the watcher does not resume it [72.30ms]
+(pass) issue #176: completion watcher hands kills to the recovery > builds the recovery branch only when requested [0.67ms]
+(pass) issue #176: completion watcher hands kills to the recovery > resumes a killed run through the real recovery entry point [700.07ms]
+(pass) issue #176: completion watcher hands kills to the recovery > finalizes an ordinary failure without resuming [223.12ms]
+(pass) issue #176: completion watcher hands kills to the recovery > finalizes a stopped session instead of resuming it [346.08ms]
+(pass) issue #176: completion watcher hands kills to the recovery > finalizes once the attempts are used up [475.14ms]
+(pass) issue #176: real docker snapshot resume > re-applies docker update limits to the -resume-1 container [5592.47ms]
+
+test/regression-178.js:
+(pass) issue #178: sticky OOMKilled is not a kill of the main process > isKilledExit only trusts OOMKilled without an exit code [0.31ms]
+(pass) issue #178: sticky OOMKilled is not a kill of the main process > the watcher shell condition agrees with isKilledExit [48.58ms]
+(pass) issue #178: sticky OOMKilled is not a kill of the main process > recoverKilledExecution does not resume an exit 0/1 with OOMKilled [125.40ms]
+(pass) issue #178: sticky OOMKilled is not a kill of the main process > the watcher finalizes exit 0 with OOMKilled=true without resuming [409.55ms]
+(pass) issue #178: sticky OOMKilled is not a kill of the main process > the watcher finalizes exit 1 with OOMKilled=true without resuming [274.60ms]
+
+test/regression-180.js:
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > exit 0 with oomKilled=true [0.26ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > exit 1 with oomKilled=true [1.05ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > exit 1 with oomKilled=false [0.03ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > exit 137 with oomKilled=true [0.09ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > exit 137 with oomKilled=false [2.13ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > exit -1 with oomKilled=true [0.11ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > exit 139 with oomKilled=true [0.04ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > requires fresh attribution in addition to SIGKILL or an unknown exit [0.26ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > still trusts a memory marker the command printed itself [0.14ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > reports the incident record without a memory verdict [0.27ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > drops a stale cgroup reason stored before the fix [0.10ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > the finalizer does not record the flag as the reason for exit 1 [24.14ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > the attached kept message names a child OOM kill, not the command [0.24ms]
+
+test/regression-181.js:
+(pass) issue #181: --on-kill-resume-delay parsing > accepts a range, a fixed delay and 0, with or without "=" [26.02ms]
+(pass) issue #181: --on-kill-resume-delay parsing > defaults to no delay [0.10ms]
+(pass) issue #181: --on-kill-resume-delay parsing > rejects malformed and reversed ranges [0.26ms]
+(pass) issue #181: --on-kill-resume-delay parsing > requires --on-kill-resume or --recovery-command [0.21ms]
+(pass) issue #181: --on-kill-resume-delay parsing > shows the delay in the [Isolation] line and stores it [0.15ms]
+(pass) issue #181: picking and waiting out the delay > picks uniformly within the range [0.38ms]
+(pass) issue #181: picking and waiting out the delay > waits in short steps and stops as soon as it is cancelled [0.26ms]
+(pass) issue #181: picking and waiting out the delay > really blocks the thread for the real sleep [50.35ms]
+(pass) issue #181: recovering after the delay > prints the delay in the [Recovery k/N] line [0.30ms]
+(pass) issue #181: recovering after the delay > waits before docker start and records delayMs in the history [93.31ms]
+(pass) issue #181: recovering after the delay > keeps the old behaviour and history format without a delay [42.52ms]
+(pass) issue #181: recovering after the delay > a --stop during the wait cancels the pending recovery [30.86ms]
+(pass) issue #181: recovering after the delay > a --terminate of the exited container still cancels the recovery [42.60ms]
+(pass) issue #181: recovering after the delay > a failed --terminate for another reason still restores the marker [44.98ms]
+
+test/regression-182.js:
+(pass) issue #182: reading cgroup v2 memory counters > parses the sample the watcher writes [0.30ms]
+(pass) issue #182: reading cgroup v2 memory counters > leaves OOM scope unknown with only raw counters [0.15ms]
+(pass) issue #182: reading cgroup v2 memory counters > formats the counters for --status and for the log [0.16ms]
+(pass) issue #182: the watcher samples the cgroup while the container runs > starts the sampler first and stops it before reading the state [0.52ms]
+(pass) issue #182: the watcher samples the cgroup while the container runs > keeps the last sample once the cgroup is gone [1591.45ms]
+(pass) issue #182: the watcher samples the cgroup while the container runs > writes the counters into the post-mortem and the record [1989.79ms]
+(pass) issue #182: the watcher samples the cgroup while the container runs > notes the counters of a removed container too [1873.71ms]
+(pass) issue #182: the watcher samples the cgroup while the container runs > records nothing without a cgroup v2 sample [25.89ms]
+(pass) issue #182: the watcher samples the cgroup while the container runs > explains an unknown exit with the per-run oom_kill count [25.57ms]
+(pass) issue #182: the kill recovery keeps the killed run counters > logs them and notes them in recoveryHistory [51.10ms]
+
+test/regression-185.js:
+(pass) issue #185: counter-only OOM scope is unknown > preserves raw counters without attributing scope: 3135373312 3135373312 1 3 [0.31ms]
+(pass) issue #185: counter-only OOM scope is unknown > preserves raw counters without attributing scope: 3135373312 3135373312 2 2 [0.05ms]
+(pass) issue #185: counter-only OOM scope is unknown > preserves raw counters without attributing scope: 3135373312 3135373312 4 1 [0.03ms]
+(pass) issue #185: counter-only OOM scope is unknown > preserves raw counters without attributing scope: 3135373312 3135373312 0 3 [0.03ms]
+(pass) issue #185: counter-only OOM scope is unknown > preserves raw counters without attributing scope: 3135373312 3135373312 - 3 [0.06ms]
+(pass) issue #185: counter-only OOM scope is unknown > does not report an OOM scope when kills are zero or unknown [5.02ms]
+(pass) issue #185: counter-only OOM scope is unknown > writes the same unknown scope from the POSIX watcher shell [35.79ms]
+(pass) issue #185: counter-only OOM scope is unknown > retains the exit-code guard for earlier child OOM kills [0.77ms]
+
+test/regression-187.js:
+(pass) issue #187: explicit resume attempts > reattaches the current attempt without enabling kill recovery for snapshot commands [252.26ms]
+(pass) issue #187: explicit resume attempts > merges attachment metadata without reviving a completed or newer attempt [116.47ms]
+(pass) issue #187: explicit resume attempts > keeps boundaries and evidence when an explicit resume is automatically recovered [116.20ms]
+(pass) issue #187: explicit resume attempts > runs the timestamped output capture and finalizer through the real watcher shell [487.44ms]
+(pass) issue #187: explicit resume attempts > archives terminal evidence and resets every attempt-local field [66.83ms]
+(pass) issue #187: explicit resume attempts > does not resolve the previous footer or memory marker as current evidence [170.04ms]
+(pass) issue #187: explicit resume attempts > persists the new attempt before a watcher can finalize an immediate exit [96.11ms]
+(pass) issue #187: explicit resume attempts > records a structured boundary before launch and accepted launch separately from output [61.23ms]
+(pass) issue #187: explicit resume attempts > preserves the stopped record when launch fails and logs that failure [45.48ms]
+(pass) issue #187: explicit resume attempts > records previous and new container names for a snapshot resume [60.48ms]
+(pass) issue #187: explicit resume attempts > defers the relaunch watcher until the accepted attempt is saved [83.10ms]
+(pass) issue #187: explicit resume attempts > reports watcher failure while preserving the accepted launch [95.10ms]
+(pass) issue #187: explicit resume attempts > rejects a finalizer carrying evidence from a previous attempt [77.96ms]
+(pass) issue #187: explicit resume attempts > does not reuse a previous fatal marker when the new run exits 139 [232.09ms]
+(pass) issue #187: explicit resume attempts > keeps successive attempts and their terminal evidence through store round trips [173.70ms]
+(pass) issue #187: explicit resume attempts > reports output time only after fresh timestamped command output, even without a newline [623.02ms]
+(pass) issue #187: explicit resume attempts > bounds reads and never scans prior evidence after log truncation [56.60ms]
+(pass) issue #187: explicit resume attempts > builds a watcher that filters historical output and carries the attempt identity [2.81ms]
+
+test/regression-189.js:
+(pass) CPU penalty is opt-in and accepts durations and percentage settings [1.47ms]
+(pass) requires complete time-weighted windows, then lifts and observes afresh [0.64ms]
+(pass) resets coverage on outage, gaps, resize and restart, and skips ineffective caps [8.37ms]
+(pass) weights timestamps rather than giving short intervals equal weight [0.22ms]
+(pass) resume restores the original base within resized daemon capacity [1.30ms]
+(pass) monitor applies, lifts and reapplies with tracking disabled [2972.95ms]
+(pass) preserves legacy CPU quota format and the lower original base [4.87ms]
+
+test/regression-190.js:
+(pass) issue #190: launch resource options > recognizes resource flags and rejects invalid input before launch [5.95ms]
+(pass) uses daemon capacity, draws each range once and disables extra swap by default [0.40ms]
+(pass) preserves stored resolutions without another random draw or daemon query [0.07ms]
+(pass) rejects swap below memory and daemon capacity failures [0.16ms]
+(pass) forwards raw resource and penalty options through every remaining Docker level [0.62ms]
+
+test/regression-191.js:
+(pass) manual in-place memory override updates before start and records the resolution [85.23ms]
+(pass) manual snapshot override applies limits to the new container at creation [94.19ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=true) [50.94ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=false) [45.11ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=false) [58.39ms]
+(pass) automatic memory change requires a qualifying OOM (exit=1, fresh=false) [16.69ms]
+(pass) a failed memory update prevents starting the old-limit command [76.64ms]
+
+test/regression-192.js:
+(pass) samples remote/private cgroups through Docker and reports unavailable counters [0.32ms]
+(pass) real watcher shell: remote [1305.42ms]
+(pass) real watcher shell: no-shell [1329.07ms]
+(pass) real watcher shell: outage [1306.09ms]
+(pass) real watcher shell: shared [1292.90ms]
+
+test/regression-193.js:
+(pass) issue #193: durable store locks and resume > reclaims an old malformed lock ("") [8.58ms]
+(pass) issue #193: durable store locks and resume > reclaims an old malformed lock ("{\"pid\":") [6.72ms]
+(pass) issue #193: durable store locks and resume > reclaims an old malformed lock ("{\"pid\":\"83190\",\"timestamp\":1791655281794,\"hostname\":\"4a9f0873bb9a\"}") [15.19ms]
+(pass) issue #193: durable store locks and resume > does not replace a fresh incomplete lock [107.00ms]
+(pass) issue #193: durable store locks and resume > reserves the replacement session before Docker side effects [10.27ms]
+(pass) issue #193: durable store locks and resume > never launches when the durable reservation fails [0.86ms]
+(pass) an ENOSPC while writing lock data never publishes an empty shared lock [10.69ms]
+(pass) attaches the watcher and identifies a postlaunch save failure (stop=true) [1.29ms]
+(pass) attaches the watcher and identifies a postlaunch save failure (stop=false) [0.32ms]
+(pass) a partial ENOSPC database write preserves the durable reservation [22.64ms]
+(pass) a dead launcher does not permanently block a later resume [84.63ms]
+
+test/regression-194.js:
+(pass) historical child OOM kills cannot explain a subsequent SIGKILL [0.49ms]
+(pass) requires a recent sampled delta and rejects historical or malformed evidence [0.52ms]
+(pass) requires Docker service and matching-container force-kill evidence for a daemon restart [0.87ms]
+(pass) persists terminal evidence without requiring a surviving log file [33.59ms]
+(pass) keeps logged main-process evidence when no cgroup sample reaches the finalizer [30.41ms]
+(pass) attached reporting uses attributed evidence and keeps ordinary exits final [4.83ms]
+
+test/regression-198.js:
+(pass) replacement command resumes the same container without a snapshot or changed ID [6.09ms]
+(pass) automatic recovery replaces a prior explicit handoff and exports its attempt [2.52ms]
+(pass) legacy snapshots preflight before commit and remove originals only with non-forced rm after start [15.79ms]
+(pass) disk shortage rolls back the reservation without committing or removing the original [8.24ms]
+(pass) snapshot failure removes a completed image and restores the original execution [6.35ms]
+(pass) watcher removes its generated image after the cleanup policy removes its container [97.05ms]
+(pass) changed caller labels use a guarded snapshot and reapply merged labels [9.74ms]
+(pass) original retained by default and when a successor has already stopped [18.13ms]
+(pass) repeated snapshot successors retain the original root-session attribution [19.05ms]
+
+test/regression-199.js:
+(pass) Docker attribution labels (#199) > attributes replacement containers to their stable root and execution [1.21ms]
+(pass) Docker attribution labels (#199) > parses repeated labels and preserves equals signs and empty values [0.83ms]
+(pass) Docker attribution labels (#199) > rejects malformed, reserved and non-Docker labels [0.30ms]
+(pass) Docker attribution labels (#199) > forwards labels safely through nested Docker isolation [0.38ms]
+
+test/regression-201.js:
+(pass) wrapper help (#201) > --help prints the no-argument usage and exits successfully [234.42ms]
+(pass) wrapper help (#201) > --help after the separator remains part of the command [0.35ms]
+(pass) wrapper help (#201) > -h prints the no-argument usage and exits successfully [120.03ms]
+(pass) wrapper help (#201) > -h after the separator remains part of the command [0.08ms]
+
+test/regression-202.js:
+(pass) shell command semantics (#202) > keeps the whole command line when it contains ";" [0.16ms]
+(pass) shell command semantics (#202) > keeps the whole command line when it contains "&&" [0.02ms]
+(pass) shell command semantics (#202) > keeps the whole command line when it contains "||" [0.05ms]
+(pass) shell command semantics (#202) > keeps the whole command line when it contains "|" [0.01ms]
+(pass) shell command semantics (#202) > keeps the whole command line when it contains "&" [0.01ms]
+(pass) shell command semantics (#202) > keeps the whole command line when it contains ">" [0.01ms]
+(pass) shell command semantics (#202) > keeps the whole command line when it contains "<" [0.01ms]
+(pass) shell command semantics (#202) > keeps the whole command line when it contains "\n" [0.01ms]
+(pass) shell command semantics (#202) > preserves the script, empty positional argv, quotes, and quoted operators [0.15ms]
+(pass) shell command semantics (#202) > does not classify a missing script or a script-file argument as -c [0.17ms]
+(pass) shell command semantics (#202) > retains direct bash -i -c behavior from #91 [0.04ms]
+(pass) shell command semantics (#202) > leaves outer expansions, comments and globbing to the shell [0.06ms]
+(pass) shell command semantics (#202) > preserves literal escapes within a directly executed script [0.17ms]
+(pass) shell command semantics (#202) > executes sh -c 'exit 7'; echo after $? with the expected output and exit [4.76ms]
+(pass) shell command semantics (#202) > executes sh -c 'echo $0 $1' a b with the expected output and exit [2.68ms]
+(pass) shell command semantics (#202) > executes sh -c 'kill -9 $$'; exit $? with the expected output and exit [3.96ms]
+
+test/regression-84.js:
+(pass) isInteractiveShellCommand additional cases (issue #84) > should return true for "bash --norc" [0.28ms]
+(pass) isInteractiveShellCommand additional cases (issue #84) > should return true for "zsh --no-rcs" [0.07ms]
+(pass) isInteractiveShellCommand additional cases (issue #84) > should return true for "bash -i" (interactive flag, no -c) [0.03ms]
+(pass) isInteractiveShellCommand additional cases (issue #84) > should return true for "fish" [0.03ms]
+(pass) isInteractiveShellCommand additional cases (issue #84) > should return true for "dash" [0.03ms]
+(pass) isInteractiveShellCommand additional cases (issue #84) > should return true for "/usr/local/bin/bash" [0.03ms]
+(pass) isInteractiveShellCommand additional cases (issue #84) > should return false for 'bash -c "echo hello"' [0.02ms]
+(pass) Regression: No Shell-Inside-Shell (issue #84) > should pass "bash" with -i flag, not wrap in shell -c [0.24ms]
+(pass) Regression: No Shell-Inside-Shell (issue #84) > should pass "zsh" with -i flag, not wrap in shell -c [0.12ms]
+(pass) Regression: No Shell-Inside-Shell (issue #84) > should pass "sh" directly without -i (sh does not use -i flag), not wrap in shell -c [0.13ms]
+(pass) Regression: No Shell-Inside-Shell (issue #84) > should pass "/bin/bash" with -i flag, not wrap in shell -c [0.08ms]
+(pass) Regression: No Shell-Inside-Shell (issue #84) > should pass "bash --norc" with -i flag (workaround for broken .bashrc) [0.08ms]
+(pass) Regression: No Shell-Inside-Shell (issue #84) > should pass "bash -l" directly (login shell, already has its own init) [0.05ms]
+(pass) Regression: No Shell-Inside-Shell (issue #84) > should still wrap non-shell commands in shell -c (guard against over-broad fix) [0.07ms]
+(pass) Regression: No Shell-Inside-Shell (issue #84) > should still wrap "npm test" in shell -c (guard against over-broad fix) [0.05ms]
+(pass) Regression: No Shell-Inside-Shell (issue #84) > should not treat "bash -c something" as bare shell [0.05ms]
+(pass) Regression: No Shell-Inside-Shell (issue #84) > should not duplicate -i if user already passes "bash -i" [0.07ms]
+(pass) Docker daemon availability check (issue #84) > isDockerAvailable should return a boolean [191.71ms]
+(pass) Docker daemon availability check (issue #84) > runInDocker error message for non-running daemon should be actionable [0.24ms]
+(pass) Docker not installed check (issue #84) > isDockerInstalled should return a boolean [8.00ms]
+(pass) Docker not installed check (issue #84) > runInDocker error message for missing docker binary should be actionable [0.35ms]
+(pass) Docker not installed check (issue #84) > isDockerInstalled should return false consistently when docker binary is absent (mock) [7.20ms]
+(pass) Post-fix regression hint: --norc suggestion (issue #84) > should suggest --norc for bare bash that exits quickly [0.28ms]
+(pass) Post-fix regression hint: --norc suggestion (issue #84) > should suggest --no-rcs for bare zsh that exits quickly [0.08ms]
+(pass) Post-fix regression hint: --norc suggestion (issue #84) > should suggest --norc for /bin/bash path that exits quickly [0.04ms]
+(pass) Post-fix regression hint: --norc suggestion (issue #84) > should suggest --norc for bare sh that exits quickly [0.05ms]
+(pass) Post-fix regression hint: --norc suggestion (issue #84) > should confirm workaround: bash --norc is detected as bare shell [0.09ms]
+
+test/regression-89.js:
+(pass) Virtual docker pull output before Docker error (issue #89) > should show "$ docker pull <image>" line when Docker is not installed and image is specified [1.72ms]
+(pass) Virtual docker pull output before Docker error (issue #89) > should show "$ docker pull <image>" before the error message (issue #89) [0.49ms]
+(pass) Virtual docker pull output before Docker error (issue #89) > should output "$ docker pull <image>" in the correct format ($ prefix, no extra prefix) [0.12ms]
+(pass) runInDocker virtual pull output contract (issue #89) > runInDocker should output docker pull command but NOT ✗/│ markers before returning (issue #89) [0.48ms]
+
+test/regression-91.js:
+(pass) isShellInvocationWithArgs (issue #91) > should return true for "bash -i -c nvm --version" [0.22ms]
+(pass) isShellInvocationWithArgs (issue #91) > should return true for 'bash -c "echo hello"' [0.04ms]
+(pass) isShellInvocationWithArgs (issue #91) > should return true for "bash -c echo hello" [0.02ms]
+(pass) isShellInvocationWithArgs (issue #91) > should return true for "zsh -c nvm --version" [0.02ms]
+(pass) isShellInvocationWithArgs (issue #91) > should return true for "sh -c ls" [0.02ms]
+(pass) isShellInvocationWithArgs (issue #91) > should return true for "/bin/bash -c echo hi" [0.02ms]
+(pass) isShellInvocationWithArgs (issue #91) > should return false for bare "bash" (no -c) [0.03ms]
+(pass) isShellInvocationWithArgs (issue #91) > should return false for "bash -i" (no -c) [0.02ms]
+(pass) isShellInvocationWithArgs (issue #91) > should return false for "bash --norc" (no -c) [0.02ms]
+(pass) isShellInvocationWithArgs (issue #91) > should return false for non-shell commands [0.03ms]
+(pass) buildShellWithArgsCmdArgs (issue #91) > should reconstruct "bash -i -c nvm --version" correctly [0.04ms]
+(pass) buildShellWithArgsCmdArgs (issue #91) > should reconstruct "bash -c echo hello" correctly [0.02ms]
+(pass) buildShellWithArgsCmdArgs (issue #91) > should handle single-word script "bash -c ls" [0.02ms]
+(pass) buildShellWithArgsCmdArgs (issue #91) > should handle zsh with -c [0.05ms]
+(pass) buildShellWithArgsCmdArgs (issue #91) > should handle /bin/bash -i -c with multi-word script [0.06ms]
+(pass) buildShellWithArgsCmdArgs (issue #91) > should not include -c argument inside script argument (no double -c) [0.04ms]
+(pass) Regression: No Double-Wrapping for Shell With -c (issue #91) > should pass "bash -i -c nvm --version" directly without outer shell wrapper [0.20ms]
+(pass) Regression: No Double-Wrapping for Shell With -c (issue #91) > should pass "zsh -c nvm --version" directly without outer shell wrapper [0.09ms]
+(pass) Regression: No Double-Wrapping for Shell With -c (issue #91) > should pass "bash -c echo hello" directly [0.07ms]
+(pass) Regression: No Double-Wrapping for Shell With -c (issue #91) > should not introduce a second bash layer (no shell-inside-shell) [0.07ms]
+(pass) Regression: No Double-Wrapping for Shell With -c (issue #91) > should still handle bare "bash" with -i (regression guard for issue #84) [0.05ms]
+(pass) Regression: No Double-Wrapping for Shell With -c (issue #91) > should still wrap non-shell commands in outer shell -c (guard against over-broad fix) [0.04ms]
+(pass) Regression: No Double-Wrapping for Shell With -c (issue #91) > should still wrap "npm test" in outer shell -c [0.03ms]
+(pass) isShellInvocationWithArgs is mutually exclusive with isInteractiveShellCommand > "bash" is not both bare-shell and shell-with-args [0.07ms]
+(pass) isShellInvocationWithArgs is mutually exclusive with isInteractiveShellCommand > "bash -i" is not both bare-shell and shell-with-args [0.01ms]
+(pass) isShellInvocationWithArgs is mutually exclusive with isInteractiveShellCommand > "bash --norc" is not both bare-shell and shell-with-args [0.01ms]
+(pass) isShellInvocationWithArgs is mutually exclusive with isInteractiveShellCommand > "bash -i -c "nvm --version"" is not both bare-shell and shell-with-args [0.01ms]
+(pass) isShellInvocationWithArgs is mutually exclusive with isInteractiveShellCommand > "bash -c echo hi" is not both bare-shell and shell-with-args
+(pass) isShellInvocationWithArgs is mutually exclusive with isInteractiveShellCommand > "zsh -c ls" is not both bare-shell and shell-with-args [0.02ms]
+(pass) isShellInvocationWithArgs is mutually exclusive with isInteractiveShellCommand > "nvm --version" is not both bare-shell and shell-with-args
+(pass) isShellInvocationWithArgs is mutually exclusive with isInteractiveShellCommand > "echo hello" is not both bare-shell and shell-with-args
+(pass) buildDisplayCommand (issue #91 display fix) > should quote the -c script argument when it contains spaces [0.08ms]
+(pass) buildDisplayCommand (issue #91 display fix) > should quote the -c script argument for plain "bash -c echo hello" [0.07ms]
+(pass) buildDisplayCommand (issue #91 display fix) > should not double-quote if script has no spaces [0.05ms]
+(pass) buildDisplayCommand (issue #91 display fix) > should return command unchanged for non-shell-with-args commands [0.04ms]
+(pass) buildDisplayCommand (issue #91 display fix) > should return command unchanged for bare shell invocations [0.02ms]
+(pass) buildDisplayCommand (issue #91 display fix) > should handle zsh -c with spaces [2.76ms]
+
+test/release-name.mjs:
+(pass) releaseTag > uses plain "v${version}" when no prefix is given [0.11ms]
+(pass) releaseTag > prepends known language prefixes [0.03ms]
+(pass) releaseTag > passes arbitrary prefixes through [0.02ms]
+(pass) releaseName > returns bare version when prefix is empty (preserves pre-issue-108 behaviour) [0.05ms]
+(pass) releaseName > decorates known language prefixes with human titles [0.02ms]
+(pass) releaseName > falls back to "${prefix}${version}" for unknown prefixes [0.01ms]
+(pass) release badge helpers > strips plain and language-prefixed v tags before building badge versions [0.28ms]
+(pass) release badge helpers > escapes shields.io static badge path delimiters in prerelease versions [0.12ms]
+(pass) release badge helpers > builds an exact npm version badge without leaking the js tag prefix [0.20ms]
+(pass) release badge helpers > builds an exact crates.io version badge without leaking the rust tag prefix [0.07ms]
+(pass) extractChangelogEntry > extracts a Changesets-style JavaScript entry [0.37ms]
+(pass) extractChangelogEntry > extracts a Keep-a-Changelog-style Rust entry [0.11ms]
+(pass) containsPackageVersionBadge > detects the badge this repository generates [2.40ms]
+(pass) containsPackageVersionBadge > reports unformatted release notes [0.12ms]
+(pass) containsPackageVersionBadge > does not treat a foreign host that merely mentions the badge host as a badge [0.08ms]
+(pass) containsPackageVersionBadge > ignores relative and malformed image targets [0.49ms]
+(pass) containsPackageVersionBadge > accepts a badge carrying a markdown title [0.10ms]
+
+test/run-js-tests.mjs:
+(pass) run-js-tests timeout defaults > adds a 30 second timeout when no timeout is supplied [0.18ms]
+(pass) run-js-tests timeout defaults > preserves an explicit long timeout flag [0.04ms]
+(pass) run-js-tests timeout defaults > preserves an explicit inline timeout flag [0.02ms]
+(pass) run-js-tests timeout defaults > preserves Bun short timeout flag [0.02ms]
+
+test/screen-integration.js:
+(pass) Screen Integration Tests > runInScreen (if available) > should run command in detached screen session [77.76ms]
+(pass) Screen Integration Tests > runInScreen (if available) > should stream detached screen output to the tracked CLI log path [516.78ms]
+hello
+  Captured output: "hello"
+(pass) Screen Integration Tests > runInScreen (if available) > should run command in attached mode and capture output (issue #15) [167.29ms]
+line1
+line2
+line3
+  Captured multi-line output: "line1\nline2\nline3"
+(pass) Screen Integration Tests > runInScreen (if available) > should handle multi-line output in attached mode [157.49ms]
+hello
+  Captured quoted output: "hello"
+(pass) Screen Integration Tests > runInScreen (if available) > should capture output from commands with quoted strings (issue #25) [182.43ms]
+hello from attached mode
+  Captured complex quote output: "hello from attached mode"
+(pass) Screen Integration Tests > runInScreen (if available) > should capture output from commands with complex quoted strings [170.89ms]
+quick command output
+  Verified output capture: "quick command output"
+(pass) Screen Integration Tests > runInScreen (if available) > should always return output property in attached mode (issue #25 fix verification) [170.51ms]
+v26.11.0
+  Captured version output: "v26.11.0"
+(pass) Screen Integration Tests > runInScreen (if available) > should capture output from version-flag commands (issue #96) [160.83ms]
+/bin/sh: 1: nonexistent_command_12345: not found
+  Captured exit code: 127
+(pass) Screen Integration Tests > runInScreen (if available) > should capture exit code from failed commands (issue #96) [153.37ms]
+stderr-test
+  Captured stderr output: "stderr-test"
+(pass) Screen Integration Tests > runInScreen (if available) > should capture stderr output in screen isolation (issue #96) [178.01ms]
+line1
+line2
+line3
+  Multi-line output with exit code 0: verified
+(pass) Screen Integration Tests > runInScreen (if available) > should capture multi-line output with correct exit code (issue #96) [173.28ms]
+
+test/sequence-parser.js:
+(pass) Sequence Parser > parseSequence > should parse single value [0.17ms]
+(pass) Sequence Parser > parseSequence > should parse space-separated sequence [0.06ms]
+(pass) Sequence Parser > parseSequence > should parse sequence with underscores as null [0.11ms]
+(pass) Sequence Parser > parseSequence > should handle all underscores [0.04ms]
+(pass) Sequence Parser > parseSequence > should handle empty string [0.03ms]
+(pass) Sequence Parser > parseSequence > should handle null/undefined [0.06ms]
+(pass) Sequence Parser > parseSequence > should trim whitespace [0.07ms]
+(pass) Sequence Parser > parseSequence > should handle multiple spaces between values [0.03ms]
+(pass) Sequence Parser > formatSequence > should format array with values [0.03ms]
+(pass) Sequence Parser > formatSequence > should format array with nulls as underscores [0.02ms]
+(pass) Sequence Parser > formatSequence > should handle empty array [0.01ms]
+(pass) Sequence Parser > formatSequence > should handle non-array [0.15ms]
+(pass) Sequence Parser > shiftSequence > should remove first element [0.08ms]
+(pass) Sequence Parser > shiftSequence > should handle nulls [0.02ms]
+(pass) Sequence Parser > shiftSequence > should handle single element [0.01ms]
+(pass) Sequence Parser > shiftSequence > should handle empty array [0.02ms]
+(pass) Sequence Parser > isSequence > should return true for space-separated values [0.02ms]
+(pass) Sequence Parser > isSequence > should return false for single value [0.01ms]
+(pass) Sequence Parser > isSequence > should return false for non-string [0.14ms]
+(pass) Sequence Parser > distributeOption > should replicate single value for all levels [0.15ms]
+(pass) Sequence Parser > distributeOption > should parse sequence with matching length [0.04ms]
+(pass) Sequence Parser > distributeOption > should throw on length mismatch [0.09ms]
+(pass) Sequence Parser > distributeOption > should handle null/undefined value [0.03ms]
+(pass) Sequence Parser > getValueAtLevel > should get value at valid index [0.06ms]
+(pass) Sequence Parser > getValueAtLevel > should handle nulls [0.03ms]
+(pass) Sequence Parser > getValueAtLevel > should return null for out of bounds [0.03ms]
+(pass) Sequence Parser > getValueAtLevel > should handle non-array [0.05ms]
+(pass) Sequence Parser > formatIsolationChain > should format simple chain [0.18ms]
+(pass) Sequence Parser > formatIsolationChain > should add SSH endpoint [0.05ms]
+(pass) Sequence Parser > formatIsolationChain > should add Docker image short name [0.07ms]
+(pass) Sequence Parser > formatIsolationChain > should handle placeholders [0.03ms]
+(pass) Sequence Parser > formatIsolationChain > should handle empty array [0.02ms]
+(pass) Sequence Parser > buildNextLevelOptions > should shift all stacks [0.16ms]
+(pass) Sequence Parser > buildNextLevelOptions > should handle last level [0.08ms]
+
+test/session-name-status.js:
+=== Session Name Status Tests (Issue #101) ===
+(pass) Issue #101: --status with session name lookup > ExecutionStore.get() session name lookup > should find record by UUID [13.24ms]
+(pass) Issue #101: --status with session name lookup > ExecutionStore.get() session name lookup > should find record by session name [28.83ms]
+(pass) Issue #101: --status with session name lookup > ExecutionStore.get() session name lookup > should prefer UUID match over session name [22.29ms]
+(pass) Issue #101: --status with session name lookup > ExecutionStore.get() session name lookup > should return null for non-existent session name [0.47ms]
+(pass) Issue #101: --status with session name lookup > ExecutionStore.get() session name lookup > should return null for record without session name [14.34ms]
+(pass) Issue #101: --status with session name lookup > queryStatus() with session name > should query status by session name [27.50ms]
+(pass) Issue #101: --status with session name lookup > queryStatus() with session name > should show error for non-existent session name [0.44ms]
+(pass) Issue #101: --status with session name lookup > CLI --status with session name > should query by session name via CLI [255.88ms]
+(pass) Issue #101: --status with session name lookup > CLI --status with session name > should show error for non-existent session name via CLI [82.87ms]
+(pass) Issue #101: Detached status enrichment > isDetachedSessionAlive() > should return null for non-detached records [0.28ms]
+(pass) Issue #101: Detached status enrichment > isDetachedSessionAlive() > should return null for records without session name [0.05ms]
+(pass) Issue #101: Detached status enrichment > isDetachedSessionAlive() > should return false for non-existent screen session [34.16ms]
+(pass) Issue #101: Detached status enrichment > isDetachedSessionAlive() > should return false for non-existent docker container [132.01ms]
+(pass) Issue #101: Detached status enrichment > enrichDetachedStatus() > should not modify non-detached records [0.35ms]
+(pass) Issue #101: Detached status enrichment > enrichDetachedStatus() > should mark non-running detached session as executed [31.02ms]
+(pass) Issue #101: Detached status enrichment > enrichDetachedStatus() > Issue #134: completed record with a lingering live session > keeps the recorded exit code when the session is still listed [87.20ms]
+(pass) Issue #101: Detached status enrichment > enrichDetachedStatus() > Issue #134: completed record with a lingering live session > honors the log footer exit code even without a recorded exit code [94.12ms]
+(pass) Issue #101: Detached status enrichment > enrichDetachedStatus() > Issue #134: completed record with a lingering live session > flips to executing only when there is no terminal record at all [84.57ms]
+(pass) Issue #136: detached docker session liveness > reports unknown (null) — not false — when the container is not visible yet [99.66ms]
+(pass) Issue #136: detached docker session liveness > keeps the record executing while the container is not visible yet [120.84ms]
+(pass) Issue #136: detached docker session liveness > keeps a running container executing [1295.23ms]
+(pass) Issue #136: detached docker session liveness > resolves a stopped container to its real exit code, never the -1 sentinel [1160.48ms]
+(pass) Issue #144: detached docker OOMKilled status signal > surfaces oomKilled in status output even when Docker exit code is 0 [45.18ms]
+(pass) Issue #144: detached docker OOMKilled status signal > surfaces oomKilled in list output [26.61ms]
+(pass) Issue #148: detached docker OOMKilled terminal status when the container is gone > makes an OOM-killed session terminal once its container is gone [27.03ms]
+(pass) Issue #148: detached docker OOMKilled terminal status when the container is gone > uses the container exit code, not 137, for a stopped OOM-flagged container [31.12ms]
+(pass) Issue #151: OOMKilled is an observation, not a verdict > keeps a running container executing while exposing oomKilled [22.18ms]
+(pass) Issue #151: OOMKilled is an observation, not a verdict > never synthesizes 137 for a running container that reports exit code 137 [19.79ms]
+(pass) Issue #151: OOMKilled is an observation, not a verdict > reports the container exit code 0 once an OOM-flagged container finishes [26.87ms]
+(pass) Issue #151: OOMKilled is an observation, not a verdict > prefers the log footer exit code over the OOM fallback when the container is gone [23.42ms]
+(pass) Issue #151: OOMKilled is an observation, not a verdict > keeps the list output executing for an OOM-flagged running container [22.97ms]
+(pass) Issue #105: attachCurrentTime for executing status > should add currentTime to serialization when status is executing [0.35ms]
+(pass) Issue #105: attachCurrentTime for executing status > should not add currentTime when status is executed [0.06ms]
+(pass) Issue #105: attachCurrentTime for executing status > should not mutate the original record [0.04ms]
+(pass) Issue #105: attachCurrentTime for executing status > should place currentTime right after startTime in serialization order [0.10ms]
+(pass) Issue #105: attachCurrentTime for executing status > should handle null record gracefully [0.02ms]
+
+test/session-probe.js:
+(pass) parseScreenSessionState > finds a detached session [4.08ms]
+(pass) parseScreenSessionState > reports missing sessions [0.06ms]
+(pass) parseScreenSessionState > does not match a partial session name [0.03ms]
+(pass) mapDockerStatusToState > maps running to RUNNING [0.03ms]
+(pass) mapDockerStatusToState > maps exited and created to STOPPED [0.04ms]
+(pass) mapDockerStatusToState > maps an unknown or empty status to UNKNOWN [0.03ms]
+(pass) probeSession > detects a running docker container [0.26ms]
+(pass) probeSession > detects a stopped docker container [0.07ms]
+(pass) probeSession > detects a removed docker container [0.04ms]
+(pass) probeSession > detects a live tmux session [0.05ms]
+(pass) probeSession > detects a dead tmux session [0.04ms]
+(pass) probeSession > detects a live screen session [0.05ms]
+(pass) probeSession > reports ssh sessions as unknown [0.03ms]
+(pass) probeSession > reports records without a session name as unknown [0.03ms]
+
+test/shared-golden.js:
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: plain argv [0.36ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: explicit tmux separator [0.13ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: query without command [0.18ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: docker resource flags [0.21ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: unknown wrapper option [0.37ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: conflicting modes [0.05ms]
+(pass) shared JavaScript and Rust golden contracts > isolation argv: empty runtime flags [0.20ms]
+(pass) shared JavaScript and Rust golden contracts > isolation argv: resource, mount and network boundaries [0.09ms]
+(pass) shared JavaScript and Rust golden contracts > uses the same JSON and text status output [0.20ms]
+(pass) shared JavaScript and Rust golden contracts > preserves the complete execution record format (exit 0) [0.05ms]
+(pass) shared JavaScript and Rust golden contracts > preserves the complete execution record format (exit 137) [0.06ms]
+(pass) shared JavaScript and Rust golden contracts > executes the JavaScript source of the generated Rust parity policy [3.44ms]
+
+test/ssh-integration.js:
+  SSH to localhost not available, integration tests will be skipped
+  Skipping: SSH to localhost not available
+(pass) SSH Integration Tests > runInSsh with real SSH connection > should execute simple command in attached mode [0.39ms]
+  Skipping: SSH to localhost not available
+(pass) SSH Integration Tests > runInSsh with real SSH connection > should execute command with arguments [0.15ms]
+  Skipping: SSH to localhost not available
+(pass) SSH Integration Tests > runInSsh with real SSH connection > should handle command failure with non-zero exit code [0.11ms]
+  Skipping: SSH to localhost not available
+(pass) SSH Integration Tests > runInSsh with real SSH connection > should execute command in detached mode [0.14ms]
+  Skipping: SSH to localhost not available
+(pass) SSH Integration Tests > runInSsh with real SSH connection > should handle multiple sequential commands [0.18ms]
+  Skipping: SSH to localhost not available
+(pass) SSH Integration Tests > runInSsh with real SSH connection > should handle command with environment variables [0.10ms]
+  Skipping: SSH to localhost not available
+(pass) SSH Integration Tests > runInSsh with real SSH connection > should handle special characters in command [0.12ms]
+  Skipping: SSH to localhost not available
+(pass) SSH Integration Tests > runInSsh with real SSH connection > should work with custom session name [0.12ms]
+  Note: SSH connection error handling is tested via unit tests
+(pass) SSH Integration Tests > SSH error handling > should fail gracefully with invalid endpoint [8.39ms]
+  Skipping: SSH to localhost not available
+(pass) SSH CLI Integration > should work through CLI with --isolated ssh --endpoint [0.42ms]
+
+test/status-query.js:
+=== Status Query Integration Tests ===
+(pass) --status query functionality > links-notation format (default) > should output status in links-notation indented format by default [141.71ms]
+(pass) --status query functionality > links-notation format (default) > should output status in links-notation format with explicit flag [91.42ms]
+(pass) --status query functionality > json format > should output status in JSON format [105.04ms]
+(pass) --status query functionality > text format > should output status in human-readable text format [98.92ms]
+(pass) --status query functionality > error handling > should show error for non-existent UUID [90.06ms]
+(pass) --status query functionality > error handling > should show error when tracking is disabled [87.81ms]
+(pass) --status query functionality > --list query functionality > should output all tracked executions in links-notation format by default [119.20ms]
+(pass) --status query functionality > --list query functionality > should output all tracked executions in JSON format [123.39ms]
+(pass) --status query functionality > --list query functionality > should show count zero when no records are stored [62.32ms]
+(pass) --status query functionality > --list query functionality > should show error when tracking is disabled [70.89ms]
+(pass) --status query functionality > --upload-log functionality > should upload a private sanitized copy and preserve the stored log [175.99ms]
+(pass) --status query functionality > --upload-log functionality > should install gh-upload-log when it is missing before uploading [246.04ms]
+(pass) --status query functionality > --upload-log functionality > should upload the original privately only with explicit --no-sanitize [166.92ms]
+(pass) --status query functionality > --upload-log functionality > should show an error when the stored log file is missing [88.95ms]
+(pass) --status query functionality > executing status > should show executing status for ongoing commands [110.87ms]
+(pass) --status query functionality > executing status > should include currentTime for executing commands (JSON) [143.58ms]
+(pass) --status query functionality > executing status > should not include currentTime for completed commands (JSON) [133.60ms]
+(pass) --status query functionality > executing status > should include currentTime in links-notation for executing commands [102.30ms]
+(pass) --status query functionality > executing status > should indent nested process ID arrays in links-notation [120.71ms]
+(pass) --status query functionality > executing status > should include Current Time in text format for executing commands [182.07ms]
+(pass) --status query functionality > executing status > should not include Current Time in text format for completed commands [153.96ms]
+
+test/substitution.js:
+=== Substitution Engine Unit Tests ===
+
+✓ Loaded 48 substitution rules
+
+✓ Test: loadDefaultSubstitutions() returns array of rules
+✓ Test: Rules have correct structure (pattern, replacement, regex)
+
+=== Pattern Matching Tests ===
+
+✓ PASS: Basic npm install
+  Input:  "install gh-upload-log npm package"
+  Output: "npm install gh-upload-log"
+
+✓ PASS: npm install with version
+  Input:  "install 0.0.1 version of gh-upload-log npm package"
+  Output: "npm install gh-upload-log@0.0.1"
+
+✓ PASS: Global npm install
+  Input:  "install lodash npm package globally"
+  Output: "npm install -g lodash"
+
+✓ PASS: Global npm install with version
+  Input:  "install 4.17.21 version of lodash npm package globally"
+  Output: "npm install -g lodash@4.17.21"
+
+✓ PASS: npm uninstall
+  Input:  "uninstall lodash npm package"
+  Output: "npm uninstall lodash"
+
+✓ PASS: Git clone with URL
+  Input:  "clone https://github.com/user/repo repository"
+  Output: "git clone https://github.com/user/repo"
+
+✓ PASS: Git clone with SSH URL
+  Input:  "clone git@github.com:user/repo.git repository"
+  Output: "git clone git@github.com:user/repo.git"
+
+✓ PASS: Git checkout branch
+  Input:  "checkout main branch"
+  Output: "git checkout main"
+
+✓ PASS: Git create branch
+  Input:  "create feature-x branch"
+  Output: "git checkout -b feature-x"
+
+✓ PASS: List files
+  Input:  "list files"
+  Output: "ls -la"
+
+✓ PASS: Show working directory
+  Input:  "show current directory"
+  Output: "pwd"
+
+✓ PASS: Create directory
+  Input:  "create my-project directory"
+  Output: "mkdir -p my-project"
+
+✓ PASS: pip install
+  Input:  "install requests python package"
+  Output: "pip install requests"
+
+✓ PASS: Non-matching command (pass through)
+  Input:  "echo hello world"
+  Output: "echo hello world"
+
+✓ PASS: Regular npm command (pass through)
+  Input:  "npm test"
+  Output: "npm test"
+
+=== Pattern Specificity Tests ===
+
+✓ Test: Pattern specificity works correctly
+  Input:  "install 1.0.0 version of express npm package globally"
+  Output: "npm install -g express@1.0.0"
+
+=== Variable Extraction Tests ===
+
+✓ Test: Variable extraction and substitution works correctly
+  Pattern matched: "install $packageName npm package"
+  Variables in pattern: [packageName]
+  Result command: "npm install my-package"
+
+=== processCommand Integration Tests ===
+
+✓ Test: processCommand applies substitutions
+  Input:  "list files"
+  Output: "ls -la"
+  Matched: true
+
+✓ Test: processCommand passes through non-matching commands
+  Input:  "echo test"
+  Output: "echo test"
+  Matched: false
+
+=== Test Summary ===
+Pattern Matching: 15/15 tests passed
+Total Tests: 22/22 passed
+
+✓ All tests passed!
+
+
+test/user-manager.js:
+(pass) user-manager > getCurrentUser > should return a non-empty string [7.30ms]
+(pass) user-manager > getCurrentUser > should return a valid username format [5.88ms]
+(pass) user-manager > getCurrentUserGroups > should return an array [7.61ms]
+(pass) user-manager > getCurrentUserGroups > should return at least one group (the primary group) [10.65ms]
+(pass) user-manager > getCurrentUserGroups > should return groups as strings [7.80ms]
+(pass) user-manager > userExists > should return true for current user [23.21ms]
+(pass) user-manager > userExists > should return false for non-existent user [8.84ms]
+(pass) user-manager > userExists > should return true for root user (on Unix) [8.81ms]
+(pass) user-manager > groupExists > should return true for root group (on Unix) [12.60ms]
+(pass) user-manager > groupExists > should return false for non-existent group [6.60ms]
+(pass) user-manager > generateIsolatedUsername > should generate unique usernames [0.35ms]
+(pass) user-manager > generateIsolatedUsername > should use default prefix [0.04ms]
+(pass) user-manager > generateIsolatedUsername > should use custom prefix [0.05ms]
+(pass) user-manager > generateIsolatedUsername > should generate valid username (no special chars) [0.08ms]
+(pass) user-manager > generateIsolatedUsername > should not exceed 31 characters [0.03ms]
+(pass) user-manager > generateIsolatedUsername > should draw the suffix from a CSPRNG, not Math.random [1.47ms]
+(pass) user-manager > generateIsolatedUsername > should handle long prefix by truncating [0.05ms]
+(pass) user-manager > getUserInfo > should return exists: false for non-existent user [8.22ms]
+(pass) user-manager > getUserInfo > should return user info for current user [40.68ms]
+(pass) user-manager > getUserInfo > should include uid for existing user [36.49ms]
+(pass) args-parser user isolation options > --isolated-user option (user isolation) > should parse --isolated-user flag [0.33ms]
+(pass) args-parser user isolation options > --isolated-user option (user isolation) > should parse --isolated-user with custom username [0.11ms]
+(pass) args-parser user isolation options > --isolated-user option (user isolation) > should parse --isolated-user=value format [0.08ms]
+(pass) args-parser user isolation options > --isolated-user option (user isolation) > should parse -u shorthand [0.06ms]
+(pass) args-parser user isolation options > --isolated-user option (user isolation) > should parse -u with custom username [0.06ms]
+(pass) args-parser user isolation options > --isolated-user option (user isolation) > should work with isolation options [0.07ms]
+(pass) args-parser user isolation options > --isolated-user option (user isolation) > should throw error when used with docker isolation [0.15ms]
+(pass) args-parser user isolation options > --isolated-user option (user isolation) > should validate custom username format [0.08ms]
+(pass) args-parser user isolation options > --isolated-user option (user isolation) > should validate custom username length [0.27ms]
+(pass) args-parser user isolation options > --isolated-user option (user isolation) > should work with screen isolation and custom username [0.07ms]
+(pass) args-parser user isolation options > --isolated-user option (user isolation) > should work with tmux isolation [0.04ms]
+(pass) args-parser user isolation options > --keep-user option > should parse --keep-user with --isolated-user [0.07ms]
+(pass) args-parser user isolation options > --keep-user option > should throw error when used without --isolated-user [0.07ms]
+
+test/version.js:
+(pass) Version Flag Tests > Basic version flag > should show version with --version [282.50ms]
+(pass) Version Flag Tests > Basic version flag > should show version with -v [165.51ms]
+(pass) Version Flag Tests > Basic version flag > should show version with --version -- (trailing separator) [151.71ms]
+(pass) Version Flag Tests > Runtime detection > should show Bun version when running with Bun [172.34ms]
+(pass) Version Flag Tests > OS version detection > should show OS information [143.79ms]
+(pass) Version Flag Tests > OS version detection > should show macOS ProductVersion on darwin [173.42ms]
+(pass) Version Flag Tests > Tool version detection > should detect screen version if installed [254.08ms]
+(pass) Version Flag Tests > Tool version detection > should detect tmux version if installed [176.07ms]
+(pass) Version Flag Tests > Tool version detection > should detect docker version if installed [277.02ms]
+(pass) Version Flag Tests > Verbose mode > should show verbose output with --version --verbose [258.04ms]
+(pass) Version Flag Tests > Verbose mode > should show verbose output with --version --debug [170.18ms]
+(pass) Version Flag Tests > Verbose mode > should show verbose output with START_VERBOSE=1 [227.17ms]
+(pass) Version Flag Tests > Error cases > should error with "No command provided" for $ -- [69.72ms]
+(pass) Version Flag Tests > Error cases > should error with "No command provided" for no args [59.74ms]
+
+ 1193 pass
+ 0 fail
+ 1835 expect() calls
+Ran 1193 tests across 76 files. [159.47s]

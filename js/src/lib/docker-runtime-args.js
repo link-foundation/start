@@ -42,6 +42,9 @@ function buildDockerRuntimeArgs(options = {}) {
   for (const envVar of options.env || []) {
     args.push('-e', envVar);
   }
+  for (const label of require('./docker-labels').dockerLabels(options)) {
+    args.push('--label', label);
+  }
   for (const volume of options.volumes || []) {
     args.push('-v', volume);
   }
@@ -69,6 +72,9 @@ function buildDockerRuntimeArgs(options = {}) {
  */
 function buildDockerRuntimeStatusLines(options = {}) {
   const lines = [];
+  if (options.labels && options.labels.length > 0) {
+    lines.push(`[Isolation] Labels: ${options.labels.join(', ')}`);
+  }
   if (options.volumes && options.volumes.length > 0) {
     lines.push(`[Isolation] Volumes: ${options.volumes.join(', ')}`);
   }
@@ -129,6 +135,8 @@ function buildDockerRuntimeMetadata(options = {}) {
       options.volumes && options.volumes.length > 0 ? options.volumes : null,
     mounts: options.mounts && options.mounts.length > 0 ? options.mounts : null,
     env: options.env && options.env.length > 0 ? options.env : null,
+    labels: options.labels && options.labels.length > 0 ? options.labels : null,
+    commandHandoff: options.detached ? true : null,
     privileged: options.privileged || null,
     network: networks[0] || null,
     networks: networks.length > 0 ? networks : null,

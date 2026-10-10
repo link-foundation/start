@@ -53,19 +53,35 @@ function createExecutable(filePath, content) {
   fs.chmodSync(filePath, 0o755);
 }
 
-function createFakeUploader(fakeBin, outputPrefix) {
+function fakeUploaderScript(fakeBin, outputPrefix) {
+  const fixturePath = path.join(fakeBin, 'capture-upload.js');
+  fs.writeFileSync(
+    fixturePath,
+    [
+      "const fs = require('fs');",
+      'const args = process.argv.slice(2);',
+      'fs.writeFileSync(process.env.UPLOAD_CAPTURE, JSON.stringify({',
+      '  args, content: fs.readFileSync(args[0], "utf8"),',
+      '  mode: fs.statSync(args[0]).mode & 0o777,',
+      '}));',
+      `console.log(${JSON.stringify(outputPrefix)} + ': ' + args[0]);`,
+      '',
+    ].join('\n')
+  );
   if (process.platform === 'win32') {
-    createExecutable(
-      path.join(fakeBin, 'gh-upload-log.cmd'),
-      `@echo off\r\necho ${outputPrefix}: %1\r\n`
-    );
+    return `@echo off\r\n"${process.execPath}" "${fixturePath}" %*\r\n`;
+  }
+  return `#!/bin/sh\n"${process.execPath}" "${fixturePath}" "$@"\n`;
+}
+
+function createFakeUploader(fakeBin, outputPrefix) {
+  const content = fakeUploaderScript(fakeBin, outputPrefix);
+  if (process.platform === 'win32') {
+    createExecutable(path.join(fakeBin, 'gh-upload-log.cmd'), content);
     return;
   }
 
-  createExecutable(
-    path.join(fakeBin, 'gh-upload-log'),
-    `#!/bin/sh\necho "${outputPrefix}: $1"\n`
-  );
+  createExecutable(path.join(fakeBin, 'gh-upload-log'), content);
 }
 
 describe('--status query functionality', () => {
@@ -262,10 +278,14 @@ describe('--status query functionality', () => {
   });
 
   describe('--upload-log functionality', () => {
-    it('should run gh-upload-log with the stored execution log path', () => {
+    it('should upload a private sanitized copy and preserve the stored log', () => {
       const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'upload-log-bin-'));
       const logPath = path.join(TEST_APP_FOLDER, 'command.log');
-      fs.writeFileSync(logPath, 'captured command output\n', 'utf8');
+      const capturePath = path.join(fakeBin, 'capture.json');
+      const token = ['gh', 'p_', 'a'.repeat(36)].join('');
+      const customSecret = 'fake-custom-credential';
+      const original = `captured command output\n${token}\n${customSecret}\n`;
+      fs.writeFileSync(logPath, original, 'utf8');
       createFakeUploader(fakeBin, 'fake uploader received');
 
       testRecord.logPath = logPath;
@@ -274,11 +294,28 @@ describe('--status query functionality', () => {
       const result = runCli(['--upload-log', testRecord.uuid], {
         PATH: fakeBin,
         HOME: fakeBin,
+        UPLOAD_CAPTURE: capturePath,
+        EXAMPLE_API_KEY: customSecret,
+        GH_UPLOAD_PUBLIC: 'true',
       });
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain(`fake uploader received: ${logPath}`);
+      const captured = JSON.parse(fs.readFileSync(capturePath, 'utf8'));
+      expect(captured.args[0]).not.toBe(logPath);
+      expect(captured.args[1]).toBe('--private');
+      expect(captured.content).toContain('captured command output');
+      expect(captured.content).toContain('[REDACTED]');
+      expect(captured.content).not.toContain(token);
+      expect(captured.content).not.toContain(customSecret);
+      if (process.platform !== 'win32') {
+        expect(captured.mode).toBe(0o600);
+      }
+      expect(result.stdout).toContain(
+        `fake uploader received: ${captured.args[0]}`
+      );
       expect(result.stderr).toBe('');
+      expect(fs.readFileSync(logPath, 'utf8')).toBe(original);
+      expect(fs.existsSync(captured.args[0])).toBe(false);
 
       fs.rmSync(fakeBin, { recursive: true, force: true });
     });
@@ -293,8 +330,15 @@ describe('--status query functionality', () => {
         path.join(os.tmpdir(), 'upload-log-install-bin-')
       );
       const installMarker = path.join(fakeBin, 'install.log');
+      const capturePath = path.join(fakeBin, 'capture.json');
       const logPath = path.join(TEST_APP_FOLDER, 'install-command.log');
-      fs.writeFileSync(logPath, 'captured command output\n', 'utf8');
+      const token = ['gh', 'p_', 'b'.repeat(36)].join('');
+      const original = `captured command output\n${token}\n`;
+      fs.writeFileSync(logPath, original, 'utf8');
+      const uploaderScript = fakeUploaderScript(
+        fakeBin,
+        'installed uploader received'
+      );
 
       createExecutable(
         path.join(fakeBin, 'bun'),
@@ -302,8 +346,7 @@ describe('--status query functionality', () => {
           '#!/bin/sh',
           `echo "$@" > "${installMarker}"`,
           `cat > "${path.join(fakeBin, 'gh-upload-log')}" <<'SCRIPT'`,
-          '#!/bin/sh',
-          'echo "installed uploader received: $1"',
+          uploaderScript,
           'SCRIPT',
           `chmod +x "${path.join(fakeBin, 'gh-upload-log')}"`,
           'exit 0',
@@ -317,6 +360,7 @@ describe('--status query functionality', () => {
       const result = runCli(['--upload-log', testRecord.uuid], {
         PATH: `${fakeBin}${path.delimiter}/usr/bin${path.delimiter}/bin`,
         HOME: fakeBin,
+        UPLOAD_CAPTURE: capturePath,
       });
 
       expect(result.exitCode).toBe(0);
@@ -324,10 +368,48 @@ describe('--status query functionality', () => {
         'install -g gh-upload-log'
       );
       expect(result.stdout).toContain('gh-upload-log not found');
+      const captured = JSON.parse(fs.readFileSync(capturePath, 'utf8'));
+      expect(captured.args[0]).not.toBe(logPath);
+      expect(captured.args[1]).toBe('--private');
+      expect(captured.content).toContain('captured command output');
+      expect(captured.content).toContain('[REDACTED]');
+      expect(captured.content).not.toContain(token);
+      expect(captured.mode).toBe(0o600);
       expect(result.stdout).toContain(
-        `installed uploader received: ${logPath}`
+        `installed uploader received: ${captured.args[0]}`
+      );
+      expect(fs.readFileSync(logPath, 'utf8')).toBe(original);
+      expect(fs.existsSync(captured.args[0])).toBe(false);
+
+      fs.rmSync(fakeBin, { recursive: true, force: true });
+    });
+
+    it('should upload the original privately only with explicit --no-sanitize', () => {
+      const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'upload-raw-bin-'));
+      const capturePath = path.join(fakeBin, 'capture.json');
+      const logPath = path.join(TEST_APP_FOLDER, 'raw-command.log');
+      const token = ['gh', 'p_', 'c'.repeat(36)].join('');
+      const original = `captured command output\n${token}\n`;
+      fs.writeFileSync(logPath, original, 'utf8');
+      createFakeUploader(fakeBin, 'raw uploader received');
+      testRecord.logPath = logPath;
+      store.save(testRecord);
+
+      const result = runCli(
+        ['--upload-log', testRecord.uuid, '--no-sanitize'],
+        {
+          PATH: fakeBin,
+          HOME: fakeBin,
+          UPLOAD_CAPTURE: capturePath,
+          GH_UPLOAD_PUBLIC: 'true',
+        }
       );
 
+      expect(result.exitCode).toBe(0);
+      const captured = JSON.parse(fs.readFileSync(capturePath, 'utf8'));
+      expect(captured.args).toEqual([logPath, '--private']);
+      expect(captured.content).toBe(original);
+      expect(fs.readFileSync(logPath, 'utf8')).toBe(original);
       fs.rmSync(fakeBin, { recursive: true, force: true });
     });
 

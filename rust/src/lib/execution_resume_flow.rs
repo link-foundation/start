@@ -46,6 +46,9 @@ pub fn resume_execution_with_options(
     output_format: Option<&str>,
     options: &crate::args_parser::WrapperOptions,
 ) -> ExecutionResumeResult {
+    let mut overrides = crate::docker_resource_options::specs(options);
+    overrides["removeOriginal"] = json!(options.remove_original);
+    overrides["labels"] = json!(options.labels);
     resume_execution_with_resources(
         store,
         identifier,
@@ -53,7 +56,7 @@ pub fn resume_execution_with_options(
         output_format,
         &SystemCommandRunner,
         &SystemResumeHooks,
-        &crate::docker_resource_options::specs(options),
+        &overrides,
     )
 }
 
@@ -107,6 +110,39 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
         }
     };
     let mut planning_record = record.clone();
+    if let Some(labels) = overrides
+        .get("labels")
+        .and_then(Value::as_array)
+        .filter(|labels| !labels.is_empty())
+    {
+        let mut merged = record_strings(&record, "labels");
+        for label in labels.iter().filter_map(Value::as_str) {
+            let key = label.split('=').next().unwrap_or(label);
+            if let Some(index) = merged
+                .iter()
+                .position(|existing| existing.split('=').next() == Some(key))
+            {
+                merged[index] = label.to_string();
+            } else {
+                merged.push(label.to_string());
+            }
+        }
+        planning_record
+            .options
+            .insert("labels".into(), json!(merged));
+    }
+    if planning_record.options.get("labels") != record.options.get("labels") {
+        if record_option(&record, "isolated") != Some("docker") {
+            return ExecutionResumeResult {
+                success: false,
+                output: None,
+                error: Some("Docker labels require a Docker execution when resuming.".into()),
+            };
+        }
+        planning_record
+            .options
+            .insert("forceSnapshot".into(), json!(true));
+    }
     if let Some(limits) = &limits {
         planning_record
             .options
@@ -163,6 +199,9 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
     lifecycle_record.attempt = Some(attempt.clone());
     crate::execution_attempt::append_lifecycle(&lifecycle_record, "resume-started", json!({}));
     apply_resume_to_record(&mut record, &plan, None);
+    if let Some(labels) = planning_record.options.get("labels") {
+        record.options.insert("labels".into(), labels.clone());
+    }
     record.attempt = Some(attempt.clone());
     if let Some(resolved) = resolved {
         record.options.insert("resolvedLimits".into(), resolved);
@@ -236,41 +275,140 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
         }
         container_id = launch_result.container_id;
     } else {
-        for step in &plan.steps {
-            let result = runner.run(&step.command, &step.args);
-            if !result.success {
-                let _ = store.save(&previous);
-                let detail = if !result.stderr.trim().is_empty() {
-                    result.stderr.trim().to_string()
-                } else {
-                    result.error.clone().unwrap_or_else(|| {
-                        format!(
-                            "exit code {}",
-                            result
-                                .status
-                                .map(|code| code.to_string())
-                                .unwrap_or_else(|| "unknown".to_string())
-                        )
-                    })
-                };
-                crate::execution_attempt::append_lifecycle(
-                    &lifecycle_record,
-                    "launch-failed",
-                    json!({ "error": detail }),
+        let mut snapshot_created = false;
+        let mut derived_created = false;
+        let handoff = plan.mode == ResumeMode::DockerStart
+            && command.is_some()
+            && record_flag(&previous, "commandHandoff");
+        let launch_result = (|| -> Result<(), String> {
+            let _snapshot_lock = if plan.mode == ResumeMode::DockerSnapshot {
+                Some(crate::docker_snapshot_safety::acquire_snapshot_lock()?)
+            } else {
+                None
+            };
+            if plan.mode == ResumeMode::DockerSnapshot {
+                let message =
+                    crate::docker_snapshot_safety::preflight_snapshot(&plan.session_name, runner)?;
+                plan.message.push_str(&format!("\n{}", message));
+                if !record.log_path.is_empty() {
+                    append_log_file(&PathBuf::from(&record.log_path), &format!("{}\n", message));
+                }
+            }
+            if handoff {
+                let copied = crate::docker_command_handoff::write_command_handoff(
+                    &plan.session_name,
+                    &plan.command,
+                    record_option(&previous, "shell").unwrap_or("auto"),
+                    record_flag(&previous, "keepAlive"),
+                    runner,
+                )?;
+                if !copied.success {
+                    return Err(if copied.stderr.trim().is_empty() {
+                        copied.error.unwrap_or_else(|| {
+                            "Could not copy replacement command into the stopped container".into()
+                        })
+                    } else {
+                        copied.stderr.trim().into()
+                    });
+                }
+            }
+            for step in &plan.steps {
+                let result = runner.run(&step.command, &step.args);
+                if !result.success {
+                    let detail = if !result.stderr.trim().is_empty() {
+                        result.stderr.trim().to_string()
+                    } else {
+                        result.error.clone().unwrap_or_else(|| {
+                            format!(
+                                "exit code {}",
+                                result
+                                    .status
+                                    .map(|code| code.to_string())
+                                    .unwrap_or_else(|| "unknown".to_string())
+                            )
+                        })
+                    };
+                    return Err(detail);
+                }
+                if step.args[0] == "commit" {
+                    snapshot_created = true;
+                }
+                if step.args[0] == "create" {
+                    derived_created = true;
+                }
+                let stdout = result.stdout.trim().to_string();
+                if !stdout.is_empty() && matches!(step.args[0].as_str(), "run" | "create") {
+                    container_id = Some(stdout);
+                }
+            }
+            if plan.mode == ResumeMode::DockerSnapshot
+                && overrides.get("removeOriginal").and_then(Value::as_bool) == Some(true)
+            {
+                let running = runner.run(
+                    &docker_command().to_string_lossy(),
+                    &[
+                        "inspect".into(),
+                        "-f".into(),
+                        "{{.State.Running}}".into(),
+                        active_session_name(&plan).into(),
+                    ],
                 );
-                return ExecutionResumeResult {
-                    success: false,
-                    output: None,
-                    error: Some(format!(
-                        "Failed to resume {} session \"{}\": {}",
-                        plan.backend, plan.session_name, detail
-                    )),
+                let note = if running.success && running.stdout.trim() == "true" {
+                    let removed = runner.run(
+                        &docker_command().to_string_lossy(),
+                        &["rm".into(), plan.session_name.clone()],
+                    );
+                    if removed.success {
+                        format!("Stopped original container removed: {}", plan.session_name)
+                    } else {
+                        format!("Original container retained: {}", removed.stderr.trim())
+                    }
+                } else {
+                    "Original container retained: the snapshot container is not running.".into()
                 };
+                plan.message.push_str(&format!("\n{}", note));
+                if !record.log_path.is_empty() {
+                    append_log_file(&PathBuf::from(&record.log_path), &format!("{}\n", note));
+                }
             }
-            let stdout = result.stdout.trim().to_string();
-            if !stdout.is_empty() {
-                container_id = Some(stdout);
+            Ok(())
+        })();
+        if let Err(detail) = launch_result {
+            if derived_created {
+                runner.run(
+                    &docker_command().to_string_lossy(),
+                    &["rm".into(), active_session_name(&plan).into()],
+                );
             }
+            if snapshot_created {
+                runner.run(
+                    &docker_command().to_string_lossy(),
+                    &["rmi".into(), plan.snapshot_image.clone().unwrap()],
+                );
+            }
+            if handoff {
+                let _ = crate::docker_command_handoff::write_command_handoff(
+                    &plan.session_name,
+                    &previous.command,
+                    record_option(&previous, "shell").unwrap_or("auto"),
+                    record_flag(&previous, "keepAlive"),
+                    runner,
+                );
+            }
+            let _ = store.save(&previous);
+            crate::execution_attempt::append_lifecycle(
+                &lifecycle_record,
+                "launch-failed",
+                json!({ "error": detail }),
+            );
+            return ExecutionResumeResult {
+                success: false,
+                output: None,
+                error: Some(format!(
+                    "Failed to resume {} session \"{}\": {}",
+                    plan.backend, plan.session_name, detail
+                )),
+            };
         }
 
         if let Some(line) = build_resource_limits_status_line(&plan.resource_limits) {

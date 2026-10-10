@@ -1,0 +1,3 @@
+    Checking start-command v0.23.0 (/tmp/gh-issue-solver-1791653332998/rust)
+    Checking tempfile v3.27.0
+    Finished `dev` profile [unoptimized] target(s) in 8.72s

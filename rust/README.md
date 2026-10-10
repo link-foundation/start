@@ -27,6 +27,8 @@ start ls -la
 start cargo test
 start git status
 start --list
+start --help
+start -i docker -d --label task.tool=codex -- my-task
 start --attach <id>
 start --resume <id> -- <command>
 start --resume-all
@@ -36,6 +38,10 @@ See the project-wide [README](../README.md), [docs/USAGE.md](../docs/USAGE.md),
 [docs/PIPES.md](../docs/PIPES.md), and
 [docs/EXAMPLES.md](../docs/EXAMPLES.md) for the full user-facing guide and
 checked examples.
+
+`-h` also prints usage. Labels persist across Docker resumes. New detached
+containers support copy-free command handoff; legacy snapshots require capacity
+preflight. Log uploads are private and sanitized; manual `--no-sanitize` opts out.
 
 ## Development
 

@@ -192,6 +192,10 @@ try {
 }
 
 const { wrapperOptions, command: parsedCommand } = parsedArgs;
+if (wrapperOptions.help) {
+  printUsage();
+  process.exit(0);
+}
 
 // Query/control modes (--status, --list, --attach, --resume, ...) address an
 // execution that already exists, so they never need a command of their own.
@@ -479,6 +483,7 @@ async function runWithIsolation(
     result = await runIsolated(environment, cmd, {
       ...options,
       session: sessionName,
+      sessionId,
       image: effectiveImage,
       endpoint: options.endpoint,
       detached: mode === 'detached',

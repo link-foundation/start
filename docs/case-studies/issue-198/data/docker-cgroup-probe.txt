@@ -1,0 +1,17 @@
+$ printf preserved > /root/kept; sleep 120
+
+AssertionError [ERR_ASSERTION]: Failed to run in docker: docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: unable to apply cgroup configuration: cannot enter cgroupv2 "/sys/fs/cgroup/docker" with domain controllers -- it is in threaded mode
+
+Run 'docker run --help' for more information
+
+false !== true
+
+    at /tmp/gh-issue-solver-1791653332998/experiments/issue-198-docker-smoke.js:57:12
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

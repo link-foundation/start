@@ -89,6 +89,11 @@ pub struct WrapperOptions {
     pub mounts: Vec<String>,
     /// Docker environment variables (-e/--env, KEY=VALUE), applied to docker isolation
     pub env: Vec<String>,
+    /// Caller attribution for Docker containers.
+    pub labels: Vec<String>,
+    pub help: bool,
+    pub no_sanitize: bool,
+    pub remove_original: bool,
     /// Run docker container in privileged mode
     pub privileged: bool,
     /// First Docker network name (compatibility accessor)
@@ -173,6 +178,10 @@ impl Default for WrapperOptions {
             volumes: Vec::new(),
             mounts: Vec::new(),
             env: Vec::new(),
+            labels: Vec::new(),
+            help: false,
+            no_sanitize: false,
+            remove_original: false,
             privileged: false,
             network: None,
             networks: Vec::new(),
@@ -264,7 +273,9 @@ pub fn parse_args(args: &[String]) -> Result<ParsedArgs, String> {
     }
 
     // Validate options and apply defaults
-    validate_options(&mut wrapper_options)?;
+    if !wrapper_options.help {
+        validate_options(&mut wrapper_options)?;
+    }
 
     Ok(ParsedArgs {
         wrapper_options,
@@ -303,6 +314,39 @@ fn parse_option(
     options: &mut WrapperOptions,
 ) -> Result<usize, String> {
     let arg = &args[index];
+
+    if arg == "--help" || arg == "-h" {
+        options.help = true;
+        return Ok(1);
+    }
+    if arg == "--no-sanitize" {
+        options.no_sanitize = true;
+        return Ok(1);
+    }
+    if arg == "--remove-original" {
+        options.remove_original = true;
+        return Ok(1);
+    }
+    if arg == "--label" || arg.starts_with("--label=") {
+        let label = if arg == "--label" {
+            args.get(index + 1).map(String::as_str).unwrap_or("")
+        } else {
+            &arg[8..]
+        };
+        let Some((key, _)) = label.split_once('=') else {
+            return Err("--label requires KEY=VALUE".to_string());
+        };
+        if key.is_empty() || key.chars().any(char::is_whitespace) {
+            return Err("--label requires a nonempty key without whitespace".to_string());
+        }
+        if key.starts_with("start-command.") {
+            return Err(
+                "start-command.* labels are reserved for execution attribution".to_string(),
+            );
+        }
+        options.labels.push(label.to_string());
+        return Ok(if arg == "--label" { 2 } else { 1 });
+    }
 
     // --isolated, --isolation, or -i
     if arg == "--isolated" || arg == "--isolation" || arg == "-i" {
@@ -608,6 +652,18 @@ fn parse_option(
 
 /// Validate parsed options and apply defaults
 pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
+    if options.no_sanitize && options.upload_log.is_none() {
+        return Err("--no-sanitize is only valid with --upload-log".to_string());
+    }
+    if options.remove_original && options.resume.is_none() {
+        return Err("--remove-original is only valid with --resume".to_string());
+    }
+    if !options.labels.is_empty()
+        && options.isolated.as_deref() != Some("docker")
+        && options.resume.is_none()
+    {
+        return Err("--label is only valid with docker isolation or --resume".to_string());
+    }
     // Check attached and detached conflict
     if options.attached && options.detached {
         return Err(

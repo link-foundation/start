@@ -1,0 +1,14 @@
+✔ replacement command resumes the same container without a snapshot or changed ID (11.945301ms)
+✔ automatic recovery replaces a prior explicit handoff and exports its attempt (4.187104ms)
+✔ legacy snapshots preflight before commit and remove originals only with non-forced rm after start (17.671045ms)
+✔ disk shortage rolls back the reservation without committing or removing the original (5.311711ms)
+✔ snapshot failure removes a completed image and restores the original execution (5.145222ms)
+✔ watcher removes its generated image after the cleanup policy removes its container (78.946011ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 303.80061

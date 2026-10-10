@@ -127,6 +127,12 @@ function fakeRunner(hostConfig, failures = {}) {
     if (args[0] === 'inspect' && args.includes('{{json .HostConfig}}')) {
       return ok(`${JSON.stringify(hostConfig)}\n`);
     }
+    if (args.includes('--size')) {
+      return ok('1024');
+    }
+    if (args[0] === 'info') {
+      return ok(JSON.stringify({ DockerRootDir: os.tmpdir() }));
+    }
     return ok('cid\n');
   };
   runner.calls = calls;
@@ -300,6 +306,7 @@ describe('issue #176: snapshot resume keeps the resource limits', () => {
       command: 'npm run build',
       probe: stoppedProbe,
       runner,
+      snapshotOptions: { freeBytes: () => 100 * 1024 ** 3 },
       startWatcher: (...args) => watchers.push(args),
     });
     expect(result.success).toBe(true);

@@ -98,6 +98,15 @@ impl CommandRunner for FakeRunner {
                 error: None,
             };
         }
+        if args.iter().any(|arg| arg == "--size") {
+            return ok("1024\n");
+        }
+        if verb == "info" {
+            return ok("{\"DockerRootDir\":\"/docker\"}");
+        }
+        if command == "df" {
+            return ok("Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/mock 999999999 0 999999999 0% /docker");
+        }
         if verb == "inspect" && args.iter().any(|arg| arg == "{{json .HostConfig}}") {
             return ok(&format!("{}\n", self.host_config));
         }

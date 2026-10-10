@@ -103,6 +103,10 @@ pub fn split_shell_words_with(command: &str, style: ShellQuotingStyle) -> Option
         }
         started = true;
         if !is_powershell && c == '\\' && quote != Some('\'') {
+            if quote == Some('"') && chars.peek().is_some_and(|next| !"$`\"\\\n".contains(*next)) {
+                current.push(c);
+                continue;
+            }
             let escaped = chars.next()?;
             current.push(escaped);
             continue;
@@ -157,30 +161,100 @@ fn is_shell_command(parts: &[String]) -> bool {
         .is_some_and(|first| SHELL_NAMES.contains(&basename(first)))
 }
 
+/// Literal argv are safe only if no outer shell evaluation is required (#202).
+/// Quoted operators inside the script are literals; expansions in double quotes
+/// and operators outside quotes must be evaluated by the outer command shell.
+fn simple_shell_words(command: &str) -> Option<Vec<String>> {
+    let mut quote = None;
+    let mut chars = command.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\\' && quote != Some('\'') {
+            if chars.peek() == Some(&'\n') {
+                return None;
+            }
+            if quote != Some('"') || chars.peek().is_some_and(|next| "$`\"\\\n".contains(*next)) {
+                chars.next();
+            }
+            continue;
+        }
+        if quote == Some('\'') {
+            if c == '\'' {
+                quote = None;
+            }
+            continue;
+        }
+        if c == '$' || c == '`' {
+            return None;
+        }
+        if quote == Some('"') {
+            if c == '"' {
+                quote = None;
+            }
+            continue;
+        }
+        if ";&|<>(){}\n\r*?[]~#".contains(c) || (c.is_whitespace() && !" \t".contains(c)) {
+            return None;
+        }
+        if c == '\'' || c == '"' {
+            quote = Some(c);
+        }
+    }
+    split_shell_words_with(command, ShellQuotingStyle::Posix)
+}
+
 /// True if command is a bare shell invocation (no -c); avoids bash-inside-bash (issue #84).
 pub fn is_interactive_shell_command(command: &str) -> bool {
-    let parts = to_shell_words(command);
+    let Some(parts) = simple_shell_words(command) else {
+        return false;
+    };
     is_shell_command(&parts) && !parts.iter().any(|part| part == "-c")
 }
 
 /// True if command is a shell invocation with -c (e.g. `bash -i -c "cmd"`); avoids double-wrapping (issue #91).
 pub fn is_shell_invocation_with_args(command: &str) -> bool {
-    let parts = to_shell_words(command);
-    is_shell_command(&parts) && parts.iter().any(|part| part == "-c")
+    let Some(parts) = simple_shell_words(command) else {
+        return false;
+    };
+    let Some(index) = parts.iter().position(|part| part == "-c") else {
+        return false;
+    };
+    is_shell_command(&parts)
+        && index > 0
+        && index + 1 < parts.len()
+        && parts[1..index].iter().all(|part| {
+            let flag = part.strip_prefix("--").or_else(|| part.strip_prefix('-'));
+            flag.is_some_and(|flag| {
+                !flag.is_empty() && flag.chars().all(|c| c.is_ascii_alphabetic() || c == '-')
+            })
+        })
 }
 
-/// Build argv for a shell-with-c command; everything after -c is one script argument.
-pub fn build_shell_with_args_cmd_args(command: &str) -> Vec<String> {
-    let parts = to_shell_words(command);
-    let Some(index) = parts.iter().position(|part| part == "-c") else {
-        return parts;
-    };
-    let script = parts[index + 1..].join(" ");
-    let mut result = parts[..=index].to_vec();
-    if !script.is_empty() {
-        result.push(script);
+/// Build Docker argv without folding command operators or positional arguments.
+pub(crate) fn docker_shell_args(command: &str, shell: &str, interactive: bool) -> Vec<String> {
+    if is_interactive_shell_command(command) {
+        let mut args = to_shell_words(command);
+        if interactive
+            && ["bash", "zsh"].contains(&basename(&args[0]))
+            && !args.iter().any(|arg| arg == "-i")
+        {
+            args.insert(1, "-i".to_string());
+        }
+        return args;
     }
-    result
+    if is_shell_invocation_with_args(command) {
+        return build_shell_with_args_cmd_args(command);
+    }
+    let mut args = vec![shell.to_string()];
+    if ["bash", "zsh"].contains(&basename(shell)) {
+        args.push("-i".to_string());
+    }
+    args.extend(["-c".to_string(), command.to_string()]);
+    args
+}
+
+/// Preserve the script word and all positional argv separately (#202).
+pub fn build_shell_with_args_cmd_args(command: &str) -> Vec<String> {
+    simple_shell_words(command).unwrap_or_else(|| to_shell_words(command))
 }
 
 /// Quote an argument for display only, keeping the user-facing double-quoted form (issue #91).

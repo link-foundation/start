@@ -92,8 +92,8 @@ fn snapshots_a_stopped_container_to_run_a_new_command() {
     let run_args = &plan.steps[1].args;
     assert_eq!(run_args[0..4], ["run", "-d", "--name", "box-resume-1"]);
     assert_eq!(
-        run_args[run_args.len() - 4..],
-        ["start-command-resume/box:1", "sh", "-c", "npm run build"]
+        run_args[run_args.len() - 3..],
+        ["sh", "-c", "npm run build"]
     );
 }
 
@@ -303,6 +303,23 @@ impl ScriptedRunner {
 
 impl CommandRunner for ScriptedRunner {
     fn run(&self, command: &str, args: &[String]) -> CommandRunOutput {
+        if args.iter().any(|arg| arg == "--size") {
+            return CommandRunOutput {
+                success: true,
+                stdout: "1024".into(),
+                ..Default::default()
+            };
+        }
+        if args.first().map(String::as_str) == Some("info") {
+            return CommandRunOutput {
+                success: true,
+                stdout: "{\"DockerRootDir\":\"/docker\"}".into(),
+                ..Default::default()
+            };
+        }
+        if command == "df" {
+            return CommandRunOutput { success: true, stdout: "Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/mock 999999999 0 999999999 0% /docker".into(), ..Default::default() };
+        }
         if args.first().map(String::as_str) == Some("inspect") {
             // "missing" means `docker inspect` itself fails: no such container.
             let found = self.container_status != "missing";
@@ -552,4 +569,188 @@ fn resume_execution_surfaces_relaunch_failures() {
     );
     assert!(!result.success);
     assert!(result.error.unwrap().contains("docker is not running"));
+}
+
+#[test]
+fn handoff_resume_keeps_container_identity_and_never_snapshots() {
+    let mut record = make_record();
+    record.options.insert("commandHandoff".into(), json!(true));
+    record
+        .options
+        .insert("containerId".into(), json!("original-id"));
+    let (_temp, store) = store_with(&record);
+    let runner = ScriptedRunner::new("exited");
+    let result = resume_execution_with(
+        Some(&store),
+        "box",
+        Some("printf replacement"),
+        None,
+        &runner,
+        &RecordingHooks::default(),
+    );
+    assert!(result.success, "{:?}", result.error);
+    let calls = runner.calls.borrow();
+    assert!(calls
+        .iter()
+        .any(|c| c.get(1).map(String::as_str) == Some("cp")));
+    assert!(calls
+        .iter()
+        .any(|c| c.get(1).map(String::as_str) == Some("start")));
+    assert!(!calls.iter().any(|c| matches!(
+        c.get(1).map(String::as_str),
+        Some("commit" | "run" | "create")
+    )));
+    let saved = store.get(&record.uuid).unwrap();
+    assert_eq!(
+        saved.options.get("containerId"),
+        Some(&json!("original-id"))
+    );
+    assert_eq!(saved.options.get("sessionName"), Some(&json!("box")));
+}
+
+#[test]
+fn changed_labels_force_a_guarded_snapshot_for_the_stored_command() {
+    let mut record = make_record();
+    record.options.insert("commandHandoff".into(), json!(true));
+    record
+        .options
+        .insert("labels".into(), json!(["role=old", "team=runtime"]));
+    let (_temp, store) = store_with(&record);
+    let runner = ScriptedRunner::new("exited");
+    let result = resume_execution_with_resources(
+        Some(&store),
+        "box",
+        None,
+        None,
+        &runner,
+        &RecordingHooks::default(),
+        &json!({"labels":["role=new"]}),
+    );
+    assert!(result.success, "{:?}", result.error);
+    let calls = runner.calls.borrow();
+    let launch = calls
+        .iter()
+        .find(|c| c.get(1).map(String::as_str) == Some("run"))
+        .unwrap();
+    assert!(launch.contains(&"role=new".into()));
+    assert!(launch.contains(&"team=runtime".into()));
+    assert!(!launch.contains(&"role=old".into()));
+    assert_eq!(
+        store
+            .get(&record.uuid)
+            .unwrap()
+            .options
+            .get("commandHandoff"),
+        Some(&json!(true))
+    );
+}
+
+struct SafetyRunner {
+    base: ScriptedRunner,
+    low_disk: bool,
+}
+impl CommandRunner for SafetyRunner {
+    fn run(&self, command: &str, args: &[String]) -> CommandRunOutput {
+        if command == "df" && self.low_disk {
+            return CommandRunOutput { success: true, stdout: "Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/mock 1 1 0 100% /docker".into(), ..Default::default() };
+        }
+        if args.iter().any(|arg| arg == "{{.State.Running}}") {
+            return CommandRunOutput {
+                success: true,
+                stdout: "true".into(),
+                ..Default::default()
+            };
+        }
+        self.base.run(command, args)
+    }
+}
+
+#[test]
+fn snapshot_disk_shortage_restores_the_original_without_commit_or_remove() {
+    let record = make_record();
+    let (_temp, store) = store_with(&record);
+    let runner = SafetyRunner {
+        base: ScriptedRunner::new("exited"),
+        low_disk: true,
+    };
+    let result = resume_execution_with_resources(
+        Some(&store),
+        "box",
+        Some("new"),
+        None,
+        &runner,
+        &RecordingHooks::default(),
+        &json!({"removeOriginal":true}),
+    );
+    assert!(!result.success);
+    assert!(result.error.unwrap().contains("Insufficient disk"));
+    assert!(runner.base.calls.borrow().is_empty());
+    assert_eq!(
+        store.get(&record.uuid).unwrap().options.get("sessionName"),
+        Some(&json!("box"))
+    );
+}
+
+#[test]
+fn remove_original_is_non_forced_and_runs_only_after_successor_start() {
+    let record = make_record();
+    let (_temp, store) = store_with(&record);
+    let runner = SafetyRunner {
+        base: ScriptedRunner::new("exited"),
+        low_disk: false,
+    };
+    let result = resume_execution_with_resources(
+        Some(&store),
+        "box",
+        Some("new"),
+        None,
+        &runner,
+        &RecordingHooks::default(),
+        &json!({"removeOriginal":true}),
+    );
+    assert!(result.success, "{:?}", result.error);
+    let calls = runner.base.calls.borrow();
+    let launch = calls
+        .iter()
+        .position(|c| c.get(1).map(String::as_str) == Some("run"))
+        .unwrap();
+    let removal = calls
+        .iter()
+        .position(|c| c.get(1).map(String::as_str) == Some("rm"))
+        .unwrap();
+    assert!(launch < removal);
+    assert_eq!(calls[removal], ["docker", "rm", "box"]);
+}
+
+#[test]
+fn repeated_snapshot_successors_retain_original_root_session_attribution() {
+    let record = make_record();
+    let (_temp, store) = store_with(&record);
+    for role in ["first", "second"] {
+        let runner = ScriptedRunner::new("exited");
+        let result = resume_execution_with_resources(
+            Some(&store),
+            &record.uuid,
+            Some("new"),
+            None,
+            &runner,
+            &RecordingHooks::default(),
+            &json!({"labels":[format!("role={}", role)]}),
+        );
+        assert!(result.success, "{:?}", result.error);
+        let calls = runner.calls.borrow();
+        let launch = calls
+            .iter()
+            .find(|c| c.get(1).map(String::as_str) == Some("run"))
+            .unwrap();
+        assert!(launch.contains(&"start-command.root-session=box".into()));
+        assert_eq!(
+            store.get(&record.uuid).unwrap().options.get("rootSession"),
+            Some(&json!("box"))
+        );
+    }
+    assert_eq!(
+        store.get(&record.uuid).unwrap().options.get("resumeCount"),
+        Some(&json!(2))
+    );
 }

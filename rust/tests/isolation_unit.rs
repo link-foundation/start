@@ -292,21 +292,18 @@ mod build_shell_with_args_cmd_args_tests {
     }
 
     #[test]
-    fn should_join_script_parts_after_c() {
+    fn should_preserve_positional_arguments_after_script() {
         let args = build_shell_with_args_cmd_args("bash -c echo hello world");
-        // Everything after -c should be joined as one argument
-        let c_idx = args.iter().position(|a| a == "-c").expect("Should have -c");
-        let script = &args[c_idx + 1];
-        assert_eq!(script, "echo hello world");
+        assert_eq!(args, vec!["bash", "-c", "echo", "hello", "world"]);
     }
 
     #[test]
     fn should_handle_bash_i_c_cmd() {
-        let args = build_shell_with_args_cmd_args("bash -i -c nvm --version");
+        let args = build_shell_with_args_cmd_args("bash -i -c \"nvm --version\"");
         assert!(args.contains(&"bash".to_string()));
         assert!(args.contains(&"-i".to_string()));
         assert!(args.contains(&"-c".to_string()));
-        // "nvm --version" should be joined
+        // The quoted script remains one argument.
         let c_idx = args.iter().position(|a| a == "-c").expect("Should have -c");
         let script = &args[c_idx + 1];
         assert_eq!(script, "nvm --version");

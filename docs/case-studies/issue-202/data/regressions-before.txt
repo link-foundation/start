@@ -1,0 +1,307 @@
+bun test v1.4.2 (744846f84)
+
+js/test/regression-199.js:
+265 |   let i = 0;
+266 |   while (i < args.length) {
+267 |     const consumed = parseOption(args, i, options);
+268 |     if (consumed === 0) {
+269 |       if (args[i].startsWith('-')) {
+270 |         throw new Error(`Unknown wrapper option: ${args[i]}`);
+                                                                  ^
+error: Unknown wrapper option: --label
+      at parseWrapperArgs (/tmp/gh-issue-solver-1791653332998/js/src/lib/args-parser.js:270:61)
+      at parseArgs (/tmp/gh-issue-solver-1791653332998/js/src/lib/args-parser.js:229:5)
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-199.js:11:32)
+(fail) Docker attribution labels (#199) > parses repeated labels and preserves equals signs and empty values [18.82ms]
+(pass) Docker attribution labels (#199) > rejects malformed, reserved and non-Docker labels [2.73ms]
+27 |     }
+28 |     expect(() => parseArgs(['--label', 'task=one', '--', 'true'])).toThrow();
+29 |   });
+30 |   it('forwards labels safely through nested Docker isolation', () => {
+31 |     const command = buildNextLevelCommand({ isolatedStack: ['screen', 'docker'], labels: ['task=a "quote" $value'] }, 'true');
+32 |     expect(parseArgs(require('../src/lib/shell-utils').splitShellWords(command).slice(1)).wrapperOptions.labels).toEqual(['task=a "quote" $value']);
+                                                                                                                      ^
+error: expect(received).toEqual(expected)
+
+- [
+-   "task=a "quote" $value",
+- ]
++ undefined
+
+- Expected  - 3
++ Received  + 1
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-199.js:32:114)
+(fail) Docker attribution labels (#199) > forwards labels safely through nested Docker isolation [8.66ms]
+
+js/test/regression-201.js:
+ 9 |       const cli = path.join(__dirname, '../src/bin/cli.js');
+10 |       const usage = spawnSync(process.execPath, [cli], { encoding: 'utf8' });
+11 |       const result = spawnSync(process.execPath, [cli, flag], {
+12 |         encoding: 'utf8',
+13 |       });
+14 |       expect(result.status).toBe(0);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-201.js:14:29)
+(fail) wrapper help (#201) > --help prints the no-argument usage and exits successfully [207.71ms]
+16 |       expect(result.stdout).toBe(usage.stdout);
+17 |       expect(parseArgs([flag]).wrapperOptions.help).toBe(true);
+18 |     });
+19 |     it(`${flag} after the separator remains part of the command`, () => {
+20 |       const result = parseArgs(['--', 'grep', flag]);
+21 |       expect(result.wrapperOptions.help).toBe(false);
+                                              ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: undefined
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-201.js:21:42)
+(fail) wrapper help (#201) > --help after the separator remains part of the command [10.25ms]
+ 9 |       const cli = path.join(__dirname, '../src/bin/cli.js');
+10 |       const usage = spawnSync(process.execPath, [cli], { encoding: 'utf8' });
+11 |       const result = spawnSync(process.execPath, [cli, flag], {
+12 |         encoding: 'utf8',
+13 |       });
+14 |       expect(result.status).toBe(0);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-201.js:14:29)
+(fail) wrapper help (#201) > -h prints the no-argument usage and exits successfully [189.10ms]
+16 |       expect(result.stdout).toBe(usage.stdout);
+17 |       expect(parseArgs([flag]).wrapperOptions.help).toBe(true);
+18 |     });
+19 |     it(`${flag} after the separator remains part of the command`, () => {
+20 |       const result = parseArgs(['--', 'grep', flag]);
+21 |       expect(result.wrapperOptions.help).toBe(false);
+                                              ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: undefined
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-201.js:21:42)
+(fail) wrapper help (#201) > -h after the separator remains part of the command [0.17ms]
+
+js/test/regression-202.js:
+ 9 | 
+10 | describe('shell command semantics (#202)', () => {
+11 |   for (const operator of [';', '&&', '||', '|', '&', '>', '<', '\n']) {
+12 |     it(`keeps the whole command line when it contains ${JSON.stringify(operator)}`, () => {
+13 |       const command = `sh -c 'exit 7'${operator} echo after $?`;
+14 |       expect(isShellInvocationWithArgs(command)).toBe(false);
+                                                      ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-202.js:14:50)
+(fail) shell command semantics (#202) > keeps the whole command line when it contains ";" [0.23ms]
+ 9 | 
+10 | describe('shell command semantics (#202)', () => {
+11 |   for (const operator of [';', '&&', '||', '|', '&', '>', '<', '\n']) {
+12 |     it(`keeps the whole command line when it contains ${JSON.stringify(operator)}`, () => {
+13 |       const command = `sh -c 'exit 7'${operator} echo after $?`;
+14 |       expect(isShellInvocationWithArgs(command)).toBe(false);
+                                                      ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-202.js:14:50)
+(fail) shell command semantics (#202) > keeps the whole command line when it contains "&&" [0.05ms]
+ 9 | 
+10 | describe('shell command semantics (#202)', () => {
+11 |   for (const operator of [';', '&&', '||', '|', '&', '>', '<', '\n']) {
+12 |     it(`keeps the whole command line when it contains ${JSON.stringify(operator)}`, () => {
+13 |       const command = `sh -c 'exit 7'${operator} echo after $?`;
+14 |       expect(isShellInvocationWithArgs(command)).toBe(false);
+                                                      ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-202.js:14:50)
+(fail) shell command semantics (#202) > keeps the whole command line when it contains "||" [0.04ms]
+ 9 | 
+10 | describe('shell command semantics (#202)', () => {
+11 |   for (const operator of [';', '&&', '||', '|', '&', '>', '<', '\n']) {
+12 |     it(`keeps the whole command line when it contains ${JSON.stringify(operator)}`, () => {
+13 |       const command = `sh -c 'exit 7'${operator} echo after $?`;
+14 |       expect(isShellInvocationWithArgs(command)).toBe(false);
+                                                      ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-202.js:14:50)
+(fail) shell command semantics (#202) > keeps the whole command line when it contains "|" [0.05ms]
+ 9 | 
+10 | describe('shell command semantics (#202)', () => {
+11 |   for (const operator of [';', '&&', '||', '|', '&', '>', '<', '\n']) {
+12 |     it(`keeps the whole command line when it contains ${JSON.stringify(operator)}`, () => {
+13 |       const command = `sh -c 'exit 7'${operator} echo after $?`;
+14 |       expect(isShellInvocationWithArgs(command)).toBe(false);
+                                                      ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-202.js:14:50)
+(fail) shell command semantics (#202) > keeps the whole command line when it contains "&" [0.04ms]
+ 9 | 
+10 | describe('shell command semantics (#202)', () => {
+11 |   for (const operator of [';', '&&', '||', '|', '&', '>', '<', '\n']) {
+12 |     it(`keeps the whole command line when it contains ${JSON.stringify(operator)}`, () => {
+13 |       const command = `sh -c 'exit 7'${operator} echo after $?`;
+14 |       expect(isShellInvocationWithArgs(command)).toBe(false);
+                                                      ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-202.js:14:50)
+(fail) shell command semantics (#202) > keeps the whole command line when it contains ">" [0.05ms]
+ 9 | 
+10 | describe('shell command semantics (#202)', () => {
+11 |   for (const operator of [';', '&&', '||', '|', '&', '>', '<', '\n']) {
+12 |     it(`keeps the whole command line when it contains ${JSON.stringify(operator)}`, () => {
+13 |       const command = `sh -c 'exit 7'${operator} echo after $?`;
+14 |       expect(isShellInvocationWithArgs(command)).toBe(false);
+                                                      ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-202.js:14:50)
+(fail) shell command semantics (#202) > keeps the whole command line when it contains "<" [0.04ms]
+ 9 | 
+10 | describe('shell command semantics (#202)', () => {
+11 |   for (const operator of [';', '&&', '||', '|', '&', '>', '<', '\n']) {
+12 |     it(`keeps the whole command line when it contains ${JSON.stringify(operator)}`, () => {
+13 |       const command = `sh -c 'exit 7'${operator} echo after $?`;
+14 |       expect(isShellInvocationWithArgs(command)).toBe(false);
+                                                      ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-202.js:14:50)
+(fail) shell command semantics (#202) > keeps the whole command line when it contains "\n" [0.04ms]
+17 |     });
+18 |   }
+19 |   it('preserves the script, empty positional argv, quotes, and quoted operators', () => {
+20 |     const command = `sh -c 'printf "%s\\n" "$0" "$1" "$2"; echo "|"' a 'b c' ''`;
+21 |     expect(isShellInvocationWithArgs(command)).toBe(true);
+22 |     expect(buildShellWithArgsCmdArgs(command)).toEqual([
+                                                    ^
+error: expect(received).toEqual(expected)
+
+  [
+    "sh",
+    "-c",
+-   "printf "%s\n" "$0" "$1" "$2"; echo "|"",
+-   "a",
+-   "b c",
+-   "",
++   "printf "%s\n" "$0" "$1" "$2"; echo "|" a b c ",
+  ]
+
+- Expected  - 4
++ Received  + 1
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-202.js:22:48)
+(fail) shell command semantics (#202) > preserves the script, empty positional argv, quotes, and quoted operators [0.29ms]
+22 |     expect(buildShellWithArgsCmdArgs(command)).toEqual([
+23 |       'sh', '-c', 'printf "%s\\n" "$0" "$1" "$2"; echo "|"', 'a', 'b c', '',
+24 |     ]);
+25 |   });
+26 |   it('does not classify a missing script or a script-file argument as -c', () => {
+27 |     expect(isShellInvocationWithArgs('sh -c')).toBe(false);
+                                                    ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-202.js:27:48)
+(fail) shell command semantics (#202) > does not classify a missing script or a script-file argument as -c [0.35ms]
+(pass) shell command semantics (#202) > retains direct bash -i -c behavior from #91 [0.11ms]
+32 |       'bash', '-i', '-c', 'nvm --version',
+33 |     ]);
+34 |   });
+35 |   it('leaves outer expansions, comments and globbing to the shell', () => {
+36 |     for (const command of ['sh -c "echo $$"', 'sh -c echo $HOME', 'sh -c echo *', 'sh -c echo # comment']) {
+37 |       expect(isShellInvocationWithArgs(command)).toBe(false);
+                                                      ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-202.js:37:50)
+(fail) shell command semantics (#202) > leaves outer expansions, comments and globbing to the shell [0.14ms]
+46 |     run(`executes ${command} with the expected output and exit`, () => {
+47 |       const args = isShellInvocationWithArgs(command)
+48 |         ? buildShellWithArgsCmdArgs(command)
+49 |         : ['sh', '-c', command];
+50 |       const result = spawnSync(args[0], args.slice(1), { encoding: 'utf8' });
+51 |       expect(result.stdout.trim()).toBe(output);
+                                        ^
+error: expect(received).toBe(expected)
+
+Expected: "after 7"
+Received: ""
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-202.js:51:36)
+(fail) shell command semantics (#202) > executes sh -c 'exit 7'; echo after $? with the expected output and exit [2.98ms]
+46 |     run(`executes ${command} with the expected output and exit`, () => {
+47 |       const args = isShellInvocationWithArgs(command)
+48 |         ? buildShellWithArgsCmdArgs(command)
+49 |         : ['sh', '-c', command];
+50 |       const result = spawnSync(args[0], args.slice(1), { encoding: 'utf8' });
+51 |       expect(result.stdout.trim()).toBe(output);
+                                        ^
+error: expect(received).toBe(expected)
+
+Expected: "a b"
+Received: "sh a b"
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-202.js:51:36)
+(fail) shell command semantics (#202) > executes sh -c 'echo $0 $1' a b with the expected output and exit [2.42ms]
+47 |       const args = isShellInvocationWithArgs(command)
+48 |         ? buildShellWithArgsCmdArgs(command)
+49 |         : ['sh', '-c', command];
+50 |       const result = spawnSync(args[0], args.slice(1), { encoding: 'utf8' });
+51 |       expect(result.stdout.trim()).toBe(output);
+52 |       expect(result.status).toBe(status);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: 137
+Received: null
+
+      at <anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/regression-202.js:52:29)
+(fail) shell command semantics (#202) > executes sh -c 'kill -9 $$'; exit $? with the expected output and exit [2.31ms]
+
+ 2 pass
+ 20 fail
+ 26 expect() calls
+Ran 22 tests across 3 files. [538.00ms]
