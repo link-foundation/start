@@ -1,0 +1,47 @@
+   Compiling start-command v0.23.0 (/tmp/gh-issue-solver-1791653332998/rust)
+    Finished `test` profile [unoptimized] target(s) in 5.51s
+     Running tests/failure_handler.rs (rust/target/debug/deps/failure_handler-74b9d9eaf44f84ae)
+
+running 25 tests
+test config_tests::should_allow_setting_disable_auto_issue ... ok
+test config_tests::should_allow_setting_disable_log_upload ... ok
+test config_tests::should_have_correct_default_values ... ok
+test config_tests::should_allow_setting_verbose ... ok
+test create_issue_tests::helper_process_calls_create_issue ... ignored, helper process, driven by create_issue_with_fake_gh
+test handle_failure_tests::should_not_panic_when_disable_auto_issue_is_true ... ok
+test handle_failure_tests::should_not_panic_when_verbose_and_disable_auto_issue ... ok
+test create_issue_tests::keeps_the_failing_command_verbatim_and_writes_real_newlines ... ok
+test create_issue_tests::passes_the_title_and_body_as_separate_arguments ... ok
+test create_issue_tests::sanitizes_credentials_in_issue_metadata_and_supports_unicode_commands ... ok
+test is_gh_upload_log_available_tests::return_value_is_bool_type ... ok
+test is_gh_upload_log_available_tests::should_return_a_bool ... ok
+test parse_git_url_tests::should_normalize_url_to_https ... ok
+test parse_git_url_tests::should_parse_git_at_format ... ok
+test parse_git_url_tests::should_parse_https_url ... ok
+test parse_git_url_tests::should_parse_npm_style_git_url ... ok
+test parse_git_url_tests::should_return_none_for_empty_string ... ok
+test parse_git_url_tests::should_parse_ssh_url ... ok
+test parse_git_url_tests::should_return_none_for_non_github_url ... ok
+test parse_git_url_tests::should_return_none_for_invalid_url ... ok
+test parse_git_url_tests::should_strip_git_suffix_from_repo ... ok
+test is_gh_authenticated_tests::return_value_is_bool_type ... ok
+test is_gh_authenticated_tests::should_return_a_bool ... ok
+test can_create_issue_tests::should_return_false_for_invalid_repo ... ok
+test can_create_issue_tests::should_return_bool ... ok
+
+test result: ok. 24 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.56s
+
+     Running tests/log_sanitizer.rs (rust/target/debug/deps/log_sanitizer-d25918c120de2b34)
+
+running 8 tests
+test large_log_experiment ... ignored, bounded 110MiB experiment; run with experiments/issue-200/large-log-rust.sh
+test fails_closed_on_invalid_source_and_excessive_environment_values ... ok
+test upload_child ... ok
+test redacts_multiline_and_short_environment_values_and_preserves_invalid_utf8 ... ok
+test private_copy_does_not_modify_source_and_is_removed_on_drop ... ok
+test both_upload_paths_use_private_sanitized_copies_and_manual_optout_is_explicit ... ok
+test redacts_required_credentials_across_chunk_boundaries ... ok
+test bounds_memory_and_redacts_long_token_and_header_suffixes ... ok
+
+test result: ok. 7 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.44s
+

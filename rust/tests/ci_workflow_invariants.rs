@@ -174,6 +174,10 @@ fn declares_a_least_privilege_default_permission_set() {
 fn gives_every_job_a_timeout() {
     for name in list_workflows() {
         for job in parse_jobs(&read_workflow(&name)) {
+            if job_key(&job.body, "uses").is_some() {
+                // Reusable-workflow callers cannot set timeouts; called jobs do.
+                continue;
+            }
             assert!(
                 job_key(&job.body, "timeout-minutes").is_some(),
                 "{name}: job \"{}\" has no timeout-minutes",
@@ -236,7 +240,7 @@ fn writers_share_the_main_writer_group_and_are_not_cancellable() {
 }
 
 #[test]
-fn read_only_checks_are_cancellable() {
+fn read_only_checks_protect_main_and_the_gated_rust_stage() {
     for name in list_workflows() {
         for job in parse_jobs(&read_workflow(&name)) {
             if WRITER_JOBS.contains(&job.name.as_str()) {
@@ -252,8 +256,12 @@ fn read_only_checks_are_cancellable() {
             );
             assert_eq!(
                 concurrency_key(&job.body, "cancel-in-progress").as_deref(),
-                Some("true"),
-                "{name}: superseded check \"{}\" should be cancelled",
+                Some(if name == "rust.yml" || job.name == "rust-stage" {
+                    "false"
+                } else {
+                    "${{ github.ref != 'refs/heads/main' }}"
+                }),
+                "{name}: checks must preserve main and the gated Rust stage: {}",
                 job.name
             );
         }
@@ -264,7 +272,7 @@ fn read_only_checks_are_cancellable() {
 fn uses_not_cancelled_rather_than_always_outside_the_status_job() {
     for name in list_workflows() {
         for job in parse_jobs(&read_workflow(&name)) {
-            if job.name == "pipeline-status" {
+            if job.name == "pipeline-status" || job.name == "rust-stage" {
                 continue;
             }
             assert!(
@@ -291,7 +299,7 @@ fn aggregates_every_job_into_a_pipeline_status_gate() {
         let needs = parse_needs(&status.body)
             .unwrap_or_else(|| panic!("{name}: pipeline-status has no needs"));
         for job in &jobs {
-            if job.name == "pipeline-status" {
+            if job.name == "pipeline-status" || job.name == "rust-stage" {
                 continue;
             }
             assert!(
@@ -406,12 +414,13 @@ fn security_workflow_scans_code_dependencies_and_secrets() {
         "no dependency review"
     );
     assert!(security.contains("secretlint"), "no secret scanning");
-    for language in ["javascript-typescript", "actions", "rust"] {
+    for language in ["javascript-typescript", "actions"] {
         assert!(
             security.contains(language),
             "CodeQL matrix does not cover {language}"
         );
     }
+    assert!(read_workflow("rust.yml").contains("languages: rust"));
 }
 
 #[test]
@@ -615,15 +624,15 @@ fn pins_third_party_actions_to_a_commit_hash() {
 #[test]
 fn audits_both_dependency_graphs_for_advisories() {
     let security = read_workflow("security.yml");
-    let jobs: Vec<String> = parse_jobs(&security).into_iter().map(|j| j.name).collect();
-    for job in ["cargo-audit", "npm-audit"] {
-        assert!(
-            jobs.iter().any(|name| name == job),
-            "security.yml has no {job} job"
-        );
-    }
+    let rust = read_workflow("rust.yml");
+    assert!(parse_jobs(&security)
+        .iter()
+        .any(|job| job.name == "npm-audit"));
+    assert!(parse_jobs(&rust)
+        .iter()
+        .any(|job| job.name == "cargo-audit"));
     assert!(
-        security.contains("cargo audit"),
+        rust.contains("cargo audit"),
         "cargo-audit job must run cargo audit"
     );
     assert!(

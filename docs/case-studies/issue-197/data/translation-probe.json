@@ -1,0 +1,130 @@
+[
+  {
+    "construct": "arithmetic",
+    "source": "/** @param {number} count @returns {number} */\nexport function threshold(count) { return count * 0.9; }\n",
+    "items": [
+      {
+        "term": "comment",
+        "status": "translated",
+        "reason": null
+      },
+      {
+        "term": "export_statement",
+        "status": "translated",
+        "reason": null
+      }
+    ],
+    "rust": "// meta-language:self-translation:v1 source=JavaScript target=Rust sha256=37130df12f6a77735a63a98570b20af63a8f007142d3fc081919e5096dc14cb7 bytes=104\n\n// meta-language:prelude begin\n#![allow(unused, unreachable_patterns, non_snake_case, non_camel_case_types, invalid_nan_comparisons)]\n// meta-language:prelude end\n\n// meta-language:translated JavaScript export_statement items=1 sha256=0ddfc17c6dda6b9bb8c9c51f8c82bd92712a61a2608cd9e53af239a41858e03b\n// | /** @param {number} count @returns {number} */\n// | export function threshold(count) { return count * 0.9; }\npub fn threshold(count: f64) -> f64 {\n    (count * 0.9f64)\n}\n"
+  },
+  {
+    "construct": "runtimeImport",
+    "source": "import { spawnSync } from 'node:child_process';\nexport function run() { return spawnSync('echo', ['hello']); }\n",
+    "items": [
+      {
+        "term": "import_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      },
+      {
+        "term": "export_statement",
+        "status": "carried",
+        "reason": "type"
+      }
+    ],
+    "rust": "// meta-language:self-translation:v1 source=JavaScript target=Rust sha256=66152bbbf19f9da13538eead5425d658ed9842f146c80e8a290e38387258ec9f bytes=111\n\n// meta-language:carried JavaScript import_statement (unsupported)\n// | import { spawnSync } from 'node:child_process';\n// meta-language:carried JavaScript export_statement (type)\n// | export function run() { return spawnSync('echo', ['hello']); }\n"
+  },
+  {
+    "construct": "commonJs",
+    "source": "const fs = require('node:fs');\nfunction read(path) { return fs.readFileSync(path, 'utf8'); }\nmodule.exports = { read };\n",
+    "items": [
+      {
+        "term": "lexical_declaration",
+        "status": "carried",
+        "reason": "unsupported"
+      },
+      {
+        "term": "function_declaration",
+        "status": "carried",
+        "reason": "type"
+      },
+      {
+        "term": "expression_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      }
+    ],
+    "rust": "// meta-language:self-translation:v1 source=JavaScript target=Rust sha256=62bbff7dde79c59b5e8025d1c4fd7d6639b6a48b5d74be9525793ab964595c43 bytes=120\n\n// meta-language:carried JavaScript lexical_declaration (unsupported)\n// | const fs = require('node:fs');\n// meta-language:carried JavaScript function_declaration (type)\n// | function read(path) { return fs.readFileSync(path, 'utf8'); }\n// meta-language:carried JavaScript expression_statement (unsupported)\n// | module.exports = { read };\n"
+  },
+  {
+    "construct": "optional",
+    "source": "export function session(options) { return options?.session ?? null; }\n",
+    "items": [
+      {
+        "term": "export_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      }
+    ],
+    "rust": "// meta-language:self-translation:v1 source=JavaScript target=Rust sha256=cd6f47b91f5ae4f77239e6f4d4e2ca9b933c2671f0f12ea517614a13cd0fef5b bytes=70\n\n// meta-language:carried JavaScript export_statement (unsupported)\n// | export function session(options) { return options?.session ?? null; }\n"
+  },
+  {
+    "construct": "objects",
+    "source": "export function record() { return { status: \"executed\", exitCode: 0 }; }\n",
+    "items": [
+      {
+        "term": "export_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      }
+    ],
+    "rust": "// meta-language:self-translation:v1 source=JavaScript target=Rust sha256=be8b04f1e00f6b933ef84a6da89f9989646e5e002dca6d515da5b470b1cf7802 bytes=73\n\n// meta-language:carried JavaScript export_statement (unsupported)\n// | export function record() { return { status: \"executed\", exitCode: 0 }; }\n"
+  },
+  {
+    "construct": "arrays",
+    "source": "export function selected(values) { return values.filter(value => value > 0).join(\",\"); }\n",
+    "items": [
+      {
+        "term": "export_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      }
+    ],
+    "rust": "// meta-language:self-translation:v1 source=JavaScript target=Rust sha256=0c98378acdafb39a238c55c7042fa684c865e44d7056ac28e14ce44389b737ce bytes=89\n\n// meta-language:carried JavaScript export_statement (unsupported)\n// | export function selected(values) { return values.filter(value => value > 0).join(\",\"); }\n"
+  },
+  {
+    "construct": "regex",
+    "source": "export function isDelay(value) { return /^(\\d+)(ms|s)$/.test(value); }\n",
+    "items": [
+      {
+        "term": "export_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      }
+    ],
+    "rust": "// meta-language:self-translation:v1 source=JavaScript target=Rust sha256=13bbfec4985b8a22e93953bba148598eee157e11879b005278aea03a69757650 bytes=71\n\n// meta-language:carried JavaScript export_statement (unsupported)\n// | export function isDelay(value) { return /^(\\d+)(ms|s)$/.test(value); }\n"
+  },
+  {
+    "construct": "exceptions",
+    "source": "export function parse(value) { try { return JSON.parse(value); } catch { return null; } }\n",
+    "items": [
+      {
+        "term": "export_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      }
+    ],
+    "rust": "// meta-language:self-translation:v1 source=JavaScript target=Rust sha256=45f9846fd2e302139248037bc876a6dd72718d9b78b81f2181a76b15c6542afd bytes=90\n\n// meta-language:carried JavaScript export_statement (unsupported)\n// | export function parse(value) { try { return JSON.parse(value); } catch { return null; } }\n"
+  },
+  {
+    "construct": "asynchronous",
+    "source": "export async function execute(run) { return await run(); }\n",
+    "items": [
+      {
+        "term": "export_statement",
+        "status": "carried",
+        "reason": "unsupported"
+      }
+    ],
+    "rust": "// meta-language:self-translation:v1 source=JavaScript target=Rust sha256=4452becb58a0b6fd0ca225334e44f169d8bda562bea0f121560c21cc787f9597 bytes=59\n\n// meta-language:carried JavaScript export_statement (unsupported)\n// | export async function execute(run) { return await run(); }\n"
+  }
+]

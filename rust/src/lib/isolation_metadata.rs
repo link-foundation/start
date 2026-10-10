@@ -11,6 +11,37 @@ use crate::args_parser::WrapperOptions;
 use crate::recovery_delay::effective_on_kill_resume_delay;
 use std::collections::HashMap;
 
+/// Container labels are immutable, so resume counters describe container creation.
+/// Snapshot containers get new attribution; in-place restarts retain their labels.
+pub fn docker_attribution_labels(
+    options: &crate::isolation::IsolationOptions,
+    session: &str,
+) -> Vec<String> {
+    let mut labels = options.labels.clone();
+    let mut inferred_root = session;
+    if options.resume_count > 0 {
+        while let Some((prefix, count)) = inferred_root.rsplit_once("-resume-") {
+            if count.is_empty() || !count.bytes().all(|byte| byte.is_ascii_digit()) {
+                break;
+            }
+            inferred_root = prefix;
+        }
+    }
+    let root = options.root_session.as_deref().unwrap_or(inferred_root);
+    let uuid = options
+        .uuid
+        .clone()
+        .or_else(|| options.execution_id.clone())
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    labels.extend([
+        format!("start-command.session={}", session),
+        format!("start-command.root-session={}", root),
+        format!("start-command.uuid={}", uuid),
+        format!("start-command.resume-count={}", options.resume_count),
+    ]);
+    labels
+}
+
 /// Build the human-readable `[Isolation]` status lines for docker runtime
 /// options (volumes, mounts, env, privileged). Used for the start block and
 /// log header; empty collections contribute no lines.
@@ -70,6 +101,9 @@ pub fn docker_runtime_status_lines_for_options(options: &WrapperOptions) -> Vec<
         &options.networks,
         &options.network_aliases,
     );
+    if !options.labels.is_empty() {
+        lines.push(format!("[Isolation] Labels: {}", options.labels.join(", ")));
+    }
     if let Some(line) = crate::docker_resource_options::log_line(
         &crate::docker_resource_options::specs(options),
         &options.resolved_limits,
@@ -225,6 +259,12 @@ pub fn build_isolation_options_map(
 ) -> HashMap<String, serde_json::Value> {
     let str_val = |s: &str| serde_json::Value::String(s.to_string());
     let mut opts_map = HashMap::new();
+    if !options.labels.is_empty() {
+        opts_map.insert("labels".to_string(), serde_json::json!(options.labels));
+    }
+    if environment == Some("docker") && mode == "detached" {
+        opts_map.insert("commandHandoff".to_string(), serde_json::json!(true));
+    }
     if let Some(env) = environment {
         opts_map.insert("isolated".to_string(), str_val(env));
     }

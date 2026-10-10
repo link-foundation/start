@@ -168,6 +168,10 @@ fn main() {
     };
 
     let mut wrapper_options = parsed.wrapper_options;
+    if wrapper_options.help {
+        print_usage();
+        process::exit(0);
+    }
     let parsed_command = parsed.command.clone();
 
     // Options that address an existing execution never start a new one.
@@ -511,6 +515,10 @@ fn run_with_isolation(
             volumes: wrapper_options.volumes.clone(),
             mounts: wrapper_options.mounts.clone(),
             env: wrapper_options.env.clone(),
+            labels: wrapper_options.labels.clone(),
+            uuid: Some(session_id.to_string()),
+            root_session: None,
+            resume_count: 0,
             privileged: wrapper_options.privileged,
             network: wrapper_options.network.clone(),
             networks: wrapper_options.networks.clone(),

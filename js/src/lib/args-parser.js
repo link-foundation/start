@@ -193,6 +193,8 @@ function parseArgs(args) {
     volumes: [], // Docker bind mounts/volumes (-v/--volume), applied to docker levels
     mounts: [], // Docker --mount specs, applied to docker levels
     env: [], // Docker environment variables (-e/--env, KEY=VALUE), applied to docker levels
+    labels: [], // Caller attribution, applied to every Docker level
+    help: false,
     privileged: false, // Run docker container in privileged mode
     network: null, // First Docker network name (compatibility accessor)
     networks: [], // Ordered Docker network names
@@ -247,7 +249,9 @@ function parseArgs(args) {
   }
 
   // Validate options
-  validateOptions(wrapperOptions);
+  if (!wrapperOptions.help) {
+    validateOptions(wrapperOptions);
+  }
 
   return {
     wrapperOptions,
@@ -288,6 +292,16 @@ function parseWrapperArgs(args, options) {
  */
 function parseOption(args, index, options) {
   const arg = args[index];
+  if (arg === '--help' || arg === '-h') {
+    options.help = true;
+    return 1;
+  }
+  if (arg === '--label' || arg.startsWith('--label=')) {
+    const label = arg === '--label' ? args[index + 1] : arg.slice(8);
+    require('./docker-labels').validateLabel(label);
+    options.labels.push(label);
+    return arg === '--label' ? 2 : 1;
+  }
 
   // --isolated, --isolation, or -i
   if (arg === '--isolated' || arg === '--isolation' || arg === '-i') {
@@ -568,6 +582,11 @@ function parseOption(args, index, options) {
  * @throws {Error} If a docker-only option is set without docker isolation
  */
 function validateDockerRuntimeOptionsRequireDocker(options) {
+  if (options.labels?.length > 0 && !options.resume) {
+    throw new Error(
+      '--label option is only valid with docker isolation or --resume'
+    );
+  }
   if (options.volumes && options.volumes.length > 0) {
     throw new Error(
       '--volume option is only valid when isolation stack includes docker'

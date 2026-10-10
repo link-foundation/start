@@ -33,3 +33,12 @@ libc = "0.2"
 
 [dev-dependencies]
 tempfile = "3"
+
+# Keep each compiler process small; CI also disables incremental artifacts.
+[profile.dev]
+debug = 0
+incremental = false
+
+[profile.test]
+debug = 0
+incremental = false

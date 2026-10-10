@@ -1,0 +1,24 @@
+   Compiling start-command v0.23.0 (/tmp/gh-issue-solver-1791653332998/rust)
+    Finished `test` profile [unoptimized] target(s) in 7.91s
+     Running tests/regression_199.rs (/tmp/gh-issue-solver-1791653332998/.cargo-target/debug/deps/regression_199-56509a92804b4fbf)
+
+running 3 tests
+test invalid_or_reserved_labels_are_rejected ... ok
+test docker_labels_are_parsed_and_persisted ... ok
+test replacement_container_labels_keep_root_and_uuid ... FAILED
+
+failures:
+
+---- replacement_container_labels_keep_root_and_uuid stdout ----
+
+thread 'replacement_container_labels_keep_root_and_uuid' (110071) panicked at tests/regression_199.rs:11:5:
+assertion failed: initial_labels.contains(&"start-command.root-session=demo-resume-1".to_string())
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    replacement_container_labels_keep_root_and_uuid
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--test regression_199`

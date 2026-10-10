@@ -1,0 +1,75 @@
+bun test v1.4.2 (744846f84)
+
+js/test/javascript-first-ci.js:
+14 | }
+15 | 
+16 | describe('JavaScript first CI gate', () => {
+17 |   it('makes Rust callable only after the complete JavaScript stage', () => {
+18 |     const files = workflows();
+19 |     assert.deepEqual(Object.keys(files['rust.yml'].on), ['workflow_call']);
+                ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
++   'push',
++   'pull_request',
++   'workflow_dispatch'
+-   'workflow_call'
+  ]
+
+ generatedMessage: true,
+     actual: [ "push", "pull_request", "workflow_dispatch" ],
+   expected: [ "workflow_call" ],
+   operator: "deepStrictEqual",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1791653332998/js/test/javascript-first-ci.js:19:12
+      at run (node:async_hooks:144:29)
+      at node:test:1445:26
+      at executeTestNode (node:test:1448:45)
+      at node:test:1591:20
+(fail) JavaScript first CI gate > makes Rust callable only after the complete JavaScript stage [40.68ms]
+25 |   });
+26 | 
+27 |   it('always runs JavaScript and its behavioral parity gate on Rust-only changes', () => {
+28 |     const js = workflows()['js.yml'];
+29 |     for (const trigger of ['push', 'pull_request']) {
+30 |       assert.equal(js.on[trigger].paths, undefined);
+                  ^
+AssertionError: Expected values to be strictly equal:
++ actual - expected
+
++ [
++   'README.md',
++   'REQUIREMENTS.md',
++   'ARCHITECTURE.md',
++   'docs/**',
++   'examples/**',
++   'experiments/**',
++   'js/**',
++   'scripts/**',
++   '.github/workflows/js.yml'
++ ]
+- undefined
+
+ generatedMessage: true,
+     actual: [ "README.md", "REQUIREMENTS.md", "ARCHITECTURE.md", "docs/**", "examples/**", "experiments/**",
+  "js/**", "scripts/**", ".github/workflows/js.yml"
+],
+   expected: undefined,
+   operator: "strictEqual",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1791653332998/js/test/javascript-first-ci.js:30:14
+      at run (node:async_hooks:144:29)
+      at node:test:1445:26
+      at executeTestNode (node:test:1448:45)
+      at node:test:1591:20
+(fail) JavaScript first CI gate > always runs JavaScript and its behavioral parity gate on Rust-only changes [3.76ms]
+
+ 0 pass
+ 2 fail
+Ran 2 tests across 1 file. [83.00ms]

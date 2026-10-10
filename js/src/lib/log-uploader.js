@@ -6,6 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { sanitizeLogToTemp } = require('./log-sanitizer');
 
 function isExecutable(filePath) {
   try {
@@ -135,7 +136,7 @@ function ensureGhUploadLogAvailable() {
   };
 }
 
-function uploadLogPath(logPath) {
+function uploadLogPath(logPath, options = {}) {
   if (!logPath) {
     return {
       success: false,
@@ -146,29 +147,47 @@ function uploadLogPath(logPath) {
     return { success: false, error: `Log file not found: ${logPath}` };
   }
 
-  const availability = ensureGhUploadLogAvailable();
-  if (!availability.success) {
-    return availability;
-  }
-
-  const result = runCommand(availability.command, [logPath], {
-    stdio: 'inherit',
-  });
-
-  const exitCode =
-    result.status !== null && result.status !== undefined ? result.status : 1;
-  if (exitCode !== 0) {
+  let prepared;
+  try {
+    if (!options.noSanitize) {
+      // Wrapper options.env holds Docker arguments, not the process secrets.
+      prepared = sanitizeLogToTemp(logPath, { verbose: options.verbose });
+    }
+    const availability = ensureGhUploadLogAvailable();
+    if (!availability.success) {
+      return availability;
+    }
+    const result = runCommand(
+      availability.command,
+      [prepared ? prepared.path : logPath, '--private'],
+      {
+        stdio: 'inherit',
+      }
+    );
+    const exitCode =
+      result.status !== null && result.status !== undefined ? result.status : 1;
+    if (exitCode !== 0) {
+      return {
+        success: false,
+        exitCode,
+        error: `gh-upload-log exited with code ${exitCode}`,
+      };
+    }
+    return { success: true, exitCode: 0 };
+  } catch {
     return {
       success: false,
-      exitCode,
-      error: `gh-upload-log exited with code ${exitCode}`,
+      exitCode: 1,
+      error: 'Log preparation or upload failed; upload blocked.',
     };
+  } finally {
+    if (prepared) {
+      prepared.cleanup();
+    }
   }
-
-  return { success: true, exitCode: 0 };
 }
 
-function uploadExecutionLog(store, identifier) {
+function uploadExecutionLog(store, identifier, options = {}) {
   if (!store) {
     return { success: false, error: 'Execution tracking is disabled.' };
   }
@@ -181,7 +200,7 @@ function uploadExecutionLog(store, identifier) {
     };
   }
 
-  return uploadLogPath(record.logPath);
+  return uploadLogPath(record.logPath, options);
 }
 
 module.exports = {

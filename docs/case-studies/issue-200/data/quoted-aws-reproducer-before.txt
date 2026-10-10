@@ -1,0 +1,37 @@
+▶ log sanitization
+  ✖ redacts AWS assignment values enclosed in either quote style (32.519607ms)
+✖ log sanitization (39.291803ms)
+ℹ tests 1
+ℹ suites 1
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 291.867408
+
+✖ failing tests:
+
+test at js/test/log-sanitizer.js:103:3
+✖ redacts AWS assignment values enclosed in either quote style (32.519607ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(!output.includes('quoted-aws-secret'))
+  
+      at TestContext.<anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/log-sanitizer.js:113:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at node:internal/test_runner/test:1903:71
+      at node:internal/per_context/primordials:505:82
+      at new Promise (<anonymous>)
+      at new SafePromise (node:internal/per_context/primordials:479:3)
+      at node:internal/per_context/primordials:505:9
+      at Array.map (<anonymous>) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

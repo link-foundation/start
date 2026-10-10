@@ -1,0 +1,156 @@
+$ ulimit -v 131072; printf preserved > /root/kept; sleep 120
+
+{
+  "image": "alpine:3.23",
+  "limits": [],
+  "commandMemoryLimitKiB": 131072,
+  "commandDurationCeilingSeconds": 120,
+  "checkedAt": "2026-10-10T17:57:20.069Z",
+  "handoff": {
+    "mode": "docker-start",
+    "sameContainerId": true,
+    "preservedFilesystem": true,
+    "snapshotCommands": 0
+  },
+  "legacy": {
+    "mode": "docker-snapshot",
+    "originalRemoved": true,
+    "snapshotPreflight": "Resumed session in new container start-198-legacy-6b08fa65-resume-1 from snapshot of start-198-legacy-6b08fa65\n[Resume] snapshotting 0.00 GiB; disk preflight passed (10.00 GiB required).\nStopped original container removed: start-198-legacy-6b08fa65",
+    "successorSupportsHandoff": true,
+    "snapshotImageRemovedByWatcher": true
+  },
+  "dockerCalls": [
+    [
+      "docker",
+      "exec"
+    ],
+    [
+      "docker",
+      "inspect"
+    ],
+    [
+      "docker",
+      "kill"
+    ],
+    [
+      "docker",
+      "inspect"
+    ],
+    [
+      "docker",
+      "inspect"
+    ],
+    [
+      "docker",
+      "cp"
+    ],
+    [
+      "docker",
+      "start"
+    ],
+    [
+      "docker",
+      "exec"
+    ],
+    [
+      "docker",
+      "inspect"
+    ],
+    [
+      "docker",
+      "run"
+    ],
+    [
+      "docker",
+      "exec"
+    ],
+    [
+      "docker",
+      "kill"
+    ],
+    [
+      "docker",
+      "inspect"
+    ],
+    [
+      "docker",
+      "inspect"
+    ],
+    [
+      "docker",
+      "inspect"
+    ],
+    [
+      "docker",
+      "info"
+    ],
+    [
+      "docker",
+      "commit"
+    ],
+    [
+      "docker",
+      "run"
+    ],
+    [
+      "docker",
+      "inspect"
+    ],
+    [
+      "docker",
+      "rm"
+    ],
+    [
+      "docker",
+      "inspect"
+    ],
+    [
+      "docker",
+      "exec"
+    ],
+    [
+      "docker",
+      "inspect"
+    ],
+    [
+      "docker",
+      "kill"
+    ],
+    [
+      "docker",
+      "inspect"
+    ],
+    [
+      "docker",
+      "inspect"
+    ],
+    [
+      "docker",
+      "cp"
+    ],
+    [
+      "docker",
+      "start"
+    ],
+    [
+      "docker",
+      "exec"
+    ],
+    [
+      "docker",
+      "inspect"
+    ],
+    [
+      "docker",
+      "kill"
+    ],
+    [
+      "docker",
+      "inspect"
+    ],
+    [
+      "docker",
+      "image"
+    ]
+  ]
+}

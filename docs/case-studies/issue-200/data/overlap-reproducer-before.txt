@@ -1,0 +1,40 @@
+▶ log sanitization
+  ✖ retains full header continuation when an inner token reaches the same block boundary (31.574505ms)
+✖ log sanitization (35.972291ms)
+ℹ tests 1
+ℹ suites 1
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 271.378805
+
+✖ failing tests:
+
+test at js/test/log-sanitizer.js:79:3
+✖ retains full header continuation when an inner token reaches the same block boundary (31.574505ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + '[REDACTED] trailing-private-value\nordinary\n'
+  - '[REDACTED]\nordinary\n'
+               ^
+  
+      at TestContext.<anonymous> (/tmp/gh-issue-solver-1791653332998/js/test/log-sanitizer.js:89:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at node:internal/test_runner/test:1903:71
+      at node:internal/per_context/primordials:505:82
+      at new Promise (<anonymous>)
+      at new SafePromise (node:internal/per_context/primordials:479:3)
+      at node:internal/per_context/primordials:505:9
+      at Array.map (<anonymous>) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '[REDACTED] trailing-private-value\nordinary\n',
+    expected: '[REDACTED]\nordinary\n',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

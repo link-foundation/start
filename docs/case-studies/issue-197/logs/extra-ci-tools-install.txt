@@ -1,0 +1,10 @@
+Collecting zizmor
+  Downloading zizmor-1.30.1-py3-none-manylinux_2_28_x86_64.whl.metadata (4.6 kB)
+Collecting pyflakes
+  Downloading pyflakes-4.0.3-py2.py3-none-any.whl.metadata (3.7 kB)
+Downloading zizmor-1.30.1-py3-none-manylinux_2_28_x86_64.whl (9.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.5/9.5 MB 29.0 MB/s  0:00:00
+Downloading pyflakes-4.0.3-py2.py3-none-any.whl (66 kB)
+Installing collected packages: zizmor, pyflakes
+
+Successfully installed pyflakes-4.0.3 zizmor-1.30.1

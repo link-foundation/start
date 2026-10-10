@@ -1,0 +1,28 @@
+bun test v1.4.2 (744846f84)
+
+js/test/docker-command-handoff.js:
+(pass) new stopped containers choose a copy-free command handoff [6.13ms]
+(pass) handoff preserves argv and accepts a replacement without executing it on the host [25.69ms]
+(pass) handoff preserves direct shell positional argv and evaluates compound commands as scripts [11.38ms]
+(pass) auto handoff chooses an installed shell inside the existing container [1521.12ms]
+
+js/test/docker-snapshot-safety.js:
+(pass) preflight refuses insufficient space before any snapshot [14.72ms]
+(pass) containerd image store checks Docker and containerd filesystems separately [0.53ms]
+(pass) preflight logs the layer size and rejects unknown sizes or roots [0.56ms]
+(pass) snapshot lock is separate from store locks and excludes concurrent processes [2140.15ms]
+
+js/test/regression-198.js:
+(pass) replacement command resumes the same container without a snapshot or changed ID [9.52ms]
+(pass) automatic recovery replaces a prior explicit handoff and exports its attempt [3.95ms]
+(pass) legacy snapshots preflight before commit and remove originals only with non-forced rm after start [13.29ms]
+(pass) disk shortage rolls back the reservation without committing or removing the original [9.13ms]
+(pass) snapshot failure removes a completed image and restores the original execution [10.63ms]
+(pass) watcher removes its generated image after the cleanup policy removes its container [55.64ms]
+(pass) changed caller labels use a guarded snapshot and reapply merged labels [6.59ms]
+(pass) original retained by default and when a successor has already stopped [13.98ms]
+(pass) repeated snapshot successors retain the original root-session attribution [13.12ms]
+
+ 17 pass
+ 0 fail
+Ran 17 tests across 3 files. [4.04s]

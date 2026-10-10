@@ -1,0 +1,11 @@
+▶ log sanitization
+  ✔ enforces private permissions at creation even with a permissive umask (23.090298ms)
+✔ log sanitization (26.985285ms)
+ℹ tests 1
+ℹ suites 1
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 258.137919

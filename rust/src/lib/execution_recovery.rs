@@ -502,7 +502,31 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
     }
 
     if recovery_command.is_some() {
-        let copied = write_recovery_marker(&container_name, attempt, runner);
+        let copied = if record
+            .options
+            .get("commandHandoff")
+            .and_then(Value::as_bool)
+            == Some(true)
+        {
+            crate::docker_command_handoff::write_command_handoff(
+                &container_name,
+                &format!(
+                    "export {}={}; {}",
+                    RECOVERY_ATTEMPT_ENV,
+                    attempt,
+                    recovery_command.as_deref().unwrap()
+                ),
+                option_str(&record, "shell").unwrap_or("auto"),
+                record.options.get("keepAlive").and_then(Value::as_bool) == Some(true),
+                runner,
+            )
+            .unwrap_or_else(|error| CommandRunOutput {
+                error: Some(error),
+                ..Default::default()
+            })
+        } else {
+            write_recovery_marker(&container_name, attempt, runner)
+        };
         if !copied.success {
             return give_up(format!(
                 "could not mark the container: {}",

@@ -1,0 +1,37 @@
+CHECK: js-check8.log
+$ bun run lint && bun run lint:scripts && bun run format:check && bun run format:check:scripts && bun run check:file-size
+$ eslint .
+$ cd .. && eslint .
+$ prettier --check .
+Checking formatting...
+All matched files use Prettier code style!
+$ cd .. && prettier --check "scripts/**/*.{js,mjs,cjs}"
+Checking formatting...
+All matched files use Prettier code style!
+$ bun ../scripts/check-file-size.mjs
+
+Checking JavaScript and Rust files for maximum 1000 lines...
+
+✓ All files are within the line limit
+
+
+
+CHECK: rust-format4.log
+
+
+CHECK: rust-clippy5.log
+    Checking start-command v0.23.0 (/tmp/gh-issue-solver-1791653332998/rust)
+    Finished `dev` profile [unoptimized] target(s) in 15.44s
+
+
+CHECK: final-feature-parity2.log
+Verified 20 features, source inventory and behavior evidence.
+
+
+CHECK: final-workflow-guard2.log
+Every Rust job uses the successful JavaScript stage on the same commit.
+
+
+CHECK: final-generation2.log
+Verified rust/src/lib/generated/parity_threshold.rs
+

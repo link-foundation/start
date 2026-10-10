@@ -21,6 +21,7 @@ $ echo "Hello World"
 $ bun test
 $ git status
 $ --list
+$ --help
 $ --upload-log <id>
 $ --attach <id>
 $ --resume <id> -- <command>
@@ -35,13 +36,32 @@ with `--output-format json` or `--output-format text`.
 Use `--upload-log <id>` to look up a stored execution by UUID or session name
 and run `gh-upload-log` for its saved log file. If `gh-upload-log` is missing,
 the command attempts to install it first with Bun or npm.
+Uploads use a private sanitized copy; the original stays local and a failed
+sanitization stops the upload. `--upload-log <id> --no-sanitize` is an explicit
+manual opt-out. Automatic reporting always sanitizes.
+
+`--help` and `-h` print the same usage as running `$` without arguments and exit
+zero. Only wrapper options before `--` are interpreted: `$ -- grep --help`
+executes the command's help.
+
+Docker accepts repeatable `--label KEY=VALUE` options. Caller labels are saved
+alongside environment options and reapplied to replacement containers. The
+wrapper always adds its reserved `start-command.session`, `.root-session`,
+`.uuid` and `.resume-count` labels. Filter live tasks using
+`docker ps --filter label=task.tool=codex`. Existing containers retain immutable
+creation labels across in-place resumes; changed labels require a snapshot.
 
 Use `--attach <id>` to re-enter a running detached isolated session, and
 `--attach <id> --read-only` to follow its output without sending input. Use
 `--resume <id>` to restart a stopped one in the same environment, or
 `--resume <id> -- <command>` to run a different command against the same
-container filesystem (the stopped container's memory, CPU and PIDs limits are
-re-applied to the derived container). Add `--on-kill-resume <N>` and
+container filesystem. New detached Docker launches reuse the container through
+a small command handoff script. Legacy containers and changed labels require a
+snapshot, guarded by a host lock and checks for twice the writable-layer size
+plus a 10 GiB reserve in both Docker and containerd storage. Snapshot successors
+retain the stopped container's memory, CPU and PIDs limits. Add
+`--remove-original` to remove the predecessor only after the successor starts.
+Add `--on-kill-resume <N>` and
 `--recovery-command <cmd>` to a detached Docker launch to recover from an OOM
 kill in the same container automatically, and `--on-kill-resume-delay 30-90`
 to wait a random 30–90 seconds before each such resume so that executions

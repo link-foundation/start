@@ -565,6 +565,14 @@ function runInDocker(command, options = {}) {
     }
   }
   const containerName = options.session || generateSessionName('docker');
+  const attribution = {
+    ...options,
+    containerName,
+    sessionId:
+      options.sessionId ||
+      options.executionId ||
+      require('crypto').randomUUID(),
+  };
   const containerExistedBeforeLaunch =
     readDockerContainerStatus(containerName) !== null;
   const cleanupPolicy = getDockerContainerCleanupPolicy(options);
@@ -604,7 +612,7 @@ function runInDocker(command, options = {}) {
         dockerArgs.push('--user', options.user);
       }
 
-      dockerArgs.push(...buildDockerRuntimeArgs(options));
+      dockerArgs.push(...buildDockerRuntimeArgs(attribution));
 
       const effectiveCommand = options.keepAlive
         ? `${command}; exec ${shellToUse}`
@@ -614,12 +622,12 @@ function runInDocker(command, options = {}) {
         : [shellToUse];
       const mainCmdArgs = isBareShell
         ? toShellWords(command)
-        : isShellInvocationWithArgs(command)
+        : isShellInvocationWithArgs(effectiveCommand)
           ? buildShellWithArgsCmdArgs(effectiveCommand)
           : [...shellArgs, '-c', effectiveCommand];
       // A recovery command is selected by a marker that `docker cp` drops
       // into the container before it is started again (issue #176).
-      const cmdArgs = options.recoveryCommand
+      const recoveryArgs = options.recoveryCommand
         ? buildRecoverySelectorArgs(mainCmdArgs, {
             shell: shellToUse,
             shellFlag: shellInteractiveFlag,
@@ -628,6 +636,14 @@ function runInDocker(command, options = {}) {
               : options.recoveryCommand,
           })
         : mainCmdArgs;
+      const {
+        buildCommandHandoffArgs,
+        commandHandoffPath,
+      } = require('./docker-command-handoff');
+      const cmdArgs = buildCommandHandoffArgs(
+        recoveryArgs,
+        commandHandoffPath(containerName)
+      );
       dockerArgs.push(options.image, ...cmdArgs);
 
       if (DEBUG) {
@@ -717,7 +733,7 @@ function runInDocker(command, options = {}) {
       if (options.user) {
         dockerArgs.push('--user', options.user);
       }
-      dockerArgs.push(...buildDockerRuntimeArgs(options));
+      dockerArgs.push(...buildDockerRuntimeArgs(attribution));
       if (DEBUG) {
         console.log(`[DEBUG] shell: ${shellToUse}`);
       }

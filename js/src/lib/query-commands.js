@@ -38,8 +38,8 @@ function handleListQuery(store, outputFormat, options = {}) {
   return reportResult(listExecutions(store, outputFormat, options));
 }
 
-function handleUploadLogQuery(store, identifier) {
-  const result = uploadExecutionLog(store, identifier);
+function handleUploadLogQuery(store, identifier, options = {}) {
+  const result = uploadExecutionLog(store, identifier, options);
   if (result.success) {
     return result.exitCode || 0;
   }
@@ -67,6 +67,7 @@ async function handleResumeQuery(
       command,
       outputFormat,
       resourceOptions,
+      removeOriginal: resourceOptions.removeOriginal === true,
     })
   );
 }
@@ -164,7 +165,7 @@ async function dispatchQueryCommand(options, context = {}) {
     return handleListQuery(store, outputFormat, { running: options.running });
   }
   if (hasValue(options.uploadLog)) {
-    return handleUploadLogQuery(store, options.uploadLog);
+    return handleUploadLogQuery(store, options.uploadLog, options);
   }
   if (hasValue(options.stop)) {
     return handleControlQuery(store, options.stop, ControlAction.STOP);

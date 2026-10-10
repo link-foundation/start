@@ -1,0 +1,1749 @@
+ INFO zizmor: 🌈 zizmor v1.30.1
+DEBUG zizmor::config: loading config from `.github/zizmor.yml`
+DEBUG collect_inputs: zizmor::config: config discovery: using global config: Config { raw: RawConfig { rules: {"unpinned-uses": AuditRuleConfig { disable: false, ignore: [], config: Some(Mapping {"policies": Mapping {"actions/*": String("ref-pin"), "github/*": String("ref-pin"), "docker/*": String("ref-pin"), "astral-sh/*": String("ref-pin"), "lycheeverse/*": String("ref-pin"), "zizmorcore/*": String("ref-pin"), "changesets/*": String("ref-pin"), "*": String("hash-pin")}}), remap: None }} }, dependabot_cooldown_config: DependabotCooldownConfig { days: 7 }, forbidden_uses_config: None, secrets_outside_env_policy: SecretsOutsideEnvPolicy { allow: {"github_token"} }, unpinned_uses_policies: UnpinnedUsesPolicies { policy_tree: {"astral-sh": [(InOwner("astral-sh"), RefPin)], "lycheeverse": [(InOwner("lycheeverse"), RefPin)], "zizmorcore": [(InOwner("zizmorcore"), RefPin)], "github": [(InOwner("github"), RefPin)], "actions": [(InOwner("actions"), RefPin)], "docker": [(InOwner("docker"), RefPin)], "changesets": [(InOwner("changesets"), RefPin)]}, default_policy: HashPin }, known_vulnerable_actions_config: KnownVulnerableActionsConfig { allow: {} } }
+DEBUG collect_inputs: ignore::gitignore: opened gitignore file: /tmp/gh-issue-solver-1791653332998/.gitignore
+DEBUG collect_inputs: globset: glob `Glob("**/npm-debug.log*")` converted to regex: `"(?-u)^(?:/?|.*/)npm\\-debug\\.log[^/]*$"`
+DEBUG collect_inputs: globset: glob `Glob("**/yarn-debug.log*")` converted to regex: `"(?-u)^(?:/?|.*/)yarn\\-debug\\.log[^/]*$"`
+DEBUG collect_inputs: globset: glob `Glob("**/yarn-error.log*")` converted to regex: `"(?-u)^(?:/?|.*/)yarn\\-error\\.log[^/]*$"`
+DEBUG collect_inputs: globset: glob `Glob("**/lerna-debug.log*")` converted to regex: `"(?-u)^(?:/?|.*/)lerna\\-debug\\.log[^/]*$"`
+DEBUG collect_inputs: globset: glob `Glob("**/.env.*")` converted to regex: `"(?-u)^(?:/?|.*/)\\.env\\.[^/]*$"`
+DEBUG collect_inputs: globset: glob `Glob("**/.pnp.*")` converted to regex: `"(?-u)^(?:/?|.*/)\\.pnp\\.[^/]*$"`
+DEBUG collect_inputs: globset: glob `Glob(".yarn/*")` converted to regex: `"(?-u)^\\.yarn/[^/]*$"`
+DEBUG collect_inputs: globset: glob `Glob("**/vite.config.js.timestamp-*")` converted to regex: `"(?-u)^(?:/?|.*/)vite\\.config\\.js\\.timestamp\\-[^/]*$"`
+DEBUG collect_inputs: globset: glob `Glob("**/vite.config.ts.timestamp-*")` converted to regex: `"(?-u)^(?:/?|.*/)vite\\.config\\.ts\\.timestamp\\-[^/]*$"`
+DEBUG collect_inputs: globset: built glob set; 12 literals, 37 basenames, 6 extensions, 0 prefixes, 2 suffixes, 2 required extensions, 9 regexes
+DEBUG collect_inputs: ignore::gitignore: opened gitignore file: /tmp/gh-issue-solver-1791653332998/.git/info/exclude
+DEBUG collect_inputs: globset: built glob set; 0 literals, 2 basenames, 0 extensions, 0 prefixes, 0 suffixes, 0 required extensions, 0 regexes
+DEBUG collect_inputs: zizmor::registry::input: registering workflow input as with key file://.github/workflows/security.yml
+DEBUG collect_inputs: zizmor::registry::input: registering workflow input as with key file://.github/workflows/rust.yml
+DEBUG collect_inputs: zizmor::registry::input: registering workflow input as with key file://.github/workflows/links.yml
+DEBUG collect_inputs: zizmor::registry::input: registering workflow input as with key file://.github/workflows/workflows.yml
+DEBUG collect_inputs: zizmor::registry::input: registering workflow input as with key file://.github/workflows/js.yml
+DEBUG zizmor::registry: skipping impostor-commit: can't run without a GitHub API token
+DEBUG zizmor::registry: skipping ref-confusion: can't run without a GitHub API token
+DEBUG zizmor::registry: skipping known-vulnerable-actions: can't run without a GitHub API token
+DEBUG zizmor::registry: skipping stale-action-refs: can't run without a GitHub API token
+DEBUG zizmor::registry: skipping ref-version-mismatch: can't run without a GitHub API token
+ WARN audit: zizmor: zizmor is running in offline mode by default; some audits and auto-fixes will not be available. see https://docs.zizmor.sh/usage/#operating-modes for details
+DEBUG audit: zizmor: scheduling artipacked on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling unsound-contains on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling unsound-ternary on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling excessive-permissions on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling dangerous-triggers on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling use-trusted-publishing on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling template-injection on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling hardcoded-container-credentials on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling self-hosted-runner on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling unpinned-uses on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling undocumented-permissions on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling insecure-commands on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling github-env on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling cache-poisoning on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling secrets-inherit on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling bot-conditions on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling overprovisioned-secrets on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling unredacted-secrets on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling forbidden-uses on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling obfuscation on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling unpinned-images on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling anonymous-definition on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling unsound-condition on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling dependabot-execution on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling dependabot-cooldown on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling concurrency-limits on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling archived-uses on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling typosquat-uses on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling misfeature on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling secrets-outside-env on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling superfluous-actions on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling github-app on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling unpinned-tools on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling adhoc-packages on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling insecure-url-scheme on file://.github/workflows/js.yml
+DEBUG audit: zizmor: scheduling self-repository on file://.github/workflows/js.yml
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                2,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                3,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                5,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                7,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                8,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                9,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                10,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                11,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                12,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                13,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                14,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                15,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                16,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                18,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                19,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                20,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                21,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for js.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                22,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                2,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                3,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                5,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                7,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                8,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                9,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                10,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                11,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                12,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                13,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                14,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                15,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                16,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                18,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                19,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                20,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                21,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/js.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/js.yml",
+            native_path: ".github/workflows/js.yml",
+            best_identifier: ".github/workflows/js.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                22,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+ INFO audit: zizmor: 🌈 completed .github/workflows/js.yml
+DEBUG audit: zizmor: scheduling artipacked on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling unsound-contains on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling unsound-ternary on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling excessive-permissions on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling dangerous-triggers on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling use-trusted-publishing on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling template-injection on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling hardcoded-container-credentials on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling self-hosted-runner on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling unpinned-uses on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling undocumented-permissions on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling insecure-commands on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling github-env on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling cache-poisoning on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling secrets-inherit on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling bot-conditions on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling overprovisioned-secrets on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling unredacted-secrets on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling forbidden-uses on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling obfuscation on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling unpinned-images on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling anonymous-definition on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling unsound-condition on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling dependabot-execution on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling dependabot-cooldown on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling concurrency-limits on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling archived-uses on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling typosquat-uses on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling misfeature on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling secrets-outside-env on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling superfluous-actions on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling github-app on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling unpinned-tools on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling adhoc-packages on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling insecure-url-scheme on file://.github/workflows/links.yml
+DEBUG audit: zizmor: scheduling self-repository on file://.github/workflows/links.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/links.yml
+DEBUG audit: zizmor: scheduling artipacked on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling unsound-contains on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling unsound-ternary on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling excessive-permissions on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling dangerous-triggers on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling use-trusted-publishing on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling template-injection on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling hardcoded-container-credentials on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling self-hosted-runner on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling unpinned-uses on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling undocumented-permissions on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling insecure-commands on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling github-env on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling cache-poisoning on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling secrets-inherit on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling bot-conditions on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling overprovisioned-secrets on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling unredacted-secrets on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling forbidden-uses on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling obfuscation on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling unpinned-images on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling anonymous-definition on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling unsound-condition on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling dependabot-execution on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling dependabot-cooldown on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling concurrency-limits on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling archived-uses on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling typosquat-uses on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling misfeature on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling secrets-outside-env on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling superfluous-actions on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling github-app on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling unpinned-tools on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling adhoc-packages on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling insecure-url-scheme on file://.github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling self-repository on file://.github/workflows/rust.yml
+DEBUG audit:audit{input=Workflow(file://.github/workflows/rust.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for rust.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/rust.yml",
+            native_path: ".github/workflows/rust.yml",
+            best_identifier: ".github/workflows/rust.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                4,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/rust.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for rust.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/rust.yml",
+            native_path: ".github/workflows/rust.yml",
+            best_identifier: ".github/workflows/rust.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                5,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/rust.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for rust.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/rust.yml",
+            native_path: ".github/workflows/rust.yml",
+            best_identifier: ".github/workflows/rust.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                6,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/rust.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for rust.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/rust.yml",
+            native_path: ".github/workflows/rust.yml",
+            best_identifier: ".github/workflows/rust.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                7,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/rust.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for rust.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/rust.yml",
+            native_path: ".github/workflows/rust.yml",
+            best_identifier: ".github/workflows/rust.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                8,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/rust.yml)}: zizmor::audit::use_trusted_publishing: use-trusted-publishing: couldn't determine shell type for rust.yml step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/rust.yml",
+            native_path: ".github/workflows/rust.yml",
+            best_identifier: ".github/workflows/rust.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                9,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}
+DEBUG audit:audit{input=Workflow(file://.github/workflows/rust.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/rust.yml",
+            native_path: ".github/workflows/rust.yml",
+            best_identifier: ".github/workflows/rust.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                4,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/rust.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/rust.yml",
+            native_path: ".github/workflows/rust.yml",
+            best_identifier: ".github/workflows/rust.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                5,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/rust.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/rust.yml",
+            native_path: ".github/workflows/rust.yml",
+            best_identifier: ".github/workflows/rust.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                6,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/rust.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/rust.yml",
+            native_path: ".github/workflows/rust.yml",
+            best_identifier: ".github/workflows/rust.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                7,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/rust.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/rust.yml",
+            native_path: ".github/workflows/rust.yml",
+            best_identifier: ".github/workflows/rust.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                8,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+DEBUG audit:audit{input=Workflow(file://.github/workflows/rust.yml)}: zizmor::audit::adhoc_packages: adhoc-packages: couldn't determine shell for step SymbolicLocation {
+    key: Local(
+        LocalKey {
+            group: Group(
+                ".github/workflows",
+            ),
+            verbatim_path: ".github/workflows/rust.yml",
+            native_path: ".github/workflows/rust.yml",
+            best_identifier: ".github/workflows/rust.yml",
+        },
+    ),
+    annotation: "this step",
+    link: None,
+    route: Route {
+        route: [
+            Key(
+                "jobs",
+            ),
+            Key(
+                "test",
+            ),
+            Key(
+                "steps",
+            ),
+            Index(
+                9,
+            ),
+        ],
+    },
+    feature_kind: Normal,
+    kind: Related,
+}; assuming bash
+ INFO audit: zizmor: 🌈 completed .github/workflows/rust.yml
+DEBUG audit: zizmor: scheduling artipacked on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling unsound-contains on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling unsound-ternary on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling excessive-permissions on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling dangerous-triggers on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling use-trusted-publishing on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling template-injection on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling hardcoded-container-credentials on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling self-hosted-runner on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling unpinned-uses on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling undocumented-permissions on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling insecure-commands on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling github-env on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling cache-poisoning on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling secrets-inherit on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling bot-conditions on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling overprovisioned-secrets on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling unredacted-secrets on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling forbidden-uses on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling obfuscation on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling unpinned-images on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling anonymous-definition on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling unsound-condition on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling dependabot-execution on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling dependabot-cooldown on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling concurrency-limits on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling archived-uses on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling typosquat-uses on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling misfeature on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling secrets-outside-env on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling superfluous-actions on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling github-app on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling unpinned-tools on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling adhoc-packages on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling insecure-url-scheme on file://.github/workflows/security.yml
+DEBUG audit: zizmor: scheduling self-repository on file://.github/workflows/security.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/security.yml
+DEBUG audit: zizmor: scheduling artipacked on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling unsound-contains on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling unsound-ternary on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling excessive-permissions on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling dangerous-triggers on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling use-trusted-publishing on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling template-injection on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling hardcoded-container-credentials on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling self-hosted-runner on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling unpinned-uses on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling undocumented-permissions on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling insecure-commands on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling github-env on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling cache-poisoning on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling secrets-inherit on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling bot-conditions on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling overprovisioned-secrets on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling unredacted-secrets on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling forbidden-uses on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling obfuscation on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling unpinned-images on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling anonymous-definition on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling unsound-condition on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling dependabot-execution on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling dependabot-cooldown on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling concurrency-limits on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling archived-uses on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling typosquat-uses on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling misfeature on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling secrets-outside-env on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling superfluous-actions on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling github-app on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling unpinned-tools on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling adhoc-packages on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling insecure-url-scheme on file://.github/workflows/workflows.yml
+DEBUG audit: zizmor: scheduling self-repository on file://.github/workflows/workflows.yml
+ INFO audit: zizmor: 🌈 completed .github/workflows/workflows.yml
+No findings to report. Good job! (21 ignored, 36 suppressed)

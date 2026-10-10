@@ -1,0 +1,11 @@
+▶ log sanitization
+  ✔ redacts AWS assignment values enclosed in either quote style (21.614169ms)
+✔ log sanitization (32.761709ms)
+ℹ tests 1
+ℹ suites 1
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 401.04524

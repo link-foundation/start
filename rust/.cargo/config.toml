@@ -1,0 +1,5 @@
+[build]
+jobs = 2
+
+# Local target placement and disk pruning are managed by
+# scripts/bounded-cargo.mjs. CI uses a fresh runner target and caches registry only.

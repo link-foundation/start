@@ -1,0 +1,4 @@
+24871:Rust CI/CD / Test (windows-latest)	UNKNOWN STEP	2026-10-10T18:26:38.9913601Z ^[[1m^[[91merror^[[0m^[[1m^[[97m: variable does not need to be mutable^[[0m
+24872:Rust CI/CD / Test (windows-latest)	UNKNOWN STEP	2026-10-10T18:26:38.9914748Z    ^[[1m^[[96m--> ^[[0msrc\lib\log_sanitizer.rs:300:9
+24891:Rust CI/CD / Test (windows-latest)	UNKNOWN STEP	2026-10-10T18:26:40.6331387Z ##[error]Process completed with exit code 1.
+25159:Rust CI/CD / Rust Stage	UNKNOWN STEP	2026-10-10T18:30:37.4047613Z ##[error]Process completed with exit code 1.

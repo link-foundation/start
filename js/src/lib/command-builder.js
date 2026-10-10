@@ -106,6 +106,9 @@ function buildNextLevelCommand(options, command) {
     for (const envVar of options.env || []) {
       parts.push(`--env "${envVar}"`);
     }
+    for (const label of options.labels || []) {
+      parts.push(`--label ${require('./shell-utils').quoteShellArg(label)}`);
+    }
     if (options.privileged) {
       parts.push('--privileged');
     }

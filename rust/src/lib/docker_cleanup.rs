@@ -52,7 +52,7 @@ pub(crate) fn build_docker_kept_reason_snippet() -> String {
 /// (--privileged, --env/-e, --volume/-v, --mount, --network,
 /// --network-alias, resource limits). Returned references borrow
 /// from `options`, which outlives the `docker run` invocation.
-pub(crate) fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<&str> {
+pub fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<&str> {
     let mut args: Vec<&str> = Vec::new();
     if options.privileged {
         args.push("--privileged");
@@ -60,6 +60,10 @@ pub(crate) fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<&str>
     for env_var in &options.env {
         args.push("-e");
         args.push(env_var);
+    }
+    for label in &options.labels {
+        args.push("--label");
+        args.push(label);
     }
     for volume in &options.volumes {
         args.push("-v");
@@ -135,7 +139,7 @@ pub(crate) fn should_cleanup_docker_container(
 
 pub(crate) fn docker_container_cleanup_instructions(container_name: &str) -> String {
     format!(
-        "Container kept for investigation: {}\nRe-enter while running: $ --attach {}\nContinue the stored command: $ --resume {}\nRun another command in the same container: $ --resume {} -- <command>\nRemove when done: docker rm -f {}",
+        "Container kept for investigation: {}\nRe-enter while running: $ --attach {}\nContinue the stored command: $ --resume {}\nRun another command (legacy containers snapshot the filesystem into a new container): $ --resume {} -- <command>\nRemove when done: docker rm -f {}",
         container_name, container_name, container_name, container_name, container_name
     )
 }
@@ -392,7 +396,7 @@ pub(crate) fn remove_docker_container(container_name: &str, log_path: Option<&Pa
 fn build_docker_kept_log_snippet(container_name: &str, quoted_log_path: &str) -> String {
     let quoted_name = shell_quote(container_name);
     format!(
-        "{}; printf '\\nContainer kept for investigation: %s\\nReason: %s\\nRe-enter while running: $ --attach %s\\nContinue the stored command: $ --resume %s\\nRun another command in the same container: $ --resume %s -- <command>\\nRemove when done: docker rm -f %s\\n' {} \"$__start_command_reason\" {} {} {} {} >> {}",
+        "{}; printf '\\nContainer kept for investigation: %s\\nReason: %s\\nRe-enter while running: $ --attach %s\\nContinue the stored command: $ --resume %s\\nRun another command (legacy containers snapshot the filesystem into a new container): $ --resume %s -- <command>\\nRemove when done: docker rm -f %s\\n' {} \"$__start_command_reason\" {} {} {} {} >> {}",
         build_docker_kept_reason_snippet(),
         quoted_name, quoted_name, quoted_name, quoted_name, quoted_name, quoted_log_path
     )
@@ -506,10 +510,17 @@ pub fn build_detached_docker_completion_script_with(
         ));
 
         let memory = build_cgroup_memory_log_snippet(quoted_log_path);
+        let (capture_image, remove_image) =
+            crate::docker_snapshot_safety::snapshot_image_cleanup_snippets(
+                container_name,
+                &format!(">> {} 2>&1", quoted_log_path),
+            );
         let remove = format!(
-            "docker rm -f {} >> {} 2>&1 || true; {}; {}",
+            "{}; if docker rm -f {} >> {} 2>&1; then {}; fi; {}; {}",
+            capture_image,
             quoted_name,
             quoted_log_path,
+            remove_image,
             build_docker_removal_note_snippet(container_name, quoted_log_path),
             memory
         );
@@ -546,16 +557,23 @@ pub fn build_detached_docker_completion_script_with(
         parts.push(crate::cpu_penalty_monitor::stop_snippet());
         parts.push(build_cgroup_sampler_stop_snippet());
         parts.push(build_docker_state_snippet(container_name));
+        let (capture_image, remove_image) =
+            crate::docker_snapshot_safety::snapshot_image_cleanup_snippets(
+                container_name,
+                ">/dev/null 2>&1",
+            );
         match policy {
             DockerContainerCleanupPolicy::Always => exited.push(format!(
-                "docker rm -f {} >/dev/null 2>&1 || true",
-                quoted_name
+                "{}; if docker rm -f {} >/dev/null 2>&1; then {}; fi",
+                capture_image, quoted_name, remove_image
             )),
             DockerContainerCleanupPolicy::Default | DockerContainerCleanupPolicy::KeepOnFail => {
                 exited.push(format!(
-                    "if {}; then docker rm -f {} >/dev/null 2>&1 || true; fi",
+                    "if {}; then {}; if docker rm -f {} >/dev/null 2>&1; then {}; fi; fi",
                     successful_non_oom_condition(),
-                    quoted_name
+                    capture_image,
+                    quoted_name,
+                    remove_image
                 ))
             }
             DockerContainerCleanupPolicy::Keep => {}

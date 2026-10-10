@@ -1,0 +1,19 @@
+bun test v1.4.2 (744846f84)
+
+js/test/shared-golden.js:
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: plain argv [3.59ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: explicit tmux separator [0.70ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: query without command [0.65ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: docker resource flags [1.17ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: unknown wrapper option [0.69ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: conflicting modes [0.07ms]
+(pass) shared JavaScript and Rust golden contracts > isolation argv: empty runtime flags [0.89ms]
+(pass) shared JavaScript and Rust golden contracts > isolation argv: resource, mount and network boundaries [0.09ms]
+(pass) shared JavaScript and Rust golden contracts > uses the same JSON and text status output [0.81ms]
+(pass) shared JavaScript and Rust golden contracts > preserves the complete execution record format (exit 0) [0.08ms]
+(pass) shared JavaScript and Rust golden contracts > preserves the complete execution record format (exit 137) [0.04ms]
+(pass) shared JavaScript and Rust golden contracts > executes the JavaScript source of the generated Rust parity policy [2.08ms]
+
+ 12 pass
+ 0 fail
+Ran 12 tests across 1 file. [67.00ms]

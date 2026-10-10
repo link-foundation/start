@@ -212,13 +212,19 @@ mod create_issue_tests {
             repo: "repo".to_string(),
             url: "https://github.com/owner/repo".to_string(),
         };
-        let url = create_issue(&repo_info, FAILING_COMMAND, 1, None).unwrap_or_default();
+        let full_command =
+            std::env::var("TEST_FAILING_COMMAND").unwrap_or_else(|_| FAILING_COMMAND.to_string());
+        let url = create_issue(&repo_info, &full_command, 1, None).unwrap_or_default();
         println!("{}{}", URL_PREFIX, url);
     }
 
     /// Run `create_issue` with a fake `gh` first on the child's PATH that
     /// records its argv, NUL-separated, and return the URL and that argv.
     fn create_issue_with_fake_gh() -> (Option<String>, Vec<String>) {
+        create_issue_with_fake_gh_command(FAILING_COMMAND)
+    }
+
+    fn create_issue_with_fake_gh_command(full_command: &str) -> (Option<String>, Vec<String>) {
         let dir = TempDir::new().unwrap();
         let argv_file = dir.path().join("argv");
         let gh_path = dir.path().join("gh");
@@ -242,6 +248,7 @@ mod create_issue_tests {
         let output = Command::new(std::env::current_exe().unwrap())
             .args(["--exact", HELPER_TEST, "--ignored", "--nocapture"])
             .env("PATH", std::env::join_paths(paths).unwrap())
+            .env("TEST_FAILING_COMMAND", full_command)
             .output()
             .unwrap();
         assert!(
@@ -275,6 +282,16 @@ mod create_issue_tests {
         assert_eq!(argv[4], "--title");
         assert_eq!(argv[6], "--body");
         assert_eq!(argv.len(), 8);
+    }
+
+    #[test]
+    fn sanitizes_credentials_in_issue_metadata_and_supports_unicode_commands() {
+        let token = format!("gh{}{}", "p_", "a".repeat(36));
+        let (_, argv) =
+            create_issue_with_fake_gh_command(&format!("echo {} 😀{}", token, "é".repeat(40)));
+        assert!(!argv[5].contains(&token));
+        assert!(!argv[7].contains(&token));
+        assert!(argv[7].contains("[REDACTED]"));
     }
 
     #[test]

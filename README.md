@@ -312,7 +312,11 @@ kill after the cgroup disappears, and older kernels may not expose peak usage.
 
 `--upload-log` accepts either an execution UUID or an isolation session name. It
 looks up the stored `logPath`, installs `gh-upload-log` with Bun or npm if the
-uploader is missing, and then streams the uploader output directly.
+uploader is missing, and uploads a private sanitized copy. GitHub, OpenAI,
+Anthropic, AWS and JWT credentials, Authorization values and secret environment
+values are redacted. The original log stays local. Sanitization failure stops the
+upload. Manual `--upload-log <id> --no-sanitize` explicitly uploads the original
+log; automatic reporting always sanitizes.
 
 `--stop` and `--terminate` accept either the execution UUID or the isolation
 session/container name. `--stop` asks the backend to stop gracefully (CTRL+C for
@@ -336,14 +340,24 @@ on a stopped container.
 | Session state                       | What happens                                                                                             |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Container exists, no new command    | `docker start` re-runs the stored command in the same container.                                         |
-| Container exists, new command given | The container filesystem is committed to an image and a derived container runs the new command.          |
+| Managed container exists, new command given | A small command script is copied into it and `docker start` reuses its filesystem. |
+| Legacy container or changed labels | A guarded snapshot creates a replacement container. |
 | Session is gone                     | The command is launched again through the stored isolation options (same image, volumes, env, networks). |
 
 `--resume <id> -- <command>` is the form downstream tools need: it runs a
 _different_ command against the same container filesystem, instead of
 `docker start -ai`, which would re-run the original entrypoint from scratch.
 
-`docker commit` does not capture a container's HostConfig, so before committing
+New detached containers support a command handoff, so ordinary resumes avoid
+copying their writable layer. Legacy snapshot fallback checks free space for
+twice the writable-layer size plus a 10 GiB reserve in Docker and containerd
+storage, and serializes snapshots with a separate host lock. It refuses to
+commit when those checks cannot establish sufficient capacity. Add
+`--remove-original` to a snapshot resume to remove the stopped predecessor after
+the replacement starts successfully. The existing container-removal policy also
+removes its wrapper-owned temporary resume image.
+
+For the legacy fallback, `docker commit` does not capture a container's HostConfig, so before committing
 `--resume` reads the stopped container's resource limits with `docker inspect`
 (including limits a supervisor applied later with `docker update`) and re-applies
 the non-default ones to the derived `<name>-resume-N` container: `--memory`,
@@ -523,7 +537,7 @@ The exit code is always prominently displayed after command completion, making i
 When a command fails (non-zero exit code) and it's a globally installed NPM package:
 
 1. **Repository Detection** - Automatically detects the GitHub repository for NPM packages
-2. **Log Upload** - Uploads the full log to GitHub (requires [gh-upload-log](https://github.com/link-foundation/gh-upload-log))
+2. **Log Upload** - Uploads a private sanitized copy of the log to GitHub (requires [gh-upload-log](https://github.com/link-foundation/gh-upload-log))
 3. **Issue Creation** - Creates an issue in the package's repository with:
    - Command that was executed
    - Exit code
@@ -646,6 +660,7 @@ This is useful for:
 | `--volume, -v`                   | Docker bind mount/volume `host:container[:mode]` (repeatable, docker only)   |
 | `--mount`                        | Docker `--mount` spec (repeatable, docker only)                              |
 | `--env, -e`                      | Environment variable `KEY=VALUE` for the container (repeatable, docker only) |
+| `--label KEY=VALUE`              | Task attribution label (repeatable, Docker only; persisted on resume) |
 | `--privileged`                   | Run docker container in privileged mode (docker only)                        |
 | `--network`                      | Connect to a named network (repeatable, docker only)                         |
 | `--network-alias`                | Add an alias on the first network (repeatable, docker only)                  |
@@ -662,6 +677,22 @@ This is useful for:
 | `--on-kill-resume-delay <s>`     | Wait a random `<min>[-<max>]` seconds before each such resume (default 0)    |
 
 **Note:** Using both `--attached` and `--detached` together will result in an error - you must choose one mode.
+
+`--help` and `-h` print usage and exit successfully. After `--`, those flags
+belong to the wrapped command, as in `$ -- grep --help`.
+
+Every Docker task receives `start-command.session`, `start-command.root-session`,
+`start-command.uuid` and `start-command.resume-count` labels. The namespace is
+reserved for the wrapper. Caller labels survive replacement containers, letting
+supervisors use `docker ps --filter label=task.tool=codex` even when a stored
+execution status is stale. An in-place resume retains the immutable labels of
+the same container; its resume-count describes container creation. Changing
+labels on resume requires the guarded snapshot fallback.
+
+```bash
+$ -i docker -d --label task.tool=codex --label task.url=https://github.com/o/r/issues/1 -- my-task
+docker ps --filter label=task.tool=codex
+```
 
 When `--network` is repeated, Docker creates the container on the first network,
 connects every additional network, and only then starts the command. This lets a

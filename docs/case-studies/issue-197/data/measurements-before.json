@@ -1,0 +1,100 @@
+{
+  "runWindow": {
+    "total": 300,
+    "oldest": "2026-08-10T15:46:07Z",
+    "newest": "2026-10-10T17:29:09Z"
+  },
+  "eventWindow": {
+    "total": 180,
+    "oldest": "2026-09-15T22:22:22Z",
+    "newest": "2026-10-10T17:29:06Z"
+  },
+  "nonMainConclusions": {
+    "pending": 1,
+    "success": 168,
+    "failure": 51,
+    "cancelled": 18
+  },
+  "branches": [
+    {
+      "branch": "issue-195-cd307f03a9cf",
+      "pushesInEventWindow": 3,
+      "pushEvents": [
+        {
+          "id": "23602414620",
+          "createdAt": "2026-10-09T21:41:17Z",
+          "head": "e9cbeb42d4d6204aa997a74154ffedfcbd696599",
+          "before": "9379afabbc87d7497539eee00ffd61194a7112c0"
+        },
+        {
+          "id": "23546384943",
+          "createdAt": "2026-10-09T21:32:21Z",
+          "head": "9379afabbc87d7497539eee00ffd61194a7112c0",
+          "before": "bcc5133aaf29858d8f9a8869f734d4c1aedeae47"
+        },
+        {
+          "id": "23544465930",
+          "createdAt": "2026-10-09T21:15:05Z",
+          "head": "f549fbb8b6b5c98bd0726edc3bb00b3f54552223",
+          "before": "52384a64c22398da4f9bb46612502557eda471d4"
+        }
+      ],
+      "distinctCiHeadShas": 5,
+      "conclusions": {
+        "success": 16,
+        "failure": 5
+      }
+    },
+    {
+      "branch": "issue-183-4cba24615d2f",
+      "pushesInEventWindow": 5,
+      "pushEvents": [
+        {
+          "id": "23165521866",
+          "createdAt": "2026-10-05T02:40:32Z",
+          "head": "e234c05c08aeb1771e9b3bb9d6e37acf97000237",
+          "before": "cfab9058bfaf19623a10853c46331284bff7bd6c"
+        },
+        {
+          "id": "23162436902",
+          "createdAt": "2026-10-05T01:56:00Z",
+          "head": "282a311752da7beae02fe99f78350ed541027ee3",
+          "before": "286f83ccb11f839c3daf7dcf18fc759ff7481974"
+        },
+        {
+          "id": "23148387889",
+          "createdAt": "2026-10-05T02:51:57Z",
+          "head": "01eda9026768893eec5127660689e0d69cf7898e",
+          "before": "e234c05c08aeb1771e9b3bb9d6e37acf97000237"
+        },
+        {
+          "id": "23123481803",
+          "createdAt": "2026-10-05T02:38:59Z",
+          "head": "cfab9058bfaf19623a10853c46331284bff7bd6c",
+          "before": "5039e7cf0f15ccd7e30e2e2ff01a1b6fb3685b7c"
+        },
+        {
+          "id": "23017924970",
+          "createdAt": "2026-10-05T02:11:25Z",
+          "head": "5039e7cf0f15ccd7e30e2e2ff01a1b6fb3685b7c",
+          "before": "282a311752da7beae02fe99f78350ed541027ee3"
+        }
+      ],
+      "distinctCiHeadShas": 6,
+      "conclusions": {
+        "success": 17,
+        "cancelled": 2,
+        "failure": 2
+      }
+    },
+    {
+      "branch": "issue-203-b56519b4c758",
+      "pushesInEventWindow": 0,
+      "pushEvents": [],
+      "distinctCiHeadShas": 1,
+      "conclusions": {
+        "pending": 1
+      }
+    }
+  ]
+}

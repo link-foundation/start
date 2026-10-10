@@ -24,6 +24,8 @@ $ ls -la
 $ bun test
 $ git status
 $ --list
+$ --help
+$ -i docker -d --label task.tool=codex -- my-task
 $ --attach <id>
 $ --resume <id> -- <command>
 $ --resume-all
@@ -33,6 +35,10 @@ See the project-wide [README](../README.md), [docs/USAGE.md](../docs/USAGE.md),
 [docs/PIPES.md](../docs/PIPES.md), and
 [docs/EXAMPLES.md](../docs/EXAMPLES.md) for the full user-facing guide and
 checked examples.
+
+`-h` also prints usage. Labels persist across Docker resumes. New detached
+containers support copy-free command handoff; legacy snapshots require capacity
+preflight. Log uploads are private and sanitized; manual `--no-sanitize` opts out.
 
 ## Development
 

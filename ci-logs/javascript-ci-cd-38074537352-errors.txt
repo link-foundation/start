@@ -1,0 +1,12 @@
+5712:Test (Bun on windows-latest)	Run tests	2026-10-10T18:08:42.2614345Z AssertionError: Expected values to be strictly equal:
+5731:Test (Bun on windows-latest)	Run tests	2026-10-10T18:08:42.2643790Z ##[error]438 !== 420
+5740:Test (Bun on windows-latest)	Run tests	2026-10-10T18:08:42.2650680Z (fail) handoff preserves argv and accepts a replacement without executing it on the host [173.59ms]
+6772:Test (Bun on windows-latest)	Run tests	2026-10-10T18:09:01.2473120Z AssertionError: /usr/bin/bash: line 3: _: command not found
+6790:Test (Bun on windows-latest)	Run tests	2026-10-10T18:09:01.2479739Z ##[error]
+6798:Test (Bun on windows-latest)	Run tests	2026-10-10T18:09:01.2481657Z (fail) watcher removes its generated image after the cleanup policy removes its container [438.19ms]
+7311:Test (Bun on windows-latest)	Run tests	2026-10-10T18:09:08.9440658Z (fail) handoff preserves argv and accepts a replacement without executing it on the host [173.59ms]
+7312:Test (Bun on windows-latest)	Run tests	2026-10-10T18:09:08.9441491Z (fail) watcher removes its generated image after the cleanup policy removes its container [438.19ms]
+7320:Test (Bun on windows-latest)	Run tests	2026-10-10T18:09:09.0313188Z ##[error]Process completed with exit code 1.
+12398:JavaScript Stage	Check aggregate pipeline status	2026-10-10T18:10:13.4721397Z ##[error]test: failure
+12399:JavaScript Stage	Check aggregate pipeline status	2026-10-10T18:10:13.4733412Z ##[error]required test: failure
+12400:JavaScript Stage	Check aggregate pipeline status	2026-10-10T18:10:13.4764658Z ##[error]Process completed with exit code 1.

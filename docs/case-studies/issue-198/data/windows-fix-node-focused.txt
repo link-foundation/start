@@ -1,0 +1,25 @@
+✔ new stopped containers choose a copy-free command handoff (6.321211ms)
+✔ handoff preserves argv and accepts a replacement without executing it on the host (68.830218ms)
+✔ handoff preserves direct shell positional argv and evaluates compound commands as scripts (29.222378ms)
+✔ auto handoff chooses an installed shell inside the existing container (1634.930012ms)
+✔ preflight refuses insufficient space before any snapshot (15.649229ms)
+✔ containerd image store checks Docker and containerd filesystems separately (5.440969ms)
+✔ preflight logs the layer size and rejects unknown sizes or roots (2.346717ms)
+✔ snapshot lock is separate from store locks and excludes concurrent processes (2306.140448ms)
+✔ replacement command resumes the same container without a snapshot or changed ID (22.429957ms)
+✔ automatic recovery replaces a prior explicit handoff and exports its attempt (13.646675ms)
+✔ legacy snapshots preflight before commit and remove originals only with non-forced rm after start (32.660782ms)
+✔ disk shortage rolls back the reservation without committing or removing the original (10.338214ms)
+✔ snapshot failure removes a completed image and restores the original execution (17.013124ms)
+✔ watcher removes its generated image after the cleanup policy removes its container (99.559558ms)
+✔ changed caller labels use a guarded snapshot and reapply merged labels (17.092442ms)
+✔ original retained by default and when a successor has already stopped (23.134342ms)
+✔ repeated snapshot successors retain the original root-session attribution (18.715821ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2655.460277

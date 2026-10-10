@@ -7,6 +7,7 @@ use std::fs;
 use std::process::Command;
 
 use crate::isolation::get_timestamp;
+use crate::log_sanitizer::{sanitize_log_to_temp, StreamingSanitizer};
 
 /// Configuration for the failure handler
 #[derive(Debug, Default)]
@@ -73,7 +74,7 @@ pub fn handle_failure(
             println!("Log upload disabled via START_DISABLE_LOG_UPLOAD");
         }
     } else if is_gh_upload_log_available() {
-        log_url = upload_log(log_path);
+        log_url = upload_log_with_options(log_path, config.verbose);
         if let Some(ref url) = log_url {
             println!("Log uploaded: {}", url);
         }
@@ -299,26 +300,60 @@ pub fn ensure_gh_upload_log_available() -> Result<(), String> {
 
 /// Upload a log file with gh-upload-log and stream its output to the terminal.
 pub fn upload_log_interactive(log_path: &str) -> Result<i32, String> {
+    upload_log_interactive_with_options(log_path, false, false)
+}
+
+/// Upload privately; unsanitized source access requires an explicit opt-out.
+pub fn upload_log_interactive_with_options(
+    log_path: &str,
+    no_sanitize: bool,
+    verbose: bool,
+) -> Result<i32, String> {
+    let prepared = if no_sanitize {
+        None
+    } else {
+        Some(sanitize_log_to_temp(
+            std::path::Path::new(log_path),
+            verbose,
+        )?)
+    };
+    let upload_path = prepared
+        .as_ref()
+        .map(|copy| copy.path.as_path())
+        .unwrap_or_else(|| std::path::Path::new(log_path));
     ensure_gh_upload_log_available()?;
 
     let status = Command::new("gh-upload-log")
-        .arg(log_path)
+        .arg(upload_path)
+        .arg("--private")
         .status()
-        .map_err(|e| format!("Failed to run gh-upload-log: {}", e))?;
+        .map_err(|_| "Failed to run gh-upload-log.".to_string())?;
 
     Ok(status.code().unwrap_or(1))
 }
 
 /// Upload log file using gh-upload-log
 pub fn upload_log(log_path: &str) -> Option<String> {
+    upload_log_with_options(log_path, false)
+}
+
+/// Automatic log publication always sanitizes; diagnostics contain counts only.
+pub fn upload_log_with_options(log_path: &str, verbose: bool) -> Option<String> {
+    let prepared = match sanitize_log_to_temp(std::path::Path::new(log_path), verbose) {
+        Ok(copy) => copy,
+        Err(_) => {
+            println!("Warning: Log sanitization failed; upload blocked.");
+            return None;
+        }
+    };
     let output = Command::new("gh-upload-log")
-        .args([log_path, "--public"])
+        .arg(&prepared.path)
+        .arg("--private")
         .output()
         .ok()?;
 
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        println!("Warning: Log upload failed - {}", stderr);
+        println!("Warning: Log upload failed.");
         return None;
     }
 
@@ -362,10 +397,17 @@ pub fn create_issue(
     exit_code: i32,
     log_url: Option<&str>,
 ) -> Option<String> {
+    let mut sanitizer =
+        StreamingSanitizer::new(std::env::vars_os().filter_map(|(name, value)| {
+            Some((name.into_string().ok()?, value.into_string().ok()?))
+        }))
+        .ok()?;
+    let safe_command = String::from_utf8(sanitizer.push(full_command.as_bytes(), true)).ok()?;
+    let full_command = safe_command.as_str();
     let title = format!(
         "Command failed with exit code {}: {}{}",
         exit_code,
-        &full_command[..50.min(full_command.len())],
+        full_command.chars().take(50).collect::<String>(),
         if full_command.len() > 50 { "..." } else { "" }
     );
 

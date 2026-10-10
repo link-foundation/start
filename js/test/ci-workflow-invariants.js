@@ -156,6 +156,10 @@ describe('CI workflow invariants', () => {
   it('gives every job a timeout', () => {
     for (const name of workflows) {
       for (const job of parseJobs(readWorkflow(name))) {
+        if (jobKey(job.body, 'uses')) {
+          // Reusable-workflow callers cannot declare a timeout; their jobs do.
+          continue;
+        }
         assert.ok(
           jobKey(job.body, 'timeout-minutes'),
           `${name}: job "${job.name}" has no timeout-minutes`
@@ -186,7 +190,7 @@ describe('CI workflow invariants', () => {
     }
   });
 
-  it('makes writers non-cancellable and read-only checks cancellable', () => {
+  it('protects main and the gated Rust stage from cancellation', () => {
     for (const name of workflows) {
       for (const job of parseJobs(readWorkflow(name))) {
         const group = concurrencyKey(job.body, 'group');
@@ -212,8 +216,10 @@ describe('CI workflow invariants', () => {
           );
           assert.strictEqual(
             cancel,
-            'true',
-            `${name}: superseded check "${job.name}" should be cancelled`
+            name === 'rust.yml' || job.name === 'rust-stage'
+              ? 'false'
+              : "${{ github.ref != 'refs/heads/main' }}",
+            `${name}: checks must preserve main and the gated Rust stage`
           );
         }
       }
@@ -223,7 +229,7 @@ describe('CI workflow invariants', () => {
   it('uses !cancelled() rather than always() outside the status job', () => {
     for (const name of workflows) {
       for (const job of parseJobs(readWorkflow(name))) {
-        if (job.name === 'pipeline-status') {
+        if (job.name === 'pipeline-status' || job.name === 'rust-stage') {
           continue;
         }
         assert.doesNotMatch(
@@ -246,7 +252,7 @@ describe('CI workflow invariants', () => {
         `${name}: pipeline-status must run even when jobs are cancelled`
       );
       for (const job of jobs) {
-        if (job.name === 'pipeline-status') {
+        if (job.name === 'pipeline-status' || job.name === 'rust-stage') {
           continue;
         }
         assert.match(
@@ -395,15 +401,10 @@ describe('CI workflow invariants', () => {
 
   it('audits both dependency graphs for advisories', () => {
     const security = readWorkflow('security.yml');
-    const jobs = parseJobs(security).map((job) => job.name);
-    for (const job of ['cargo-audit', 'npm-audit']) {
-      assert.ok(jobs.includes(job), `security.yml has no ${job} job`);
-    }
-    assert.match(
-      security,
-      /cargo audit/,
-      'cargo-audit job must run cargo audit'
-    );
+    const rust = readWorkflow('rust.yml');
+    assert.ok(parseJobs(security).some((job) => job.name === 'npm-audit'));
+    assert.ok(parseJobs(rust).some((job) => job.name === 'cargo-audit'));
+    assert.match(rust, /cargo audit/, 'cargo-audit job must run cargo audit');
     assert.match(security, /npm audit/, 'npm-audit job must run npm audit');
   });
 

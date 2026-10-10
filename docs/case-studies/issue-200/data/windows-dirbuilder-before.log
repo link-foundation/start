@@ -1,0 +1,15 @@
+non-Unix constructor: exit 1
+error: variable does not need to be mutable
+ --> /tmp/start-dirbuilder-probe-P74422/constructor.rs:3:9
+  |
+3 |     let mut builder = DirBuilder::new();
+  |         ----^^^^^^^
+  |         |
+  |         help: remove this `mut`
+  |
+  = note: `-D unused-mut` implied by `-D warnings`
+  = help: to override `-D warnings` add `#[allow(unused_mut)]`
+
+error: aborting due to 1 previous error
+
+Unix constructor: exit 0

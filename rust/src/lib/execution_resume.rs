@@ -6,12 +6,12 @@
 //! addressing one logical session across restarts.
 //!
 //! Three strategies, chosen from the probed session state:
-//! - `DockerStart`: the container still exists and the stored command is re-run
-//!   by `docker start` (its original entrypoint).
-//! - `DockerSnapshot`: the container still exists but a new command was given,
-//!   so its filesystem is committed to an image and a derived container runs
-//!   the new command. This avoids `docker start -ai`, which would re-run the
-//!   original entrypoint from scratch.
+//! - `DockerStart`: the container still exists. Newly managed containers accept
+//!   replacement commands through a small handoff script, then restart in place
+//!   without a snapshot.
+//! - `DockerSnapshot`: a legacy container needs a replacement command, or
+//!   immutable labels need changing. After disk preflight, its filesystem is
+//!   committed under a host-wide lock and a derived container runs the command.
 //! - `Relaunch`: nothing is left of the session, so the command is launched
 //!   again through the stored isolation options.
 
@@ -231,6 +231,27 @@ pub fn build_launch_options(record: &ExecutionRecord) -> IsolationOptions {
     let networks = record_strings(record, "networks");
     IsolationOptions {
         session: record_option(record, "sessionName").map(str::to_string),
+        labels: record_strings(record, "labels"),
+        uuid: Some(record.uuid.clone()),
+        root_session: Some(
+            record_option(record, "rootSession")
+                .or_else(|| {
+                    record
+                        .options
+                        .get("sessionNameHistory")
+                        .and_then(Value::as_array)
+                        .and_then(|history| history.first())
+                        .and_then(Value::as_str)
+                })
+                .unwrap_or_else(|| record_option(record, "sessionName").unwrap_or("session"))
+                .to_string(),
+        ),
+        resume_count: record
+            .options
+            .get("resumeCount")
+            .and_then(Value::as_u64)
+            .unwrap_or(0) as u32
+            + 1,
         image: record_option(record, "image").map(str::to_string),
         volumes: record_strings(record, "volumes"),
         mounts: record_strings(record, "mounts"),
@@ -333,12 +354,24 @@ fn docker_snapshot_plan(
     let docker = docker_command().to_string_lossy().to_string();
 
     let mut launch_options = build_launch_options(record);
+    launch_options.session = Some(new_session_name.clone());
+    launch_options.resume_count = attempt as u32;
+    launch_options.labels =
+        crate::isolation_metadata::docker_attribution_labels(&launch_options, &new_session_name);
     // `docker commit` keeps the filesystem but not the HostConfig, so the
     // limits must be passed to the new container explicitly (issue #176).
     if let Some(limits) = live_resource_limits {
         launch_options.resource_limits = limits;
     }
     let mut container_args = vec!["--name".to_string(), new_session_name.clone()];
+    container_args.extend([
+        "--label".into(),
+        format!(
+            "{}={}",
+            crate::docker_snapshot_safety::SNAPSHOT_IMAGE_LABEL,
+            snapshot_image
+        ),
+    ]);
     if let Some(user) = record_option(record, "user") {
         container_args.push("--user".to_string());
         container_args.push(user.to_string());
@@ -349,9 +382,10 @@ fn docker_snapshot_plan(
             .map(str::to_string),
     );
     container_args.push(snapshot_image.clone());
-    container_args.push("sh".to_string());
-    container_args.push("-c".to_string());
-    container_args.push(command.to_string());
+    container_args.extend(crate::docker_command_handoff::build_command_handoff_args(
+        &["sh".into(), "-c".into(), command.into()],
+        &crate::docker_command_handoff::command_handoff_path(&new_session_name),
+    ));
 
     let mut steps = vec![ResumeStep {
         command: docker.clone(),
@@ -444,28 +478,45 @@ pub fn build_resume_plan_with_limits(
 
     if backend == "docker" && probe.state == SessionState::Stopped {
         return Ok(match new_command {
-            None => ResumePlan {
-                mode: ResumeMode::DockerStart,
-                backend,
-                new_session_name: None,
-                snapshot_image: None,
-                command,
-                attempt,
-                resource_limits: Vec::new(),
-                steps: vec![ResumeStep {
-                    command: docker_command().to_string_lossy().to_string(),
-                    args: vec!["start".to_string(), session_name.clone()],
-                    description: format!("Start stopped container {}", session_name),
-                }],
-                launch_options: None,
-                message: format!("Resumed detached docker container: {}", session_name),
-                session_name,
-            },
+            None | Some(_)
+                if !record_flag(record, "forceSnapshot")
+                    && (new_command.is_none() || record_flag(record, "commandHandoff")) =>
+            {
+                ResumePlan {
+                    mode: ResumeMode::DockerStart,
+                    backend,
+                    new_session_name: None,
+                    snapshot_image: None,
+                    command,
+                    attempt,
+                    resource_limits: Vec::new(),
+                    steps: vec![ResumeStep {
+                        command: docker_command().to_string_lossy().to_string(),
+                        args: vec!["start".to_string(), session_name.clone()],
+                        description: format!("Start stopped container {}", session_name),
+                    }],
+                    launch_options: None,
+                    message: if new_command.is_some() {
+                        format!("Resumed new command in the same detached docker container: {} (no filesystem snapshot)", session_name)
+                    } else {
+                        format!("Resumed detached docker container: {}", session_name)
+                    },
+                    session_name,
+                }
+            }
             Some(new_command) => docker_snapshot_plan(
                 record,
                 &backend,
                 &session_name,
                 new_command,
+                attempt,
+                live_resource_limits,
+            ),
+            None => docker_snapshot_plan(
+                record,
+                &backend,
+                &session_name,
+                &command,
                 attempt,
                 live_resource_limits,
             ),
@@ -620,6 +671,18 @@ pub fn apply_resume_to_record(
             .insert("resourceLimits".to_string(), json!(plan.resource_limits));
     }
 
+    if !record.options.contains_key("rootSession") {
+        let root = record
+            .options
+            .get("sessionNameHistory")
+            .and_then(Value::as_array)
+            .and_then(|history| history.first())
+            .and_then(Value::as_str)
+            .or_else(|| record_option(record, "sessionName"))
+            .unwrap_or("session")
+            .to_string();
+        record.options.insert("rootSession".into(), json!(root));
+    }
     if let Some(new_session_name) = &plan.new_session_name {
         let mut history = record
             .options
@@ -641,6 +704,13 @@ pub fn apply_resume_to_record(
         record
             .options
             .insert("image".to_string(), json!(snapshot_image));
+        record
+            .options
+            .insert("snapshotImage".into(), json!(snapshot_image));
+        record.options.insert("commandHandoff".into(), json!(true));
+    }
+    if plan.mode == ResumeMode::Relaunch && plan.backend == "docker" {
+        record.options.insert("commandHandoff".into(), json!(true));
     }
     if let Some(container_id) = container_id {
         record

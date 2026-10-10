@@ -1,0 +1,9 @@
+bun test v1.4.2 (744846f84)
+
+js/test/javascript-first-ci.js:
+(pass) JavaScript first CI gate > makes Rust callable only after the complete JavaScript stage [7.73ms]
+(pass) JavaScript first CI gate > always runs JavaScript and its behavioral parity gate on Rust-only changes [4.53ms]
+
+ 2 pass
+ 0 fail
+Ran 2 tests across 1 file. [50.00ms]

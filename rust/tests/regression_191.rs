@@ -26,7 +26,9 @@ struct Runner(FakeRunner);
 impl CommandRunner for Runner {
     fn run(&self, command: &str, args: &[String]) -> CommandRunOutput {
         if args.first().map(String::as_str) == Some("info") {
-            return ok(&json!({"MemTotal":1073741824,"NCPU":4}).to_string());
+            return ok(
+                &json!({"MemTotal":1073741824,"NCPU":4,"DockerRootDir":"/docker"}).to_string(),
+            );
         }
         self.0.run(command, args)
     }

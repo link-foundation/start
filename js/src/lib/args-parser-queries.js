@@ -26,6 +26,8 @@ function createQueryOptionDefaults() {
     list: false, // List all tracked execution records
     running: false, // Restrict --list to executions that are still running
     uploadLog: null, // UUID/session name whose stored log should be uploaded
+    noSanitize: false,
+    removeOriginal: false,
     outputFormat: null, // Output format (links-notation, json, text)
     stop: null, // UUID/session name to stop gracefully
     terminate: null, // UUID/session name to terminate immediately
@@ -55,6 +57,12 @@ const IDENTIFIER_OPTIONS = {
  * Boolean flags with no argument.
  */
 const FLAG_OPTIONS = {
+  '--no-sanitize': (options) => {
+    options.noSanitize = true;
+  },
+  '--remove-original': (options) => {
+    options.removeOriginal = true;
+  },
   '--list': (options) => {
     options.list = true;
   },
@@ -185,6 +193,12 @@ const OUTPUT_FORMAT_MODES = ['--status', '--list', '--resume', '--resume-all'];
  * @throws {Error} When the combination is not supported
  */
 function validateQueryOptions(options) {
+  if (options.noSanitize && !hasValue(options.uploadLog)) {
+    throw new Error('--no-sanitize is only valid with --upload-log');
+  }
+  if (options.removeOriginal && !hasValue(options.resume)) {
+    throw new Error('--remove-original is only valid with --resume');
+  }
   if (hasValue(options.outputFormat)) {
     if (!VALID_OUTPUT_FORMATS.includes(options.outputFormat)) {
       throw new Error(

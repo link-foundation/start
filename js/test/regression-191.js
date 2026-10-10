@@ -33,8 +33,15 @@ function fixture() {
     if (args[0] === 'info') {
       return {
         success: true,
-        stdout: JSON.stringify({ MemTotal: 1073741824, NCPU: 4 }),
+        stdout: JSON.stringify({
+          MemTotal: 1073741824,
+          NCPU: 4,
+          DockerRootDir: os.tmpdir(),
+        }),
       };
+    }
+    if (args.includes('--size')) {
+      return { success: true, stdout: '1024' };
     }
     if (args[0] === 'inspect') {
       return {
@@ -78,6 +85,7 @@ it('manual snapshot override applies limits to the new container at creation', a
   try {
     const result = await resumeExecution(f.store, f.record.uuid, {
       command: 'new',
+      snapshotOptions: { freeBytes: () => 100 * 1024 ** 3 },
       resourceOptions: { memory: '128m' },
       runner: f.runner,
       probe: () => ({ alive: false, state: SessionState.STOPPED }),

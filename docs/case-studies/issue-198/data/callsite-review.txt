@@ -1,0 +1,49 @@
+js/src/lib/docker-runtime-args.js:139:    commandHandoff: options.detached ? true : null,
+js/src/lib/docker-snapshot-safety.js:142:function snapshotImageCleanupSnippet(
+js/src/lib/docker-snapshot-safety.js:163:  snapshotImageCleanupSnippet,
+js/src/lib/isolation.js:641:        commandHandoffPath,
+js/src/lib/isolation.js:645:        commandHandoffPath(containerName)
+js/src/lib/docker-cleanup.js:365:    require('./docker-snapshot-safety').snapshotImageCleanupSnippet(
+js/src/lib/docker-resource-limits.js:4: * `docker commit` captures a container's filesystem and image config, but not
+js/src/lib/docker-command-handoff.js:7:function commandHandoffPath(sessionName) {
+js/src/lib/docker-command-handoff.js:63:      `${containerName}:${commandHandoffPath(containerName)}`,
+js/src/lib/docker-command-handoff.js:71:  commandHandoffPath,
+rust/src/lib/execution_resume_flow.rs:282:            && record_flag(&previous, "commandHandoff");
+rust/src/lib/docker_resource_limits.rs:3://! `docker commit` captures a container's filesystem and image config, but not
+js/src/lib/execution-resume.js:50:  commandHandoffPath,
+js/src/lib/execution-resume.js:147: * @param {object} params - {containerArgs, extraNetworks, newSessionName, snapshotImage}
+js/src/lib/execution-resume.js:154:  snapshotImage,
+js/src/lib/execution-resume.js:170:      description: `Create ${newSessionName} from ${snapshotImage}`,
+js/src/lib/execution-resume.js:232:    if (!opts.forceSnapshot && (!newCommand || opts.commandHandoff)) {
+js/src/lib/execution-resume.js:256:    // `docker commit` keeps the filesystem but not the HostConfig, so the
+js/src/lib/execution-resume.js:261:    const snapshotImage = buildSnapshotImageName(sessionName, attempt);
+js/src/lib/execution-resume.js:268:      snapshotImage,
+js/src/lib/execution-resume.js:275:          args: ['commit', sessionName, snapshotImage],
+js/src/lib/execution-resume.js:276:          description: `Snapshot container ${sessionName} as ${snapshotImage}`,
+js/src/lib/execution-resume.js:283:            `${SNAPSHOT_IMAGE_LABEL}=${snapshotImage}`,
+js/src/lib/execution-resume.js:295:            snapshotImage,
+js/src/lib/execution-resume.js:298:              commandHandoffPath(newSessionName)
+js/src/lib/execution-resume.js:303:          snapshotImage,
+js/src/lib/execution-resume.js:341:  if (result.snapshotImage) {
+js/src/lib/execution-resume.js:343:      `  snapshotImage ${escapeForLinksNotation(result.snapshotImage)}`
+js/src/lib/execution-resume.js:413:  if (plan.snapshotImage) {
+js/src/lib/execution-resume.js:414:    options.image = plan.snapshotImage;
+js/src/lib/execution-resume.js:415:    options.snapshotImage = plan.snapshotImage;
+js/src/lib/execution-resume.js:417:    options.commandHandoff = true;
+js/src/lib/execution-resume.js:420:    options.commandHandoff = true;
+js/src/lib/execution-resume.js:690:        runner(getDockerCommand(), ['rmi', plan.snapshotImage]);
+js/src/lib/execution-resume.js:806:        snapshotImage: plan.snapshotImage || null,
+js/src/lib/execution-recovery.js:360:      copied = opts.commandHandoff
+rust/src/lib/execution_recovery.rs:507:            .get("commandHandoff")
+rust/src/lib/isolation_metadata.rs:264:        opts_map.insert("commandHandoff".to_string(), serde_json::json!(true));
+rust/src/lib/execution_resume.rs:74:    /// only, issue #176): `docker commit` does not carry the HostConfig over.
+rust/src/lib/execution_resume.rs:361:    // `docker commit` keeps the filesystem but not the HostConfig, so the
+rust/src/lib/execution_resume.rs:483:                    && (new_command.is_none() || record_flag(record, "commandHandoff")) =>
+rust/src/lib/execution_resume.rs:580:            "  snapshotImage {}",
+rust/src/lib/execution_resume.rs:612:                "snapshotImage": result.snapshot_image,
+rust/src/lib/execution_resume.rs:709:            .insert("snapshotImage".into(), json!(snapshot_image));
+rust/src/lib/execution_resume.rs:710:        record.options.insert("commandHandoff".into(), json!(true));
+rust/src/lib/execution_resume.rs:713:        record.options.insert("commandHandoff".into(), json!(true));
+rust/src/lib/execution_resume_cases.rs:577:    record.options.insert("commandHandoff".into(), json!(true));
+rust/src/lib/execution_resume_cases.rs:614:    record.options.insert("commandHandoff".into(), json!(true));
+rust/src/lib/execution_resume_cases.rs:643:            .get("commandHandoff"),

@@ -64,13 +64,23 @@ describe('issue #193: durable store locks and resume', () => {
     };
     const result = await resumeExecution(store, record.uuid, {
       command: 'new',
+      snapshotOptions: { freeBytes: () => 100 * 1024 ** 3 },
       probe: () => ({ alive: false, state: SessionState.STOPPED }),
       runner: (_cmd, args) => {
         if (args[0] !== 'inspect') {
           expect(saved?.options.sessionName).toBe('task-resume-1');
           expect(saved?.attempt.launchAcceptedAt).toBeNull();
         }
-        return { success: true, stdout: args[0] === 'inspect' ? '{}' : 'id' };
+        return {
+          success: true,
+          stdout: args.includes('--size')
+            ? '1024'
+            : args[0] === 'info'
+              ? JSON.stringify({ DockerRootDir: '/docker' })
+              : args[0] === 'inspect'
+                ? '{}'
+                : 'id',
+        };
       },
       startWatcher: () => true,
     });

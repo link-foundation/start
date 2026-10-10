@@ -86,6 +86,10 @@ function splitShellWords(command, style = defaultShellQuotingStyle()) {
       if (i + 1 >= command.length) {
         return null;
       }
+      if (quote === '"' && !'$`"\\\n'.includes(command[i + 1])) {
+        current += char;
+        continue;
+      }
       current += command[++i];
       continue;
     }
@@ -121,10 +125,69 @@ function toShellWords(command) {
   );
 }
 
+/**
+ * Return literal argv only when no outer shell evaluation is needed. Operators,
+ * expansions and comments belong to the outer command line, not the -c script.
+ * Single quotes protect their contents; double quotes still permit expansion.
+ */
+function simpleShellWords(command) {
+  let quote = null;
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i];
+    if (char === '\\' && quote !== "'") {
+      if (command[i + 1] === '\n') {
+        return null;
+      }
+      if (quote !== '"' || '$`"\\\n'.includes(command[i + 1])) {
+        i++;
+      }
+      continue;
+    }
+    if (quote === "'") {
+      if (char === "'") {
+        quote = null;
+      }
+      continue;
+    }
+    if (char === '$' || char === '`') {
+      return null;
+    }
+    if (quote === '"') {
+      if (char === '"') {
+        quote = null;
+      }
+      continue;
+    }
+    if (';&|<>(){}\n\r*?[]~#'.includes(char)) {
+      return null;
+    }
+    if (/\s/.test(char) && !' \t'.includes(char)) {
+      return null;
+    }
+    if (char === "'" || char === '"') {
+      quote = char;
+    }
+  }
+  return splitShellWords(command, 'posix');
+}
+
+function shellScriptIndex(parts) {
+  if (!parts || !SHELL_NAMES.includes(path.basename(parts[0] || ''))) {
+    return -1;
+  }
+  const index = parts.indexOf('-c');
+  return index > 0 &&
+    index + 1 < parts.length &&
+    parts.slice(1, index).every((part) => /^--?[a-zA-Z][a-zA-Z-]*$/.test(part))
+    ? index
+    : -1;
+}
+
 /** True if command is a bare shell invocation (no -c); avoids bash-inside-bash (issue #84). */
 function isInteractiveShellCommand(command) {
-  const parts = toShellWords(command);
+  const parts = simpleShellWords(command);
   return (
+    parts !== null &&
     parts.length > 0 &&
     SHELL_NAMES.includes(path.basename(parts[0])) &&
     !parts.includes('-c')
@@ -133,25 +196,12 @@ function isInteractiveShellCommand(command) {
 
 /** True if command is a shell invocation with -c (e.g. `bash -i -c "cmd"`); avoids double-wrapping (issue #91). */
 function isShellInvocationWithArgs(command) {
-  const parts = toShellWords(command);
-  return (
-    parts.length > 0 &&
-    SHELL_NAMES.includes(path.basename(parts[0])) &&
-    parts.includes('-c')
-  );
+  return shellScriptIndex(simpleShellWords(command)) !== -1;
 }
 
-/** Build argv for shell-with-c command; everything after -c is one script argument. */
+/** Preserve the script word and every positional argument as separate argv. */
 function buildShellWithArgsCmdArgs(command) {
-  const parts = toShellWords(command);
-  const cIdx = parts.indexOf('-c');
-  if (cIdx === -1) {
-    return parts;
-  }
-  const scriptArg = parts.slice(cIdx + 1).join(' ');
-  return scriptArg.length > 0
-    ? [...parts.slice(0, cIdx + 1), scriptArg]
-    : parts.slice(0, cIdx + 1);
+  return simpleShellWords(command) || toShellWords(command);
 }
 
 /** Quote an argument for display only, keeping the user-facing double-quoted form (issue #91). */

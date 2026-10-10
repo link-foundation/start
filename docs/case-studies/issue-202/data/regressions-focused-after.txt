@@ -1,0 +1,34 @@
+bun test v1.4.2 (744846f84)
+
+js/test/regression-199.js:
+(pass) Docker attribution labels (#199) > parses repeated labels and preserves equals signs and empty values [22.58ms]
+(pass) Docker attribution labels (#199) > rejects malformed, reserved and non-Docker labels [0.48ms]
+(pass) Docker attribution labels (#199) > forwards labels safely through nested Docker isolation [1.04ms]
+
+js/test/regression-201.js:
+(pass) wrapper help (#201) > --help prints the no-argument usage and exits successfully [163.89ms]
+(pass) wrapper help (#201) > --help after the separator remains part of the command [0.36ms]
+(pass) wrapper help (#201) > -h prints the no-argument usage and exits successfully [208.11ms]
+(pass) wrapper help (#201) > -h after the separator remains part of the command [0.10ms]
+
+js/test/regression-202.js:
+(pass) shell command semantics (#202) > keeps the whole command line when it contains ";" [2.50ms]
+(pass) shell command semantics (#202) > keeps the whole command line when it contains "&&" [0.03ms]
+(pass) shell command semantics (#202) > keeps the whole command line when it contains "||" [0.02ms]
+(pass) shell command semantics (#202) > keeps the whole command line when it contains "|" [0.02ms]
+(pass) shell command semantics (#202) > keeps the whole command line when it contains "&" [0.17ms]
+(pass) shell command semantics (#202) > keeps the whole command line when it contains ">" [0.03ms]
+(pass) shell command semantics (#202) > keeps the whole command line when it contains "<" [0.18ms]
+(pass) shell command semantics (#202) > keeps the whole command line when it contains "\n" [0.07ms]
+(pass) shell command semantics (#202) > preserves the script, empty positional argv, quotes, and quoted operators [0.38ms]
+(pass) shell command semantics (#202) > does not classify a missing script or a script-file argument as -c [0.13ms]
+(pass) shell command semantics (#202) > retains direct bash -i -c behavior from #91 [0.03ms]
+(pass) shell command semantics (#202) > leaves outer expansions, comments and globbing to the shell [0.06ms]
+(pass) shell command semantics (#202) > executes sh -c 'exit 7'; echo after $? with the expected output and exit [7.81ms]
+(pass) shell command semantics (#202) > executes sh -c 'echo $0 $1' a b with the expected output and exit [7.32ms]
+(pass) shell command semantics (#202) > executes sh -c 'kill -9 $$'; exit $? with the expected output and exit [4.83ms]
+
+ 22 pass
+ 0 fail
+ 61 expect() calls
+Ran 22 tests across 3 files. [486.00ms]
