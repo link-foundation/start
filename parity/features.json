@@ -694,7 +694,8 @@
           "js/src/lib/resume-resources.js"
         ],
         "tests": [
-          "js/test/regression-182.js"
+          "js/test/regression-182.js",
+          "js/test/regression-207.js"
         ]
       },
       "rust": {
@@ -705,7 +706,8 @@
           "rust/src/lib/resume_resources.rs"
         ],
         "tests": [
-          "rust/tests/regression_182.rs"
+          "rust/tests/regression_182.rs",
+          "rust/tests/regression_207.rs"
         ]
       },
       "manualRust": [
@@ -827,7 +829,8 @@
           "js/src/lib/launch-persistence.js"
         ],
         "tests": [
-          "js/test/execution-store.js"
+          "js/test/execution-store.js",
+          "js/test/regression-207.js"
         ]
       },
       "rust": {
@@ -839,7 +842,8 @@
           "rust/src/lib/lino_value_json.rs"
         ],
         "tests": [
-          "rust/tests/execution_store.rs"
+          "rust/tests/execution_store.rs",
+          "rust/tests/regression_207.rs"
         ]
       },
       "manualRust": [
@@ -1630,7 +1634,8 @@
         ],
         "tests": [
           "js/test/regression-189.js",
-          "js/test/regression-190.js"
+          "js/test/regression-190.js",
+          "js/test/regression-207.js"
         ]
       },
       "rust": {
@@ -1639,7 +1644,8 @@
           "rust/src/lib/cpu_penalty_monitor.rs"
         ],
         "tests": [
-          "rust/tests/regression_189.rs"
+          "rust/tests/regression_189.rs",
+          "rust/tests/regression_207.rs"
         ]
       },
       "manualRust": [

@@ -232,5 +232,158 @@
       "javascript": 101,
       "minimumRust": 90.9
     }
+  ],
+  "cpu-penalty-state": [
+    {
+      "name": "external four CPU base triggers and restores at default 95 percent",
+      "baseCpus": null,
+      "config": {
+        "cpus": 2,
+        "trigger": 95,
+        "triggerWindowMs": 100,
+        "release": 65,
+        "releaseWindowMs": 100
+      },
+      "steps": [
+        {
+          "now": 0,
+          "baseCpus": 4,
+          "cores": 4,
+          "action": null
+        },
+        {
+          "now": 40,
+          "baseCpus": 4,
+          "cores": 4,
+          "action": null
+        },
+        {
+          "now": 80,
+          "baseCpus": 4,
+          "cores": 4,
+          "action": null
+        },
+        {
+          "now": 100,
+          "baseCpus": 4,
+          "cores": 0.2,
+          "action": "apply"
+        },
+        {
+          "now": 120,
+          "baseCpus": 2,
+          "cores": 0.2,
+          "action": null
+        },
+        {
+          "now": 160,
+          "baseCpus": 2,
+          "cores": 0.2,
+          "action": null
+        },
+        {
+          "now": 200,
+          "baseCpus": 2,
+          "cores": 0.2,
+          "action": null
+        },
+        {
+          "now": 220,
+          "baseCpus": 2,
+          "cores": 0.2,
+          "action": "lift"
+        }
+      ],
+      "expected": {
+        "baseCpus": 4.0,
+        "limitCpus": 4.0,
+        "phase": "observing",
+        "penaltyCount": 1
+      }
+    },
+    {
+      "name": "restart keeps observed base while own cap is visible",
+      "baseCpus": null,
+      "saved": {
+        "baseCpus": 4,
+        "limitCpus": 2,
+        "phase": "penalized",
+        "since": 0,
+        "penaltyCount": 1,
+        "penalizedMs": 0
+      },
+      "config": {
+        "cpus": 2,
+        "trigger": 95,
+        "triggerWindowMs": 100,
+        "release": 65,
+        "releaseWindowMs": 100
+      },
+      "steps": [
+        {
+          "now": 0,
+          "baseCpus": 2,
+          "cores": 0.2,
+          "action": null
+        },
+        {
+          "now": 40,
+          "baseCpus": 2,
+          "cores": 0.2,
+          "action": null
+        },
+        {
+          "now": 80,
+          "baseCpus": 2,
+          "cores": 0.2,
+          "action": null
+        },
+        {
+          "now": 100,
+          "baseCpus": 2,
+          "cores": 0.2,
+          "action": "lift"
+        }
+      ],
+      "expected": {
+        "baseCpus": 4.0,
+        "limitCpus": 4.0,
+        "phase": "observing",
+        "penaltyCount": 1
+      }
+    },
+    {
+      "name": "external override during penalty establishes new base",
+      "baseCpus": null,
+      "saved": {
+        "baseCpus": 4,
+        "limitCpus": 2,
+        "phase": "penalized",
+        "since": 0,
+        "penaltyCount": 1,
+        "penalizedMs": 0
+      },
+      "config": {
+        "cpus": 2,
+        "trigger": 95,
+        "triggerWindowMs": 100,
+        "release": 65,
+        "releaseWindowMs": 100
+      },
+      "steps": [
+        {
+          "now": 0,
+          "baseCpus": 3,
+          "cores": 3,
+          "action": null
+        }
+      ],
+      "expected": {
+        "baseCpus": 3.0,
+        "limitCpus": 3.0,
+        "phase": "observing",
+        "penaltyCount": 1
+      }
+    }
   ]
 }

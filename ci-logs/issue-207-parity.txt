@@ -1,0 +1,44 @@
+bun test v1.4.2 (744846f84)
+
+js/test/shared-golden.js:
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: plain argv [3.33ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: explicit tmux separator [3.35ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: query without command [0.66ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: docker resource flags [0.67ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: unknown wrapper option [0.70ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: conflicting modes [0.10ms]
+(pass) shared JavaScript and Rust golden contracts > isolation argv: empty runtime flags [0.89ms]
+(pass) shared JavaScript and Rust golden contracts > isolation argv: resource, mount and network boundaries [0.11ms]
+(pass) shared JavaScript and Rust golden contracts > uses the same JSON and text status output [0.92ms]
+(pass) shared JavaScript and Rust golden contracts > preserves the complete execution record format (exit 0) [0.11ms]
+(pass) shared JavaScript and Rust golden contracts > preserves the complete execution record format (exit 137) [0.05ms]
+(pass) shared JavaScript and Rust golden contracts > executes the JavaScript source of the generated Rust parity policy [19.44ms]
+(pass) shared JavaScript and Rust golden contracts > CPU state: external four CPU base triggers and restores at default 95 percent [2.66ms]
+(pass) shared JavaScript and Rust golden contracts > CPU state: restart keeps observed base while own cap is visible [0.57ms]
+(pass) shared JavaScript and Rust golden contracts > CPU state: external override during penalty establishes new base [0.12ms]
+
+js/test/javascript-first-ci.js:
+(pass) JavaScript first CI gate > validates every current workflow using parsed YAML [7.91ms]
+(pass) JavaScript first CI gate > rejects independent Rust PR trigger [4.08ms]
+(pass) JavaScript first CI gate > rejects removed successful-stage condition [3.72ms]
+(pass) JavaScript first CI gate > rejects an alternative that bypasses the successful stage [3.76ms]
+(pass) JavaScript first CI gate > rejects Rust-only path filter [4.05ms]
+(pass) JavaScript first CI gate > rejects Rust security matrix bypass [3.79ms]
+(pass) JavaScript first CI gate > rejects direct Rust CodeQL bypass [3.78ms]
+(pass) JavaScript first CI gate > rejects comma-delimited Rust CodeQL bypass [3.53ms]
+(pass) JavaScript first CI gate > rejects Rust CodeQL matrix include bypass [2.59ms]
+(pass) JavaScript first CI gate > rejects independent Rustup tooling [3.50ms]
+(pass) JavaScript first CI gate > rejects release key outside main environment [3.70ms]
+(pass) JavaScript first CI gate > rejects a new ungated Rust workflow [3.40ms]
+(pass) JavaScript first CI gate > rejects conditional parity [3.05ms]
+(pass) JavaScript first CI gate > rejects a failure required JavaScript check [16.95ms]
+(pass) JavaScript first CI gate > rejects a cancelled required JavaScript check [14.35ms]
+(pass) JavaScript first CI gate > rejects a skipped required JavaScript check [20.73ms]
+(pass) JavaScript first CI gate > opens the gate only after all required checks succeed [44.40ms]
+(pass) JavaScript first CI gate > rejects a change to only one implementation of a feature [0.71ms]
+(pass) JavaScript first CI gate > makes Rust callable only after the complete JavaScript stage [16.28ms]
+(pass) JavaScript first CI gate > always runs JavaScript and its behavioral parity gate on Rust-only changes [88.87ms]
+
+ 35 pass
+ 0 fail
+Ran 35 tests across 2 files. [353.00ms]

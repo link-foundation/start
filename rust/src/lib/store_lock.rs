@@ -11,11 +11,21 @@ use uuid::Uuid;
 pub struct LockManager {
     path: PathBuf,
     token: Option<String>,
+    monitor_owner: bool,
 }
 
 impl LockManager {
     pub fn new(path: PathBuf) -> Self {
-        Self { path, token: None }
+        Self {
+            path,
+            token: None,
+            monitor_owner: false,
+        }
+    }
+
+    pub fn for_cpu_monitor(mut self) -> Self {
+        self.monitor_owner = true;
+        self
     }
 
     pub fn acquire(&mut self, timeout: u64) -> bool {
@@ -30,7 +40,7 @@ impl LockManager {
                 let data = fs::read_to_string(&self.path)
                     .ok()
                     .and_then(|s| serde_json::from_str::<Value>(&s).ok());
-                if Self::stale(data.as_ref(), &stat) {
+                if self.stale(data.as_ref(), &stat) {
                     if let Ok(current) = fs::metadata(&self.path) {
                         if Self::same_file(&stat, &current) {
                             debug("reclaiming stale or malformed lock");
@@ -51,7 +61,7 @@ impl LockManager {
                 let data = json!({"pid": std::process::id(), "timestamp":
                     SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis(),
                     "hostname": local_hostname::get().map(|h| h.to_string_lossy().to_string()).unwrap_or_default(),
-                    "token": token});
+                    "token": token, "processStart": Self::process_info(std::process::id() as u64).map(|p| p.1)});
                 file.write_all(data.to_string().as_bytes())?;
                 file.sync_all()?;
                 fs::hard_link(&temp, &self.path)
@@ -91,7 +101,7 @@ impl LockManager {
         }
     }
 
-    fn stale(data: Option<&Value>, stat: &fs::Metadata) -> bool {
+    fn stale(&self, data: Option<&Value>, stat: &fs::Metadata) -> bool {
         let timestamp = data
             .and_then(|d| d.get("timestamp"))
             .and_then(Value::as_u64);
@@ -107,13 +117,48 @@ impl LockManager {
         };
         let hostname = crate::launch_owner::hostname();
         if data.and_then(|d| d.get("hostname")).and_then(Value::as_str) == Some(&hostname) {
-            return !crate::launch_owner::process_alive(pid);
+            if !crate::launch_owner::process_alive(pid) {
+                return true;
+            }
+            if let Some((state, start)) = Self::process_info(pid) {
+                if state == "Z"
+                    || state == "X"
+                    || state == "x"
+                    || data
+                        .and_then(|d| d["processStart"].as_str())
+                        .is_some_and(|s| s != start)
+                {
+                    return true;
+                }
+            }
+            #[cfg(target_os = "linux")]
+            if self.monitor_owner && data.and_then(|d| d["processStart"].as_str()).is_none() {
+                if let Ok(command) = fs::read_to_string(format!("/proc/{}/cmdline", pid)) {
+                    return !command.contains("cpu-penalty-monitor")
+                        && !command.contains("__start-cpu-monitor");
+                }
+            }
+            return false;
         }
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis() as u64;
         now.saturating_sub(timestamp) > 60000
+    }
+
+    fn process_info(pid: u64) -> Option<(String, String)> {
+        #[cfg(target_os = "linux")]
+        {
+            let stat = fs::read_to_string(format!("/proc/{}/stat", pid)).ok()?;
+            let fields: Vec<&str> = stat[stat.rfind(')')? + 2..].split_whitespace().collect();
+            Some((fields.first()?.to_string(), fields.get(19)?.to_string()))
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            let _ = pid;
+            None
+        }
     }
 
     pub fn release(&mut self) {

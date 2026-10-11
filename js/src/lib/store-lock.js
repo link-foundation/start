@@ -7,11 +7,13 @@ const LOCK_STALE_MS = 60000;
 const MALFORMED_LOCK_GRACE_MS = 3000;
 
 class LockManager {
-  constructor(lockFilePath, filesystem = fs) {
+  constructor(lockFilePath, filesystem = fs, monitorOwner = false) {
     this.lockFilePath = lockFilePath;
     this.fs = filesystem;
     this.lockAcquired = false;
     this.identity = null;
+    this.token = null;
+    this.monitorOwner = monitorOwner;
   }
 
   acquire(timeout = LOCK_TIMEOUT_MS) {
@@ -22,7 +24,8 @@ class LockManager {
       }
     };
     while (Date.now() - started < timeout) {
-      const temp = `${this.lockFilePath}.${process.pid}.${crypto.randomUUID()}`;
+      const token = crypto.randomUUID();
+      const temp = `${this.lockFilePath}.${process.pid}.${token}`;
       try {
         try {
           const stat = this.fs.statSync(this.lockFilePath);
@@ -44,6 +47,8 @@ class LockManager {
             pid: process.pid,
             timestamp: Date.now(),
             hostname: os.hostname(),
+            processStart: this.processInfo(process.pid)?.start,
+            token,
           }),
           { flag: 'wx' }
         );
@@ -56,6 +61,7 @@ class LockManager {
         const identity = this.fs.statSync(temp);
         this.fs.linkSync(temp, this.lockFilePath);
         this.identity = identity;
+        this.token = token;
         this.lockAcquired = true;
         debug(`acquired after ${Date.now() - started}ms`);
         return true;
@@ -84,7 +90,8 @@ class LockManager {
       const current = this.fs.statSync(this.lockFilePath);
       if (
         current.dev === this.identity.dev &&
-        current.ino === this.identity.ino
+        current.ino === this.identity.ino &&
+        this.readLockFile()?.token === this.token
       ) {
         this.fs.unlinkSync(this.lockFilePath);
       }
@@ -92,6 +99,7 @@ class LockManager {
       /* The lock may already be gone. */
     }
     this.lockAcquired = false;
+    this.token = null;
   }
 
   readLockFile() {
@@ -117,12 +125,55 @@ class LockManager {
     if (data.hostname === os.hostname()) {
       try {
         process.kill(data.pid, 0);
+        const info = this.processInfo(data.pid);
+        if (
+          info &&
+          (['Z', 'X', 'x'].includes(info.state) ||
+            (data.processStart && data.processStart !== info.start))
+        ) {
+          return true;
+        }
+        if (
+          this.monitorOwner &&
+          !data.processStart &&
+          process.platform === 'linux'
+        ) {
+          try {
+            const command = this.fs.readFileSync(
+              `/proc/${data.pid}/cmdline`,
+              'utf8'
+            );
+            return (
+              !command.includes('cpu-penalty-monitor') &&
+              !command.includes('__start-cpu-monitor')
+            );
+          } catch {
+            /* Proc may be restricted; do not evict an unverified live owner. */
+          }
+        }
         return false;
       } catch (error) {
         return error.code === 'ESRCH';
       }
     }
     return Date.now() - data.timestamp > LOCK_STALE_MS;
+  }
+
+  processInfo(pid) {
+    if (process.platform !== 'linux') {
+      return null;
+    }
+    try {
+      const stat = this.fs.readFileSync(`/proc/${pid}/stat`, 'utf8');
+      // comm is parenthesized and can contain spaces and closing parentheses.
+      const fields = stat
+        .slice(stat.lastIndexOf(')') + 2)
+        .trim()
+        .split(/\s+/);
+      return { state: fields[0], start: fields[19] };
+    } catch {
+      return null;
+    }
   }
 
   sleep(ms) {

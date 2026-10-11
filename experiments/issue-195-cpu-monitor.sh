@@ -12,6 +12,15 @@ set -eu
 step_file="$START_CPU_FIXTURE/step"
 case "$1" in
   inspect)
+    if [ "$3" = '{{json .HostConfig}}' ]; then
+      if [ -f "$START_CPU_FIXTURE/updates" ]; then
+        cpus=$(tail -n 1 "$START_CPU_FIXTURE/updates")
+        printf '{"NanoCpus":%s000000000}\n' "$cpus"
+      else
+        echo '{}'
+      fi
+      exit 0
+    fi
     step=0
     if [ -f "$step_file" ]; then step=$(cat "$step_file"); fi
     step=$((step + 1))

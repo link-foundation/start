@@ -95,6 +95,41 @@ fn execution_record_format_matches_shared_goldens() {
 }
 
 #[test]
+fn cpu_penalty_state_matches_shared_goldens() {
+    use start_command::cpu_penalty::{evaluate, initial, observe_base, Config, State};
+    for fixture in fixtures()["cpu-penalty-state"].as_array().unwrap() {
+        let config: Config = serde_json::from_value(fixture["config"].clone()).unwrap();
+        let saved = fixture
+            .get("saved")
+            .map(|v| serde_json::from_value::<State>(v.clone()).unwrap());
+        let mut state = initial(fixture["baseCpus"].as_f64(), 0, saved);
+        for step in fixture["steps"].as_array().unwrap() {
+            let now = step["now"].as_i64().unwrap();
+            state = observe_base(&state, step["baseCpus"].as_f64(), now);
+            let (next, action) = evaluate(
+                &state,
+                now,
+                step["cores"].as_f64().unwrap(),
+                6.0,
+                50,
+                &config,
+            );
+            assert_eq!(
+                action.map(|a| a.kind),
+                step["action"].as_str(),
+                "{}",
+                fixture["name"]
+            );
+            state = next;
+        }
+        let actual = serde_json::to_value(state).unwrap();
+        for (key, value) in fixture["expected"].as_object().unwrap() {
+            assert_eq!(&actual[key], value, "{}: {}", fixture["name"], key);
+        }
+    }
+}
+
+#[test]
 fn executes_generated_rust_parity_policy() {
     for fixture in fixtures()["parity-threshold"].as_array().unwrap() {
         assert_eq!(

@@ -1,0 +1,148 @@
+bun test v1.4.2 (744846f84)
+
+js/test/regression-207.js:
+ 6 | const { initialState } = require('../src/lib/cpu-penalty');
+ 7 | const cpu = require('../src/lib/cpu-penalty-monitor');
+ 8 | 
+ 9 | it('restarted monitors retain an observed base absent from launch flags', () => {
+10 |   const saved = { ...initialState(4, 0), phase: 'penalized', limitCpus: 2 };
+11 |   expect(initialState(null, 100, saved).baseCpus).toBe(4);
+                                                       ^
+error: expect(received).toBe(expected)
+
+Expected: 4
+Received: null
+
+      at <anonymous> (/tmp/gh-issue-solver-1791720727953/js/test/regression-207.js:11:51)
+(fail) restarted monitors retain an observed base absent from launch flags [5.78ms]
+36 |       if (mode === 'supervise') {
+37 |         const script = `${cpu.startSnippet(null, 'cpu-task', 1, { ...record.options, logPath })}; read done; ${cpu.stopSnippet()}`;
+38 |         command.splice(0, command.length, 'sh', '-c', script);
+39 |       }
+40 |       const result = spawnSync('python3', [path.resolve(__dirname, '../../experiments/issue-207-monitor.py'), mode, logPath, ...command], { encoding: 'utf8' });
+41 |       expect(result.status, result.stderr).toBe(0);
+                                                ^
+error: Traceback (most recent call last):
+  File "/tmp/gh-issue-solver-1791720727953/experiments/issue-207-monitor.py", line 68, in <module>
+    wait_for(lambda: state().get('phase') == 'penalized', 'apply at 95% of external 4-CPU base')
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/gh-issue-solver-1791720727953/experiments/issue-207-monitor.py", line 50, in wait_for
+    raise AssertionError('no progress: ' + description)
+AssertionError: no progress: apply at 95% of external 4-CPU base
+
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/tmp/gh-issue-solver-1791720727953/js/test/regression-207.js:41:44)
+(fail) CPU monitor recovers external base and idle release: nano [7418.03ms]
+36 |       if (mode === 'supervise') {
+37 |         const script = `${cpu.startSnippet(null, 'cpu-task', 1, { ...record.options, logPath })}; read done; ${cpu.stopSnippet()}`;
+38 |         command.splice(0, command.length, 'sh', '-c', script);
+39 |       }
+40 |       const result = spawnSync('python3', [path.resolve(__dirname, '../../experiments/issue-207-monitor.py'), mode, logPath, ...command], { encoding: 'utf8' });
+41 |       expect(result.status, result.stderr).toBe(0);
+                                                ^
+error: Traceback (most recent call last):
+  File "/tmp/gh-issue-solver-1791720727953/experiments/issue-207-monitor.py", line 68, in <module>
+    wait_for(lambda: state().get('phase') == 'penalized', 'apply at 95% of external 4-CPU base')
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/gh-issue-solver-1791720727953/experiments/issue-207-monitor.py", line 50, in wait_for
+    raise AssertionError('no progress: ' + description)
+AssertionError: no progress: apply at 95% of external 4-CPU base
+
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/tmp/gh-issue-solver-1791720727953/js/test/regression-207.js:41:44)
+(fail) CPU monitor recovers external base and idle release: quota [7383.60ms]
+36 |       if (mode === 'supervise') {
+37 |         const script = `${cpu.startSnippet(null, 'cpu-task', 1, { ...record.options, logPath })}; read done; ${cpu.stopSnippet()}`;
+38 |         command.splice(0, command.length, 'sh', '-c', script);
+39 |       }
+40 |       const result = spawnSync('python3', [path.resolve(__dirname, '../../experiments/issue-207-monitor.py'), mode, logPath, ...command], { encoding: 'utf8' });
+41 |       expect(result.status, result.stderr).toBe(0);
+                                                ^
+error: Traceback (most recent call last):
+  File "/tmp/gh-issue-solver-1791720727953/experiments/issue-207-monitor.py", line 74, in <module>
+    wait_for(lambda: state().get('phase') == 'observing' and state().get('limitCpus') == 4, 'lift to observed base 4')
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/gh-issue-solver-1791720727953/experiments/issue-207-monitor.py", line 50, in wait_for
+    raise AssertionError('no progress: ' + description)
+AssertionError: no progress: lift to observed base 4
+
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/tmp/gh-issue-solver-1791720727953/js/test/regression-207.js:41:44)
+(fail) CPU monitor recovers external base and idle release: restart [7327.55ms]
+36 |       if (mode === 'supervise') {
+37 |         const script = `${cpu.startSnippet(null, 'cpu-task', 1, { ...record.options, logPath })}; read done; ${cpu.stopSnippet()}`;
+38 |         command.splice(0, command.length, 'sh', '-c', script);
+39 |       }
+40 |       const result = spawnSync('python3', [path.resolve(__dirname, '../../experiments/issue-207-monitor.py'), mode, logPath, ...command], { encoding: 'utf8' });
+41 |       expect(result.status, result.stderr).toBe(0);
+                                                ^
+error: Traceback (most recent call last):
+  File "/tmp/gh-issue-solver-1791720727953/experiments/issue-207-monitor.py", line 74, in <module>
+    wait_for(lambda: state().get('phase') == 'observing' and state().get('limitCpus') == 4, 'lift to observed base 4')
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/gh-issue-solver-1791720727953/experiments/issue-207-monitor.py", line 48, in wait_for
+    raise AssertionError('monitor exited: ' + description)
+AssertionError: monitor exited: lift to observed base 4
+
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/tmp/gh-issue-solver-1791720727953/js/test/regression-207.js:41:44)
+(fail) CPU monitor recovers external base and idle release: zombie [554.29ms]
+36 |       if (mode === 'supervise') {
+37 |         const script = `${cpu.startSnippet(null, 'cpu-task', 1, { ...record.options, logPath })}; read done; ${cpu.stopSnippet()}`;
+38 |         command.splice(0, command.length, 'sh', '-c', script);
+39 |       }
+40 |       const result = spawnSync('python3', [path.resolve(__dirname, '../../experiments/issue-207-monitor.py'), mode, logPath, ...command], { encoding: 'utf8' });
+41 |       expect(result.status, result.stderr).toBe(0);
+                                                ^
+error: Traceback (most recent call last):
+  File "/tmp/gh-issue-solver-1791720727953/experiments/issue-207-monitor.py", line 74, in <module>
+    wait_for(lambda: state().get('phase') == 'observing' and state().get('limitCpus') == 4, 'lift to observed base 4')
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/gh-issue-solver-1791720727953/experiments/issue-207-monitor.py", line 48, in wait_for
+    raise AssertionError('monitor exited: ' + description)
+AssertionError: monitor exited: lift to observed base 4
+
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/tmp/gh-issue-solver-1791720727953/js/test/regression-207.js:41:44)
+(fail) CPU monitor recovers external base and idle release: reused [508.41ms]
+36 |       if (mode === 'supervise') {
+37 |         const script = `${cpu.startSnippet(null, 'cpu-task', 1, { ...record.options, logPath })}; read done; ${cpu.stopSnippet()}`;
+38 |         command.splice(0, command.length, 'sh', '-c', script);
+39 |       }
+40 |       const result = spawnSync('python3', [path.resolve(__dirname, '../../experiments/issue-207-monitor.py'), mode, logPath, ...command], { encoding: 'utf8' });
+41 |       expect(result.status, result.stderr).toBe(0);
+                                                ^
+error: Traceback (most recent call last):
+  File "/tmp/gh-issue-solver-1791720727953/experiments/issue-207-monitor.py", line 68, in <module>
+    wait_for(lambda: state().get('phase') == 'penalized', 'apply at 95% of external 4-CPU base')
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/gh-issue-solver-1791720727953/experiments/issue-207-monitor.py", line 50, in wait_for
+    raise AssertionError('no progress: ' + description)
+AssertionError: no progress: apply at 95% of external 4-CPU base
+
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/tmp/gh-issue-solver-1791720727953/js/test/regression-207.js:41:44)
+(fail) CPU monitor recovers external base and idle release: supervise [7368.80ms]
+
+ 0 pass
+ 7 fail
+ 7 expect() calls
+Ran 7 tests across 1 file. [30.63s]
