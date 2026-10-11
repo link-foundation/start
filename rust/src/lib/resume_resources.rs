@@ -4,14 +4,37 @@ use crate::execution_store::ExecutionRecord;
 use crate::session_probe::{SessionProbe, SessionState};
 use serde_json::{json, Value};
 
-pub fn restore_base_cpu(mut limits: Vec<String>, record: &ExecutionRecord) -> Vec<String> {
+pub fn restore_base_cpu(limits: Vec<String>, record: &ExecutionRecord) -> Vec<String> {
+    restore_base_cpu_inspected(limits, record, false)
+}
+fn restore_base_cpu_inspected(
+    mut limits: Vec<String>,
+    record: &ExecutionRecord,
+    inspected: bool,
+) -> Vec<String> {
     if record.options.contains_key("cpuPenaltyConfig") {
-        let base = normalize_resource_limits(
+        let mut base = normalize_resource_limits(
             record
                 .options
                 .get("baseResourceLimits")
                 .or_else(|| record.options.get("resourceLimits")),
         );
+        if let Some(saved) = crate::cpu_penalty_monitor::read_state(record) {
+            if inspected
+                && !(saved["phase"] == "penalized"
+                    && crate::docker_resource_limits::cpu_count(&limits)
+                        == saved["limitCpus"].as_f64())
+            {
+                return limits;
+            }
+            if saved.get("baseCpus").is_some() {
+                base = saved["baseCpus"]
+                    .as_f64()
+                    .filter(|n| *n > 0.0)
+                    .map(|n| crate::docker_resource_limits::with_cpu_limit(limits.clone(), n))
+                    .unwrap_or_default();
+            }
+        }
         let cpu = |s: &String| {
             s.starts_with("--cpus=")
                 || s.starts_with("--cpu-quota=")
@@ -48,9 +71,11 @@ pub fn prepare<R: CommandRunner>(
     } else {
         None
     };
-    let base = restore_base_cpu(
+    let inspected = live.is_some();
+    let base = restore_base_cpu_inspected(
         live.unwrap_or_else(|| normalize_resource_limits(record.options.get("resourceLimits"))),
         record,
+        inspected,
     );
     let old_memory = base
         .iter()

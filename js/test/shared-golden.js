@@ -51,4 +51,27 @@ describe('shared JavaScript and Rust golden contracts', () => {
       );
     }
   });
+  for (const fixture of fixtures['cpu-penalty-state']) {
+    it(`CPU state: ${fixture.name}`, () => {
+      const {
+        initialState,
+        observeBase,
+        evaluate,
+      } = require('../src/lib/cpu-penalty');
+      let state = initialState(fixture.baseCpus, 0, fixture.saved);
+      for (const step of fixture.steps) {
+        state = observeBase(state, step.baseCpus, step.now);
+        const decision = evaluate(
+          state,
+          { now: step.now, cores: step.cores, daemonCpus: 6, maxGapMs: 50 },
+          fixture.config
+        );
+        assert.equal(decision.action?.kind || null, step.action);
+        state = decision.state;
+      }
+      for (const [key, value] of Object.entries(fixture.expected)) {
+        assert.deepEqual(state[key], value, key);
+      }
+    });
+  }
 });

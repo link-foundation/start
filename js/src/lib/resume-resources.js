@@ -7,13 +7,23 @@ const {
 const { resolveResourceOptions } = require('./docker-resource-options');
 
 // Temporary penalty quotas must never become a resumed execution's base quota.
-function restoreBaseCpu(limits, options) {
+function restoreBaseCpu(limits, options, saved = null, inspected = false) {
   if (!options.cpuPenaltyConfig) {
     return limits;
   }
-  const base = normalizeResourceLimits(
+  if (
+    saved &&
+    inspected &&
+    !(saved.phase === 'penalized' && cpuCount(limits) === saved.limitCpus)
+  ) {
+    return limits;
+  }
+  let base = normalizeResourceLimits(
     options.baseResourceLimits || options.resourceLimits
   );
+  if (saved && Object.hasOwn(saved, 'baseCpus')) {
+    base = saved.baseCpus > 0 ? withCpuLimit(limits, saved.baseCpus) : [];
+  }
   return [
     ...limits.filter((s) => !/^--(?:cpus|cpu-quota|cpu-period)=/.test(s)),
     ...base.filter((s) => /^--(?:cpus|cpu-quota|cpu-period)=/.test(s)),
@@ -38,7 +48,9 @@ function prepareResumeResources(record, probe, overrides, runner, random) {
       : null;
   const base = restoreBaseCpu(
     normalizeResourceLimits(live || options.resourceLimits),
-    options
+    options,
+    require('./cpu-penalty-monitor').readState(record),
+    live !== null
   );
   const oldMemory = base.find((s) => s.startsWith('--memory='))?.slice(9);
   const result = resolveResourceOptions(

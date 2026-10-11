@@ -70,10 +70,13 @@ function validate(options) {
   options.cpuPenaltyConfig = { ...DEFAULTS, ...options.cpuPenaltyConfig };
 }
 function initialState(baseCpus = null, now = Date.now(), saved = null) {
+  baseCpus =
+    saved && Object.hasOwn(saved, 'baseCpus') ? saved.baseCpus : baseCpus;
   return {
     phase: saved?.phase === 'penalized' ? 'penalized' : 'observing',
     since: saved?.phase === 'penalized' ? saved.since : now,
-    limitCpus: saved?.phase === 'penalized' ? saved.limitCpus : baseCpus,
+    limitCpus:
+      saved && Object.hasOwn(saved, 'limitCpus') ? saved.limitCpus : baseCpus,
     baseCpus,
     penaltyCount: saved?.penaltyCount || 0,
     penalizedMs: saved?.penalizedMs || 0,
@@ -81,6 +84,30 @@ function initialState(baseCpus = null, now = Date.now(), saved = null) {
     lastAt: now,
     capacity: null,
   };
+}
+// A quota different from our cap is a supervisor override, not our penalty.
+function observeBase(state, baseCpus, now) {
+  if (baseCpus === state.limitCpus) {
+    return state;
+  }
+  return {
+    ...state,
+    phase: 'observing',
+    baseCpus,
+    limitCpus: baseCpus,
+    since: now,
+    samples: [],
+  };
+}
+function transitionLog(action, config) {
+  const applying = action.kind === 'apply';
+  const window = applying ? config.triggerWindowMs : config.releaseWindowMs;
+  const duration = window % 60000 === 0 ? `${window / 60000}m` : `${window}ms`;
+  const measured =
+    action.average === null || action.average === undefined
+      ? 'capacity changed'
+      : `${action.average.toFixed(2)} of ${applying ? action.capacity : config.cpus} CPUs for ${duration}`;
+  return `[start] CPU penalty ${applying ? 'applied' : 'lifted'}: ${action.cpus} CPUs (${measured})`;
 }
 function average(samples, now, window) {
   const start = now - window;
@@ -170,6 +197,8 @@ module.exports = {
   validate,
   duration,
   initialState,
+  observeBase,
+  transitionLog,
   average,
   evaluate,
 };

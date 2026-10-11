@@ -134,14 +134,12 @@ pub struct State {
 }
 pub fn initial(base: Option<f64>, now: i64, saved: Option<State>) -> State {
     if let Some(mut s) = saved {
-        s.base_cpus = base;
         s.samples.clear();
         s.capacity = None;
         s.last_at = now;
         if s.phase != "penalized" {
             s.phase = "observing".into();
             s.since = now;
-            s.limit_cpus = base;
         }
         return s;
     }
@@ -156,6 +154,53 @@ pub fn initial(base: Option<f64>, now: i64, saved: Option<State>) -> State {
         last_at: now,
         capacity: None,
     }
+}
+pub fn observe_base(state: &State, base: Option<f64>, now: i64) -> State {
+    if base == state.limit_cpus {
+        return state.clone();
+    }
+    let mut next = state.clone();
+    next.phase = "observing".into();
+    next.base_cpus = base;
+    next.limit_cpus = base;
+    next.since = now;
+    next.samples.clear();
+    next
+}
+
+pub fn transition_log(action: &Action, config: &Config) -> String {
+    let applying = action.kind == "apply";
+    let window = if applying {
+        config.trigger_window_ms
+    } else {
+        config.release_window_ms
+    };
+    let duration = if window % 60000 == 0 {
+        format!("{}m", window / 60000)
+    } else {
+        format!("{}ms", window)
+    };
+    let measured = action
+        .average
+        .map(|n| {
+            format!(
+                "{:.2} of {} CPUs for {}",
+                n,
+                if applying {
+                    action.capacity
+                } else {
+                    config.cpus
+                },
+                duration
+            )
+        })
+        .unwrap_or_else(|| "capacity changed".into());
+    format!(
+        "[start] CPU penalty {}: {} CPUs ({})",
+        if applying { "applied" } else { "lifted" },
+        action.cpus,
+        measured
+    )
 }
 pub fn average(samples: &[Sample], now: i64, window: i64) -> Option<f64> {
     let start = now - window;
