@@ -1,5 +1,11 @@
 # start-command
 
+## 0.37.1
+
+### Patch Changes
+
+- c67c92f: Observe Docker CPU limits applied after launch, restore the remembered base on lift and resume, and recover CPU penalty monitors after crashes, zombie/reused-PID locks and transient tick failures.
+
 ## 0.37.0
 
 ### Minor Changes
