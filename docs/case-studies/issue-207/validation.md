@@ -55,6 +55,8 @@ Full [JavaScript check](../../../../ci-logs/issue-207-js-check.txt),
 [test](../../../../ci-logs/issue-207-js-tests.txt),
 [shared-contract](../../../../ci-logs/issue-207-parity.txt), and
 [generation](../../../../ci-logs/issue-207-generation.txt) logs are preserved.
+The [CI investigation](ci.md) records every failed native job, raw logs and the
+shared compile-error correction; final CI results are recorded in PR 208.
 SIGKILL cannot run cleanup; recovery requires a surviving supervisor or explicit
 reattachment. An indefinite Docker outage prevents any process from restoring
 a quota. These are the material limits, not deferred child-issue requirements.

@@ -185,13 +185,6 @@ fn monitor(uuid: &str, name: &str, attempt: u64, standalone: Option<&str>) -> Re
                 } else {
                     f64::NAN
                 };
-                debug(
-                    &record,
-                    &format!(
-                        "sample: phase={} base={:?} limit={:?} cores={} daemon={}",
-                        state.phase, state.base_cpus, state.limit_cpus, cores, cpus
-                    ),
-                );
                 let cores = if stats.success && live.success && observed.is_some() {
                     stats
                         .stdout
@@ -209,6 +202,13 @@ fn monitor(uuid: &str, name: &str, attempt: u64, standalone: Option<&str>) -> Re
                 } else {
                     f64::NAN
                 };
+                debug(
+                    &record,
+                    &format!(
+                        "sample: phase={} base={:?} limit={:?} cores={} daemon={}",
+                        state.phase, state.base_cpus, state.limit_cpus, cores, cpus
+                    ),
+                );
                 let (mut next, action) = cpu_penalty::evaluate(
                     &state,
                     Utc::now().timestamp_millis(),

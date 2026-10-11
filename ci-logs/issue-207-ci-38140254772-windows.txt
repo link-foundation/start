@@ -1,0 +1,644 @@
+﻿2026-10-11T12:44:54.0143449Z Current runner version: '2.337.0'
+2026-10-11T12:44:54.0176810Z ##[group]Runner Image Provisioner
+2026-10-11T12:44:54.0178044Z Hosted Compute Agent
+2026-10-11T12:44:54.0178911Z Version: 20260901.588
+2026-10-11T12:44:54.0180362Z Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+2026-10-11T12:44:54.0181472Z Build Date: 2026-09-01T19:56:44Z
+2026-10-11T12:44:54.0182561Z Worker ID: {f46d5c4f-6b51-4aa1-8fa5-e5f95a28e1d6}
+2026-10-11T12:44:54.0183614Z Azure Region: northcentralus
+2026-10-11T12:44:54.0184481Z ##[endgroup]
+2026-10-11T12:44:54.0186415Z ##[group]Operating System
+2026-10-11T12:44:54.0187377Z Microsoft Windows Server 2025
+2026-10-11T12:44:54.0188300Z 10.0.26100
+2026-10-11T12:44:54.0189021Z Datacenter
+2026-10-11T12:44:54.0189712Z ##[endgroup]
+2026-10-11T12:44:54.0190476Z ##[group]Runner Image
+2026-10-11T12:44:54.0191290Z Image: windows-2025-vs2026
+2026-10-11T12:44:54.0192127Z Version: 20260925.250.1
+2026-10-11T12:44:54.0194471Z Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20260925.250/images/windows/Windows2025-VS2026-Readme.md
+2026-10-11T12:44:54.0197067Z Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20260925.250
+2026-10-11T12:44:54.0198492Z ##[endgroup]
+2026-10-11T12:44:54.0200615Z ##[group]GITHUB_TOKEN Permissions
+2026-10-11T12:44:54.0203261Z Contents: read
+2026-10-11T12:44:54.0204080Z Metadata: read
+2026-10-11T12:44:54.0204777Z ##[endgroup]
+2026-10-11T12:44:54.0208422Z Secret source: Actions
+2026-10-11T12:44:54.0209726Z Cache mode: write
+2026-10-11T12:44:54.0210792Z Prepare workflow directory
+2026-10-11T12:44:54.0682500Z Prepare all required actions
+2026-10-11T12:44:54.0747751Z Getting action download info
+2026-10-11T12:44:54.2574360Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-10-11T12:44:54.3679639Z Download action repository 'dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f' (SHA:e2a55d2ffb04f378e9626c28d38b36d230d1e12f)
+2026-10-11T12:44:54.4890244Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-10-11T12:44:54.6337973Z Download action repository 'actions/cache@v5' (SHA:caa296126883cff596d87d8935842f9db880ef25)
+2026-10-11T12:44:54.9279768Z Uses: link-foundation/start/.github/workflows/rust.yml@refs/pull/208/merge (6baad160be5d2113ebc3c61a2f0ae0f40ac38c07)
+2026-10-11T12:44:54.9284438Z ##[group] Inputs
+2026-10-11T12:44:54.9285004Z   release_mode: instant
+2026-10-11T12:44:54.9285559Z   bump_type: patch
+2026-10-11T12:44:54.9286114Z   description: 
+2026-10-11T12:44:54.9286575Z ##[endgroup]
+2026-10-11T12:44:54.9287140Z Complete job name: Rust CI/CD / Test (windows-latest)
+2026-10-11T12:44:55.0809438Z ##[group]Run actions/checkout@v6
+2026-10-11T12:44:55.0811178Z with:
+2026-10-11T12:44:55.0811772Z   persist-credentials: false
+2026-10-11T12:44:55.0812451Z   repository: link-foundation/start
+2026-10-11T12:44:55.0816494Z   token: ***
+2026-10-11T12:44:55.0816974Z   ssh-strict: true
+2026-10-11T12:44:55.0817607Z   ssh-user: git
+2026-10-11T12:44:55.0818284Z   clean: true
+2026-10-11T12:44:55.0818798Z   sparse-checkout-cone-mode: true
+2026-10-11T12:44:55.0819361Z   fetch-depth: 1
+2026-10-11T12:44:55.0819820Z   fetch-tags: false
+2026-10-11T12:44:55.0820323Z   show-progress: true
+2026-10-11T12:44:55.0820806Z   lfs: false
+2026-10-11T12:44:55.0821254Z   submodules: false
+2026-10-11T12:44:55.0821740Z   set-safe-directory: true
+2026-10-11T12:44:55.0822272Z   allow-unsafe-pr-checkout: false
+2026-10-11T12:44:55.0823216Z env:
+2026-10-11T12:44:55.0823668Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:55.0824203Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:55.0824809Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:55.0825291Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:55.0825787Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:55.0826331Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:55.0826882Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:55.0827477Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:55.0830161Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:55.0830801Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:55.0831311Z ##[endgroup]
+2026-10-11T12:44:55.2345833Z Syncing repository: link-foundation/start
+2026-10-11T12:44:55.2347667Z ##[group]Getting Git version info
+2026-10-11T12:44:55.2348815Z Working directory is 'D:\a\start\start'
+2026-10-11T12:44:55.3123544Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-10-11T12:44:55.6427142Z git version 2.55.0.windows.5
+2026-10-11T12:44:55.6476033Z ##[endgroup]
+2026-10-11T12:44:55.6497395Z Temporarily overriding HOME='D:\a\_temp\1917b9f4-6111-4d18-91b4-4c6074a73cbe' before making global git config changes
+2026-10-11T12:44:55.6500194Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-11T12:44:55.6507036Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\start\start
+2026-10-11T12:44:55.7203999Z Deleting the contents of 'D:\a\start\start'
+2026-10-11T12:44:55.7210132Z ##[group]Determining repository object format
+2026-10-11T12:44:55.7213343Z ##[endgroup]
+2026-10-11T12:44:55.7214996Z ##[group]Initializing the repository
+2026-10-11T12:44:55.7222807Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\start\start
+2026-10-11T12:44:55.7984408Z Initialized empty Git repository in D:/a/start/start/.git/
+2026-10-11T12:44:55.8030517Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/link-foundation/start
+2026-10-11T12:44:55.8619013Z ##[endgroup]
+2026-10-11T12:44:55.8620832Z ##[group]Disabling automatic garbage collection
+2026-10-11T12:44:55.8628396Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+2026-10-11T12:44:55.8915490Z ##[endgroup]
+2026-10-11T12:44:55.8917923Z ##[group]Setting up auth
+2026-10-11T12:44:55.8919814Z Removing SSH command configuration
+2026-10-11T12:44:55.8928293Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-10-11T12:44:55.9213122Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-10-11T12:44:57.3925431Z Removing HTTP extra header
+2026-10-11T12:44:57.3937972Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-11T12:44:57.4233313Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-10-11T12:44:57.9484955Z Removing includeIf entries pointing to credentials config files
+2026-10-11T12:44:57.9503240Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-11T12:44:57.9810392Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-10-11T12:44:58.5153671Z [command]"C:\Program Files\Git\bin\git.exe" config --file D:\a\_temp\git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+2026-10-11T12:44:58.5460539Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:D:/a/start/start/.git.path D:\a\_temp\git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:44:58.5756149Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:D:/a/start/start/.git/worktrees/*.path D:\a\_temp\git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:44:58.6093365Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:44:58.6391775Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:44:58.6684975Z ##[endgroup]
+2026-10-11T12:44:58.6685827Z ##[group]Fetching the repository
+2026-10-11T12:44:58.6699500Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +6baad160be5d2113ebc3c61a2f0ae0f40ac38c07:refs/remotes/pull/208/merge
+2026-10-11T12:45:00.6650109Z From https://github.com/link-foundation/start
+2026-10-11T12:45:00.6651940Z  * [new ref]         6baad160be5d2113ebc3c61a2f0ae0f40ac38c07 -> pull/208/merge
+2026-10-11T12:45:00.6695381Z ##[endgroup]
+2026-10-11T12:45:00.6696269Z ##[group]Determining the checkout info
+2026-10-11T12:45:00.6697215Z ##[endgroup]
+2026-10-11T12:45:00.6707189Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+2026-10-11T12:45:00.7277759Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+2026-10-11T12:45:00.7561826Z ##[group]Checking out the ref
+2026-10-11T12:45:00.7570779Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force refs/remotes/pull/208/merge
+2026-10-11T12:45:01.2425101Z Note: switching to 'refs/remotes/pull/208/merge'.
+2026-10-11T12:45:01.2425699Z 
+2026-10-11T12:45:01.2426072Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-10-11T12:45:01.2426967Z changes and commit them, and you can discard any commits you make in this
+2026-10-11T12:45:01.2427765Z state without impacting any branches by switching back to a branch.
+2026-10-11T12:45:01.2428209Z 
+2026-10-11T12:45:01.2428625Z If you want to create a new branch to retain commits you create, you may
+2026-10-11T12:45:01.2429166Z do so (now or later) by using -c with the switch command. Example:
+2026-10-11T12:45:01.2429529Z 
+2026-10-11T12:45:01.2429703Z   git switch -c <new-branch-name>
+2026-10-11T12:45:01.2429985Z 
+2026-10-11T12:45:01.2430146Z Or undo this operation with:
+2026-10-11T12:45:01.2430891Z 
+2026-10-11T12:45:01.2431035Z   git switch -
+2026-10-11T12:45:01.2431307Z 
+2026-10-11T12:45:01.2431613Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-10-11T12:45:01.2431989Z 
+2026-10-11T12:45:01.2432438Z HEAD is now at 6baad16 Merge 8134902ecbc31d970c94a48dac214d9b38249816 into 348ad41c2e6265611a53b55271d893f74960eff6
+2026-10-11T12:45:01.3043773Z ##[endgroup]
+2026-10-11T12:45:01.3051540Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+2026-10-11T12:45:01.3400614Z 6baad160be5d2113ebc3c61a2f0ae0f40ac38c07
+2026-10-11T12:45:01.3444137Z ##[group]Removing auth
+2026-10-11T12:45:01.3445825Z Removing SSH command configuration
+2026-10-11T12:45:01.3453489Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-10-11T12:45:01.3786531Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-10-11T12:45:01.9162499Z Removing HTTP extra header
+2026-10-11T12:45:01.9171348Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-11T12:45:01.9464224Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-10-11T12:45:02.4836665Z Removing includeIf entries pointing to credentials config files
+2026-10-11T12:45:02.4847860Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-11T12:45:02.5097110Z includeif.gitdir:D:/a/start/start/.git.path
+2026-10-11T12:45:02.5097843Z includeif.gitdir:D:/a/start/start/.git/worktrees/*.path
+2026-10-11T12:45:02.5098645Z includeif.gitdir:/github/workspace/.git.path
+2026-10-11T12:45:02.5099647Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-11T12:45:02.5142131Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:D:/a/start/start/.git.path
+2026-10-11T12:45:02.5387952Z D:\a\_temp\git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:45:02.5429878Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:D:/a/start/start/.git.path D:\a\_temp\git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:45:02.5709398Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:D:/a/start/start/.git/worktrees/*.path
+2026-10-11T12:45:02.5963494Z D:\a\_temp\git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:45:02.6003560Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:D:/a/start/start/.git/worktrees/*.path D:\a\_temp\git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:45:02.6284609Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-10-11T12:45:02.6527628Z /github/runner_temp/git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:45:02.6577534Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:45:02.6929308Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-11T12:45:02.7181667Z /github/runner_temp/git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:45:02.7227999Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:45:02.7516997Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-10-11T12:45:03.2932580Z Removing credentials config 'D:\a\_temp\git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config'
+2026-10-11T12:45:03.2946421Z ##[endgroup]
+2026-10-11T12:45:03.3458382Z ##[group]Run dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f
+2026-10-11T12:45:03.3459008Z with:
+2026-10-11T12:45:03.3459325Z   toolchain: stable
+2026-10-11T12:45:03.3459639Z env:
+2026-10-11T12:45:03.3459946Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:03.3460297Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:03.3460588Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:03.3460871Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:03.3461194Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:03.3461546Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:03.3461879Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:03.3462222Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:03.3462531Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:03.3462933Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:03.3463231Z ##[endgroup]
+2026-10-11T12:45:03.3536747Z ##[start-action display=Parse toolchain version;id=__dtolnay_rust-toolchain.parse]
+2026-10-11T12:45:03.3713848Z ##[group]Run if [[ -z $toolchain ]]; then
+2026-10-11T12:45:03.3714342Z [36;1mif [[ -z $toolchain ]]; then[0m
+2026-10-11T12:45:03.3715004Z [36;1m  # GitHub does not enforce `required: true` inputs itself. https://github.com/actions/runner/issues/1070[0m
+2026-10-11T12:45:03.3715600Z [36;1m  echo "'toolchain' is a required input" >&2[0m
+2026-10-11T12:45:03.3716370Z [36;1m  exit 1[0m
+2026-10-11T12:45:03.3716878Z [36;1melif [[ $toolchain =~ ^stable' '[0-9]+' '(year|month|week|day)s?' 'ago$ ]]; then[0m
+2026-10-11T12:45:03.3717346Z [36;1m  if [[ Windows == macOS ]]; then[0m
+2026-10-11T12:45:03.3717996Z [36;1m    echo "toolchain=1.$((($(date -v-$(sed 's/stable \([0-9]*\) \(.\).*/\1\2/' <<< $toolchain) +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT[0m
+2026-10-11T12:45:03.3718847Z [36;1m  else[0m
+2026-10-11T12:45:03.3719297Z [36;1m    echo "toolchain=1.$((($(date --date "${toolchain#stable }" +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT[0m
+2026-10-11T12:45:03.3719823Z [36;1m  fi[0m
+2026-10-11T12:45:03.3720186Z [36;1melif [[ $toolchain =~ ^stable' 'minus' '[0-9]+' 'releases?$ ]]; then[0m
+2026-10-11T12:45:03.3720793Z [36;1m  echo "toolchain=1.$((($(date +%s)/60/60/24-16569)/7/6-${toolchain//[^0-9]/}))" >> $GITHUB_OUTPUT[0m
+2026-10-11T12:45:03.3721347Z [36;1melif [[ $toolchain =~ ^1\.[0-9]+$ ]]; then[0m
+2026-10-11T12:45:03.3721898Z [36;1m  echo "toolchain=1.$((i=${toolchain#1.}, c=($(date +%s)/60/60/24-16569)/7/6, i+9*i*(10*i<=c)+90*i*(100*i<=c)))" >> $GITHUB_OUTPUT[0m
+2026-10-11T12:45:03.3722460Z [36;1melse[0m
+2026-10-11T12:45:03.3722736Z [36;1m  delimiter=EOF[0m
+2026-10-11T12:45:03.3723188Z [36;1m  while [[ $toolchain == *$delimiter* ]]; do delimiter+=_; done[0m
+2026-10-11T12:45:03.3723775Z [36;1m  printf 'toolchain<<%s\n%s\n%s\n' "$delimiter" "$toolchain" "$delimiter" >> $GITHUB_OUTPUT[0m
+2026-10-11T12:45:03.3724282Z [36;1mfi[0m
+2026-10-11T12:45:03.3747943Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:45:03.3748416Z env:
+2026-10-11T12:45:03.3748777Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:03.3749055Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:03.3749722Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:03.3750014Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:03.3750303Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:03.3750646Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:03.3750961Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:03.3751301Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:03.3751599Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:03.3752323Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:03.3752659Z   toolchain: stable
+2026-10-11T12:45:03.3752932Z ##[endgroup]
+2026-10-11T12:45:03.5516671Z ##[end-action id=__dtolnay_rust-toolchain.parse;outcome=success;conclusion=success;duration_ms=197]
+2026-10-11T12:45:03.5522181Z ##[start-action display=Set $CARGO_HOME;id=__dtolnay_rust-toolchain.__run]
+2026-10-11T12:45:03.5680119Z ##[group]Run echo CARGO_HOME=${CARGO_HOME:-"$USERPROFILE\.cargo"} >> $GITHUB_ENV
+2026-10-11T12:45:03.5682917Z [36;1mecho CARGO_HOME=${CARGO_HOME:-"$USERPROFILE\.cargo"} >> $GITHUB_ENV[0m
+2026-10-11T12:45:03.5695055Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:45:03.5695534Z env:
+2026-10-11T12:45:03.5695878Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:03.5696240Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:03.5696548Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:03.5696840Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:03.5697127Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:03.5697481Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:03.5697798Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:03.5698128Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:03.5698489Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:03.5698846Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:03.5699209Z ##[endgroup]
+2026-10-11T12:45:03.6119345Z ##[end-action id=__dtolnay_rust-toolchain.__run;outcome=success;conclusion=success;duration_ms=59]
+2026-10-11T12:45:03.6122553Z ##[start-action display=Install rustup if needed;id=__dtolnay_rust-toolchain.__run_2]
+2026-10-11T12:45:03.6134685Z ##[end-action id=__dtolnay_rust-toolchain.__run_2;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-10-11T12:45:03.6138294Z ##[start-action display=Install rustup if needed on windows;id=__dtolnay_rust-toolchain.__run_3]
+2026-10-11T12:45:03.6278022Z ##[group]Run if ! command -v rustup &>/dev/null; then
+2026-10-11T12:45:03.6278672Z [36;1mif ! command -v rustup &>/dev/null; then[0m
+2026-10-11T12:45:03.6279635Z [36;1m  curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused --location --silent --show-error --fail https://win.rustup.rs/x86_64 --output 'D:\a\_temp\rustup-init.exe'[0m
+2026-10-11T12:45:03.6281381Z [36;1m  'D:\a\_temp\rustup-init.exe' --default-toolchain none --no-modify-path -y[0m
+2026-10-11T12:45:03.6281991Z [36;1m  echo "$CARGO_HOME\bin" >> $GITHUB_PATH[0m
+2026-10-11T12:45:03.6282403Z [36;1mfi[0m
+2026-10-11T12:45:03.6294302Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:45:03.6294790Z env:
+2026-10-11T12:45:03.6295072Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:03.6295413Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:03.6295757Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:03.6296103Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:03.6296412Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:03.6296733Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:03.6297080Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:03.6297419Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:03.6297712Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:03.6298118Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:03.6298450Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+2026-10-11T12:45:03.6298854Z ##[endgroup]
+2026-10-11T12:45:03.6804494Z ##[end-action id=__dtolnay_rust-toolchain.__run_3;outcome=success;conclusion=success;duration_ms=66]
+2026-10-11T12:45:03.6822829Z ##[start-action display=rustup toolchain install stable;id=__dtolnay_rust-toolchain.__run_4]
+2026-10-11T12:45:03.6953502Z ##[group]Run set -f  # split targets and components on commas and whitespace, without glob expansion
+2026-10-11T12:45:03.6954283Z [36;1mset -f  # split targets and components on commas and whitespace, without glob expansion[0m
+2026-10-11T12:45:03.6954792Z [36;1mflags=()[0m
+2026-10-11T12:45:03.6955126Z [36;1mfor t in ${targets//,/ }; do flags+=(--target "$t"); done[0m
+2026-10-11T12:45:03.6955621Z [36;1mfor c in ${components//,/ }; do flags+=(--component "$c"); done[0m
+2026-10-11T12:45:03.6956190Z [36;1mif [[ $toolchain == nightly && -n $components ]]; then flags+=(--allow-downgrade); fi[0m
+2026-10-11T12:45:03.6956671Z [36;1mlog=$(mktemp)[0m
+2026-10-11T12:45:03.6957061Z [36;1mtrap 'rm -f "$log"' EXIT[0m
+2026-10-11T12:45:03.6957383Z [36;1mfor attempt in 1 2 3 4 5; do[0m
+2026-10-11T12:45:03.6958034Z [36;1m  if rustup toolchain install "$toolchain" "${flags[@]}" --profile minimal --no-self-update --force-non-host 2>&1 | tee "$log"; then[0m
+2026-10-11T12:45:03.6959313Z [36;1m    break[0m
+2026-10-11T12:45:03.6959597Z [36;1m  else[0m
+2026-10-11T12:45:03.6959902Z [36;1m    status=$?[0m
+2026-10-11T12:45:03.6960196Z [36;1m  fi[0m
+2026-10-11T12:45:03.6960577Z [36;1m  if [[ $attempt == 5 ]] || ! grep -Fq 'checksum failed for ' "$log" \[0m
+2026-10-11T12:45:03.6961234Z [36;1m      || ! grep -Fq 'this is likely due to an ongoing update of the official release server' "$log"; then[0m
+2026-10-11T12:45:03.6961748Z [36;1m    exit "$status"[0m
+2026-10-11T12:45:03.6962062Z [36;1m  fi[0m
+2026-10-11T12:45:03.6962480Z [36;1m  echo "Retrying rustup toolchain install in 30 seconds (retry $attempt of 4)" >&2[0m
+2026-10-11T12:45:03.6962957Z [36;1m  sleep 30[0m
+2026-10-11T12:45:03.6963230Z [36;1mdone[0m
+2026-10-11T12:45:03.6974708Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:45:03.6975238Z env:
+2026-10-11T12:45:03.6975527Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:03.6975835Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:03.6976163Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:03.6976459Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:03.6976812Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:03.6977140Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:03.6977456Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:03.6977822Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:03.6978129Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:03.6978469Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:03.6978788Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+2026-10-11T12:45:03.6979109Z   toolchain: stable
+2026-10-11T12:45:03.6979450Z   targets: 
+2026-10-11T12:45:03.6979717Z   components: 
+2026-10-11T12:45:03.6980215Z   RUSTUP_PERMIT_COPY_RENAME: 1
+2026-10-11T12:45:03.6980535Z ##[endgroup]
+2026-10-11T12:45:06.9942933Z info: syncing channel updates for stable-x86_64-pc-windows-msvc
+2026-10-11T12:45:07.5153162Z info: latest update on 2026-10-01 for version 1.99.0 (b940084d7 2026-09-28)
+2026-10-11T12:45:07.5490300Z info: removing previous version of component rustfmt
+2026-10-11T12:45:07.5786692Z info: removing previous version of component clippy
+2026-10-11T12:45:07.6103659Z info: removing previous version of component rust-std for target x86_64-pc-windows-gnu
+2026-10-11T12:45:07.7208715Z info: removing previous version of component rust-std for target i686-pc-windows-msvc
+2026-10-11T12:45:07.7999072Z info: removing previous version of component cargo
+2026-10-11T12:45:07.9273870Z info: removing previous version of component rust-std
+2026-10-11T12:45:08.0054883Z info: removing previous version of component rustc
+2026-10-11T12:45:08.1164304Z info: downloading 7 components
+2026-10-11T12:45:24.2453425Z 
+2026-10-11T12:45:25.3198267Z   stable-x86_64-pc-windows-msvc updated - rustc 1.99.0 (b940084d7 2026-09-28) (from rustc 1.98.1 (48a229cea 2026-09-01))
+2026-10-11T12:45:25.3199093Z 
+2026-10-11T12:45:25.3842438Z ##[end-action id=__dtolnay_rust-toolchain.__run_4;outcome=success;conclusion=success;duration_ms=21702]
+2026-10-11T12:45:25.3853045Z ##[start-action display=rustup default stable;id=__dtolnay_rust-toolchain.__run_5]
+2026-10-11T12:45:25.4001940Z ##[group]Run rustup default "$toolchain" --force-non-host
+2026-10-11T12:45:25.4002480Z [36;1mrustup default "$toolchain" --force-non-host[0m
+2026-10-11T12:45:25.4014510Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:45:25.4014955Z env:
+2026-10-11T12:45:25.4015269Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:25.4015621Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:25.4015929Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:25.4016196Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:25.4016469Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:25.4016847Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:25.4017174Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:25.4017506Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:25.4017821Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:25.4018164Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:25.4018689Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+2026-10-11T12:45:25.4019049Z   toolchain: stable
+2026-10-11T12:45:25.4019334Z ##[endgroup]
+2026-10-11T12:45:25.4681272Z info: using existing install for stable-x86_64-pc-windows-msvc
+2026-10-11T12:45:25.4775205Z info: default toolchain set to stable-x86_64-pc-windows-msvc
+2026-10-11T12:45:25.4775968Z 
+2026-10-11T12:45:25.4998155Z   stable-x86_64-pc-windows-msvc unchanged - rustc 1.99.0 (b940084d7 2026-09-28)
+2026-10-11T12:45:25.4998698Z 
+2026-10-11T12:45:25.5083908Z ##[end-action id=__dtolnay_rust-toolchain.__run_5;outcome=success;conclusion=success;duration_ms=122]
+2026-10-11T12:45:25.5088976Z ##[start-action display=Create cachekey;id=__dtolnay_rust-toolchain.rustc-version]
+2026-10-11T12:45:25.5226339Z ##[group]Run DATE=$(rustc +"$toolchain" --version --verbose | sed -ne 's/^commit-date: \(20[0-9][0-9]\)-\([01][0-9]\)-\([0-3][0-9]\)$/\1\2\3/p')
+2026-10-11T12:45:25.5227321Z [36;1mDATE=$(rustc +"$toolchain" --version --verbose | sed -ne 's/^commit-date: \(20[0-9][0-9]\)-\([01][0-9]\)-\([0-3][0-9]\)$/\1\2\3/p')[0m
+2026-10-11T12:45:25.5228039Z [36;1mHASH=$(rustc +"$toolchain" --version --verbose | sed -ne 's/^commit-hash: //p')[0m
+2026-10-11T12:45:25.5228609Z [36;1mecho "cachekey=$(echo $DATE$HASH | head -c12)" >> $GITHUB_OUTPUT[0m
+2026-10-11T12:45:25.5240850Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:45:25.5241328Z env:
+2026-10-11T12:45:25.5241638Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:25.5241957Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:25.5242239Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:25.5242551Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:25.5242854Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:25.5243398Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:25.5243727Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:25.5244058Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:25.5244389Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:25.5244732Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:25.5245049Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+2026-10-11T12:45:25.5245405Z   toolchain: stable
+2026-10-11T12:45:25.5245694Z ##[endgroup]
+2026-10-11T12:45:26.4036984Z ##[end-action id=__dtolnay_rust-toolchain.rustc-version;outcome=success;conclusion=success;duration_ms=894]
+2026-10-11T12:45:26.4040971Z ##[start-action display=Disable incremental compilation;id=__dtolnay_rust-toolchain.__run_6]
+2026-10-11T12:45:26.4167044Z ##[group]Run if [ -z "${CARGO_INCREMENTAL+set}" ]; then
+2026-10-11T12:45:26.4167540Z [36;1mif [ -z "${CARGO_INCREMENTAL+set}" ]; then[0m
+2026-10-11T12:45:26.4167937Z [36;1m  echo CARGO_INCREMENTAL=0 >> $GITHUB_ENV[0m
+2026-10-11T12:45:26.4168292Z [36;1mfi[0m
+2026-10-11T12:45:26.4179447Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:45:26.4179902Z env:
+2026-10-11T12:45:26.4180207Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:26.4180510Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:26.4180776Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:26.4181100Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:26.4181433Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:26.4181760Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:26.4182072Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:26.4182393Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:26.4182714Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:26.4183035Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:26.4183338Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+2026-10-11T12:45:26.4183682Z ##[endgroup]
+2026-10-11T12:45:26.4570896Z ##[end-action id=__dtolnay_rust-toolchain.__run_6;outcome=success;conclusion=success;duration_ms=52]
+2026-10-11T12:45:26.4574048Z ##[start-action display=Enable colors in Cargo output;id=__dtolnay_rust-toolchain.__run_7]
+2026-10-11T12:45:26.4695094Z ##[group]Run if [ -z "${CARGO_TERM_COLOR+set}" ]; then
+2026-10-11T12:45:26.4695569Z [36;1mif [ -z "${CARGO_TERM_COLOR+set}" ]; then[0m
+2026-10-11T12:45:26.4696132Z [36;1m  echo CARGO_TERM_COLOR=always >> $GITHUB_ENV[0m
+2026-10-11T12:45:26.4696874Z [36;1mfi[0m
+2026-10-11T12:45:26.4707761Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:45:26.4708245Z env:
+2026-10-11T12:45:26.4708534Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:26.4708925Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:26.4709214Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:26.4709538Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:26.4709848Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:26.4710181Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:26.4710539Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:26.4711416Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:26.4711767Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:26.4712124Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:26.4712496Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+2026-10-11T12:45:26.4712866Z ##[endgroup]
+2026-10-11T12:45:26.5102873Z ##[end-action id=__dtolnay_rust-toolchain.__run_7;outcome=success;conclusion=success;duration_ms=52]
+2026-10-11T12:45:26.5107205Z ##[start-action display=Enable Cargo sparse registry;id=__dtolnay_rust-toolchain.__run_8]
+2026-10-11T12:45:26.5243527Z ##[group]Run # implemented in 1.66, stabilized in 1.68, made default in 1.70
+2026-10-11T12:45:26.5244191Z [36;1m# implemented in 1.66, stabilized in 1.68, made default in 1.70[0m
+2026-10-11T12:45:26.5244899Z [36;1mif [ -z "${CARGO_REGISTRIES_CRATES_IO_PROTOCOL+set}" -o -f "D:\a\_temp"/.implicit_cargo_registries_crates_io_protocol ]; then[0m
+2026-10-11T12:45:26.5245651Z [36;1m  if rustc +"$toolchain" --version --verbose | grep -q '^release: 1\.6[89]\.'; then[0m
+2026-10-11T12:45:26.5246237Z [36;1m    touch "D:\a\_temp"/.implicit_cargo_registries_crates_io_protocol || true[0m
+2026-10-11T12:45:26.5247065Z [36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse >> $GITHUB_ENV[0m
+2026-10-11T12:45:26.5247810Z [36;1m  elif rustc +"$toolchain" --version --verbose | grep -q '^release: 1\.6[67]\.'; then[0m
+2026-10-11T12:45:26.5249220Z [36;1m    touch "D:\a\_temp"/.implicit_cargo_registries_crates_io_protocol || true[0m
+2026-10-11T12:45:26.5249900Z [36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=git >> $GITHUB_ENV[0m
+2026-10-11T12:45:26.5250308Z [36;1m  fi[0m
+2026-10-11T12:45:26.5250579Z [36;1mfi[0m
+2026-10-11T12:45:26.5261352Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:45:26.5261825Z env:
+2026-10-11T12:45:26.5262101Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:26.5262484Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:26.5262779Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:26.5263082Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:26.5263431Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:26.5263767Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:26.5264105Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:26.5264453Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:26.5264837Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:26.5265180Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:26.5265493Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+2026-10-11T12:45:26.5265854Z   toolchain: stable
+2026-10-11T12:45:26.5266141Z ##[endgroup]
+2026-10-11T12:45:26.7365069Z ##[end-action id=__dtolnay_rust-toolchain.__run_8;outcome=success;conclusion=success;duration_ms=225]
+2026-10-11T12:45:26.7370450Z ##[start-action display=Work around spurious network errors in curl 8.0;id=__dtolnay_rust-toolchain.__run_9]
+2026-10-11T12:45:26.7505087Z ##[group]Run # https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation
+2026-10-11T12:45:26.7505982Z [36;1m# https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation[0m
+2026-10-11T12:45:26.7506689Z [36;1mif rustc +"$toolchain" --version --verbose | grep -q '^release: 1\.7[01]\.'; then[0m
+2026-10-11T12:45:26.7507251Z [36;1m  echo CARGO_HTTP_MULTIPLEXING=false >> $GITHUB_ENV[0m
+2026-10-11T12:45:26.7507635Z [36;1mfi[0m
+2026-10-11T12:45:26.7519879Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:45:26.7520394Z env:
+2026-10-11T12:45:26.7520681Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:26.7520991Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:26.7521358Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:26.7521703Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:26.7522019Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:26.7522356Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:26.7522714Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:26.7523084Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:26.7523392Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:26.7523741Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:26.7524068Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+2026-10-11T12:45:26.7524406Z   toolchain: stable
+2026-10-11T12:45:26.7524724Z ##[endgroup]
+2026-10-11T12:45:26.8796547Z ##[end-action id=__dtolnay_rust-toolchain.__run_9;outcome=success;conclusion=success;duration_ms=142]
+2026-10-11T12:45:26.8804288Z ##[start-action display=rustc +stable --version --verbose;id=__dtolnay_rust-toolchain.__run_10]
+2026-10-11T12:45:26.8967537Z ##[group]Run rustc +"$toolchain" --version --verbose
+2026-10-11T12:45:26.8968144Z [36;1mrustc +"$toolchain" --version --verbose[0m
+2026-10-11T12:45:26.8978736Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:45:26.8979185Z env:
+2026-10-11T12:45:26.8979500Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:26.8979863Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:26.8980219Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:26.8980515Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:26.8980804Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:26.8981160Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:26.8982205Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:26.8982554Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:26.8982885Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:26.8983231Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:26.8983598Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+2026-10-11T12:45:26.8983952Z   toolchain: stable
+2026-10-11T12:45:26.8984224Z ##[endgroup]
+2026-10-11T12:45:26.9802255Z rustc 1.99.0 (b940084d7 2026-09-28)
+2026-10-11T12:45:26.9802894Z binary: rustc
+2026-10-11T12:45:26.9803369Z commit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4
+2026-10-11T12:45:26.9803901Z commit-date: 2026-09-28
+2026-10-11T12:45:26.9804366Z host: x86_64-pc-windows-msvc
+2026-10-11T12:45:26.9804891Z release: 1.99.0
+2026-10-11T12:45:26.9805443Z LLVM version: 23.1.1
+2026-10-11T12:45:26.9938284Z ##[end-action id=__dtolnay_rust-toolchain.__run_10;outcome=success;conclusion=success;duration_ms=113]
+2026-10-11T12:45:27.1329017Z ##[group]Run actions/cache@v5
+2026-10-11T12:45:27.1329558Z with:
+2026-10-11T12:45:27.1329919Z   path: ~/.cargo/registry
+~/.cargo/git
+
+2026-10-11T12:45:27.1330509Z   key: Windows-cargo-52cf378803e3cd02d829146caf48dc81883b21936f18850fb6353777bb20c0e2
+2026-10-11T12:45:27.1331028Z   enableCrossOsArchive: false
+2026-10-11T12:45:27.1331392Z   fail-on-cache-miss: false
+2026-10-11T12:45:27.1331712Z   lookup-only: false
+2026-10-11T12:45:27.1331998Z   save-always: false
+2026-10-11T12:45:27.1332297Z env:
+2026-10-11T12:45:27.1332575Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:27.1332893Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:27.1333196Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:27.1333525Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:27.1333841Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:27.1334179Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:27.1334512Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:27.1334854Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:27.1335305Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:27.1335647Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:27.1335956Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+2026-10-11T12:45:27.1336326Z ##[endgroup]
+2026-10-11T12:45:27.5398365Z Cache hit for: Windows-cargo-52cf378803e3cd02d829146caf48dc81883b21936f18850fb6353777bb20c0e2
+2026-10-11T12:45:27.9867285Z Received 11405407 of 11405407 (100.0%), 32.9 MBs/sec
+2026-10-11T12:45:27.9869948Z Cache Size: ~11 MB (11405407 B)
+2026-10-11T12:45:27.9904317Z [command]"C:\Program Files\Git\usr\bin\tar.exe" -xf D:/a/_temp/64e70b93-67d2-420e-aade-59aa8a9c41c4/cache.tzst -P -C D:/a/start/start --force-local --use-compress-program "zstd -d"
+2026-10-11T12:45:30.8320608Z Cache restored successfully
+2026-10-11T12:45:30.8446831Z Cache restored from key: Windows-cargo-52cf378803e3cd02d829146caf48dc81883b21936f18850fb6353777bb20c0e2
+2026-10-11T12:45:30.8914689Z ##[group]Run cargo test --all-features --verbose
+2026-10-11T12:45:30.8915249Z [36;1mcargo test --all-features --verbose[0m
+2026-10-11T12:45:30.9413049Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-10-11T12:45:30.9413480Z env:
+2026-10-11T12:45:30.9413689Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:30.9413925Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:30.9414543Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:30.9414801Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:30.9415032Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:30.9415272Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:30.9415501Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:30.9415789Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:30.9416007Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:30.9416235Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:30.9416446Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+2026-10-11T12:45:30.9416691Z ##[endgroup]
+2026-10-11T12:45:32.3445824Z [1m[92m   Compiling[0m memchr v2.8.2
+2026-10-11T12:45:32.3446341Z [1m[92m   Compiling[0m proc-macro2 v1.0.106
+2026-10-11T12:45:32.3452865Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name memchr --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\memchr-2.8.2\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"alloc\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"core\", \"default\", \"libc\", \"logging\", \"rustc-dep-of-std\", \"std\", \"use_std\"))" -C metadata=71e7294d20f29982 -C extra-filename=-43c35be7682ca5f8 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:32.3458740Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name build_script_build --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\proc-macro2-1.0.106\build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --cfg "feature=\"proc-macro\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"nightly\", \"proc-macro\", \"span-locations\"))" -C metadata=afd1608521a73b10 -C extra-filename=-f0cf214c7382bc45 --out-dir D:\a\start\start\rust\target\debug\build\proc-macro2-f0cf214c7382bc45 -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:32.9328915Z [1m[92m   Compiling[0m unicode-ident v1.0.24
+2026-10-11T12:45:32.9336044Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name unicode_ident --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unicode-ident-1.0.24\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=9b01173053391fb5 -C extra-filename=-d928144a3e9b6446 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:33.0096010Z [1m[92m   Compiling[0m quote v1.0.46
+2026-10-11T12:45:33.0103705Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name build_script_build --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --cfg "feature=\"proc-macro\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"proc-macro\"))" -C metadata=c2acdc5958e77305 -C extra-filename=-e7d8c7b44a202000 --out-dir D:\a\start\start\rust\target\debug\build\quote-e7d8c7b44a202000 -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:34.3255762Z [1m[92m   Compiling[0m windows-link v0.2.1
+2026-10-11T12:45:34.3276897Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name windows_link --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-link-0.2.1\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=11da3d96fdfb8afb -C extra-filename=-44c20752ec0ab5f3 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:34.3344499Z [1m[92m     Running[0m `D:\a\start\start\rust\target\debug\build\proc-macro2-f0cf214c7382bc45\build-script-build`
+2026-10-11T12:45:34.3713472Z [1m[92m     Running[0m `D:\a\start\start\rust\target\debug\build\quote-e7d8c7b44a202000\build-script-build`
+2026-10-11T12:45:34.4070267Z [1m[92m   Compiling[0m getrandom v0.4.3
+2026-10-11T12:45:34.4079755Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name build_script_build --edition=2024 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.4.3\build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"std\", \"sys_rng\", \"wasm_js\"))" -C metadata=91036c7b41f65dd2 -C extra-filename=-8d471da8b44ae8e6 --out-dir D:\a\start\start\rust\target\debug\build\getrandom-8d471da8b44ae8e6 -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:34.5138378Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name proc_macro2 --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\proc-macro2-1.0.106\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"proc-macro\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"nightly\", \"proc-macro\", \"span-locations\"))" -C metadata=f74b4d7e5391a5eb -C extra-filename=-aa126c3cb26564ce --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern unicode_ident=D:\a\start\start\rust\target\debug\deps\libunicode_ident-d928144a3e9b6446.rmeta --cap-lints allow -Dwarnings --cfg wrap_proc_macro --cfg proc_macro_span_location --cfg proc_macro_span_file --check-cfg cfg(fuzzing) --check-cfg cfg(no_is_available) --check-cfg cfg(no_literal_byte_character) --check-cfg cfg(no_literal_c_string) --check-cfg cfg(no_source_text) --check-cfg cfg(proc_macro_span) --check-cfg cfg(proc_macro_span_file) --check-cfg cfg(proc_macro_span_location) --check-cfg cfg(procmacro2_backtrace) --check-cfg cfg(procmacro2_build_probe) --check-cfg cfg(procmacro2_nightly_testing) --check-cfg cfg(procmacro2_semver_exempt) --check-cfg cfg(randomize_layout) --check-cfg cfg(span_locations) --check-cfg cfg(super_unstable) --check-cfg cfg(wrap_proc_macro)`
+2026-10-11T12:45:34.6210930Z [1m[92m   Compiling[0m serde_core v1.0.228
+2026-10-11T12:45:34.6220117Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name build_script_build --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_core-1.0.228\build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --cfg "feature=\"result\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"default\", \"rc\", \"result\", \"std\", \"unstable\"))" -C metadata=50dbd673ba5ec258 -C extra-filename=-90c0622f1617c222 --out-dir D:\a\start\start\rust\target\debug\build\serde_core-90c0622f1617c222 -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:34.8776521Z [1m[92m   Compiling[0m autocfg v1.5.1
+2026-10-11T12:45:34.8782898Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name autocfg --edition=2015 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\autocfg-1.5.1\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=a69c968e2859d27f -C extra-filename=-a3fdf7b5c214fa15 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:35.1877716Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name quote --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.46\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"proc-macro\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"proc-macro\"))" -C metadata=414923f930133bb9 -C extra-filename=-9d37cc5af980ab3e --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern proc_macro2=D:\a\start\start\rust\target\debug\deps\libproc_macro2-aa126c3cb26564ce.rmeta --cap-lints allow -Dwarnings --check-cfg cfg(no_diagnostic_namespace)`
+2026-10-11T12:45:35.2796189Z [1m[92m   Compiling[0m num-traits v0.2.19
+2026-10-11T12:45:35.2804208Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name build_script_build --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\num-traits-0.2.19\build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"i128\", \"libm\", \"std\"))" -C metadata=3bc8bb6a5e23139b -C extra-filename=-afc47076c7d1e889 --out-dir D:\a\start\start\rust\target\debug\build\num-traits-afc47076c7d1e889 -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern autocfg=D:\a\start\start\rust\target\debug\deps\libautocfg-a3fdf7b5c214fa15.rlib --cap-lints allow -Dwarnings`
+2026-10-11T12:45:35.4575331Z [1m[92m     Running[0m `D:\a\start\start\rust\target\debug\build\serde_core-90c0622f1617c222\build-script-build`
+2026-10-11T12:45:35.4711226Z [1m[92m     Running[0m `D:\a\start\start\rust\target\debug\build\getrandom-8d471da8b44ae8e6\build-script-build`
+2026-10-11T12:45:35.4834577Z [1m[92m   Compiling[0m windows-sys v0.61.2
+2026-10-11T12:45:35.4876937Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name windows_sys --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.61.2\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"Win32\"" --cfg "feature=\"Win32_Foundation\"" --cfg "feature=\"Win32_Globalization\"" --cfg "feature=\"Win32_Storage\"" --cfg "feature=\"Win32_Storage_FileSystem\"" --cfg "feature=\"Win32_System\"" --cfg "feature=\"Win32_System_Com\"" --cfg "feature=\"Win32_UI\"" --cfg "feature=\"Win32_UI_Shell\"" --cfg "feature=\"default\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"Wdk\", \"Wdk_Devices\", \"Wdk_Devices_Bluetooth\", \"Wdk_Devices_HumanInterfaceDevice\", \"Wdk_Foundation\", \"Wdk_Graphics\", \"Wdk_Graphics_Direct3D\", \"Wdk_NetworkManagement\", \"Wdk_NetworkManagement_Ndis\", \"Wdk_NetworkManagement_WindowsFilteringPlatform\", \"Wdk_Storage\", \"Wdk_Storage_FileSystem\", \"Wdk_Storage_FileSystem_Minifilters\", \"Wdk_System\", \"Wdk_System_IO\", \"Wdk_System_Memory\", \"Wdk_System_OfflineRegistry\", \"Wdk_System_Registry\", \"Wdk_System_SystemInformation\", \"Wdk_System_SystemServices\", \"Wdk_System_Threading\", \"Win32\", \"Win32_Data\", \"Win32_Data_HtmlHelp\", \"Win32_Data_RightsManagement\", \"Win32_Devices\", \"Win32_Devices_AllJoyn\", \"Win32_Devices_Beep\", \"Win32_Devices_BiometricFramework\", \"Win32_Devices_Bluetooth\", \"Win32_Devices_Cdrom\", \"Win32_Devices_Communication\", \"Win32_Devices_DeviceAndDriverInstallation\", \"Win32_Devices_DeviceQuery\", \"Win32_Devices_Display\", \"Win32_Devices_Dvd\", \"Win32_Devices_Enumeration\", \"Win32_Devices_Enumeration_Pnp\", \"Win32_Devices_Fax\", \"Win32_Devices_HumanInterfaceDevice\", \"Win32_Devices_Nfc\", \"Win32_Devices_Nfp\", \"Win32_Devices_PortableDevices\", \"Win32_Devices_Properties\", \"Win32_Devices_Pwm\", \"Win32_Devices_Sensors\", \"Win32_Devices_SerialCommunication\", \"Win32_Devices_Tapi\", \"Win32_Devices_Usb\", \"Win32_Devices_WebServicesOnDevices\", \"Win32_Foundation\", \"Win32_Gaming\", \"Win32_Globalization\", \"Win32_Graphics\", \"Win32_Graphics_Dwm\", \"Win32_Graphics_Gdi\", \"Win32_Graphics_GdiPlus\", \"Win32_Graphics_Hlsl\", \"Win32_Graphics_OpenGL\", \"Win32_Graphics_Printing\", \"Win32_Graphics_Printing_PrintTicket\", \"Win32_Management\", \"Win32_Management_MobileDeviceManagementRegistration\", \"Win32_Media\", \"Win32_Media_Audio\", \"Win32_Media_DxMediaObjects\", \"Win32_Media_KernelStreaming\", \"Win32_Media_Multimedia\", \"Win32_Media_Streaming\", \"Win32_Media_WindowsMediaFormat\", \"Win32_NetworkManagement\", \"Win32_NetworkManagement_Dhcp\", \"Win32_NetworkManagement_Dns\", \"Win32_NetworkManagement_InternetConnectionWizard\", \"Win32_NetworkManagement_IpHelper\", \"Win32_NetworkManagement_Multicast\", \"Win32_NetworkManagement_Ndis\", \"Win32_NetworkManagement_NetBios\", \"Win32_NetworkManagement_NetManagement\", \"Win32_NetworkManagement_NetShell\", \"Win32_NetworkManagement_NetworkDiagnosticsFramework\", \"Win32_NetworkManagement_P2P\", \"Win32_NetworkManagement_QoS\", \"Win32_NetworkManagement_Rras\", \"Win32_NetworkManagement_Snmp\", \"Win32_NetworkManagement_WNet\", \"Win32_NetworkManagement_WebDav\", \"Win32_NetworkManagement_WiFi\", \"Win32_NetworkManagement_WindowsConnectionManager\", \"Win32_NetworkManagement_WindowsFilteringPlatform\", \"Win32_NetworkManagement_WindowsFirewall\", \"Win32_NetworkManagement_WindowsNetworkVirtualization\", \"Win32_Networking\", \"Win32_Networking_ActiveDirectory\", \"Win32_Networking_Clustering\", \"Win32_Networking_HttpServer\", \"Win32_Networking_Ldap\", \"Win32_Networking_WebSocket\", \"Win32_Networking_WinHttp\", \"Win32_Networking_WinInet\", \"Win32_Networking_WinSock\", \"Win32_Networking_WindowsWebServices\", \"Win32_Security\", \"Win32_Security_AppLocker\", \"Win32_Security_Authentication\", \"Win32_Security_Authentication_Identity\", \"Win32_Security_Authorization\", \"Win32_Security_Credentials\", \"Win32_Security_Cryptography\", \"Win32_Security_Cryptography_Catalog\", \"Win32_Security_Cryptography_Certificates\", \"Win32_Security_Cryptography_Sip\", \"Win32_Security_Cryptography_UI\", \"Win32_Security_DiagnosticDataQuery\", \"Win32_Security_DirectoryServices\", \"Win32_Security_EnterpriseData\", \"Win32_Security_ExtensibleAuthenticationProtocol\", \"Win32_Security_Isolation\", \"Win32_Security_LicenseProtection\", \"Win32_Security_NetworkAccessProtection\", \"Win32_Security_WinTrust\", \"Win32_Security_WinWlx\", \"Win32_Storage\", \"Win32_Storage_Cabinets\", \"Win32_Storage_CloudFilters\", \"Win32_Storage_Compression\", \"Win32_Storage_DistributedFileSystem\", \"Win32_Storage_FileHistory\", \"Win32_Storage_FileSystem\", \"Win32_Storage_Imapi\", \"Win32_Storage_IndexServer\", \"Win32_Storage_InstallableFileSystems\", \"Win32_Storage_IscsiDisc\", \"Win32_Storage_Jet\", \"Win32_Storage_Nvme\", \"Win32_Storage_OfflineFiles\", \"Win32_Storage_OperationRecorder\", \"Win32_Storage_Packaging\", \"Win32_Storage_Packaging_Appx\", \"Win32_Storage_ProjectedFileSystem\", \"Win32_Storage_StructuredStorage\", \"Win32_Storage_Vhd\", \"Win32_Storage_Xps\", \"Win32_System\", \"Win32_System_AddressBook\", \"Win32_System_Antimalware\", \"Win32_System_ApplicationInstallationAndServicing\", \"Win32_System_ApplicationVerifier\", \"Win32_System_ClrHosting\", \"Win32_System_Com\", \"Win32_System_Com_Marshal\", \"Win32_System_Com_StructuredStorage\", \"Win32_System_Com_Urlmon\", \"Win32_System_ComponentServices\", \"Win32_System_Console\", \"Win32_System_CorrelationVector\", \"Win32_System_DataExchange\", \"Win32_System_DeploymentServices\", \"Win32_System_DeveloperLicensing\", \"Win32_System_Diagnostics\", \"Win32_System_Diagnostics_Ceip\", \"Win32_System_Diagnostics_Debug\", \"Win32_System_Diagnostics_Debug_Extensions\", \"Win32_System_Diagnostics_Etw\", \"Win32_System_Diagnostics_ProcessSnapshotting\", \"Win32_System_Diagnostics_ToolHelp\", \"Win32_System_Diagnostics_TraceLogging\", \"Win32_System_DistributedTransactionCoordinator\", \"Win32_System_Environment\", \"Win32_System_ErrorReporting\", \"Win32_System_EventCollector\", \"Win32_System_EventLog\", \"Win32_System_EventNotificationService\", \"Win32_System_GroupPolicy\", \"Win32_System_HostCompute\", \"Win32_System_HostComputeNetwork\", \"Win32_System_HostComputeSystem\", \"Win32_System_Hypervisor\", \"Win32_System_IO\", \"Win32_System_Iis\", \"Win32_System_Ioctl\", \"Win32_System_JobObjects\", \"Win32_System_Js\", \"Win32_System_Kernel\", \"Win32_System_LibraryLoader\", \"Win32_System_Mailslots\", \"Win32_System_Mapi\", \"Win32_System_Memory\", \"Win32_System_Memory_NonVolatile\", \"Win32_System_MessageQueuing\", \"Win32_System_MixedReality\", \"Win32_System_Ole\", \"Win32_System_PasswordManagement\", \"Win32_System_Performance\", \"Win32_System_Performance_HardwareCounterProfiling\", \"Win32_System_Pipes\", \"Win32_System_Power\", \"Win32_System_ProcessStatus\", \"Win32_System_Recovery\", \"Win32_System_Registry\", \"Win32_System_RemoteDesktop\", \"Win32_System_RemoteManagement\", \"Win32_System_RestartManager\", \"Win32_System_Restore\", \"Win32_System_Rpc\", \"Win32_System_Search\", \"Win32_System_Search_Common\", \"Win32_System_SecurityCenter\", \"Win32_System_Services\", \"Win32_System_SetupAndMigration\", \"Win32_System_Shutdown\", \"Win32_System_StationsAndDesktops\", \"Win32_System_SubsystemForLinux\", \"Win32_System_SystemInformation\", \"Win32_System_SystemServices\", \"Win32_System_Threading\", \"Win32_System_Time\", \"Win32_System_TpmBaseServices\", \"Win32_System_UserAccessLogging\", \"Win32_System_Variant\", \"Win32_System_VirtualDosMachines\", \"Win32_System_WindowsProgramming\", \"Win32_System_Wmi\", \"Win32_UI\", \"Win32_UI_Accessibility\", \"Win32_UI_ColorSystem\", \"Win32_UI_Controls\", \"Win32_UI_Controls_Dialogs\", \"Win32_UI_HiDpi\", \"Win32_UI_Input\", \"Win32_UI_Input_Ime\", \"Win32_UI_Input_KeyboardAndMouse\", \"Win32_UI_Input_Pointer\", \"Win32_UI_Input_Touch\", \"Win32_UI_Input_XboxController\", \"Win32_UI_InteractionContext\", \"Win32_UI_Magnification\", \"Win32_UI_Shell\", \"Win32_UI_Shell_Common\", \"Win32_UI_Shell_PropertiesSystem\", \"Win32_UI_TabletPC\", \"Win32_UI_TextServices\", \"Win32_UI_WindowsAndMessaging\", \"Win32_Web\", \"Win32_Web_InternetExplorer\", \"default\", \"docs\"))" -C metadata=c75e166cfc1fce4c -C extra-filename=-b75e0d25d6de46c1 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern windows_link=D:\a\start\start\rust\target\debug\deps\libwindows_link-44c20752ec0ab5f3.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:35.4953962Z [1m[92m   Compiling[0m cfg-if v1.0.4
+2026-10-11T12:45:35.4961348Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name cfg_if --edition=2018 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cfg-if-1.0.4\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"core\", \"rustc-dep-of-std\"))" -C metadata=c78127e76106161e -C extra-filename=-05812c9ea6dda656 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:35.5316957Z [1m[92m   Compiling[0m zmij v1.0.21
+2026-10-11T12:45:35.5324136Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name build_script_build --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\zmij-1.0.21\build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"no-panic\"))" -C metadata=9332139ed17fc5f6 -C extra-filename=-5f3ee8dbeca3b68f --out-dir D:\a\start\start\rust\target\debug\build\zmij-5f3ee8dbeca3b68f -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:35.7325123Z [1m[92m     Running[0m `D:\a\start\start\rust\target\debug\build\zmij-5f3ee8dbeca3b68f\build-script-build`
+2026-10-11T12:45:35.7640830Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name getrandom --edition=2024 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\getrandom-0.4.3\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"std\", \"sys_rng\", \"wasm_js\"))" -C metadata=8919e0adbc36cdcd -C extra-filename=-7480b5176b328746 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern cfg_if=D:\a\start\start\rust\target\debug\deps\libcfg_if-05812c9ea6dda656.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:35.8660109Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name serde_core --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_core-1.0.228\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"result\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"default\", \"rc\", \"result\", \"std\", \"unstable\"))" -C metadata=a326dbc5a7153df3 -C extra-filename=-5f9be3018870dc98 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings --check-cfg cfg(if_docsrs_then_no_serde_core) --check-cfg cfg(no_core_cstr) --check-cfg cfg(no_core_error) --check-cfg cfg(no_core_net) --check-cfg cfg(no_core_num_saturating) --check-cfg cfg(no_diagnostic_namespace) --check-cfg cfg(no_serde_derive) --check-cfg cfg(no_std_atomic) --check-cfg cfg(no_std_atomic64) --check-cfg cfg(no_target_has_atomic)`
+2026-10-11T12:45:37.2685142Z [1m[92m     Running[0m `D:\a\start\start\rust\target\debug\build\num-traits-afc47076c7d1e889\build-script-build`
+2026-10-11T12:45:37.3834025Z [1m[92m   Compiling[0m syn v2.0.118
+2026-10-11T12:45:37.3845206Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name syn --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\syn-2.0.118\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"clone-impls\"" --cfg "feature=\"derive\"" --cfg "feature=\"parsing\"" --cfg "feature=\"printing\"" --cfg "feature=\"proc-macro\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"clone-impls\", \"default\", \"derive\", \"extra-traits\", \"fold\", \"full\", \"parsing\", \"printing\", \"proc-macro\", \"test\", \"visit\", \"visit-mut\"))" -C metadata=fd7aa7edee8abc5e -C extra-filename=-04f1443d019111f4 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern proc_macro2=D:\a\start\start\rust\target\debug\deps\libproc_macro2-aa126c3cb26564ce.rmeta --extern quote=D:\a\start\start\rust\target\debug\deps\libquote-9d37cc5af980ab3e.rmeta --extern unicode_ident=D:\a\start\start\rust\target\debug\deps\libunicode_ident-d928144a3e9b6446.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:37.7975971Z [1m[92m   Compiling[0m nom v8.0.0
+2026-10-11T12:45:37.7984574Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name nom --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\nom-8.0.0\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"alloc\"" --cfg "feature=\"default\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"default\", \"docsrs\", \"std\"))" -C metadata=1b3a6b7240dc723f -C extra-filename=-e0996dc7e988e323 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern memchr=D:\a\start\start\rust\target\debug\deps\libmemchr-43c35be7682ca5f8.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:39.6319751Z [1m[92m   Compiling[0m aho-corasick v1.1.4
+2026-10-11T12:45:39.6328871Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name aho_corasick --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\aho-corasick-1.1.4\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"perf-literal\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"logging\", \"perf-literal\", \"std\"))" -C metadata=6189f72fb99a0b29 -C extra-filename=-24cb3122ec915299 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern memchr=D:\a\start\start\rust\target\debug\deps\libmemchr-43c35be7682ca5f8.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:40.3749315Z [1m[92m   Compiling[0m serde_json v1.0.150
+2026-10-11T12:45:40.3757247Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name build_script_build --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_json-1.0.150\build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --cfg "feature=\"default\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"arbitrary_precision\", \"default\", \"float_roundtrip\", \"indexmap\", \"preserve_order\", \"raw_value\", \"std\", \"unbounded_depth\"))" -C metadata=8ac789d24938591c -C extra-filename=-48d38264b879b6c0 --out-dir D:\a\start\start\rust\target\debug\build\serde_json-48d38264b879b6c0 -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:40.5368864Z [1m[92m   Compiling[0m serde v1.0.228
+2026-10-11T12:45:40.5377361Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name build_script_build --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --cfg "feature=\"default\"" --cfg "feature=\"derive\"" --cfg "feature=\"serde_derive\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"default\", \"derive\", \"rc\", \"serde_derive\", \"std\", \"unstable\"))" -C metadata=635ca234b386870b -C extra-filename=-fe1626eb10107c87 --out-dir D:\a\start\start\rust\target\debug\build\serde-fe1626eb10107c87 -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:40.7753849Z [1m[92m   Compiling[0m option-ext v0.2.0
+2026-10-11T12:45:40.7760070Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name option_ext --edition=2015 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\option-ext-0.2.0\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=7ff98b2c4ac6dea9 -C extra-filename=-a31f9d569190d77e --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:40.8305990Z [1m[92m   Compiling[0m regex-syntax v0.8.11
+2026-10-11T12:45:40.8315923Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name regex_syntax --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\regex-syntax-0.8.11\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"default\"" --cfg "feature=\"std\"" --cfg "feature=\"unicode\"" --cfg "feature=\"unicode-age\"" --cfg "feature=\"unicode-bool\"" --cfg "feature=\"unicode-case\"" --cfg "feature=\"unicode-gencat\"" --cfg "feature=\"unicode-perl\"" --cfg "feature=\"unicode-script\"" --cfg "feature=\"unicode-segment\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"arbitrary\", \"default\", \"std\", \"unicode\", \"unicode-age\", \"unicode-bool\", \"unicode-case\", \"unicode-gencat\", \"unicode-perl\", \"unicode-script\", \"unicode-segment\"))" -C metadata=0cba9fe287e0b21c -C extra-filename=-6863198ceb7fc988 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:41.2869288Z [1m[92m   Compiling[0m dirs-sys v0.5.0
+2026-10-11T12:45:41.2877993Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name dirs_sys --edition=2015 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dirs-sys-0.5.0\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=1c583f978cf252c0 -C extra-filename=-1cad3ec40b492df4 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern option_ext=D:\a\start\start\rust\target\debug\deps\liboption_ext-a31f9d569190d77e.rmeta --extern windows_sys=D:\a\start\start\rust\target\debug\deps\libwindows_sys-b75e0d25d6de46c1.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:41.3729485Z [1m[92m     Running[0m `D:\a\start\start\rust\target\debug\build\serde-fe1626eb10107c87\build-script-build`
+2026-10-11T12:45:41.4206347Z [1m[92m     Running[0m `D:\a\start\start\rust\target\debug\build\serde_json-48d38264b879b6c0\build-script-build`
+2026-10-11T12:45:41.4331759Z [1m[92m   Compiling[0m links-notation v0.13.0
+2026-10-11T12:45:41.4339564Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name links_notation --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\links-notation-0.13.0\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=259f370e1dce92dd -C extra-filename=-0924e24d1172d132 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern nom=D:\a\start\start\rust\target\debug\deps\libnom-e0996dc7e988e323.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:42.0239848Z [1m[92m   Compiling[0m serde_derive v1.0.228
+2026-10-11T12:45:42.0247716Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name serde_derive --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_derive-1.0.228\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type proc-macro --emit=dep-info,link -C prefer-dynamic -C embed-bitcode=no --cfg "feature=\"default\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"deserialize_in_place\"))" -C metadata=e447668333049680 -C extra-filename=-7f47d3588934922d --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern proc_macro2=D:\a\start\start\rust\target\debug\deps\libproc_macro2-aa126c3cb26564ce.rlib --extern quote=D:\a\start\start\rust\target\debug\deps\libquote-9d37cc5af980ab3e.rlib --extern syn=D:\a\start\start\rust\target\debug\deps\libsyn-04f1443d019111f4.rlib --extern proc_macro --cap-lints allow -Dwarnings`
+2026-10-11T12:45:43.7847921Z [1m[92m   Compiling[0m regex-automata v0.4.14
+2026-10-11T12:45:43.7866953Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name regex_automata --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\regex-automata-0.4.14\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"alloc\"" --cfg "feature=\"dfa-onepass\"" --cfg "feature=\"hybrid\"" --cfg "feature=\"meta\"" --cfg "feature=\"nfa-backtrack\"" --cfg "feature=\"nfa-pikevm\"" --cfg "feature=\"nfa-thompson\"" --cfg "feature=\"perf-inline\"" --cfg "feature=\"perf-literal\"" --cfg "feature=\"perf-literal-multisubstring\"" --cfg "feature=\"perf-literal-substring\"" --cfg "feature=\"std\"" --cfg "feature=\"syntax\"" --cfg "feature=\"unicode\"" --cfg "feature=\"unicode-age\"" --cfg "feature=\"unicode-bool\"" --cfg "feature=\"unicode-case\"" --cfg "feature=\"unicode-gencat\"" --cfg "feature=\"unicode-perl\"" --cfg "feature=\"unicode-script\"" --cfg "feature=\"unicode-segment\"" --cfg "feature=\"unicode-word-boundary\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"default\", \"dfa\", \"dfa-build\", \"dfa-onepass\", \"dfa-search\", \"hybrid\", \"internal-instrument\", \"internal-instrument-pikevm\", \"logging\", \"meta\", \"nfa\", \"nfa-backtrack\", \"nfa-pikevm\", \"nfa-thompson\", \"perf\", \"perf-inline\", \"perf-literal\", \"perf-literal-multisubstring\", \"perf-literal-substring\", \"std\", \"syntax\", \"unicode\", \"unicode-age\", \"unicode-bool\", \"unicode-case\", \"unicode-gencat\", \"unicode-perl\", \"unicode-script\", \"unicode-segment\", \"unicode-word-boundary\"))" -C metadata=0faa654a5657fafe -C extra-filename=-2bfaafb64d39e171 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern aho_corasick=D:\a\start\start\rust\target\debug\deps\libaho_corasick-24cb3122ec915299.rmeta --extern memchr=D:\a\start\start\rust\target\debug\deps\libmemchr-43c35be7682ca5f8.rmeta --extern regex_syntax=D:\a\start\start\rust\target\debug\deps\libregex_syntax-6863198ceb7fc988.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:46.3874371Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name num_traits --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\num-traits-0.2.19\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"i128\", \"libm\", \"std\"))" -C metadata=5667e2284ff345f8 -C extra-filename=-2728f0e9ceb7a01c --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings --cfg has_total_cmp --check-cfg cfg(has_total_cmp)`
+2026-10-11T12:45:46.9380290Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name zmij --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\zmij-1.0.21\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"no-panic\"))" -C metadata=0427dbd3557f0548 -C extra-filename=-07750df0fb145b48 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings --check-cfg cfg(exhaustive) --check-cfg cfg(zmij_no_select_unpredictable)`
+2026-10-11T12:45:47.0257540Z [1m[92m   Compiling[0m itoa v1.0.18
+2026-10-11T12:45:47.0264675Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name itoa --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\itoa-1.0.18\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"no-panic\"))" -C metadata=b5d4ee2764233014 -C extra-filename=-036611c640f9adcd --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:47.1989659Z [1m[92m   Compiling[0m base64 v0.22.1
+2026-10-11T12:45:47.2017778Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name base64 --edition=2018 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\base64-0.22.1\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"alloc\"" --cfg "feature=\"default\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"default\", \"std\"))" -C metadata=4f59977cdd21c4ff -C extra-filename=-abc4386f083d1b15 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:47.2459406Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name serde_json --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_json-1.0.150\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"default\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"arbitrary_precision\", \"default\", \"float_roundtrip\", \"indexmap\", \"preserve_order\", \"raw_value\", \"std\", \"unbounded_depth\"))" -C metadata=f6b7d59b0441134f -C extra-filename=-81d026261f5cedaf --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern itoa=D:\a\start\start\rust\target\debug\deps\libitoa-036611c640f9adcd.rmeta --extern memchr=D:\a\start\start\rust\target\debug\deps\libmemchr-43c35be7682ca5f8.rmeta --extern serde_core=D:\a\start\start\rust\target\debug\deps\libserde_core-5f9be3018870dc98.rmeta --extern zmij=D:\a\start\start\rust\target\debug\deps\libzmij-07750df0fb145b48.rmeta --cap-lints allow -Dwarnings --cfg "fast_arithmetic=\"64\"" --check-cfg "cfg(fast_arithmetic, values(\"32\", \"64\"))"`
+2026-10-11T12:45:47.5616874Z [1m[92m   Compiling[0m lino-objects-codec v0.2.1
+2026-10-11T12:45:47.5625120Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name lino_objects_codec --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\lino-objects-codec-0.2.1\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=f2e581ee26b8cacb -C extra-filename=-7a3a6ad9b9371400 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern base64=D:\a\start\start\rust\target\debug\deps\libbase64-abc4386f083d1b15.rmeta --extern links_notation=D:\a\start\start\rust\target\debug\deps\liblinks_notation-0924e24d1172d132.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:48.0311318Z [1m[92m   Compiling[0m chrono v0.4.45
+2026-10-11T12:45:48.0323798Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name chrono --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\chrono-0.4.45\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"alloc\"" --cfg "feature=\"clock\"" --cfg "feature=\"default\"" --cfg "feature=\"iana-time-zone\"" --cfg "feature=\"js-sys\"" --cfg "feature=\"now\"" --cfg "feature=\"oldtime\"" --cfg "feature=\"std\"" --cfg "feature=\"wasm-bindgen\"" --cfg "feature=\"wasmbind\"" --cfg "feature=\"winapi\"" --cfg "feature=\"windows-link\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"__internal_bench\", \"alloc\", \"arbitrary\", \"clock\", \"core-error\", \"default\", \"defmt\", \"iana-time-zone\", \"js-sys\", \"libc\", \"now\", \"oldtime\", \"pure-rust-locales\", \"rkyv\", \"rkyv-16\", \"rkyv-32\", \"rkyv-64\", \"rkyv-validation\", \"serde\", \"std\", \"unstable-locales\", \"wasm-bindgen\", \"wasmbind\", \"winapi\", \"windows-link\"))" -C metadata=dfbcd6f778a2b44e -C extra-filename=-0cab66ad0b931bdd --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern num_traits=D:\a\start\start\rust\target\debug\deps\libnum_traits-2728f0e9ceb7a01c.rmeta --extern windows_link=D:\a\start\start\rust\target\debug\deps\libwindows_link-44c20752ec0ab5f3.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:48.3788552Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name serde --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"default\"" --cfg "feature=\"derive\"" --cfg "feature=\"serde_derive\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"default\", \"derive\", \"rc\", \"serde_derive\", \"std\", \"unstable\"))" -C metadata=5741c8ab4f3480d3 -C extra-filename=-17368f49a738fa4e --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern serde_core=D:\a\start\start\rust\target\debug\deps\libserde_core-5f9be3018870dc98.rmeta --extern serde_derive=D:\a\start\start\rust\target\debug\deps\serde_derive-7f47d3588934922d.dll --cap-lints allow -Dwarnings --cfg if_docsrs_then_no_serde_core --check-cfg "cfg(feature, values(\"result\"))" --check-cfg cfg(if_docsrs_then_no_serde_core) --check-cfg cfg(no_core_cstr) --check-cfg cfg(no_core_error) --check-cfg cfg(no_core_net) --check-cfg cfg(no_core_num_saturating) --check-cfg cfg(no_diagnostic_namespace) --check-cfg cfg(no_serde_derive) --check-cfg cfg(no_std_atomic) --check-cfg cfg(no_std_atomic64) --check-cfg cfg(no_target_has_atomic)`
+2026-10-11T12:45:48.8921007Z [1m[92m   Compiling[0m regex v1.12.4
+2026-10-11T12:45:48.8935391Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name regex --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\regex-1.12.4\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"default\"" --cfg "feature=\"perf\"" --cfg "feature=\"perf-backtrack\"" --cfg "feature=\"perf-cache\"" --cfg "feature=\"perf-dfa\"" --cfg "feature=\"perf-inline\"" --cfg "feature=\"perf-literal\"" --cfg "feature=\"perf-onepass\"" --cfg "feature=\"std\"" --cfg "feature=\"unicode\"" --cfg "feature=\"unicode-age\"" --cfg "feature=\"unicode-bool\"" --cfg "feature=\"unicode-case\"" --cfg "feature=\"unicode-gencat\"" --cfg "feature=\"unicode-perl\"" --cfg "feature=\"unicode-script\"" --cfg "feature=\"unicode-segment\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"logging\", \"pattern\", \"perf\", \"perf-backtrack\", \"perf-cache\", \"perf-dfa\", \"perf-dfa-full\", \"perf-inline\", \"perf-literal\", \"perf-onepass\", \"std\", \"unicode\", \"unicode-age\", \"unicode-bool\", \"unicode-case\", \"unicode-gencat\", \"unicode-perl\", \"unicode-script\", \"unicode-segment\", \"unstable\", \"use_std\"))" -C metadata=475307027fa91061 -C extra-filename=-b11fc57856220164 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern aho_corasick=D:\a\start\start\rust\target\debug\deps\libaho_corasick-24cb3122ec915299.rmeta --extern memchr=D:\a\start\start\rust\target\debug\deps\libmemchr-43c35be7682ca5f8.rmeta --extern regex_automata=D:\a\start\start\rust\target\debug\deps\libregex_automata-2bfaafb64d39e171.rmeta --extern regex_syntax=D:\a\start\start\rust\target\debug\deps\libregex_syntax-6863198ceb7fc988.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:49.1643584Z [1m[92m   Compiling[0m dirs v6.0.0
+2026-10-11T12:45:49.1652757Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name dirs --edition=2015 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\dirs-6.0.0\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=2903eaf1d89724fe -C extra-filename=-ba98407d99ac549b --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern dirs_sys=D:\a\start\start\rust\target\debug\deps\libdirs_sys-1cad3ec40b492df4.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:49.2403398Z [1m[92m   Compiling[0m uuid v1.23.4
+2026-10-11T12:45:49.2414451Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name uuid --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\uuid-1.23.4\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"default\"" --cfg "feature=\"rng\"" --cfg "feature=\"std\"" --cfg "feature=\"v4\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"arbitrary\", \"atomic\", \"borsh\", \"bytemuck\", \"default\", \"fast-rng\", \"js\", \"macro-diagnostics\", \"md5\", \"rng\", \"rng-getrandom\", \"rng-rand\", \"serde\", \"sha1\", \"slog\", \"std\", \"uuid-rng-internal-lib\", \"v1\", \"v3\", \"v4\", \"v5\", \"v6\", \"v7\", \"v8\", \"zerocopy\"))" -C metadata=032b79b4539208c1 -C extra-filename=-e18a645004800d2e --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern getrandom=D:\a\start\start\rust\target\debug\deps\libgetrandom-7480b5176b328746.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:49.3120375Z [1m[92m   Compiling[0m fastrand v2.4.1
+2026-10-11T12:45:49.3126944Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name fastrand --edition=2018 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\fastrand-2.4.1\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"alloc\"" --cfg "feature=\"default\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"default\", \"getrandom\", \"js\", \"std\"))" -C metadata=1c8ee5eaa42c9fa9 -C extra-filename=-8f38b04a81586514 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:49.5139874Z [1m[92m   Compiling[0m once_cell v1.21.4
+2026-10-11T12:45:49.5148606Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name once_cell --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\once_cell-1.21.4\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"alloc\"" --cfg "feature=\"race\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"atomic-polyfill\", \"critical-section\", \"default\", \"parking_lot\", \"portable-atomic\", \"race\", \"std\", \"unstable\"))" -C metadata=73e686a82d94c204 -C extra-filename=-e11f23e333f01aed --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:49.6018418Z [1m[92m   Compiling[0m start-command v0.23.0 (D:\a\start\start\rust)
+2026-10-11T12:45:49.6028972Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name start_command --edition=2021 src\lib\mod.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=462ebceecf18d5e3 -C extra-filename=-8c4264f74c15c69d --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern base64=D:\a\start\start\rust\target\debug\deps\libbase64-abc4386f083d1b15.rmeta --extern chrono=D:\a\start\start\rust\target\debug\deps\libchrono-0cab66ad0b931bdd.rmeta --extern dirs=D:\a\start\start\rust\target\debug\deps\libdirs-ba98407d99ac549b.rmeta --extern lino_objects_codec=D:\a\start\start\rust\target\debug\deps\liblino_objects_codec-7a3a6ad9b9371400.rmeta --extern regex=D:\a\start\start\rust\target\debug\deps\libregex-b11fc57856220164.rmeta --extern serde=D:\a\start\start\rust\target\debug\deps\libserde-17368f49a738fa4e.rmeta --extern serde_json=D:\a\start\start\rust\target\debug\deps\libserde_json-81d026261f5cedaf.rmeta --extern uuid=D:\a\start\start\rust\target\debug\deps\libuuid-e18a645004800d2e.rmeta -Dwarnings`
+2026-10-11T12:45:49.6843356Z [1m[92m   Compiling[0m tempfile v3.27.0
+2026-10-11T12:45:49.6851171Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name tempfile --edition=2021 C:\Users\runneradmin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tempfile-3.27.0\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"default\"" --cfg "feature=\"getrandom\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"getrandom\", \"nightly\"))" -C metadata=040bad4933d0a1fe -C extra-filename=-197453001a6dfb38 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern fastrand=D:\a\start\start\rust\target\debug\deps\libfastrand-8f38b04a81586514.rmeta --extern getrandom=D:\a\start\start\rust\target\debug\deps\libgetrandom-7480b5176b328746.rmeta --extern once_cell=D:\a\start\start\rust\target\debug\deps\libonce_cell-e11f23e333f01aed.rmeta --extern windows_sys=D:\a\start\start\rust\target\debug\deps\libwindows_sys-b75e0d25d6de46c1.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:49.8302162Z [1m[91merror[E0425][0m[1m[97m: cannot find value `cores` in this scope[0m
+2026-10-11T12:45:49.8303138Z    [1m[96m--> [0msrc\lib\cpu_penalty_monitor.rs:192:73
+2026-10-11T12:45:49.8303924Z     [1m[96m|[0m
+2026-10-11T12:45:49.8304843Z [1m[96m192[0m [1m[96m|[0m                         state.phase, state.base_cpus, state.limit_cpus, cores, cpus
+2026-10-11T12:45:49.8306145Z     [1m[96m|[0m                                                                         [1m[91m^^^^^[0m [1m[91mnot found in this scope[0m
+2026-10-11T12:45:49.8306917Z 
+2026-10-11T12:45:50.0353752Z [1m[92m     Running[0m `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name start_command --edition=2021 src\lib\mod.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=04323acfa0d2153f -C extra-filename=-e58916016921b0d4 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern base64=D:\a\start\start\rust\target\debug\deps\libbase64-abc4386f083d1b15.rlib --extern chrono=D:\a\start\start\rust\target\debug\deps\libchrono-0cab66ad0b931bdd.rlib --extern dirs=D:\a\start\start\rust\target\debug\deps\libdirs-ba98407d99ac549b.rlib --extern lino_objects_codec=D:\a\start\start\rust\target\debug\deps\liblino_objects_codec-7a3a6ad9b9371400.rlib --extern regex=D:\a\start\start\rust\target\debug\deps\libregex-b11fc57856220164.rlib --extern serde=D:\a\start\start\rust\target\debug\deps\libserde-17368f49a738fa4e.rlib --extern serde_json=D:\a\start\start\rust\target\debug\deps\libserde_json-81d026261f5cedaf.rlib --extern tempfile=D:\a\start\start\rust\target\debug\deps\libtempfile-197453001a6dfb38.rlib --extern uuid=D:\a\start\start\rust\target\debug\deps\libuuid-e18a645004800d2e.rlib -Dwarnings`
+2026-10-11T12:45:51.3414109Z [1m[97mFor more information about this error, try `rustc --explain E0425`.[0m
+2026-10-11T12:45:51.3534300Z [1m[91merror[0m: could not compile `start-command` (lib) due to 1 previous error
+2026-10-11T12:45:51.3537495Z 
+2026-10-11T12:45:51.3537867Z Caused by:
+2026-10-11T12:45:51.3547609Z   process didn't exit successfully: `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name start_command --edition=2021 src\lib\mod.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=462ebceecf18d5e3 -C extra-filename=-8c4264f74c15c69d --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern base64=D:\a\start\start\rust\target\debug\deps\libbase64-abc4386f083d1b15.rmeta --extern chrono=D:\a\start\start\rust\target\debug\deps\libchrono-0cab66ad0b931bdd.rmeta --extern dirs=D:\a\start\start\rust\target\debug\deps\libdirs-ba98407d99ac549b.rmeta --extern lino_objects_codec=D:\a\start\start\rust\target\debug\deps\liblino_objects_codec-7a3a6ad9b9371400.rmeta --extern regex=D:\a\start\start\rust\target\debug\deps\libregex-b11fc57856220164.rmeta --extern serde=D:\a\start\start\rust\target\debug\deps\libserde-17368f49a738fa4e.rmeta --extern serde_json=D:\a\start\start\rust\target\debug\deps\libserde_json-81d026261f5cedaf.rmeta --extern uuid=D:\a\start\start\rust\target\debug\deps\libuuid-e18a645004800d2e.rmeta -Dwarnings` (exit code: 1)
+2026-10-11T12:45:51.3555149Z [1m[93mwarning[0m: build failed, waiting for other jobs to finish...
+2026-10-11T12:45:52.5006022Z [1m[91merror[0m: could not compile `start-command` (lib test) due to 1 previous error
+2026-10-11T12:45:52.5006392Z 
+2026-10-11T12:45:52.5006465Z Caused by:
+2026-10-11T12:45:52.5010867Z   process didn't exit successfully: `C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name start_command --edition=2021 src\lib\mod.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=04323acfa0d2153f -C extra-filename=-e58916016921b0d4 --out-dir D:\a\start\start\rust\target\debug\deps -C strip=debuginfo -L dependency=D:\a\start\start\rust\target\debug\deps --extern base64=D:\a\start\start\rust\target\debug\deps\libbase64-abc4386f083d1b15.rlib --extern chrono=D:\a\start\start\rust\target\debug\deps\libchrono-0cab66ad0b931bdd.rlib --extern dirs=D:\a\start\start\rust\target\debug\deps\libdirs-ba98407d99ac549b.rlib --extern lino_objects_codec=D:\a\start\start\rust\target\debug\deps\liblino_objects_codec-7a3a6ad9b9371400.rlib --extern regex=D:\a\start\start\rust\target\debug\deps\libregex-b11fc57856220164.rlib --extern serde=D:\a\start\start\rust\target\debug\deps\libserde-17368f49a738fa4e.rlib --extern serde_json=D:\a\start\start\rust\target\debug\deps\libserde_json-81d026261f5cedaf.rlib --extern tempfile=D:\a\start\start\rust\target\debug\deps\libtempfile-197453001a6dfb38.rlib --extern uuid=D:\a\start\start\rust\target\debug\deps\libuuid-e18a645004800d2e.rlib -Dwarnings` (exit code: 1)
+2026-10-11T12:45:52.6823827Z ##[error]Process completed with exit code 1.
+2026-10-11T12:45:52.7072204Z Post job cleanup.
+2026-10-11T12:45:52.8935147Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-10-11T12:45:52.9244205Z git version 2.55.0.windows.5
+2026-10-11T12:45:52.9321381Z Temporarily overriding HOME='D:\a\_temp\bc013b9f-2089-4d96-b074-f85dd94bdf05' before making global git config changes
+2026-10-11T12:45:52.9322440Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-11T12:45:52.9335404Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\start\start
+2026-10-11T12:45:52.9659128Z Removing SSH command configuration
+2026-10-11T12:45:52.9671238Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-10-11T12:45:52.9999234Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-10-11T12:45:53.5634835Z Removing HTTP extra header
+2026-10-11T12:45:53.5646452Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-11T12:45:53.5955690Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-10-11T12:45:54.1118563Z Removing includeIf entries pointing to credentials config files
+2026-10-11T12:45:54.1133270Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-11T12:45:54.1391803Z includeif.gitdir:D:/a/start/start/.git.path
+2026-10-11T12:45:54.1392212Z includeif.gitdir:D:/a/start/start/.git/worktrees/*.path
+2026-10-11T12:45:54.1437947Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:D:/a/start/start/.git.path
+2026-10-11T12:45:54.1687967Z D:\a\_temp\git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:45:54.1733051Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:D:/a/start/start/.git.path D:\a\_temp\git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:45:54.2047987Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:D:/a/start/start/.git/worktrees/*.path
+2026-10-11T12:45:54.2319182Z D:\a\_temp\git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:45:54.2363814Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:D:/a/start/start/.git/worktrees/*.path D:\a\_temp\git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config
+2026-10-11T12:45:54.2672959Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-10-11T12:45:55.3127321Z Removing credentials config 'D:\a\_temp\git-credentials-1e186f81-eb4b-45ce-a2e0-be50ac57f988.config'
+2026-10-11T12:45:55.3393328Z Cleaning up orphan processes
+2026-10-11T12:45:55.3725898Z Terminate orphan process: pid (7000) (vctip)

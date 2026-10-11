@@ -1,0 +1,701 @@
+﻿2026-10-11T12:44:53.9712652Z Current runner version: '2.337.0'
+2026-10-11T12:44:53.9740097Z ##[group]Runner Image Provisioner
+2026-10-11T12:44:53.9741096Z Hosted Compute Agent
+2026-10-11T12:44:53.9741699Z Version: 20261002.596
+2026-10-11T12:44:53.9742314Z Commit: c3d12f3313a95f25162a1503be624f3b0617f8c0
+2026-10-11T12:44:53.9743119Z Build Date: 2026-10-02T22:28:27Z
+2026-10-11T12:44:53.9743855Z Worker ID: {f40bcbdd-e923-4426-8ff7-13798a36572d}
+2026-10-11T12:44:53.9744594Z Region: eastus2
+2026-10-11T12:44:53.9745169Z Cloud: Azure
+2026-10-11T12:44:53.9745716Z ##[endgroup]
+2026-10-11T12:44:53.9747263Z ##[group]Operating System
+2026-10-11T12:44:53.9747953Z Ubuntu
+2026-10-11T12:44:53.9748572Z 24.04.5
+2026-10-11T12:44:53.9749157Z LTS
+2026-10-11T12:44:53.9749958Z ##[endgroup]
+2026-10-11T12:44:53.9750664Z ##[group]Runner Image
+2026-10-11T12:44:53.9751353Z Image: ubuntu-24.04
+2026-10-11T12:44:53.9752006Z Version: 20261004.327.1
+2026-10-11T12:44:53.9753290Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261004.327/images/ubuntu/Ubuntu2404-Readme.md
+2026-10-11T12:44:53.9754897Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261004.327
+2026-10-11T12:44:53.9755895Z ##[endgroup]
+2026-10-11T12:44:53.9757050Z ##[group]GITHUB_TOKEN Permissions
+2026-10-11T12:44:53.9759227Z Contents: read
+2026-10-11T12:44:53.9760170Z Metadata: read
+2026-10-11T12:44:53.9761032Z ##[endgroup]
+2026-10-11T12:44:53.9763361Z Secret source: Actions
+2026-10-11T12:44:53.9764432Z Cache mode: write
+2026-10-11T12:44:53.9765630Z Prepare workflow directory
+2026-10-11T12:44:54.0189964Z Prepare all required actions
+2026-10-11T12:44:54.0239290Z Getting action download info
+2026-10-11T12:44:54.2554571Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-10-11T12:44:54.3557737Z Download action repository 'dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f' (SHA:e2a55d2ffb04f378e9626c28d38b36d230d1e12f)
+2026-10-11T12:44:54.4730947Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-10-11T12:44:54.5925393Z Download action repository 'actions/cache@v5' (SHA:caa296126883cff596d87d8935842f9db880ef25)
+2026-10-11T12:44:54.9050001Z Uses: link-foundation/start/.github/workflows/rust.yml@refs/pull/208/merge (6baad160be5d2113ebc3c61a2f0ae0f40ac38c07)
+2026-10-11T12:44:54.9055538Z ##[group] Inputs
+2026-10-11T12:44:54.9056266Z   release_mode: instant
+2026-10-11T12:44:54.9056890Z   bump_type: patch
+2026-10-11T12:44:54.9057453Z   description: 
+2026-10-11T12:44:54.9057993Z ##[endgroup]
+2026-10-11T12:44:54.9058661Z Complete job name: Rust CI/CD / Test (ubuntu-latest)
+2026-10-11T12:44:54.9988540Z ##[group]Run actions/checkout@v6
+2026-10-11T12:44:54.9989969Z with:
+2026-10-11T12:44:54.9990559Z   persist-credentials: false
+2026-10-11T12:44:54.9991309Z   repository: link-foundation/start
+2026-10-11T12:44:54.9998914Z   token: ***
+2026-10-11T12:44:54.9999740Z   ssh-strict: true
+2026-10-11T12:44:55.0000329Z   ssh-user: git
+2026-10-11T12:44:55.0000901Z   clean: true
+2026-10-11T12:44:55.0001533Z   sparse-checkout-cone-mode: true
+2026-10-11T12:44:55.0002258Z   fetch-depth: 1
+2026-10-11T12:44:55.0002810Z   fetch-tags: false
+2026-10-11T12:44:55.0003393Z   show-progress: true
+2026-10-11T12:44:55.0003971Z   lfs: false
+2026-10-11T12:44:55.0004541Z   submodules: false
+2026-10-11T12:44:55.0005140Z   set-safe-directory: true
+2026-10-11T12:44:55.0005832Z   allow-unsafe-pr-checkout: false
+2026-10-11T12:44:55.0006908Z env:
+2026-10-11T12:44:55.0007444Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:55.0083818Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:55.0084660Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:55.0085424Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:55.0086156Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:55.0087015Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:55.0087742Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:55.0088607Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:55.0089505Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:55.0090277Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:55.0091292Z ##[endgroup]
+2026-10-11T12:44:55.1177041Z Syncing repository: link-foundation/start
+2026-10-11T12:44:55.1180849Z ##[group]Getting Git version info
+2026-10-11T12:44:55.1182408Z Working directory is '/home/runner/work/start/start'
+2026-10-11T12:44:55.1184709Z [command]/usr/bin/git version
+2026-10-11T12:44:55.1260698Z git version 2.55.0
+2026-10-11T12:44:55.1303122Z ##[endgroup]
+2026-10-11T12:44:55.1320730Z Temporarily overriding HOME='/home/runner/work/_temp/d35c90a7-6d7d-40a7-9ec3-e6e7ef7c8909' before making global git config changes
+2026-10-11T12:44:55.1325144Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-11T12:44:55.1330586Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/start/start
+2026-10-11T12:44:55.1388381Z Deleting the contents of '/home/runner/work/start/start'
+2026-10-11T12:44:55.1393248Z ##[group]Determining repository object format
+2026-10-11T12:44:55.1395932Z ##[endgroup]
+2026-10-11T12:44:55.1397702Z ##[group]Initializing the repository
+2026-10-11T12:44:55.1401681Z [command]/usr/bin/git init /home/runner/work/start/start
+2026-10-11T12:44:55.1537224Z Initialized empty Git repository in /home/runner/work/start/start/.git/
+2026-10-11T12:44:55.1553014Z [command]/usr/bin/git remote add origin https://github.com/link-foundation/start
+2026-10-11T12:44:55.1602770Z ##[endgroup]
+2026-10-11T12:44:55.1604488Z ##[group]Disabling automatic garbage collection
+2026-10-11T12:44:55.1606304Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-11T12:44:55.1645091Z ##[endgroup]
+2026-10-11T12:44:55.1646724Z ##[group]Setting up auth
+2026-10-11T12:44:55.1647531Z Removing SSH command configuration
+2026-10-11T12:44:55.1655804Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-11T12:44:55.1715666Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-11T12:44:55.2111952Z Removing HTTP extra header
+2026-10-11T12:44:55.2120037Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-11T12:44:55.2162431Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-11T12:44:55.2386647Z Removing includeIf entries pointing to credentials config files
+2026-10-11T12:44:55.2395057Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-11T12:44:55.2433361Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-11T12:44:55.2664507Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-2b3092fc-f2b4-48ee-bf88-22a1b26c74fa.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-11T12:44:55.2708004Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/start/start/.git.path /home/runner/work/_temp/git-credentials-2b3092fc-f2b4-48ee-bf88-22a1b26c74fa.config
+2026-10-11T12:44:55.2743855Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/start/start/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-2b3092fc-f2b4-48ee-bf88-22a1b26c74fa.config
+2026-10-11T12:44:55.2790784Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-2b3092fc-f2b4-48ee-bf88-22a1b26c74fa.config
+2026-10-11T12:44:55.2827224Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-2b3092fc-f2b4-48ee-bf88-22a1b26c74fa.config
+2026-10-11T12:44:55.2858799Z ##[endgroup]
+2026-10-11T12:44:55.2860044Z ##[group]Fetching the repository
+2026-10-11T12:44:55.2868663Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +6baad160be5d2113ebc3c61a2f0ae0f40ac38c07:refs/remotes/pull/208/merge
+2026-10-11T12:44:56.6341350Z From https://github.com/link-foundation/start
+2026-10-11T12:44:56.6342463Z  * [new ref]         6baad160be5d2113ebc3c61a2f0ae0f40ac38c07 -> pull/208/merge
+2026-10-11T12:44:56.6347475Z ##[endgroup]
+2026-10-11T12:44:56.6348938Z ##[group]Determining the checkout info
+2026-10-11T12:44:56.6350393Z ##[endgroup]
+2026-10-11T12:44:56.6354892Z [command]/usr/bin/git sparse-checkout disable
+2026-10-11T12:44:56.6412250Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-11T12:44:56.6447077Z ##[group]Checking out the ref
+2026-10-11T12:44:56.6451541Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/208/merge
+2026-10-11T12:44:56.8099054Z Note: switching to 'refs/remotes/pull/208/merge'.
+2026-10-11T12:44:56.8100043Z 
+2026-10-11T12:44:56.8100716Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-10-11T12:44:56.8102314Z changes and commit them, and you can discard any commits you make in this
+2026-10-11T12:44:56.8103596Z state without impacting any branches by switching back to a branch.
+2026-10-11T12:44:56.8104375Z 
+2026-10-11T12:44:56.8105145Z If you want to create a new branch to retain commits you create, you may
+2026-10-11T12:44:56.8106241Z do so (now or later) by using -c with the switch command. Example:
+2026-10-11T12:44:56.8106806Z 
+2026-10-11T12:44:56.8107080Z   git switch -c <new-branch-name>
+2026-10-11T12:44:56.8107475Z 
+2026-10-11T12:44:56.8107725Z Or undo this operation with:
+2026-10-11T12:44:56.8108058Z 
+2026-10-11T12:44:56.8108285Z   git switch -
+2026-10-11T12:44:56.8108589Z 
+2026-10-11T12:44:56.8109019Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-10-11T12:44:56.8109943Z 
+2026-10-11T12:44:56.8110620Z HEAD is now at 6baad16 Merge 8134902ecbc31d970c94a48dac214d9b38249816 into 348ad41c2e6265611a53b55271d893f74960eff6
+2026-10-11T12:44:56.8122518Z ##[endgroup]
+2026-10-11T12:44:56.8170348Z [command]/usr/bin/git log -1 --format=%H
+2026-10-11T12:44:56.8197730Z 6baad160be5d2113ebc3c61a2f0ae0f40ac38c07
+2026-10-11T12:44:56.8208815Z ##[group]Removing auth
+2026-10-11T12:44:56.8209161Z Removing SSH command configuration
+2026-10-11T12:44:56.8213396Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-11T12:44:56.8250408Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-11T12:44:56.8477552Z Removing HTTP extra header
+2026-10-11T12:44:56.8483553Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-11T12:44:56.8523499Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-11T12:44:56.8754051Z Removing includeIf entries pointing to credentials config files
+2026-10-11T12:44:56.8758387Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-11T12:44:56.8789887Z includeif.gitdir:/home/runner/work/start/start/.git.path
+2026-10-11T12:44:56.8793704Z includeif.gitdir:/home/runner/work/start/start/.git/worktrees/*.path
+2026-10-11T12:44:56.8794534Z includeif.gitdir:/github/workspace/.git.path
+2026-10-11T12:44:56.8795337Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-11T12:44:56.8802045Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/start/start/.git.path
+2026-10-11T12:44:56.8828388Z /home/runner/work/_temp/git-credentials-2b3092fc-f2b4-48ee-bf88-22a1b26c74fa.config
+2026-10-11T12:44:56.8839646Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/start/start/.git.path /home/runner/work/_temp/git-credentials-2b3092fc-f2b4-48ee-bf88-22a1b26c74fa.config
+2026-10-11T12:44:56.8876975Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/start/start/.git/worktrees/*.path
+2026-10-11T12:44:56.8902963Z /home/runner/work/_temp/git-credentials-2b3092fc-f2b4-48ee-bf88-22a1b26c74fa.config
+2026-10-11T12:44:56.8912795Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/start/start/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-2b3092fc-f2b4-48ee-bf88-22a1b26c74fa.config
+2026-10-11T12:44:56.8960195Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-10-11T12:44:56.8985342Z /github/runner_temp/git-credentials-2b3092fc-f2b4-48ee-bf88-22a1b26c74fa.config
+2026-10-11T12:44:56.8994025Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-2b3092fc-f2b4-48ee-bf88-22a1b26c74fa.config
+2026-10-11T12:44:56.9030975Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-11T12:44:56.9058076Z /github/runner_temp/git-credentials-2b3092fc-f2b4-48ee-bf88-22a1b26c74fa.config
+2026-10-11T12:44:56.9073230Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-2b3092fc-f2b4-48ee-bf88-22a1b26c74fa.config
+2026-10-11T12:44:56.9107599Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-11T12:44:56.9328927Z Removing credentials config '/home/runner/work/_temp/git-credentials-2b3092fc-f2b4-48ee-bf88-22a1b26c74fa.config'
+2026-10-11T12:44:56.9338708Z ##[endgroup]
+2026-10-11T12:44:56.9730309Z ##[group]Run dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f
+2026-10-11T12:44:56.9730965Z with:
+2026-10-11T12:44:56.9731310Z   toolchain: stable
+2026-10-11T12:44:56.9731655Z env:
+2026-10-11T12:44:56.9731982Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:56.9732382Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:56.9732750Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:56.9733133Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:56.9733516Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:56.9733944Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:56.9734362Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:56.9734826Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:56.9735216Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:56.9735672Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:56.9736048Z ##[endgroup]
+2026-10-11T12:44:56.9806196Z ##[start-action display=Parse toolchain version;id=__dtolnay_rust-toolchain.parse]
+2026-10-11T12:44:56.9877880Z ##[group]Run if [[ -z $toolchain ]]; then
+2026-10-11T12:44:56.9878461Z [36;1mif [[ -z $toolchain ]]; then[0m
+2026-10-11T12:44:56.9879220Z [36;1m  # GitHub does not enforce `required: true` inputs itself. https://github.com/actions/runner/issues/1070[0m
+2026-10-11T12:44:56.9880466Z [36;1m  echo "'toolchain' is a required input" >&2[0m
+2026-10-11T12:44:56.9880913Z [36;1m  exit 1[0m
+2026-10-11T12:44:56.9881414Z [36;1melif [[ $toolchain =~ ^stable' '[0-9]+' '(year|month|week|day)s?' 'ago$ ]]; then[0m
+2026-10-11T12:44:56.9881979Z [36;1m  if [[ Linux == macOS ]]; then[0m
+2026-10-11T12:44:56.9882686Z [36;1m    echo "toolchain=1.$((($(date -v-$(sed 's/stable \([0-9]*\) \(.\).*/\1\2/' <<< $toolchain) +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT[0m
+2026-10-11T12:44:56.9883346Z [36;1m  else[0m
+2026-10-11T12:44:56.9883898Z [36;1m    echo "toolchain=1.$((($(date --date "${toolchain#stable }" +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT[0m
+2026-10-11T12:44:56.9884499Z [36;1m  fi[0m
+2026-10-11T12:44:56.9884931Z [36;1melif [[ $toolchain =~ ^stable' 'minus' '[0-9]+' 'releases?$ ]]; then[0m
+2026-10-11T12:44:56.9885644Z [36;1m  echo "toolchain=1.$((($(date +%s)/60/60/24-16569)/7/6-${toolchain//[^0-9]/}))" >> $GITHUB_OUTPUT[0m
+2026-10-11T12:44:56.9886256Z [36;1melif [[ $toolchain =~ ^1\.[0-9]+$ ]]; then[0m
+2026-10-11T12:44:56.9886953Z [36;1m  echo "toolchain=1.$((i=${toolchain#1.}, c=($(date +%s)/60/60/24-16569)/7/6, i+9*i*(10*i<=c)+90*i*(100*i<=c)))" >> $GITHUB_OUTPUT[0m
+2026-10-11T12:44:56.9887815Z [36;1melse[0m
+2026-10-11T12:44:56.9888110Z [36;1m  delimiter=EOF[0m
+2026-10-11T12:44:56.9888557Z [36;1m  while [[ $toolchain == *$delimiter* ]]; do delimiter+=_; done[0m
+2026-10-11T12:44:56.9889278Z [36;1m  printf 'toolchain<<%s\n%s\n%s\n' "$delimiter" "$toolchain" "$delimiter" >> $GITHUB_OUTPUT[0m
+2026-10-11T12:44:56.9890205Z [36;1mfi[0m
+2026-10-11T12:44:57.0198387Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:44:57.0198968Z env:
+2026-10-11T12:44:57.0199532Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:57.0199976Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:57.0200349Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:57.0200705Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:57.0201083Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:57.0201471Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:57.0201853Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:57.0202271Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:57.0202641Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:57.0203039Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:57.0203386Z   toolchain: stable
+2026-10-11T12:44:57.0203691Z ##[endgroup]
+2026-10-11T12:44:57.0356772Z ##[end-action id=__dtolnay_rust-toolchain.parse;outcome=success;conclusion=success;duration_ms=54]
+2026-10-11T12:44:57.0362718Z ##[start-action display=Set $CARGO_HOME;id=__dtolnay_rust-toolchain.__run]
+2026-10-11T12:44:57.0410064Z ##[group]Run echo CARGO_HOME=${CARGO_HOME:-"$HOME/.cargo"} >> $GITHUB_ENV
+2026-10-11T12:44:57.0410761Z [36;1mecho CARGO_HOME=${CARGO_HOME:-"$HOME/.cargo"} >> $GITHUB_ENV[0m
+2026-10-11T12:44:57.0481687Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:44:57.0482170Z env:
+2026-10-11T12:44:57.0482474Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:57.0482822Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:57.0483148Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:57.0483462Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:57.0483802Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:57.0484196Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:57.0484572Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:57.0484972Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:57.0485316Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:57.0485742Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:57.0486105Z ##[endgroup]
+2026-10-11T12:44:57.0588263Z ##[end-action id=__dtolnay_rust-toolchain.__run;outcome=success;conclusion=success;duration_ms=22]
+2026-10-11T12:44:57.0592010Z ##[start-action display=Install rustup if needed;id=__dtolnay_rust-toolchain.__run_2]
+2026-10-11T12:44:57.0683976Z ##[group]Run if ! command -v rustup &>/dev/null; then
+2026-10-11T12:44:57.0684561Z [36;1mif ! command -v rustup &>/dev/null; then[0m
+2026-10-11T12:44:57.0685614Z [36;1m  curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused --location --silent --show-error --fail https://sh.rustup.rs | sh -s -- --default-toolchain none -y[0m
+2026-10-11T12:44:57.0686625Z [36;1m  echo "$CARGO_HOME/bin" >> $GITHUB_PATH[0m
+2026-10-11T12:44:57.0687075Z [36;1mfi[0m
+2026-10-11T12:44:57.0758324Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:44:57.0758837Z env:
+2026-10-11T12:44:57.0759185Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:57.0759808Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:57.0760181Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:57.0760540Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:57.0760945Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:57.0761362Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:57.0761803Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:57.0762248Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:57.0762648Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:57.0763081Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:57.0763487Z   CARGO_HOME: /home/runner/.cargo
+2026-10-11T12:44:57.0763876Z ##[endgroup]
+2026-10-11T12:44:57.0892046Z ##[end-action id=__dtolnay_rust-toolchain.__run_2;outcome=success;conclusion=success;duration_ms=29]
+2026-10-11T12:44:57.0895073Z ##[start-action display=Install rustup if needed on windows;id=__dtolnay_rust-toolchain.__run_3]
+2026-10-11T12:44:57.0903796Z ##[end-action id=__dtolnay_rust-toolchain.__run_3;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-10-11T12:44:57.0921590Z ##[start-action display=rustup toolchain install stable;id=__dtolnay_rust-toolchain.__run_4]
+2026-10-11T12:44:57.0953268Z ##[group]Run set -f  # split targets and components on commas and whitespace, without glob expansion
+2026-10-11T12:44:57.0954041Z [36;1mset -f  # split targets and components on commas and whitespace, without glob expansion[0m
+2026-10-11T12:44:57.0954556Z [36;1mflags=()[0m
+2026-10-11T12:44:57.0954896Z [36;1mfor t in ${targets//,/ }; do flags+=(--target "$t"); done[0m
+2026-10-11T12:44:57.0955381Z [36;1mfor c in ${components//,/ }; do flags+=(--component "$c"); done[0m
+2026-10-11T12:44:57.0955947Z [36;1mif [[ $toolchain == nightly && -n $components ]]; then flags+=(--allow-downgrade); fi[0m
+2026-10-11T12:44:57.0956428Z [36;1mlog=$(mktemp)[0m
+2026-10-11T12:44:57.0956730Z [36;1mtrap 'rm -f "$log"' EXIT[0m
+2026-10-11T12:44:57.0957050Z [36;1mfor attempt in 1 2 3 4 5; do[0m
+2026-10-11T12:44:57.0957692Z [36;1m  if rustup toolchain install "$toolchain" "${flags[@]}" --profile minimal --no-self-update --force-non-host 2>&1 | tee "$log"; then[0m
+2026-10-11T12:44:57.0958325Z [36;1m    break[0m
+2026-10-11T12:44:57.0958576Z [36;1m  else[0m
+2026-10-11T12:44:57.0958824Z [36;1m    status=$?[0m
+2026-10-11T12:44:57.0959092Z [36;1m  fi[0m
+2026-10-11T12:44:57.0959709Z [36;1m  if [[ $attempt == 5 ]] || ! grep -Fq 'checksum failed for ' "$log" \[0m
+2026-10-11T12:44:57.0960556Z [36;1m      || ! grep -Fq 'this is likely due to an ongoing update of the official release server' "$log"; then[0m
+2026-10-11T12:44:57.0961095Z [36;1m    exit "$status"[0m
+2026-10-11T12:44:57.0961374Z [36;1m  fi[0m
+2026-10-11T12:44:57.0961783Z [36;1m  echo "Retrying rustup toolchain install in 30 seconds (retry $attempt of 4)" >&2[0m
+2026-10-11T12:44:57.0962274Z [36;1m  sleep 30[0m
+2026-10-11T12:44:57.0962535Z [36;1mdone[0m
+2026-10-11T12:44:57.1031717Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:44:57.1032144Z env:
+2026-10-11T12:44:57.1032395Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:57.1032692Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:57.1032958Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:57.1033215Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:57.1033494Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:57.1033803Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:57.1034106Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:57.1034437Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:57.1034735Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:57.1035058Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:57.1035353Z   CARGO_HOME: /home/runner/.cargo
+2026-10-11T12:44:57.1035652Z   toolchain: stable
+2026-10-11T12:44:57.1035909Z   targets: 
+2026-10-11T12:44:57.1036148Z   components: 
+2026-10-11T12:44:57.1036404Z   RUSTUP_PERMIT_COPY_RENAME: 1
+2026-10-11T12:44:57.1036704Z ##[endgroup]
+2026-10-11T12:44:57.3064329Z info: syncing channel updates for stable-x86_64-unknown-linux-gnu
+2026-10-11T12:44:57.3978950Z 
+2026-10-11T12:44:57.4057708Z   stable-x86_64-unknown-linux-gnu unchanged - rustc 1.99.0 (b940084d7 2026-09-28)
+2026-10-11T12:44:57.4058550Z 
+2026-10-11T12:44:57.4117702Z ##[end-action id=__dtolnay_rust-toolchain.__run_4;outcome=success;conclusion=success;duration_ms=319]
+2026-10-11T12:44:57.4125957Z ##[start-action display=rustup default stable;id=__dtolnay_rust-toolchain.__run_5]
+2026-10-11T12:44:57.4170281Z ##[group]Run rustup default "$toolchain" --force-non-host
+2026-10-11T12:44:57.4170972Z [36;1mrustup default "$toolchain" --force-non-host[0m
+2026-10-11T12:44:57.4268860Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:44:57.4269728Z env:
+2026-10-11T12:44:57.4270096Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:57.4270534Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:57.4270917Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:57.4271594Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:57.4271987Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:57.4272443Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:57.4272884Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:57.4273384Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:57.4273793Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:57.4274266Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:57.4274687Z   CARGO_HOME: /home/runner/.cargo
+2026-10-11T12:44:57.4275203Z   toolchain: stable
+2026-10-11T12:44:57.4275570Z ##[endgroup]
+2026-10-11T12:44:57.4419699Z info: using existing install for stable-x86_64-unknown-linux-gnu
+2026-10-11T12:44:57.4429131Z info: default toolchain set to stable-x86_64-unknown-linux-gnu
+2026-10-11T12:44:57.4429783Z 
+2026-10-11T12:44:57.4504435Z   stable-x86_64-unknown-linux-gnu unchanged - rustc 1.99.0 (b940084d7 2026-09-28)
+2026-10-11T12:44:57.4504831Z 
+2026-10-11T12:44:57.4522994Z ##[end-action id=__dtolnay_rust-toolchain.__run_5;outcome=success;conclusion=success;duration_ms=39]
+2026-10-11T12:44:57.4526740Z ##[start-action display=Create cachekey;id=__dtolnay_rust-toolchain.rustc-version]
+2026-10-11T12:44:57.4555481Z ##[group]Run DATE=$(rustc +"$toolchain" --version --verbose | sed -ne 's/^commit-date: \(20[0-9][0-9]\)-\([01][0-9]\)-\([0-3][0-9]\)$/\1\2\3/p')
+2026-10-11T12:44:57.4556379Z [36;1mDATE=$(rustc +"$toolchain" --version --verbose | sed -ne 's/^commit-date: \(20[0-9][0-9]\)-\([01][0-9]\)-\([0-3][0-9]\)$/\1\2\3/p')[0m
+2026-10-11T12:44:57.4557076Z [36;1mHASH=$(rustc +"$toolchain" --version --verbose | sed -ne 's/^commit-hash: //p')[0m
+2026-10-11T12:44:57.4557770Z [36;1mecho "cachekey=$(echo $DATE$HASH | head -c12)" >> $GITHUB_OUTPUT[0m
+2026-10-11T12:44:57.4627715Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:44:57.4628058Z env:
+2026-10-11T12:44:57.4628251Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:57.4628489Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:57.4628704Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:57.4628906Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:57.4629132Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:57.4629614Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:57.4629867Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:57.4630137Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:57.4630355Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:57.4630614Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:57.4630847Z   CARGO_HOME: /home/runner/.cargo
+2026-10-11T12:44:57.4631086Z   toolchain: stable
+2026-10-11T12:44:57.4631282Z ##[endgroup]
+2026-10-11T12:44:57.5010946Z ##[end-action id=__dtolnay_rust-toolchain.rustc-version;outcome=success;conclusion=success;duration_ms=48]
+2026-10-11T12:44:57.5013650Z ##[start-action display=Disable incremental compilation;id=__dtolnay_rust-toolchain.__run_6]
+2026-10-11T12:44:57.5042595Z ##[group]Run if [ -z "${CARGO_INCREMENTAL+set}" ]; then
+2026-10-11T12:44:57.5042981Z [36;1mif [ -z "${CARGO_INCREMENTAL+set}" ]; then[0m
+2026-10-11T12:44:57.5043320Z [36;1m  echo CARGO_INCREMENTAL=0 >> $GITHUB_ENV[0m
+2026-10-11T12:44:57.5043618Z [36;1mfi[0m
+2026-10-11T12:44:57.5112679Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:44:57.5113022Z env:
+2026-10-11T12:44:57.5113221Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:57.5113459Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:57.5113674Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:57.5113887Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:57.5114110Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:57.5114364Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:57.5114610Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:57.5114887Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:57.5115128Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:57.5115401Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:57.5115634Z   CARGO_HOME: /home/runner/.cargo
+2026-10-11T12:44:57.5115874Z ##[endgroup]
+2026-10-11T12:44:57.5212111Z ##[end-action id=__dtolnay_rust-toolchain.__run_6;outcome=success;conclusion=success;duration_ms=19]
+2026-10-11T12:44:57.5214644Z ##[start-action display=Enable colors in Cargo output;id=__dtolnay_rust-toolchain.__run_7]
+2026-10-11T12:44:57.5243560Z ##[group]Run if [ -z "${CARGO_TERM_COLOR+set}" ]; then
+2026-10-11T12:44:57.5243946Z [36;1mif [ -z "${CARGO_TERM_COLOR+set}" ]; then[0m
+2026-10-11T12:44:57.5244296Z [36;1m  echo CARGO_TERM_COLOR=always >> $GITHUB_ENV[0m
+2026-10-11T12:44:57.5244588Z [36;1mfi[0m
+2026-10-11T12:44:57.5312749Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:44:57.5313099Z env:
+2026-10-11T12:44:57.5313301Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:57.5313541Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:57.5313757Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:57.5313984Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:57.5314207Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:57.5314467Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:57.5314725Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:57.5315029Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:57.5315253Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:57.5315531Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:57.5315770Z   CARGO_HOME: /home/runner/.cargo
+2026-10-11T12:44:57.5316021Z ##[endgroup]
+2026-10-11T12:44:57.5416471Z ##[end-action id=__dtolnay_rust-toolchain.__run_7;outcome=success;conclusion=success;duration_ms=20]
+2026-10-11T12:44:57.5420616Z ##[start-action display=Enable Cargo sparse registry;id=__dtolnay_rust-toolchain.__run_8]
+2026-10-11T12:44:57.5451211Z ##[group]Run # implemented in 1.66, stabilized in 1.68, made default in 1.70
+2026-10-11T12:44:57.5451815Z [36;1m# implemented in 1.66, stabilized in 1.68, made default in 1.70[0m
+2026-10-11T12:44:57.5452699Z [36;1mif [ -z "${CARGO_REGISTRIES_CRATES_IO_PROTOCOL+set}" -o -f "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol ]; then[0m
+2026-10-11T12:44:57.5453479Z [36;1m  if rustc +"$toolchain" --version --verbose | grep -q '^release: 1\.6[89]\.'; then[0m
+2026-10-11T12:44:57.5454091Z [36;1m    touch "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol || true[0m
+2026-10-11T12:44:57.5454684Z [36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse >> $GITHUB_ENV[0m
+2026-10-11T12:44:57.5455219Z [36;1m  elif rustc +"$toolchain" --version --verbose | grep -q '^release: 1\.6[67]\.'; then[0m
+2026-10-11T12:44:57.5455816Z [36;1m    touch "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol || true[0m
+2026-10-11T12:44:57.5456354Z [36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=git >> $GITHUB_ENV[0m
+2026-10-11T12:44:57.5456710Z [36;1m  fi[0m
+2026-10-11T12:44:57.5456900Z [36;1mfi[0m
+2026-10-11T12:44:57.5524585Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:44:57.5524942Z env:
+2026-10-11T12:44:57.5525139Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:57.5525376Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:57.5525586Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:57.5525829Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:57.5526052Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:57.5526306Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:57.5526558Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:57.5526835Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:57.5527064Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:57.5527325Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:57.5527568Z   CARGO_HOME: /home/runner/.cargo
+2026-10-11T12:44:57.5527808Z   toolchain: stable
+2026-10-11T12:44:57.5528015Z ##[endgroup]
+2026-10-11T12:44:57.5870104Z ##[end-action id=__dtolnay_rust-toolchain.__run_8;outcome=success;conclusion=success;duration_ms=44]
+2026-10-11T12:44:57.5874202Z ##[start-action display=Work around spurious network errors in curl 8.0;id=__dtolnay_rust-toolchain.__run_9]
+2026-10-11T12:44:57.5900300Z ##[group]Run # https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation
+2026-10-11T12:44:57.5901298Z [36;1m# https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation[0m
+2026-10-11T12:44:57.5902034Z [36;1mif rustc +"$toolchain" --version --verbose | grep -q '^release: 1\.7[01]\.'; then[0m
+2026-10-11T12:44:57.5902813Z [36;1m  echo CARGO_HTTP_MULTIPLEXING=false >> $GITHUB_ENV[0m
+2026-10-11T12:44:57.5903287Z [36;1mfi[0m
+2026-10-11T12:44:57.5972839Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:44:57.5973276Z env:
+2026-10-11T12:44:57.5973587Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:57.5973987Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:57.5974292Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:57.5974615Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:57.5974997Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:57.5975324Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:57.5975778Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:57.5976145Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:57.5976481Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:57.5976845Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:57.5977198Z   CARGO_HOME: /home/runner/.cargo
+2026-10-11T12:44:57.5977570Z   toolchain: stable
+2026-10-11T12:44:57.5977862Z ##[endgroup]
+2026-10-11T12:44:57.6216716Z ##[end-action id=__dtolnay_rust-toolchain.__run_9;outcome=success;conclusion=success;duration_ms=34]
+2026-10-11T12:44:57.6222207Z ##[start-action display=rustc +stable --version --verbose;id=__dtolnay_rust-toolchain.__run_10]
+2026-10-11T12:44:57.6247385Z ##[group]Run rustc +"$toolchain" --version --verbose
+2026-10-11T12:44:57.6247763Z [36;1mrustc +"$toolchain" --version --verbose[0m
+2026-10-11T12:44:57.6316027Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-11T12:44:57.6316371Z env:
+2026-10-11T12:44:57.6316582Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:57.6316821Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:57.6317208Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:57.6317422Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:57.6317638Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:57.6317892Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:57.6318138Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:57.6318421Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:57.6318660Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:57.6318935Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:57.6319180Z   CARGO_HOME: /home/runner/.cargo
+2026-10-11T12:44:57.6319722Z   toolchain: stable
+2026-10-11T12:44:57.6319927Z ##[endgroup]
+2026-10-11T12:44:57.6511930Z rustc 1.99.0 (b940084d7 2026-09-28)
+2026-10-11T12:44:57.6512558Z binary: rustc
+2026-10-11T12:44:57.6512894Z commit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4
+2026-10-11T12:44:57.6513334Z commit-date: 2026-09-28
+2026-10-11T12:44:57.6513614Z host: x86_64-unknown-linux-gnu
+2026-10-11T12:44:57.6513974Z release: 1.99.0
+2026-10-11T12:44:57.6514223Z LLVM version: 23.1.1
+2026-10-11T12:44:57.6534536Z ##[end-action id=__dtolnay_rust-toolchain.__run_10;outcome=success;conclusion=success;duration_ms=31]
+2026-10-11T12:44:57.6641329Z ##[group]Run actions/setup-node@v6
+2026-10-11T12:44:57.6641612Z with:
+2026-10-11T12:44:57.6641804Z   node-version: 24.x
+2026-10-11T12:44:57.6642022Z   check-latest: false
+2026-10-11T12:44:57.6644304Z   token: ***
+2026-10-11T12:44:57.6644527Z   package-manager-cache: true
+2026-10-11T12:44:57.6644782Z env:
+2026-10-11T12:44:57.6644965Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:57.6645190Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:57.6645400Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:57.6645603Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:57.6645817Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:57.6646074Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:57.6646317Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:57.6646595Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:57.6646826Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:57.6647093Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:57.6647332Z   CARGO_HOME: /home/runner/.cargo
+2026-10-11T12:44:57.6647574Z ##[endgroup]
+2026-10-11T12:44:57.8038947Z Found in cache @ /opt/hostedtoolcache/node/24.21.0/x64
+2026-10-11T12:44:57.8043581Z ##[group]Environment details
+2026-10-11T12:44:58.2473922Z node: v24.21.0
+2026-10-11T12:44:58.2474323Z npm: 11.19.0
+2026-10-11T12:44:58.2474672Z yarn: 1.22.22
+2026-10-11T12:44:58.2475543Z ##[endgroup]
+2026-10-11T12:44:58.3240872Z ##[group]Run actions/cache@v5
+2026-10-11T12:44:58.3241166Z with:
+2026-10-11T12:44:58.3241396Z   path: ~/.cargo/registry
+~/.cargo/git
+
+2026-10-11T12:44:58.3241853Z   key: Linux-cargo-fd4b0e0633ccceedf888147897c2474a201656854b057507ca16dae27cf7fb98
+2026-10-11T12:44:58.3242302Z   enableCrossOsArchive: false
+2026-10-11T12:44:58.3242561Z   fail-on-cache-miss: false
+2026-10-11T12:44:58.3242798Z   lookup-only: false
+2026-10-11T12:44:58.3243010Z   save-always: false
+2026-10-11T12:44:58.3243214Z env:
+2026-10-11T12:44:58.3243401Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:58.3243634Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:58.3243850Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:58.3244059Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:58.3244282Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:58.3244543Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:58.3244788Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:58.3245066Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:58.3245350Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:58.3245618Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:58.3245859Z   CARGO_HOME: /home/runner/.cargo
+2026-10-11T12:44:58.3246104Z ##[endgroup]
+2026-10-11T12:44:58.5316705Z Cache hit for: Linux-cargo-fd4b0e0633ccceedf888147897c2474a201656854b057507ca16dae27cf7fb98
+2026-10-11T12:44:58.7423555Z Received 12601758 of 12601758 (100.0%), 71.5 MBs/sec
+2026-10-11T12:44:58.7424474Z Cache Size: ~12 MB (12601758 B)
+2026-10-11T12:44:58.7463574Z [command]/usr/bin/tar -xf /home/runner/work/_temp/81069acd-594f-4a04-9783-e858d4d79ad0/cache.tzst -P -C /home/runner/work/start/start --use-compress-program unzstd
+2026-10-11T12:44:58.9562537Z Cache restored successfully
+2026-10-11T12:44:58.9711384Z Cache restored from key: Linux-cargo-fd4b0e0633ccceedf888147897c2474a201656854b057507ca16dae27cf7fb98
+2026-10-11T12:44:58.9855508Z ##[group]Run python3 experiments/issue-195-ci-image-preparation.py
+2026-10-11T12:44:58.9856041Z [36;1mpython3 experiments/issue-195-ci-image-preparation.py[0m
+2026-10-11T12:44:58.9856480Z [36;1mbash scripts/prepare-docker-test-images.sh[0m
+2026-10-11T12:44:58.9926579Z shell: /usr/bin/bash -e {0}
+2026-10-11T12:44:58.9926845Z env:
+2026-10-11T12:44:58.9927046Z   CARGO_TERM_COLOR: always
+2026-10-11T12:44:58.9927296Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:44:58.9927514Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:44:58.9927727Z   CARGO_NET_RETRY: 10
+2026-10-11T12:44:58.9927949Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:44:58.9928219Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:44:58.9928468Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:44:58.9928747Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:44:58.9928983Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:44:58.9929259Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:44:58.9929865Z   CARGO_HOME: /home/runner/.cargo
+2026-10-11T12:44:58.9930162Z ##[endgroup]
+2026-10-11T12:44:59.6393568Z PASS fallback: 12 Docker calls
+2026-10-11T12:44:59.6394147Z PASS cached: 3 Docker calls
+2026-10-11T12:44:59.6394522Z PASS unavailable: 10 Docker calls
+2026-10-11T12:45:00.7942941Z latest: Pulling from library/alpine
+2026-10-11T12:45:01.1800410Z e2de96513ba9: Already exists
+2026-10-11T12:45:01.5444459Z Digest: sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+2026-10-11T12:45:01.5456968Z Status: Downloaded newer image for mirror.gcr.io/library/alpine:latest
+2026-10-11T12:45:01.5464682Z mirror.gcr.io/library/alpine:latest
+2026-10-11T12:45:02.5441285Z 3.20: Pulling from library/alpine
+2026-10-11T12:45:02.9285277Z 25f1d6b1951a: Pulling fs layer
+2026-10-11T12:45:03.4305305Z 25f1d6b1951a: Verifying Checksum
+2026-10-11T12:45:03.4305824Z 25f1d6b1951a: Download complete
+2026-10-11T12:45:03.5381372Z 25f1d6b1951a: Pull complete
+2026-10-11T12:45:03.5437575Z Digest: sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
+2026-10-11T12:45:03.5450787Z Status: Downloaded newer image for mirror.gcr.io/library/alpine:3.20
+2026-10-11T12:45:03.5457500Z mirror.gcr.io/library/alpine:3.20
+2026-10-11T12:45:04.5275587Z 3.23: Pulling from library/alpine
+2026-10-11T12:45:04.8848006Z d0c1d894c237: Pulling fs layer
+2026-10-11T12:45:05.4626922Z d0c1d894c237: Verifying Checksum
+2026-10-11T12:45:05.4627681Z d0c1d894c237: Download complete
+2026-10-11T12:45:05.5700444Z d0c1d894c237: Pull complete
+2026-10-11T12:45:05.5735011Z Digest: sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0
+2026-10-11T12:45:05.5751467Z Status: Downloaded newer image for mirror.gcr.io/library/alpine:3.23
+2026-10-11T12:45:05.5759766Z mirror.gcr.io/library/alpine:3.23
+2026-10-11T12:45:05.6162433Z ##[group]Run cargo test --all-features --verbose
+2026-10-11T12:45:05.6162870Z [36;1mcargo test --all-features --verbose[0m
+2026-10-11T12:45:05.6225792Z shell: /usr/bin/bash -e {0}
+2026-10-11T12:45:05.6226048Z env:
+2026-10-11T12:45:05.6226249Z   CARGO_TERM_COLOR: always
+2026-10-11T12:45:05.6226497Z   CARGO_INCREMENTAL: 0
+2026-10-11T12:45:05.6226713Z   CARGO_BUILD_JOBS: 2
+2026-10-11T12:45:05.6226927Z   CARGO_NET_RETRY: 10
+2026-10-11T12:45:05.6227160Z   CARGO_HTTP_MULTIPLEXING: false
+2026-10-11T12:45:05.6227422Z   RUSTFLAGS: -Dwarnings
+2026-10-11T12:45:05.6227669Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+2026-10-11T12:45:05.6227944Z   GIT_CONFIG_COUNT: 1
+2026-10-11T12:45:05.6228171Z   GIT_CONFIG_KEY_0: init.defaultBranch
+2026-10-11T12:45:05.6228443Z   GIT_CONFIG_VALUE_0: main
+2026-10-11T12:45:05.6228681Z   CARGO_HOME: /home/runner/.cargo
+2026-10-11T12:45:05.6228933Z ##[endgroup]
+2026-10-11T12:45:05.8418506Z [1m[92m   Compiling[0m memchr v2.8.2
+2026-10-11T12:45:05.8420313Z [1m[92m   Compiling[0m libc v0.2.186
+2026-10-11T12:45:05.8433121Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name memchr --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/memchr-2.8.2/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="alloc"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("alloc", "core", "default", "libc", "logging", "rustc-dep-of-std", "std", "use_std"))' -C metadata=baf9d91ca3c5befb -C extra-filename=-e28dbd9d9e80b840 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:05.8446602Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name build_script_build --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.186/build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --cfg 'feature="default"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("align", "const-extern-fn", "default", "extra_traits", "rustc-dep-of-std", "rustc-std-workspace-core", "std", "use_std"))' -C metadata=89cdb3e123eaf8ef -C extra-filename=-1bbacc1c41c62c06 --out-dir /home/runner/work/start/start/rust/target/debug/build/libc-1bbacc1c41c62c06 -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:06.4352752Z [1m[92m   Compiling[0m proc-macro2 v1.0.106
+2026-10-11T12:45:06.4357844Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name build_script_build --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/proc-macro2-1.0.106/build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --cfg 'feature="proc-macro"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "nightly", "proc-macro", "span-locations"))' -C metadata=23b91dd843adb59b -C extra-filename=-e13b5774a92ba388 --out-dir /home/runner/work/start/start/rust/target/debug/build/proc-macro2-e13b5774a92ba388 -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:06.5427029Z [1m[92m     Running[0m `/home/runner/work/start/start/rust/target/debug/build/libc-1bbacc1c41c62c06/build-script-build`
+2026-10-11T12:45:06.5498272Z [1m[92m     Running[0m `/home/runner/work/start/start/rust/target/debug/build/proc-macro2-e13b5774a92ba388/build-script-build`
+2026-10-11T12:45:06.5548979Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name libc --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.186/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="default"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("align", "const-extern-fn", "default", "extra_traits", "rustc-dep-of-std", "rustc-std-workspace-core", "std", "use_std"))' -C metadata=2b425c57382d4ad0 -C extra-filename=-91caa22598312f1c --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings --cfg freebsd12 --check-cfg 'cfg(emscripten_old_stat_abi)' --check-cfg 'cfg(espidf_picolibc)' --check-cfg 'cfg(espidf_time32)' --check-cfg 'cfg(freebsd10)' --check-cfg 'cfg(freebsd11)' --check-cfg 'cfg(freebsd12)' --check-cfg 'cfg(freebsd13)' --check-cfg 'cfg(freebsd14)' --check-cfg 'cfg(freebsd15)' --check-cfg 'cfg(gnu_file_offset_bits64)' --check-cfg 'cfg(gnu_time_bits64)' --check-cfg 'cfg(libc_deny_warnings)' --check-cfg 'cfg(linux_time_bits64)' --check-cfg 'cfg(musl_v1_2_3)' --check-cfg 'cfg(musl32_time64)' --check-cfg 'cfg(musl_redir_time64)' --check-cfg 'cfg(vxworks_lt_25_09)' --check-cfg 'cfg(target_os,values("switch","aix","ohos","hurd","rtems","visionos","nuttx","cygwin","qurt"))' --check-cfg 'cfg(target_env,values("illumos","wasi","aix","ohos","nto71_iosock","nto80"))' --check-cfg 'cfg(target_arch,values("loongarch64","mips32r6","mips64r6","csky"))'`
+2026-10-11T12:45:06.7352716Z [1m[92m   Compiling[0m unicode-ident v1.0.24
+2026-10-11T12:45:06.7357329Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name unicode_ident --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-ident-1.0.24/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=f0a410356953341f -C extra-filename=-a96d43fe01b76ab7 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:06.7770465Z [1m[92m   Compiling[0m quote v1.0.46
+2026-10-11T12:45:06.7783452Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name build_script_build --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quote-1.0.46/build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --cfg 'feature="proc-macro"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "proc-macro"))' -C metadata=7e41021d70bdfb87 -C extra-filename=-dadc06ee61657aa6 --out-dir /home/runner/work/start/start/rust/target/debug/build/quote-dadc06ee61657aa6 -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:06.8556587Z [1m[92m     Running[0m `/home/runner/work/start/start/rust/target/debug/build/quote-dadc06ee61657aa6/build-script-build`
+2026-10-11T12:45:06.8666057Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name proc_macro2 --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/proc-macro2-1.0.106/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="proc-macro"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "nightly", "proc-macro", "span-locations"))' -C metadata=7e3a5f09361f7541 -C extra-filename=-d39e5b72b0cdabcb --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern unicode_ident=/home/runner/work/start/start/rust/target/debug/deps/libunicode_ident-a96d43fe01b76ab7.rmeta --cap-lints allow -Dwarnings --cfg wrap_proc_macro --cfg proc_macro_span_location --cfg proc_macro_span_file --check-cfg 'cfg(fuzzing)' --check-cfg 'cfg(no_is_available)' --check-cfg 'cfg(no_literal_byte_character)' --check-cfg 'cfg(no_literal_c_string)' --check-cfg 'cfg(no_source_text)' --check-cfg 'cfg(proc_macro_span)' --check-cfg 'cfg(proc_macro_span_file)' --check-cfg 'cfg(proc_macro_span_location)' --check-cfg 'cfg(procmacro2_backtrace)' --check-cfg 'cfg(procmacro2_build_probe)' --check-cfg 'cfg(procmacro2_nightly_testing)' --check-cfg 'cfg(procmacro2_semver_exempt)' --check-cfg 'cfg(randomize_layout)' --check-cfg 'cfg(span_locations)' --check-cfg 'cfg(super_unstable)' --check-cfg 'cfg(wrap_proc_macro)'`
+2026-10-11T12:45:07.1827667Z [1m[92m   Compiling[0m getrandom v0.4.3
+2026-10-11T12:45:07.1835942Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name build_script_build --edition=2024 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.4.3/build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("std", "sys_rng", "wasm_js"))' -C metadata=b7ad5b0907b9dfb0 -C extra-filename=-3b101bec825a2db2 --out-dir /home/runner/work/start/start/rust/target/debug/build/getrandom-3b101bec825a2db2 -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:07.2490776Z [1m[92m   Compiling[0m serde_core v1.0.228
+2026-10-11T12:45:07.2497233Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name build_script_build --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_core-1.0.228/build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --cfg 'feature="result"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("alloc", "default", "rc", "result", "std", "unstable"))' -C metadata=0a6b4c547f5dacf6 -C extra-filename=-4de2e73f080bebb7 --out-dir /home/runner/work/start/start/rust/target/debug/build/serde_core-4de2e73f080bebb7 -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:07.2508476Z [1m[92m   Compiling[0m autocfg v1.5.1
+2026-10-11T12:45:07.2513457Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name autocfg --edition=2015 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.1/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=e1b987c55b69b0a4 -C extra-filename=-e184c0b2e3a11b7e --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:07.3464265Z [1m[92m     Running[0m `/home/runner/work/start/start/rust/target/debug/build/serde_core-4de2e73f080bebb7/build-script-build`
+2026-10-11T12:45:07.3566700Z [1m[92m     Running[0m `/home/runner/work/start/start/rust/target/debug/build/getrandom-3b101bec825a2db2/build-script-build`
+2026-10-11T12:45:07.3596529Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name quote --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/quote-1.0.46/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="proc-macro"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "proc-macro"))' -C metadata=880da032324c85a1 -C extra-filename=-510b1ea531bf45c9 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern proc_macro2=/home/runner/work/start/start/rust/target/debug/deps/libproc_macro2-d39e5b72b0cdabcb.rmeta --cap-lints allow -Dwarnings --check-cfg 'cfg(no_diagnostic_namespace)'`
+2026-10-11T12:45:07.4683310Z [1m[92m   Compiling[0m num-traits v0.2.19
+2026-10-11T12:45:07.4689830Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name build_script_build --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-traits-0.2.19/build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "i128", "libm", "std"))' -C metadata=e88daeac84461c59 -C extra-filename=-9145afaa73e6b751 --out-dir /home/runner/work/start/start/rust/target/debug/build/num-traits-9145afaa73e6b751 -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern autocfg=/home/runner/work/start/start/rust/target/debug/deps/libautocfg-e184c0b2e3a11b7e.rlib --cap-lints allow -Dwarnings`
+2026-10-11T12:45:07.4895711Z [1m[92m   Compiling[0m cfg-if v1.0.4
+2026-10-11T12:45:07.4903263Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name cfg_if --edition=2018 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cfg-if-1.0.4/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("core", "rustc-dep-of-std"))' -C metadata=1182253a36498450 -C extra-filename=-5bd7ac423dabf761 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:07.5085262Z [1m[92m   Compiling[0m zmij v1.0.21
+2026-10-11T12:45:07.5092615Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name build_script_build --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zmij-1.0.21/build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("no-panic"))' -C metadata=4419a73d19fceb7e -C extra-filename=-6a193b6d607c093d --out-dir /home/runner/work/start/start/rust/target/debug/build/zmij-6a193b6d607c093d -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:07.5303716Z [1m[92m     Running[0m `/home/runner/work/start/start/rust/target/debug/build/num-traits-9145afaa73e6b751/build-script-build`
+2026-10-11T12:45:07.5797544Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name getrandom --edition=2024 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/getrandom-0.4.3/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("std", "sys_rng", "wasm_js"))' -C metadata=da8eea21d8671ec2 -C extra-filename=-0385f1908d3ad124 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern cfg_if=/home/runner/work/start/start/rust/target/debug/deps/libcfg_if-5bd7ac423dabf761.rmeta --extern libc=/home/runner/work/start/start/rust/target/debug/deps/liblibc-91caa22598312f1c.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:07.5981948Z [1m[92m     Running[0m `/home/runner/work/start/start/rust/target/debug/build/zmij-6a193b6d607c093d/build-script-build`
+2026-10-11T12:45:07.6086292Z [1m[92m   Compiling[0m syn v2.0.118
+2026-10-11T12:45:07.6098166Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name syn --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/syn-2.0.118/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="clone-impls"' --cfg 'feature="derive"' --cfg 'feature="parsing"' --cfg 'feature="printing"' --cfg 'feature="proc-macro"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("clone-impls", "default", "derive", "extra-traits", "fold", "full", "parsing", "printing", "proc-macro", "test", "visit", "visit-mut"))' -C metadata=e8bb9eca964ff10b -C extra-filename=-c0445ba24f788388 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern proc_macro2=/home/runner/work/start/start/rust/target/debug/deps/libproc_macro2-d39e5b72b0cdabcb.rmeta --extern quote=/home/runner/work/start/start/rust/target/debug/deps/libquote-510b1ea531bf45c9.rmeta --extern unicode_ident=/home/runner/work/start/start/rust/target/debug/deps/libunicode_ident-a96d43fe01b76ab7.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:07.6612290Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name serde_core --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_core-1.0.228/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="result"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("alloc", "default", "rc", "result", "std", "unstable"))' -C metadata=605be6c027b4d7e0 -C extra-filename=-b9e2f07714e983d7 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings --check-cfg 'cfg(if_docsrs_then_no_serde_core)' --check-cfg 'cfg(no_core_cstr)' --check-cfg 'cfg(no_core_error)' --check-cfg 'cfg(no_core_net)' --check-cfg 'cfg(no_core_num_saturating)' --check-cfg 'cfg(no_diagnostic_namespace)' --check-cfg 'cfg(no_serde_derive)' --check-cfg 'cfg(no_std_atomic)' --check-cfg 'cfg(no_std_atomic64)' --check-cfg 'cfg(no_target_has_atomic)'`
+2026-10-11T12:45:09.0674498Z [1m[92m   Compiling[0m nom v8.0.0
+2026-10-11T12:45:09.0683827Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name nom --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nom-8.0.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="alloc"' --cfg 'feature="default"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("alloc", "default", "docsrs", "std"))' -C metadata=86004ec7b052475d -C extra-filename=-25544efd7de61e01 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern memchr=/home/runner/work/start/start/rust/target/debug/deps/libmemchr-e28dbd9d9e80b840.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:09.0844475Z [1m[92m   Compiling[0m aho-corasick v1.1.4
+2026-10-11T12:45:09.0858610Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name aho_corasick --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aho-corasick-1.1.4/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="perf-literal"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "logging", "perf-literal", "std"))' -C metadata=b12bc2477cb2106c -C extra-filename=-d85a9e2527856957 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern memchr=/home/runner/work/start/start/rust/target/debug/deps/libmemchr-e28dbd9d9e80b840.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:10.1455788Z [1m[92m   Compiling[0m regex-syntax v0.8.11
+2026-10-11T12:45:10.1464012Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name regex_syntax --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-syntax-0.8.11/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="default"' --cfg 'feature="std"' --cfg 'feature="unicode"' --cfg 'feature="unicode-age"' --cfg 'feature="unicode-bool"' --cfg 'feature="unicode-case"' --cfg 'feature="unicode-gencat"' --cfg 'feature="unicode-perl"' --cfg 'feature="unicode-script"' --cfg 'feature="unicode-segment"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("arbitrary", "default", "std", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"))' -C metadata=c20c8a9777022da3 -C extra-filename=-482a93ff0f530431 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:10.8690326Z [1m[92m   Compiling[0m serde v1.0.228
+2026-10-11T12:45:10.8695273Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name build_script_build --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --cfg 'feature="default"' --cfg 'feature="derive"' --cfg 'feature="serde_derive"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("alloc", "default", "derive", "rc", "serde_derive", "std", "unstable"))' -C metadata=d8411768c9ed5d00 -C extra-filename=-b11cda05bacd428d --out-dir /home/runner/work/start/start/rust/target/debug/build/serde-b11cda05bacd428d -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:10.9640319Z [1m[92m   Compiling[0m option-ext v0.2.0
+2026-10-11T12:45:10.9644836Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name option_ext --edition=2015 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/option-ext-0.2.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=ffdd9fe84c7cb5d2 -C extra-filename=-d773295c59c200a3 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:10.9880999Z [1m[92m   Compiling[0m serde_json v1.0.150
+2026-10-11T12:45:10.9887155Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name build_script_build --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.150/build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --cfg 'feature="default"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("alloc", "arbitrary_precision", "default", "float_roundtrip", "indexmap", "preserve_order", "raw_value", "std", "unbounded_depth"))' -C metadata=ce279c689795942e -C extra-filename=-c9357205c189dfd7 --out-dir /home/runner/work/start/start/rust/target/debug/build/serde_json-c9357205c189dfd7 -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:11.0407636Z [1m[92m     Running[0m `/home/runner/work/start/start/rust/target/debug/build/serde_json-c9357205c189dfd7/build-script-build`
+2026-10-11T12:45:11.0430976Z [1m[92m   Compiling[0m dirs-sys v0.5.0
+2026-10-11T12:45:11.0438626Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name dirs_sys --edition=2015 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/dirs-sys-0.5.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=cb326bf56d07a902 -C extra-filename=-391104aad6b9be2b --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern libc=/home/runner/work/start/start/rust/target/debug/deps/liblibc-91caa22598312f1c.rmeta --extern option_ext=/home/runner/work/start/start/rust/target/debug/deps/liboption_ext-d773295c59c200a3.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:11.1471003Z [1m[92m     Running[0m `/home/runner/work/start/start/rust/target/debug/build/serde-b11cda05bacd428d/build-script-build`
+2026-10-11T12:45:11.1570283Z [1m[92m   Compiling[0m links-notation v0.13.0
+2026-10-11T12:45:11.1580530Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name links_notation --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/links-notation-0.13.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=a13b85a1d073bc37 -C extra-filename=-14e2d1be5b6077c0 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern nom=/home/runner/work/start/start/rust/target/debug/deps/libnom-25544efd7de61e01.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:11.5537050Z [1m[92m   Compiling[0m regex-automata v0.4.14
+2026-10-11T12:45:11.5553454Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name regex_automata --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-automata-0.4.14/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="alloc"' --cfg 'feature="dfa-onepass"' --cfg 'feature="hybrid"' --cfg 'feature="meta"' --cfg 'feature="nfa-backtrack"' --cfg 'feature="nfa-pikevm"' --cfg 'feature="nfa-thompson"' --cfg 'feature="perf-inline"' --cfg 'feature="perf-literal"' --cfg 'feature="perf-literal-multisubstring"' --cfg 'feature="perf-literal-substring"' --cfg 'feature="std"' --cfg 'feature="syntax"' --cfg 'feature="unicode"' --cfg 'feature="unicode-age"' --cfg 'feature="unicode-bool"' --cfg 'feature="unicode-case"' --cfg 'feature="unicode-gencat"' --cfg 'feature="unicode-perl"' --cfg 'feature="unicode-script"' --cfg 'feature="unicode-segment"' --cfg 'feature="unicode-word-boundary"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("alloc", "default", "dfa", "dfa-build", "dfa-onepass", "dfa-search", "hybrid", "internal-instrument", "internal-instrument-pikevm", "logging", "meta", "nfa", "nfa-backtrack", "nfa-pikevm", "nfa-thompson", "perf", "perf-inline", "perf-literal", "perf-literal-multisubstring", "perf-literal-substring", "std", "syntax", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment", "unicode-word-boundary"))' -C metadata=c3865c3b7061711d -C extra-filename=-64d558317c0eef0e --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern aho_corasick=/home/runner/work/start/start/rust/target/debug/deps/libaho_corasick-d85a9e2527856957.rmeta --extern memchr=/home/runner/work/start/start/rust/target/debug/deps/libmemchr-e28dbd9d9e80b840.rmeta --extern regex_syntax=/home/runner/work/start/start/rust/target/debug/deps/libregex_syntax-482a93ff0f530431.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:11.7123909Z [1m[92m   Compiling[0m serde_derive v1.0.228
+2026-10-11T12:45:11.7150237Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name serde_derive --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_derive-1.0.228/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type proc-macro --emit=dep-info,link -C prefer-dynamic -C embed-bitcode=no --cfg 'feature="default"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "deserialize_in_place"))' -C metadata=076d89a81e69a54b -C extra-filename=-2226411e9599bd24 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern proc_macro2=/home/runner/work/start/start/rust/target/debug/deps/libproc_macro2-d39e5b72b0cdabcb.rlib --extern quote=/home/runner/work/start/start/rust/target/debug/deps/libquote-510b1ea531bf45c9.rlib --extern syn=/home/runner/work/start/start/rust/target/debug/deps/libsyn-c0445ba24f788388.rlib --extern proc_macro --cap-lints allow -Dwarnings`
+2026-10-11T12:45:13.5535711Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name zmij --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zmij-1.0.21/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("no-panic"))' -C metadata=4146b3d366d87e8c -C extra-filename=-4d5bda82ad26d8c5 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings --check-cfg 'cfg(exhaustive)' --check-cfg 'cfg(zmij_no_select_unpredictable)'`
+2026-10-11T12:45:13.5815056Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name num_traits --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-traits-0.2.19/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "i128", "libm", "std"))' -C metadata=01d9d9ccff26aba7 -C extra-filename=-175861704d2123aa --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings --cfg has_total_cmp --check-cfg 'cfg(has_total_cmp)'`
+2026-10-11T12:45:13.7708555Z [1m[92m   Compiling[0m itoa v1.0.18
+2026-10-11T12:45:13.7713043Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name itoa --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/itoa-1.0.18/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("no-panic"))' -C metadata=eac76524c523605c -C extra-filename=-774b3841e4e85e00 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:13.8451236Z [1m[92m   Compiling[0m rustix v1.1.4
+2026-10-11T12:45:13.8463191Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name build_script_build --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rustix-1.1.4/build.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no --cfg 'feature="alloc"' --cfg 'feature="default"' --cfg 'feature="fs"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("all-apis", "alloc", "core", "default", "event", "fs", "io_uring", "libc", "libc_errno", "linux_4_11", "linux_5_1", "linux_5_11", "linux_latest", "mm", "mount", "net", "param", "pipe", "process", "pty", "rand", "runtime", "rustc-dep-of-std", "rustc-std-workspace-alloc", "shm", "std", "stdio", "system", "termios", "thread", "time", "try_close", "use-explicitly-provided-auxv", "use-libc", "use-libc-auxv"))' -C metadata=8afeb2506bf9a203 -C extra-filename=-3c92d7f90e3c5d39 --out-dir /home/runner/work/start/start/rust/target/debug/build/rustix-3c92d7f90e3c5d39 -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:13.9660401Z [1m[92m   Compiling[0m base64 v0.22.1
+2026-10-11T12:45:13.9668648Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name base64 --edition=2018 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/base64-0.22.1/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="alloc"' --cfg 'feature="default"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("alloc", "default", "std"))' -C metadata=0ccd8e940e32026b -C extra-filename=-bb62bd13cc0dca15 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:13.9728041Z [1m[92m   Compiling[0m iana-time-zone v0.1.65
+2026-10-11T12:45:13.9734196Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name iana_time_zone --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/iana-time-zone-0.1.65/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="fallback"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("fallback"))' -C metadata=def64ebb4263e4b8 -C extra-filename=-8cce9dd37a34243f --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:14.0648886Z [1m[92m   Compiling[0m chrono v0.4.45
+2026-10-11T12:45:14.0663692Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name chrono --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/chrono-0.4.45/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="alloc"' --cfg 'feature="clock"' --cfg 'feature="default"' --cfg 'feature="iana-time-zone"' --cfg 'feature="js-sys"' --cfg 'feature="now"' --cfg 'feature="oldtime"' --cfg 'feature="std"' --cfg 'feature="wasm-bindgen"' --cfg 'feature="wasmbind"' --cfg 'feature="winapi"' --cfg 'feature="windows-link"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("__internal_bench", "alloc", "arbitrary", "clock", "core-error", "default", "defmt", "iana-time-zone", "js-sys", "libc", "now", "oldtime", "pure-rust-locales", "rkyv", "rkyv-16", "rkyv-32", "rkyv-64", "rkyv-validation", "serde", "std", "unstable-locales", "wasm-bindgen", "wasmbind", "winapi", "windows-link"))' -C metadata=e9bad2fe386c007a -C extra-filename=-dd4c643e3dddef11 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern iana_time_zone=/home/runner/work/start/start/rust/target/debug/deps/libiana_time_zone-8cce9dd37a34243f.rmeta --extern num_traits=/home/runner/work/start/start/rust/target/debug/deps/libnum_traits-175861704d2123aa.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:14.1331025Z [1m[92m   Compiling[0m lino-objects-codec v0.2.1
+2026-10-11T12:45:14.1340123Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name lino_objects_codec --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lino-objects-codec-0.2.1/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=564fcb597b83324c -C extra-filename=-2a8975849ddff1a5 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern base64=/home/runner/work/start/start/rust/target/debug/deps/libbase64-bb62bd13cc0dca15.rmeta --extern links_notation=/home/runner/work/start/start/rust/target/debug/deps/liblinks_notation-14e2d1be5b6077c0.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:14.3745000Z [1m[92m     Running[0m `/home/runner/work/start/start/rust/target/debug/build/rustix-3c92d7f90e3c5d39/build-script-build`
+2026-10-11T12:45:14.4469971Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name serde_json --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.150/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="default"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("alloc", "arbitrary_precision", "default", "float_roundtrip", "indexmap", "preserve_order", "raw_value", "std", "unbounded_depth"))' -C metadata=e2a8b7efe385bc93 -C extra-filename=-9990e11d7ef0bca3 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern itoa=/home/runner/work/start/start/rust/target/debug/deps/libitoa-774b3841e4e85e00.rmeta --extern memchr=/home/runner/work/start/start/rust/target/debug/deps/libmemchr-e28dbd9d9e80b840.rmeta --extern serde_core=/home/runner/work/start/start/rust/target/debug/deps/libserde_core-b9e2f07714e983d7.rmeta --extern zmij=/home/runner/work/start/start/rust/target/debug/deps/libzmij-4d5bda82ad26d8c5.rmeta --cap-lints allow -Dwarnings --cfg 'fast_arithmetic="64"' --check-cfg 'cfg(fast_arithmetic, values("32", "64"))'`
+2026-10-11T12:45:14.9378357Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name serde --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="default"' --cfg 'feature="derive"' --cfg 'feature="serde_derive"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("alloc", "default", "derive", "rc", "serde_derive", "std", "unstable"))' -C metadata=6cf3aa44c365dce3 -C extra-filename=-76eadf50e72cbbc0 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern serde_core=/home/runner/work/start/start/rust/target/debug/deps/libserde_core-b9e2f07714e983d7.rmeta --extern serde_derive=/home/runner/work/start/start/rust/target/debug/deps/libserde_derive-2226411e9599bd24.so --cap-lints allow -Dwarnings --cfg if_docsrs_then_no_serde_core --check-cfg 'cfg(feature, values("result"))' --check-cfg 'cfg(if_docsrs_then_no_serde_core)' --check-cfg 'cfg(no_core_cstr)' --check-cfg 'cfg(no_core_error)' --check-cfg 'cfg(no_core_net)' --check-cfg 'cfg(no_core_num_saturating)' --check-cfg 'cfg(no_diagnostic_namespace)' --check-cfg 'cfg(no_serde_derive)' --check-cfg 'cfg(no_std_atomic)' --check-cfg 'cfg(no_std_atomic64)' --check-cfg 'cfg(no_target_has_atomic)'`
+2026-10-11T12:45:15.1367573Z [1m[92m   Compiling[0m regex v1.12.4
+2026-10-11T12:45:15.1386842Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name regex --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/regex-1.12.4/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="default"' --cfg 'feature="perf"' --cfg 'feature="perf-backtrack"' --cfg 'feature="perf-cache"' --cfg 'feature="perf-dfa"' --cfg 'feature="perf-inline"' --cfg 'feature="perf-literal"' --cfg 'feature="perf-onepass"' --cfg 'feature="std"' --cfg 'feature="unicode"' --cfg 'feature="unicode-age"' --cfg 'feature="unicode-bool"' --cfg 'feature="unicode-case"' --cfg 'feature="unicode-gencat"' --cfg 'feature="unicode-perl"' --cfg 'feature="unicode-script"' --cfg 'feature="unicode-segment"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "logging", "pattern", "perf", "perf-backtrack", "perf-cache", "perf-dfa", "perf-dfa-full", "perf-inline", "perf-literal", "perf-onepass", "std", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment", "unstable", "use_std"))' -C metadata=1b70823fd101cbca -C extra-filename=-a21895c5d9d1e1fe --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern aho_corasick=/home/runner/work/start/start/rust/target/debug/deps/libaho_corasick-d85a9e2527856957.rmeta --extern memchr=/home/runner/work/start/start/rust/target/debug/deps/libmemchr-e28dbd9d9e80b840.rmeta --extern regex_automata=/home/runner/work/start/start/rust/target/debug/deps/libregex_automata-64d558317c0eef0e.rmeta --extern regex_syntax=/home/runner/work/start/start/rust/target/debug/deps/libregex_syntax-482a93ff0f530431.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:15.2961270Z [1m[92m   Compiling[0m dirs v6.0.0
+2026-10-11T12:45:15.2966105Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name dirs --edition=2015 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/dirs-6.0.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=b0194b1062d38a32 -C extra-filename=-17b4012a47443be3 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern dirs_sys=/home/runner/work/start/start/rust/target/debug/deps/libdirs_sys-391104aad6b9be2b.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:15.3304789Z [1m[92m   Compiling[0m uuid v1.23.4
+2026-10-11T12:45:15.3314097Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name uuid --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uuid-1.23.4/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="default"' --cfg 'feature="rng"' --cfg 'feature="std"' --cfg 'feature="v4"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("arbitrary", "atomic", "borsh", "bytemuck", "default", "fast-rng", "js", "macro-diagnostics", "md5", "rng", "rng-getrandom", "rng-rand", "serde", "sha1", "slog", "std", "uuid-rng-internal-lib", "v1", "v3", "v4", "v5", "v6", "v7", "v8", "zerocopy"))' -C metadata=173f68bcfb4af9cb -C extra-filename=-899b20b368c8c211 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern getrandom=/home/runner/work/start/start/rust/target/debug/deps/libgetrandom-0385f1908d3ad124.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:15.3729832Z [1m[92m   Compiling[0m linux-raw-sys v0.12.1
+2026-10-11T12:45:15.3752810Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name linux_raw_sys --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/linux-raw-sys-0.12.1/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="auxvec"' --cfg 'feature="elf"' --cfg 'feature="errno"' --cfg 'feature="general"' --cfg 'feature="ioctl"' --cfg 'feature="no_std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("auxvec", "bootparam", "btrfs", "core", "default", "elf", "elf_uapi", "errno", "general", "if_arp", "if_ether", "if_packet", "if_tun", "image", "io_uring", "ioctl", "landlock", "loop_device", "mempolicy", "net", "netlink", "no_std", "prctl", "ptrace", "rustc-dep-of-std", "std", "system", "vm_sockets", "xdp"))' -C metadata=36ca03918be72345 -C extra-filename=-a99ab181060e7e91 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:15.5270964Z [1m[92m   Compiling[0m bitflags v2.13.0
+2026-10-11T12:45:15.5277509Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name bitflags --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bitflags-2.13.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("arbitrary", "bytemuck", "example_generated", "serde", "serde_core", "std"))' -C metadata=5101dd7393057321 -C extra-filename=-a7015a241d975059 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:15.5738692Z [1m[92m   Compiling[0m fastrand v2.4.1
+2026-10-11T12:45:15.5744351Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name fastrand --edition=2018 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fastrand-2.4.1/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="alloc"' --cfg 'feature="default"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("alloc", "default", "getrandom", "js", "std"))' -C metadata=effba9f05b710d71 -C extra-filename=-837b20940204814a --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:15.6295305Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name rustix --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rustix-1.1.4/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="alloc"' --cfg 'feature="default"' --cfg 'feature="fs"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("all-apis", "alloc", "core", "default", "event", "fs", "io_uring", "libc", "libc_errno", "linux_4_11", "linux_5_1", "linux_5_11", "linux_latest", "mm", "mount", "net", "param", "pipe", "process", "pty", "rand", "runtime", "rustc-dep-of-std", "rustc-std-workspace-alloc", "shm", "std", "stdio", "system", "termios", "thread", "time", "try_close", "use-explicitly-provided-auxv", "use-libc", "use-libc-auxv"))' -C metadata=f2128fe09a480110 -C extra-filename=-1d23ee81c3b3012d --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern bitflags=/home/runner/work/start/start/rust/target/debug/deps/libbitflags-a7015a241d975059.rmeta --extern linux_raw_sys=/home/runner/work/start/start/rust/target/debug/deps/liblinux_raw_sys-a99ab181060e7e91.rmeta --cap-lints allow -Dwarnings --cfg linux_raw_dep --cfg linux_raw --cfg linux_like --cfg linux_kernel`
+2026-10-11T12:45:15.6786414Z [1m[92m   Compiling[0m once_cell v1.21.4
+2026-10-11T12:45:15.6795679Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name once_cell --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/once_cell-1.21.4/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="alloc"' --cfg 'feature="race"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("alloc", "atomic-polyfill", "critical-section", "default", "parking_lot", "portable-atomic", "race", "std", "unstable"))' -C metadata=dfff668b59127dad -C extra-filename=-0b2b3aaef0c0c3ee --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --cap-lints allow -Dwarnings`
+2026-10-11T12:45:15.7684826Z [1m[92m   Compiling[0m start-command v0.23.0 (/home/runner/work/start/start/rust)
+2026-10-11T12:45:15.7708962Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name start_command --edition=2021 src/lib/mod.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=308c786b0477b259 -C extra-filename=-1cbfe35b32298034 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern base64=/home/runner/work/start/start/rust/target/debug/deps/libbase64-bb62bd13cc0dca15.rmeta --extern chrono=/home/runner/work/start/start/rust/target/debug/deps/libchrono-dd4c643e3dddef11.rmeta --extern dirs=/home/runner/work/start/start/rust/target/debug/deps/libdirs-17b4012a47443be3.rmeta --extern libc=/home/runner/work/start/start/rust/target/debug/deps/liblibc-91caa22598312f1c.rmeta --extern lino_objects_codec=/home/runner/work/start/start/rust/target/debug/deps/liblino_objects_codec-2a8975849ddff1a5.rmeta --extern regex=/home/runner/work/start/start/rust/target/debug/deps/libregex-a21895c5d9d1e1fe.rmeta --extern serde=/home/runner/work/start/start/rust/target/debug/deps/libserde-76eadf50e72cbbc0.rmeta --extern serde_json=/home/runner/work/start/start/rust/target/debug/deps/libserde_json-9990e11d7ef0bca3.rmeta --extern uuid=/home/runner/work/start/start/rust/target/debug/deps/libuuid-899b20b368c8c211.rmeta -Dwarnings`
+2026-10-11T12:45:16.0157311Z [1m[91merror[E0425][0m[1m: cannot find value `cores` in this scope[0m
+2026-10-11T12:45:16.0158353Z    [1m[94m--> [0msrc/lib/cpu_penalty_monitor.rs:192:73
+2026-10-11T12:45:16.0158971Z     [1m[94m|[0m
+2026-10-11T12:45:16.0160240Z [1m[94m192[0m [1m[94m|[0m                         state.phase, state.base_cpus, state.limit_cpus, cores, cpus
+2026-10-11T12:45:16.0161684Z     [1m[94m|[0m                                                                         [1m[91m^^^^^[0m [1m[91mnot found in this scope[0m
+2026-10-11T12:45:16.0162306Z 
+2026-10-11T12:45:16.7825456Z [1m[92m   Compiling[0m tempfile v3.27.0
+2026-10-11T12:45:16.7835303Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name tempfile --edition=2021 /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tempfile-3.27.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="default"' --cfg 'feature="getrandom"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "getrandom", "nightly"))' -C metadata=b183d7f6a5dfe5cf -C extra-filename=-5adefd9e803eb0ce --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern fastrand=/home/runner/work/start/start/rust/target/debug/deps/libfastrand-837b20940204814a.rmeta --extern getrandom=/home/runner/work/start/start/rust/target/debug/deps/libgetrandom-0385f1908d3ad124.rmeta --extern once_cell=/home/runner/work/start/start/rust/target/debug/deps/libonce_cell-0b2b3aaef0c0c3ee.rmeta --extern rustix=/home/runner/work/start/start/rust/target/debug/deps/librustix-1d23ee81c3b3012d.rmeta --cap-lints allow -Dwarnings`
+2026-10-11T12:45:16.9828669Z [1m[92m     Running[0m `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name start_command --edition=2021 src/lib/mod.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=ccce631b492fe661 -C extra-filename=-904bd3362ce49f80 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern base64=/home/runner/work/start/start/rust/target/debug/deps/libbase64-bb62bd13cc0dca15.rlib --extern chrono=/home/runner/work/start/start/rust/target/debug/deps/libchrono-dd4c643e3dddef11.rlib --extern dirs=/home/runner/work/start/start/rust/target/debug/deps/libdirs-17b4012a47443be3.rlib --extern libc=/home/runner/work/start/start/rust/target/debug/deps/liblibc-91caa22598312f1c.rlib --extern lino_objects_codec=/home/runner/work/start/start/rust/target/debug/deps/liblino_objects_codec-2a8975849ddff1a5.rlib --extern regex=/home/runner/work/start/start/rust/target/debug/deps/libregex-a21895c5d9d1e1fe.rlib --extern serde=/home/runner/work/start/start/rust/target/debug/deps/libserde-76eadf50e72cbbc0.rlib --extern serde_json=/home/runner/work/start/start/rust/target/debug/deps/libserde_json-9990e11d7ef0bca3.rlib --extern tempfile=/home/runner/work/start/start/rust/target/debug/deps/libtempfile-5adefd9e803eb0ce.rlib --extern uuid=/home/runner/work/start/start/rust/target/debug/deps/libuuid-899b20b368c8c211.rlib -Dwarnings`
+2026-10-11T12:45:17.0922707Z [1mFor more information about this error, try `rustc --explain E0425`.[0m
+2026-10-11T12:45:17.1018432Z [1m[91merror[0m: could not compile `start-command` (lib) due to 1 previous error
+2026-10-11T12:45:17.1019186Z 
+2026-10-11T12:45:17.1019681Z Caused by:
+2026-10-11T12:45:17.1030970Z   process didn't exit successfully: `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name start_command --edition=2021 src/lib/mod.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=308c786b0477b259 -C extra-filename=-1cbfe35b32298034 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern base64=/home/runner/work/start/start/rust/target/debug/deps/libbase64-bb62bd13cc0dca15.rmeta --extern chrono=/home/runner/work/start/start/rust/target/debug/deps/libchrono-dd4c643e3dddef11.rmeta --extern dirs=/home/runner/work/start/start/rust/target/debug/deps/libdirs-17b4012a47443be3.rmeta --extern libc=/home/runner/work/start/start/rust/target/debug/deps/liblibc-91caa22598312f1c.rmeta --extern lino_objects_codec=/home/runner/work/start/start/rust/target/debug/deps/liblino_objects_codec-2a8975849ddff1a5.rmeta --extern regex=/home/runner/work/start/start/rust/target/debug/deps/libregex-a21895c5d9d1e1fe.rmeta --extern serde=/home/runner/work/start/start/rust/target/debug/deps/libserde-76eadf50e72cbbc0.rmeta --extern serde_json=/home/runner/work/start/start/rust/target/debug/deps/libserde_json-9990e11d7ef0bca3.rmeta --extern uuid=/home/runner/work/start/start/rust/target/debug/deps/libuuid-899b20b368c8c211.rmeta -Dwarnings` (exit status: 1)
+2026-10-11T12:45:17.1037217Z [1m[33mwarning[0m: build failed, waiting for other jobs to finish...
+2026-10-11T12:45:18.6873259Z [1m[91merror[0m: could not compile `start-command` (lib test) due to 1 previous error
+2026-10-11T12:45:18.6873667Z 
+2026-10-11T12:45:18.6873758Z Caused by:
+2026-10-11T12:45:18.6880951Z   process didn't exit successfully: `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name start_command --edition=2021 src/lib/mod.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=ccce631b492fe661 -C extra-filename=-904bd3362ce49f80 --out-dir /home/runner/work/start/start/rust/target/debug/deps -C strip=debuginfo -L dependency=/home/runner/work/start/start/rust/target/debug/deps --extern base64=/home/runner/work/start/start/rust/target/debug/deps/libbase64-bb62bd13cc0dca15.rlib --extern chrono=/home/runner/work/start/start/rust/target/debug/deps/libchrono-dd4c643e3dddef11.rlib --extern dirs=/home/runner/work/start/start/rust/target/debug/deps/libdirs-17b4012a47443be3.rlib --extern libc=/home/runner/work/start/start/rust/target/debug/deps/liblibc-91caa22598312f1c.rlib --extern lino_objects_codec=/home/runner/work/start/start/rust/target/debug/deps/liblino_objects_codec-2a8975849ddff1a5.rlib --extern regex=/home/runner/work/start/start/rust/target/debug/deps/libregex-a21895c5d9d1e1fe.rlib --extern serde=/home/runner/work/start/start/rust/target/debug/deps/libserde-76eadf50e72cbbc0.rlib --extern serde_json=/home/runner/work/start/start/rust/target/debug/deps/libserde_json-9990e11d7ef0bca3.rlib --extern tempfile=/home/runner/work/start/start/rust/target/debug/deps/libtempfile-5adefd9e803eb0ce.rlib --extern uuid=/home/runner/work/start/start/rust/target/debug/deps/libuuid-899b20b368c8c211.rlib -Dwarnings` (exit status: 1)
+2026-10-11T12:45:18.6973244Z ##[error]Process completed with exit code 101.
+2026-10-11T12:45:18.7112166Z Post job cleanup.
+2026-10-11T12:45:18.7993015Z [command]/usr/bin/git version
+2026-10-11T12:45:18.8035909Z git version 2.55.0
+2026-10-11T12:45:18.8078445Z Temporarily overriding HOME='/home/runner/work/_temp/470d525f-7f70-42f7-9fc0-fc2a54a73bf6' before making global git config changes
+2026-10-11T12:45:18.8080144Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-11T12:45:18.8100457Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/start/start
+2026-10-11T12:45:18.8117917Z Removing SSH command configuration
+2026-10-11T12:45:18.8125320Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-11T12:45:18.8162495Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-11T12:45:18.8410261Z Removing HTTP extra header
+2026-10-11T12:45:18.8417920Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-11T12:45:18.8460441Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-11T12:45:18.8712450Z Removing includeIf entries pointing to credentials config files
+2026-10-11T12:45:18.8724210Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-11T12:45:18.8762178Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-11T12:45:18.9208070Z Cleaning up orphan processes
