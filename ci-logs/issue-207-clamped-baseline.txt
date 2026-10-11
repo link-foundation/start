@@ -1,0 +1,23 @@
+bun test v1.4.2 (744846f84)
+
+js/test/regression-207.js:
+12 | });
+13 | 
+14 | it('saved observing limits preserve the base after a daemon-clamped lift', () => {
+15 |   const saved = { ...initialState(4, 0), limitCpus: 1 };
+16 |   const { observeBase } = require('../src/lib/cpu-penalty');
+17 |   expect(observeBase(initialState(null, 100, saved), 1, 100).baseCpus).toBe(4);
+                                                                            ^
+error: expect(received).toBe(expected)
+
+Expected: 4
+Received: 1
+
+      at <anonymous> (/tmp/gh-issue-solver-1791720727953/js/test/regression-207.js:17:72)
+(fail) saved observing limits preserve the base after a daemon-clamped lift [0.74ms]
+
+ 0 pass
+ 18 filtered out
+ 1 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [35.00ms]

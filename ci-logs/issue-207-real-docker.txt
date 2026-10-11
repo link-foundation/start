@@ -1,0 +1,253 @@
+$ bun /tmp/gh-issue-solver-1791720727953/js/src/bin/cli.js --isolated docker --image alpine:3.23 --detached --session issue-207-real-49456 --keep-container --cpu-penalty --cpu-penalty-trigger-window 2s --cpu-penalty-release-window 2s -- pids=""; for i in 1 2 3 4 5 6 7 8; do (while :; do :; done) & pids="$pids $!"; done; sleep 22; kill $pids; wait $pids; echo idle; sleep 33
+│ session   5cd6b47b-9eb5-4b6e-a233-eead13b10bce
+│ start     2026-10-11 12:36:07.461
+│
+│ isolation docker
+│ mode      detached
+│ image     alpine:3.23
+│ container issue-207-real-49456
+│
+[DEBUG] Detected shell in docker image alpine:3.23: /bin/sh
+$ pids=""; for i in 1 2 3 4 5 6 7 8; do (while :; do :; done) & pids="$pids $!"; done; sleep 22; kill $pids; wait $pids; echo idle; sleep 33
+
+[DEBUG] Running: docker run -d --name issue-207-real-49456 --label start-command.session=issue-207-real-49456 --label start-command.root-session=issue-207-real-49456 --label start-command.resume-count=0 --label start-command.uuid=5cd6b47b-9eb5-4b6e-a233-eead13b10bce alpine:3.23 sh -c p=$1; shift; if [ -f "$p" ]; then exec sh "$p"; fi; exec "$@" start-command-handoff /.start-command-resume-issue-207-real-49456 /bin/sh -c pids=""; for i in 1 2 3 4 5 6 7 8; do (while :; do :; done) & pids="$pids $!"; done; sleep 22; kill $pids; wait $pids; echo idle; sleep 33
+[DEBUG] shell: /bin/sh
+[DEBUG] keepAlive: false
+[DEBUG] autoRemoveDockerContainer: false
+[DEBUG] docker cleanup policy: keep
+
+✓
+│ finish    2026-10-11 12:36:10.144
+│ duration  2.717s
+│ exit      0
+│
+│ isolation docker
+│ mode      detached
+│ image     alpine:3.23
+│ container issue-207-real-49456
+│
+│ log       /tmp/start-command/logs/isolation/docker/5cd6b47b-9eb5-4b6e-a233-eead13b10bce.log
+│ session   5cd6b47b-9eb5-4b6e-a233-eead13b10bce
+[DEBUG] Store lock /tmp/issue-207-real-2c0f4ves/executions.lock: acquired after 4ms
+[DEBUG] Store lock /tmp/issue-207-real-2c0f4ves/executions.lock: acquired after 9ms
+
+$ docker update --cpus 4 issue-207-real-49456
+issue-207-real-49456
+
+$ bun /tmp/gh-issue-solver-1791720727953/js/src/bin/cli.js --list --output-format json
+{
+  "count": 1,
+  "executions": [
+    {
+      "uuid": "5cd6b47b-9eb5-4b6e-a233-eead13b10bce",
+      "pid": 49512,
+      "processIds": {
+        "wrapperPid": 49512,
+        "containerId": "07878ff43484245e0a1fdd03953f707329c05f7152d4dded734e2fc4992828af",
+        "containerPid": 50012
+      },
+      "status": "executing",
+      "exitCode": null,
+      "command": "pids=\"\"; for i in 1 2 3 4 5 6 7 8; do (while :; do :; done) & pids=\"$pids $!\"; done; sleep 22; kill $pids; wait $pids; echo idle; sleep 33",
+      "logPath": "/tmp/start-command/logs/isolation/docker/5cd6b47b-9eb5-4b6e-a233-eead13b10bce.log",
+      "startTime": "2026-10-11T12:36:07.464Z",
+      "currentTime": "2026-10-11T12:36:10.570Z",
+      "endTime": null,
+      "oomKilled": false,
+      "workingDirectory": "/tmp/gh-issue-solver-1791720727953",
+      "shell": "/bin/sh",
+      "platform": "linux",
+      "options": {
+        "isolated": "docker",
+        "isolationMode": "detached",
+        "sessionName": "issue-207-real-49456",
+        "image": "alpine:3.23",
+        "volumes": null,
+        "mounts": null,
+        "env": null,
+        "labels": null,
+        "commandHandoff": true,
+        "privileged": null,
+        "network": null,
+        "networks": null,
+        "networkAliases": null,
+        "resourceLimits": null,
+        "resolvedLimits": {},
+        "resourceLimitSpecs": {},
+        "onKillResumeMemory": null,
+        "cpuPenaltyConfig": {
+          "cpus": 2,
+          "trigger": 95,
+          "triggerWindowMs": 2000,
+          "release": 65,
+          "releaseWindowMs": 2000
+        },
+        "baseResourceLimits": [],
+        "onKillResume": null,
+        "recoveryCommand": null,
+        "onKillResumeDelay": null,
+        "endpoint": null,
+        "user": false,
+        "keepAlive": false,
+        "autoRemoveDockerContainer": false,
+        "alwaysCleanupContainer": false,
+        "keepContainer": true,
+        "keepContainerOnFail": false,
+        "useCommandStream": false,
+        "launchPending": false,
+        "launchOwner": {
+          "pid": 49512,
+          "hostname": "8707ded85c61"
+        },
+        "containerId": "07878ff43484245e0a1fdd03953f707329c05f7152d4dded734e2fc4992828af"
+      }
+    }
+  ]
+}
+
+applied at 95% of external base: {"phase": "penalized", "since": 1791722173784, "limitCpus": 2, "baseCpus": 4, "penaltyCount": 1, "penalizedMs": 0, "containerName": "issue-207-real-49456", "attemptNumber": 1, "updatedAt": 1791722173784}
+Killed watcher/supervisor/monitor: (50048, 50069, 50073)
+$ bun /tmp/gh-issue-solver-1791720727953/js/src/bin/cli.js --resume-all --output-format json
+{
+  "count": 1,
+  "executions": [
+    {
+      "uuid": "5cd6b47b-9eb5-4b6e-a233-eead13b10bce",
+      "backend": "docker",
+      "sessionName": "issue-207-real-49456",
+      "state": "running",
+      "action": "reattached",
+      "exitCode": null,
+      "message": "Re-attached completion watcher to running container: issue-207-real-49456"
+    }
+  ]
+}
+
+resumed idle monitor restored base: {"phase": "observing", "since": 1791722195900, "limitCpus": 4, "baseCpus": 4, "penaltyCount": 1, "penalizedMs": 22116, "containerName": "issue-207-real-49456", "attemptNumber": 1, "updatedAt": 1791722195999}
+$ docker inspect -f {{json .HostConfig}} issue-207-real-49456
+{"Binds":null,"ContainerIDFile":"","LogConfig":{"Type":"json-file","Config":{}},"NetworkMode":"bridge","PortBindings":{},"RestartPolicy":{"Name":"no","MaximumRetryCount":0},"AutoRemove":false,"VolumeDriver":"","VolumesFrom":null,"ConsoleSize":[0,0],"CapAdd":null,"CapDrop":null,"CgroupnsMode":"private","Dns":null,"DnsOptions":[],"DnsSearch":[],"ExtraHosts":null,"GroupAdd":null,"IpcMode":"private","Cgroup":"","Links":null,"OomScoreAdj":0,"PidMode":"","Privileged":false,"PublishAllPorts":false,"ReadonlyRootfs":false,"SecurityOpt":null,"UTSMode":"","UsernsMode":"","ShmSize":67108864,"Runtime":"runc","Isolation":"","CpuShares":0,"Memory":0,"NanoCpus":4000000000,"CgroupParent":"","BlkioWeight":0,"BlkioWeightDevice":[],"BlkioDeviceReadBps":[],"BlkioDeviceWriteBps":[],"BlkioDeviceReadIOps":[],"BlkioDeviceWriteIOps":[],"CpuPeriod":0,"CpuQuota":0,"CpuRealtimePeriod":0,"CpuRealtimeRuntime":0,"CpusetCpus":"","CpusetMems":"","Devices":[],"DeviceCgroupRules":null,"DeviceRequests":null,"MemoryReservation":0,"MemorySwap":0,"MemorySwappiness":null,"OomKillDisable":null,"PidsLimit":null,"Ulimits":null,"CpuCount":0,"CpuPercent":0,"IOMaximumIOps":0,"IOMaximumBandwidth":0,"MaskedPaths":["/proc/acpi","/proc/asound","/proc/interrupts","/proc/kcore","/proc/keys","/proc/latency_stats","/proc/sched_debug","/proc/scsi","/proc/timer_list","/proc/timer_stats","/sys/devices/virtual/powercap","/sys/firmware"],"ReadonlyPaths":["/proc/bus","/proc/fs","/proc/irq","/proc/sys","/proc/sysrq-trigger"]}
+
+$ bun /tmp/gh-issue-solver-1791720727953/js/src/bin/cli.js --status issue-207-real-49456 --output-format json
+{
+  "uuid": "5cd6b47b-9eb5-4b6e-a233-eead13b10bce",
+  "pid": 49512,
+  "processIds": {
+    "wrapperPid": 49512,
+    "containerId": "07878ff43484245e0a1fdd03953f707329c05f7152d4dded734e2fc4992828af",
+    "containerPid": 50012
+  },
+  "status": "executing",
+  "exitCode": null,
+  "command": "pids=\"\"; for i in 1 2 3 4 5 6 7 8; do (while :; do :; done) & pids=\"$pids $!\"; done; sleep 22; kill $pids; wait $pids; echo idle; sleep 33",
+  "logPath": "/tmp/start-command/logs/isolation/docker/5cd6b47b-9eb5-4b6e-a233-eead13b10bce.log",
+  "startTime": "2026-10-11T12:36:07.464Z",
+  "currentTime": "2026-10-11T12:36:36.434Z",
+  "endTime": null,
+  "cpuPenalty": {
+    "phase": "observing",
+    "since": 1791722195900,
+    "limitCpus": 4,
+    "baseCpus": 4,
+    "penaltyCount": 1,
+    "penalizedMs": 22116,
+    "containerName": "issue-207-real-49456",
+    "attemptNumber": 1,
+    "updatedAt": 1791722195999
+  },
+  "oomKilled": false,
+  "workingDirectory": "/tmp/gh-issue-solver-1791720727953",
+  "shell": "/bin/sh",
+  "platform": "linux",
+  "options": {
+    "isolated": "docker",
+    "isolationMode": "detached",
+    "sessionName": "issue-207-real-49456",
+    "image": "alpine:3.23",
+    "volumes": null,
+    "mounts": null,
+    "env": null,
+    "labels": null,
+    "commandHandoff": true,
+    "privileged": null,
+    "network": null,
+    "networks": null,
+    "networkAliases": null,
+    "resourceLimits": null,
+    "resolvedLimits": {},
+    "resourceLimitSpecs": {},
+    "onKillResumeMemory": null,
+    "cpuPenaltyConfig": {
+      "cpus": 2,
+      "trigger": 95,
+      "triggerWindowMs": 2000,
+      "release": 65,
+      "releaseWindowMs": 2000
+    },
+    "baseResourceLimits": [],
+    "onKillResume": null,
+    "recoveryCommand": null,
+    "onKillResumeDelay": null,
+    "endpoint": null,
+    "user": false,
+    "keepAlive": false,
+    "autoRemoveDockerContainer": false,
+    "alwaysCleanupContainer": false,
+    "keepContainer": true,
+    "keepContainerOnFail": false,
+    "useCommandStream": false,
+    "launchPending": false,
+    "launchOwner": {
+      "pid": 49512,
+      "hostname": "8707ded85c61"
+    },
+    "containerId": "07878ff43484245e0a1fdd03953f707329c05f7152d4dded734e2fc4992828af"
+  }
+}
+
+=== Start Command Log ===
+Execution ID: 5cd6b47b-9eb5-4b6e-a233-eead13b10bce
+Timestamp: 2026-10-11 12:36:07.461
+Command: pids=""; for i in 1 2 3 4 5 6 7 8; do (while :; do :; done) & pids="$pids $!"; done; sleep 22; kill $pids; wait $pids; echo idle; sleep 33
+Environment: docker
+Mode: detached
+Session: issue-207-real-49456
+Image: alpine:3.23
+Platform: linux
+Node Version: v26.3.0
+Working Directory: /tmp/gh-issue-solver-1791720727953
+==================================================
+
+Command started in detached docker container: issue-207-real-49456
+Container ID: 07878ff43484
+Container will exit automatically after command completes.
+Container kept for investigation: issue-207-real-49456
+Re-enter while running: $ --attach issue-207-real-49456
+Continue the stored command: $ --resume issue-207-real-49456
+Run another command (legacy containers snapshot the filesystem into a new container): $ --resume issue-207-real-49456 -- <command>
+Remove when done: docker rm -f issue-207-real-49456
+Attach with: $ --attach issue-207-real-49456 (or docker attach issue-207-real-49456)
+View logs: docker logs issue-207-real-49456
+Live log: /tmp/start-command/logs/isolation/docker/5cd6b47b-9eb5-4b6e-a233-eead13b10bce.log
+[DEBUG] CPU monitor: sample: phase=observing base=4 limit=4 cores=3.8019 daemon=6
+[DEBUG] CPU monitor: sample: phase=observing base=4 limit=4 cores=3.8811 daemon=6
+[DEBUG] CPU monitor: sample: phase=penalized base=4 limit=2 cores=1.9979 daemon=6
+[DEBUG] CPU monitor: sample: phase=penalized base=4 limit=2 cores=1.8352000000000002 daemon=6
+[DEBUG] CPU monitor: sample: phase=penalized base=4 limit=2 cores=1.775 daemon=6
+[DEBUG] CPU monitor: sample: phase=penalized base=4 limit=2 cores=1.8987 daemon=6
+[DEBUG] CPU monitor: sample: phase=penalized base=4 limit=2 cores=2.0206 daemon=6
+[DEBUG] CPU monitor: sample: phase=penalized base=4 limit=2 cores=2.012 daemon=6
+[DEBUG] CPU monitor: sample: phase=penalized base=4 limit=2 cores=1.9396 daemon=6
+[DEBUG] CPU monitor: sample: phase=penalized base=4 limit=2 cores=1.9147999999999998 daemon=6
+[DEBUG] CPU monitor: sample: phase=penalized base=4 limit=2 cores=2.0682 daemon=6
+Terminated
+Terminated
+Terminated
+Terminated
+Terminated
+Terminated
+idle
+idle
+[DEBUG] CPU monitor: sample: phase=penalized base=4 limit=2 cores=0.11410000000000001 daemon=6
+[DEBUG] CPU monitor: sample: phase=penalized base=4 limit=2 cores=0.10890000000000001 daemon=6
+[start] CPU penalty lifted: 4 CPUs (0.13 of 2 CPUs for 2000ms)
+
