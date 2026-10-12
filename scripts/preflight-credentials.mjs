@@ -182,7 +182,7 @@ function checkCratesToken() {
   if (!token) {
     fail(
       'crates-token',
-      'Neither CARGO_REGISTRY_TOKEN nor CARGO_TOKEN is set. Add a crates.io API token to repository secrets.'
+      'CARGO_REGISTRY_TOKEN is not set: the crates.io trusted-publishing step (rust-lang/crates-io-auth-action, needs id-token: write) gave no token. Check the trusted publisher at https://crates.io/crates/start-command/settings (workflow js.yml, environment release-main).'
     );
     return;
   }
