@@ -56,7 +56,10 @@ pub fn record_tail(
     record: &crate::execution_store::ExecutionRecord,
     tail: Option<String>,
 ) -> Option<String> {
-    let stored = record.options.get("exitEvidence");
+    let stored = record
+        .options
+        .get("exitEvidence")
+        .filter(|value| value.is_object());
     let marker = if stored
         .and_then(|s| s.get("daemonRestart"))
         .and_then(serde_json::Value::as_bool)

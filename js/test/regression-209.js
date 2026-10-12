@@ -218,6 +218,12 @@ it('finalizes and preserves Docker event attribution after the log is removed', 
     const current = store.get(record.uuid);
     expect(current.options.exitEvidence.mainOom).toBe(true);
     expect(current.exitReason).toBe('memory-exhaustion (cgroup-oom-killer)');
+    const stored = current.options.exitEvidence;
+    current.options.exitEvidence = null;
+    expect(enrichDetachedStatus(current).memoryExhausted).toBe(true);
+    current.options.exitEvidence = { mainOom: false, daemonRestart: false };
+    expect(enrichDetachedStatus(current).memoryExhausted).toBeUndefined();
+    current.options.exitEvidence = stored;
     const message =
       require('../src/lib/docker-cleanup').buildAttachedDockerKeptMessage({
         containerName: 'task',

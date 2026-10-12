@@ -229,5 +229,9 @@ record the completed validation. Complete unmodified logs are archived with gzip
 [Security](../../../ci-logs/security-38257407825.log.gz),
 [Workflows](../../../ci-logs/workflows-38257407823.log.gz) and
 [Links](../../../ci-logs/links-38257407812.log.gz). Use `gzip -dc` to inspect them.
-The documentation/evidence commit receives the same full CI checks before PR
-readiness; no source changes follow the passing implementation.
+The final review also checked nullable stored evidence. JavaScript treats
+`exitEvidence: null` as absent and uses the surviving log; a stored object with
+both findings false intentionally takes precedence over that log. The Rust
+adapter now preserves this distinction, with corresponding finalization/status
+regressions in both languages. The final commit receives the full CI checks
+before PR readiness.

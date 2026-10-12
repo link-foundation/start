@@ -126,6 +126,16 @@ fn finalization_preserves_docker_event_when_the_log_is_removed() {
     );
     let current = store.get(&record.uuid).unwrap();
     assert_eq!(current.options["exitEvidence"]["mainOom"], true);
+    let mut legacy = current.clone();
+    legacy
+        .options
+        .insert("exitEvidence".into(), serde_json::Value::Null);
+    assert_eq!(enrich_detached_status(&legacy).memory_exhausted, Some(true));
+    legacy.options.insert(
+        "exitEvidence".into(),
+        json!({"mainOom": false, "daemonRestart": false}),
+    );
+    assert_eq!(enrich_detached_status(&legacy).memory_exhausted, None);
     std::fs::remove_file(&record.log_path).unwrap();
     assert_eq!(
         enrich_detached_status(&current).memory_exhausted,
