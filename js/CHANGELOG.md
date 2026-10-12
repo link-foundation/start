@@ -1,5 +1,13 @@
 # start-command
 
+## 0.37.3
+
+### Patch Changes
+
+- CI/CD: publish start-command to crates.io through trusted publishing (OIDC, `rust-lang/crates-io-auth-action`) instead of the long-lived `CARGO_TOKEN` / `CARGO_REGISTRY_TOKEN` secrets.
+
+  CI/CD: pass the crates.io token through CARGO_REGISTRY_TOKEN instead of the deprecated `cargo publish --token` flag, and pin GitHub runner images (ubuntu-24.04, macos-15, windows-2025).
+
 ## 0.37.2
 
 ### Patch Changes
