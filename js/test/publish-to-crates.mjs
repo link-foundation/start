@@ -34,6 +34,7 @@ function createFakeCargoBin(tempDir) {
     `
 const fs = require('node:fs');
 fs.writeFileSync(process.env.FAKE_CARGO_ARGS_PATH, JSON.stringify(process.argv.slice(2)));
+fs.writeFileSync(process.env.FAKE_CARGO_ARGS_PATH + '.token', process.env.CARGO_REGISTRY_TOKEN || '');
 process.exit(Number(process.env.FAKE_CARGO_EXIT || 0));
 `
   );
@@ -183,9 +184,12 @@ describe('publish-to-crates script', () => {
           '--allow-dirty',
           '--manifest-path',
           join(packageDir, 'Cargo.toml'),
-          '--token',
-          'test-token',
         ]);
+        // The deprecated `cargo publish --token` flag must not be used;
+        // the token is passed through Cargo's native environment variable.
+        expect(readFileSync(`${cargoArgsPath}.token`, 'utf8')).toBe(
+          'test-token'
+        );
       } finally {
         rmSync(tempDir, { force: true, recursive: true });
       }
