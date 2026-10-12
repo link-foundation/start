@@ -217,6 +217,52 @@
       "exitReason": "Killed (SIGKILL)",
       "memoryExhausted": true,
       "memoryExhaustedReason": "Docker reported OOMKilled"
+    },
+    {
+      "uuid": "123e4567-e89b-42d3-a456-426614174000",
+      "pid": 12345,
+      "status": "executed",
+      "exitCode": 0,
+      "command": "echo hello",
+      "logPath": "/nonexistent/start-209.log",
+      "startTime": "2026-10-10T00:00:00Z",
+      "endTime": "2026-10-10T00:00:01Z",
+      "workingDirectory": "/workspace",
+      "shell": "/bin/sh",
+      "platform": "linux",
+      "options": {},
+      "attemptHistory": [
+        {
+          "number": 1,
+          "status": "executed",
+          "exitCode": 137,
+          "oomKilled": true,
+          "exitReason": "signal (SIGKILL; cause unknown)",
+          "exitEvidence": {
+            "mainOom": true,
+            "daemonRestart": false
+          }
+        },
+        {
+          "number": 2,
+          "status": "executed",
+          "exitCode": 1,
+          "oomKilled": true,
+          "exitReason": "memory-exhaustion (cgroup-oom-killer)",
+          "memoryExhausted": true,
+          "memoryExhaustedReason": "Docker reported State.OOMKilled=true"
+        },
+        {
+          "number": 3,
+          "status": "executed",
+          "exitCode": 137,
+          "oomKilled": true,
+          "exitEvidence": {
+            "mainOom": false,
+            "daemonRestart": true
+          }
+        }
+      ]
     }
   ],
   "parity-threshold": [
@@ -384,6 +430,133 @@
         "phase": "observing",
         "penaltyCount": 1
       }
+    }
+  ],
+  "attempt-status-output": [
+    {
+      "name": "independent OOM, ordinary and daemon-restart attempts",
+      "record": {
+        "uuid": "123e4567-e89b-42d3-a456-426614174000",
+        "pid": 12345,
+        "status": "executed",
+        "exitCode": 0,
+        "command": "echo hello",
+        "logPath": "/nonexistent/start-209.log",
+        "startTime": "2026-10-10T00:00:00Z",
+        "endTime": "2026-10-10T00:00:01Z",
+        "workingDirectory": "/workspace",
+        "shell": "/bin/sh",
+        "platform": "linux",
+        "options": {},
+        "attemptHistory": [
+          {
+            "number": 1,
+            "status": "executed",
+            "exitCode": 137,
+            "oomKilled": true,
+            "exitReason": "signal (SIGKILL; cause unknown)",
+            "exitEvidence": {
+              "mainOom": true,
+              "daemonRestart": false
+            }
+          },
+          {
+            "number": 2,
+            "status": "executed",
+            "exitCode": 1,
+            "oomKilled": true,
+            "exitReason": "memory-exhaustion (cgroup-oom-killer)",
+            "memoryExhausted": true,
+            "memoryExhaustedReason": "Docker reported State.OOMKilled=true"
+          },
+          {
+            "number": 3,
+            "status": "executed",
+            "exitCode": 137,
+            "oomKilled": true,
+            "exitEvidence": {
+              "mainOom": false,
+              "daemonRestart": true
+            }
+          }
+        ]
+      },
+      "attemptHistory": [
+        {
+          "number": 1,
+          "status": "executed",
+          "exitCode": 137,
+          "oomKilled": true,
+          "exitReason": "memory-exhaustion (cgroup-oom-killer)",
+          "exitEvidence": {
+            "mainOom": true,
+            "daemonRestart": false
+          },
+          "memoryExhausted": true,
+          "memoryExhaustedReason": "Docker reported State.OOMKilled=true"
+        },
+        {
+          "number": 2,
+          "status": "executed",
+          "exitCode": 1,
+          "oomKilled": true
+        },
+        {
+          "number": 3,
+          "status": "executed",
+          "exitCode": 137,
+          "oomKilled": true,
+          "exitEvidence": {
+            "mainOom": false,
+            "daemonRestart": true
+          },
+          "exitReason": "killed (docker daemon restart)"
+        }
+      ]
+    }
+  ],
+  "docker-oom-event": [
+    {
+      "name": "final kill after child",
+      "events": "62\n99\n",
+      "finishedAt": "1970-01-01T00:01:40.592Z",
+      "recent": true
+    },
+    {
+      "name": "old child only",
+      "events": "62",
+      "finishedAt": "1970-01-01T00:01:40.592Z",
+      "recent": false
+    },
+    {
+      "name": "future event",
+      "events": "102",
+      "finishedAt": "1970-01-01T00:01:40.592Z",
+      "recent": false
+    },
+    {
+      "name": "malformed",
+      "events": "nope",
+      "finishedAt": "1970-01-01T00:01:40.592Z",
+      "recent": false
+    },
+    {
+      "name": "missing",
+      "events": "",
+      "finishedAt": "1970-01-01T00:01:40.592Z",
+      "recent": false
+    },
+    {
+      "name": "window boundary",
+      "events": "98",
+      "finishedAt": "1970-01-01T00:01:40.592Z",
+      "recent": true
+    },
+    {
+      "name": "outside window",
+      "events": "97",
+      "finishedAt": "1970-01-01T00:01:40.592Z",
+      "recent": false
     }
   ]
 }

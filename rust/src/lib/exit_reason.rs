@@ -178,6 +178,12 @@ pub fn resolve_memory_exhaustion(
             memory_exhausted_reason: format!("cgroup memory.events reported oom_kill={}", kills),
         });
     }
+    if main_oom {
+        return Some(MemoryExhaustion {
+            memory_exhausted: true,
+            memory_exhausted_reason: "Exit-time evidence reported a main-process OOM kill".into(),
+        });
+    }
     None
 }
 

@@ -292,8 +292,13 @@ pub fn read_log_tail(log_path: &str, bytes: u64) -> Option<String> {
 
 /// Read only bytes at or after the current attempt boundary.
 pub fn read_log_tail_from(log_path: &str, bytes: u64, offset: u64) -> Option<String> {
+    read_log_tail_range(log_path, bytes, offset, u64::MAX)
+}
+
+/// Bound archived evidence by the next attempt's start offset.
+pub fn read_log_tail_range(log_path: &str, bytes: u64, offset: u64, end: u64) -> Option<String> {
     let mut file = fs::File::open(log_path).ok()?;
-    let size = file.metadata().ok()?.len();
+    let size = file.metadata().ok()?.len().min(end);
     let length = size.saturating_sub(offset).min(bytes);
     file.seek(SeekFrom::Start(size - length)).ok()?;
     let mut buffer = Vec::with_capacity(length as usize);

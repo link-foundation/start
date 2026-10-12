@@ -94,19 +94,37 @@ fn snapshot_override_is_applied_at_creation() {
 }
 #[test]
 fn recovery_changes_memory_only_for_a_fresh_qualifying_oom() {
-    for (exit, oom, sample, change) in [
-        ("137", "true", "67108864 66000000 1 1 100 100", true),
-        ("137", "true", "67108864 66000000 1 1 0 100", false),
-        ("137", "false", "67108864 66000000 0 0 0 100", false),
-        ("1", "true", "67108864 66000000 1 1 100 100", false),
+    for (exit, oom, sample, change, marker) in [
+        ("137", "true", "67108864 66000000 1 1 100 100", true, ""),
+        ("137", "true", "67108864 66000000 1 1 0 100", false, ""),
+        ("137", "false", "67108864 66000000 0 0 0 100", false, ""),
+        ("1", "true", "67108864 66000000 1 1 100 100", false, ""),
+        (
+            "137",
+            "true",
+            "67108864 66000000 1 1 62 62",
+            true,
+            start_command::exit_evidence::DOCKER_OOM,
+        ),
+        (
+            "137",
+            "true",
+            "67108864 66000000 1 1 62 62",
+            false,
+            start_command::exit_evidence::DAEMON_RESTART,
+        ),
     ] {
         let dir = tempfile::TempDir::new().unwrap();
         let store = test_store(dir.path());
-        let record = docker_record(
+        let mut record = docker_record(
             ExecutionStatus::Executed,
             None,
             json!({"onKillResume":3,"onKillResumeMemory":"70%-80%"}),
         );
+        if !marker.is_empty() {
+            record.log_path = dir.path().join("run.log").to_string_lossy().into();
+            std::fs::write(&record.log_path, format!("{}\n", marker)).unwrap();
+        }
         store.save(&record).unwrap();
         let runner = runner();
         let result = recover_killed_execution(

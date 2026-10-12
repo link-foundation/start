@@ -5,12 +5,36 @@ const { resolve } = require('node:path');
 const { parseArgs } = require('../src/lib/args-parser');
 const { buildDockerRuntimeArgs } = require('../src/lib/docker-runtime-args');
 const { ExecutionRecord } = require('../src/lib/execution-store');
-const { formatRecord } = require('../src/lib/status-formatter');
+const {
+  formatRecord,
+  enrichDetachedStatus,
+} = require('../src/lib/status-formatter');
 const fixtures = JSON.parse(
   readFileSync(resolve(__dirname, '../../parity/fixtures/contracts.json'))
 );
 
 describe('shared JavaScript and Rust golden contracts', () => {
+  for (const fixture of fixtures['attempt-status-output']) {
+    it(`attempt diagnostics: ${fixture.name}`, () => {
+      const record = ExecutionRecord.fromObject(fixture.record);
+      const output = JSON.parse(
+        formatRecord(enrichDetachedStatus(record), 'json')
+      );
+      assert.deepEqual(output.attemptHistory, fixture.attemptHistory);
+      assert.deepEqual(record.toObject(), fixture.record);
+    });
+  }
+  for (const fixture of fixtures['docker-oom-event']) {
+    it(`Docker OOM event: ${fixture.name}`, () => {
+      assert.equal(
+        require('../src/lib/exit-evidence').recentDockerOom(
+          fixture.events,
+          fixture.finishedAt
+        ),
+        fixture.recent
+      );
+    });
+  }
   for (const fixture of fixtures['cli-parsing']) {
     it(`CLI parsing: ${fixture.name}`, () => {
       if (fixture.error) {

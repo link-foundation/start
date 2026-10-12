@@ -2,6 +2,7 @@
 const { spawnSync } = require('child_process');
 const { shellQuote } = require('./isolation-log-utils');
 const MAIN_OOM = 'Exit evidence: main-oom (recent cgroup oom_kill delta)';
+const DOCKER_OOM = 'Exit evidence: main-oom (recent Docker oom event)';
 const DAEMON_RESTART =
   'Exit evidence: docker-daemon-restart (Docker service journal)';
 
@@ -38,6 +39,22 @@ function daemonRestartEvidence(journal, containerId) {
   return Boolean(exited && forced);
 }
 
+function recentDockerOom(events, finishedAt) {
+  const finished = Date.parse(finishedAt) / 1000;
+  return (
+    Number.isFinite(finished) &&
+    String(events || '')
+      .split('\n')
+      .some((line) => {
+        if (!/^\d+$/.test(line.trim())) {
+          return false;
+        }
+        const at = Number(line.trim());
+        return at > 0 && finished - at >= -1 && finished - at <= 3;
+      })
+  );
+}
+
 function collectExitEvidence(
   { containerName, sample, finishedAt, exitCode, oomKilled },
   runner
@@ -52,30 +69,55 @@ function collectExitEvidence(
   const local =
     !process.env.DOCKER_HOST || process.env.DOCKER_HOST.startsWith('unix://');
   if (
-    local &&
     Number(exitCode) === 137 &&
+    containerName &&
     Number.isFinite(Date.parse(finishedAt))
   ) {
     const docker = require('./docker-cleanup').getDockerCommand();
     const id = run(docker, ['inspect', '-f', '{{.Id}}', containerName]);
     if (id.success && /^[a-f0-9]{64}$/.test(id.stdout.trim())) {
       const end = Date.parse(finishedAt);
-      const journal = run('journalctl', [
-        '-u',
-        'docker.service',
-        '--since',
-        new Date(end - 60000).toISOString(),
-        '--until',
-        new Date(end + 1000).toISOString(),
-        '--no-pager',
-        '-o',
-        'cat',
-      ]);
+      const journal = local
+        ? run('journalctl', [
+            '-u',
+            'docker.service',
+            '--since',
+            new Date(end - 60000).toISOString(),
+            '--until',
+            new Date(end + 1000).toISOString(),
+            '--no-pager',
+            '-o',
+            'cat',
+          ])
+        : { success: false, stdout: '' };
       if (
         journal.success &&
         daemonRestartEvidence(journal.stdout, id.stdout.trim())
       ) {
         return DAEMON_RESTART;
+      }
+      // Query the daemon's bounded event history: works with DooD and remote
+      // sockets even after the final kill destroys the sampled cgroup.
+      const events = run(docker, [
+        'events',
+        '--since',
+        new Date(end - 60000).toISOString(),
+        '--until',
+        new Date(end + 1000).toISOString(),
+        '--filter',
+        `container=${id.stdout.trim()}`,
+        '--filter',
+        'event=oom',
+        '--format',
+        '{{.Time}}',
+      ]);
+      if (events.success && recentDockerOom(events.stdout, finishedAt)) {
+        return DOCKER_OOM;
+      }
+      if (process.env.START_DEBUG === '1') {
+        console.error(
+          `[DEBUG] Exit evidence: container=${id.stdout.trim()} finishedAt=${finishedAt} eventsAvailable=${events.success} oomEvents=${JSON.stringify(events.stdout)} sample=${JSON.stringify(sample || '')}`
+        );
       }
     }
   }
@@ -92,17 +134,23 @@ function collectExitEvidence(
 function fromLog(log) {
   const lines = String(log || '').split('\n');
   const last = lines.filter((line) => line.startsWith('Exit evidence:')).at(-1);
-  return { mainOom: last === MAIN_OOM, daemonRestart: last === DAEMON_RESTART };
+  return {
+    mainOom: last === MAIN_OOM || last === DOCKER_OOM,
+    daemonRestart: last === DAEMON_RESTART,
+  };
 }
 
 function buildExitEvidenceSnippet(containerName, quotedLogPath) {
-  return `${shellQuote(process.execPath)} ${shellQuote(__filename)} ${shellQuote(containerName)} "$__start_command_cgroup" "$__start_command_finished" "$__start_command_exit" "$__start_command_oom" >> ${quotedLogPath} 2>/dev/null`;
+  const stderr = process.env.START_DEBUG === '1' ? '2>&1' : '2>/dev/null';
+  return `${shellQuote(process.execPath)} ${shellQuote(__filename)} ${shellQuote(containerName)} "$__start_command_cgroup" "$__start_command_finished" "$__start_command_exit" "$__start_command_oom" >> ${quotedLogPath} ${stderr}`;
 }
 
 module.exports = {
   MAIN_OOM,
+  DOCKER_OOM,
   DAEMON_RESTART,
   recentOomDelta,
+  recentDockerOom,
   daemonRestartEvidence,
   collectExitEvidence,
   fromLog,

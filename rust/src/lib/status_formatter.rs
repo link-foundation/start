@@ -44,46 +44,121 @@ pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
         enriched.cpu_penalty = Some(state);
     }
     read_attempt_activity(&mut enriched);
-    if enriched.status != ExecutionStatus::Executed {
-        return enriched;
-    }
+    enriched.attempt_history = enrich_attempt_history(record);
     let tail = crate::exit_evidence::record_tail(
         &enriched,
         read_attempt_log_tail(&enriched, FATAL_MARKER_TAIL_BYTES),
     );
+    attach_exit_diagnostics(enriched, tail.as_deref())
+}
+
+fn attach_exit_diagnostics(mut enriched: ExecutionRecord, tail: Option<&str>) -> ExecutionRecord {
+    if enriched.status != ExecutionStatus::Executed {
+        return enriched;
+    }
     let oom_kills = enriched.cgroup_memory.and_then(|memory| memory.oom_kills);
     // A record finalized before #180 may carry the cgroup OOM reason for an
     // ordinary exit (the sticky flag was blamed for exit 0/1): re-derive it.
-    if enriched.exit_reason.is_none()
-        || enriched.exit_reason.as_deref() == Some(CGROUP_OOM_EXIT_REASON)
+    if let Some(reason) =
+        resolve_exit_reason(enriched.exit_code, tail, enriched.oom_killed, oom_kills)
     {
-        enriched.exit_reason = resolve_exit_reason(
-            enriched.exit_code,
-            tail.as_deref(),
-            enriched.oom_killed,
-            oom_kills,
-        );
+        enriched.exit_reason = Some(reason);
+    } else if enriched.exit_reason.as_deref() == Some(CGROUP_OOM_EXIT_REASON) {
+        enriched.exit_reason = None;
     }
     if enriched
         .memory_exhausted_reason
         .as_deref()
-        .is_some_and(|s| s.starts_with("Docker reported") || s.starts_with("cgroup memory.events"))
+        .is_some_and(|s| {
+            s.starts_with("Docker reported")
+                || s.starts_with("cgroup memory.events")
+                || s.starts_with("Exit-time evidence")
+        })
     {
         enriched.memory_exhausted = None;
         enriched.memory_exhausted_reason = None;
     }
     if enriched.memory_exhausted.is_none() {
-        if let Some(memory) = resolve_memory_exhaustion(
-            enriched.exit_code,
-            tail.as_deref(),
-            enriched.oom_killed,
-            oom_kills,
-        ) {
+        if let Some(memory) =
+            resolve_memory_exhaustion(enriched.exit_code, tail, enriched.oom_killed, oom_kills)
+        {
             enriched.memory_exhausted = Some(memory.memory_exhausted);
             enriched.memory_exhausted_reason = Some(memory.memory_exhausted_reason);
         }
     }
     enriched
+}
+
+fn enrich_attempt_history(record: &ExecutionRecord) -> Vec<Value> {
+    let mut base = record.clone();
+    base.attempt_history.clear();
+    record
+        .attempt_history
+        .iter()
+        .enumerate()
+        .map(|(index, attempt)| {
+            let mut historical = base.clone();
+            historical.status = if attempt.get("status").and_then(Value::as_str) == Some("executed")
+            {
+                ExecutionStatus::Executed
+            } else {
+                ExecutionStatus::Executing
+            };
+            historical.exit_code = attempt
+                .get("exitCode")
+                .and_then(Value::as_i64)
+                .and_then(|n| i32::try_from(n).ok());
+            historical.oom_killed = attempt.get("oomKilled").and_then(Value::as_bool);
+            historical.cgroup_memory = attempt
+                .get("cgroupMemory")
+                .and_then(|v| serde_json::from_value(v.clone()).ok());
+            historical.exit_reason = attempt
+                .get("exitReason")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+            historical.memory_exhausted = attempt.get("memoryExhausted").and_then(Value::as_bool);
+            historical.memory_exhausted_reason = attempt
+                .get("memoryExhaustedReason")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+            historical.options.remove("exitEvidence");
+            if let Some(evidence) = attempt.get("exitEvidence") {
+                historical
+                    .options
+                    .insert("exitEvidence".into(), evidence.clone());
+            }
+            let end = if let Some(next) = record.attempt_history.get(index + 1) {
+                next.get("logOffset").and_then(Value::as_u64)
+            } else {
+                record.attempt.as_ref().and_then(|a| a.log_offset)
+            };
+            let tail = attempt
+                .get("logOffset")
+                .and_then(Value::as_u64)
+                .zip(end)
+                .filter(|(start, end)| end >= start)
+                .and_then(|(start, end)| {
+                    crate::isolation::isolation_log::read_log_tail_range(
+                        &record.log_path,
+                        FATAL_MARKER_TAIL_BYTES,
+                        start,
+                        end,
+                    )
+                });
+            let tail = crate::exit_evidence::record_tail(&historical, tail);
+            let enriched = attach_exit_diagnostics(historical, tail.as_deref()).to_json();
+            let mut output = attempt.clone();
+            for key in ["exitReason", "memoryExhausted", "memoryExhaustedReason"] {
+                if let Some(object) = output.as_object_mut() {
+                    object.remove(key);
+                }
+                if let Some(value) = enriched.get(key) {
+                    output[key] = value.clone();
+                }
+            }
+            output
+        })
+        .collect()
 }
 
 /// Reconcile the stored status of a detached execution with its live session.

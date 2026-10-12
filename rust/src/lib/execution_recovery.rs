@@ -462,10 +462,14 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
         &record,
         crate::isolation::isolation_log::FATAL_MARKER_TAIL_BYTES,
     );
-    let (_, daemon_restart) = crate::exit_evidence::from_log(tail.as_deref());
+    let (logged_main, daemon_restart) = crate::exit_evidence::from_log(tail.as_deref());
     let terminal_oom = !daemon_restart
-        && facts.oom_killed == "true"
-        && crate::exit_evidence::recent_oom_delta(&facts.cgroup_memory, &facts.finished_at);
+        && (logged_main
+            || (facts.oom_killed == "true"
+                && crate::exit_evidence::recent_oom_delta(
+                    &facts.cgroup_memory,
+                    &facts.finished_at,
+                )));
     let memory_spec = option_str(&record, "onKillResumeMemory").map(str::to_string);
     let recovery_limits = if terminal_oom {
         memory_spec.as_ref().map(|spec| {
@@ -546,6 +550,10 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
         crate::execution_attempt::append_lifecycle(&lifecycle, "resume-started", json!({}));
     }
     let described = describe_exit_code_str(&facts.exit_code);
+    record.options.insert(
+        "exitEvidence".into(),
+        json!({"mainOom": terminal_oom, "daemonRestart": daemon_restart}),
+    );
     if let Some(attempt) = next_attempt.as_mut() {
         record.status = ExecutionStatus::Executed;
         record.exit_code = described.code;
