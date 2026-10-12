@@ -97,15 +97,32 @@ it('manual snapshot override applies limits to the new container at creation', a
     fs.rmSync(f.dir, { recursive: true, force: true });
   }
 });
-for (const [exitCode, oomKilled, sample, change] of [
+for (const [exitCode, oomKilled, sample, change, marker] of [
   [137, true, '67108864 66000000 1 1 100 100', true],
   [137, true, '67108864 66000000 1 1 0 100', false],
   [137, false, '67108864 66000000 0 0 0 100', false],
   [1, true, '67108864 66000000 1 1 100 100', false],
+  [
+    137,
+    true,
+    '67108864 66000000 1 1 62 62',
+    true,
+    'Exit evidence: main-oom (recent Docker oom event)',
+  ],
+  [
+    137,
+    true,
+    '67108864 66000000 1 1 62 62',
+    false,
+    'Exit evidence: docker-daemon-restart (Docker service journal)',
+  ],
 ]) {
   it(`automatic memory change requires a qualifying OOM (exit=${exitCode}, fresh=${change})`, () => {
     const f = fixture();
     try {
+      if (marker) {
+        fs.writeFileSync(f.record.logPath, `${marker}\n`);
+      }
       const result = recoverKilledExecution({
         store: f.store,
         executionId: f.record.uuid,

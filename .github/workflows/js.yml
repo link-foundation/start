@@ -321,6 +321,20 @@ jobs:
         working-directory: js
         run: bun run test
 
+      - name: Reproduce stale-sample OOM attribution (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p issue-209-evidence
+          bun experiments/issue-209-docker.mjs > issue-209-evidence/docker-probe.jsonl 2> issue-209-evidence/docker-probe-stderr.txt
+
+      - name: Preserve OOM reproduction evidence (Linux)
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: issue-209-docker-evidence
+          path: issue-209-evidence/
+          if-no-files-found: ignore
+
       - name: Check documented examples (JavaScript)
         if: runner.os == 'Linux'
         run: bun scripts/check-doc-examples.mjs --implementation js

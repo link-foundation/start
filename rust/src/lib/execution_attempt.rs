@@ -92,6 +92,9 @@ pub fn archive_attempt(record: &mut ExecutionRecord) {
     for key in ["sessionName", "containerId", "containerError"] {
         snapshot[key] = record.options.get(key).cloned().unwrap_or(Value::Null);
     }
+    if let Some(evidence) = record.options.get("exitEvidence") {
+        snapshot["exitEvidence"] = evidence.clone();
+    }
     record.attempt_history.push(snapshot);
     record.end_time_source = None;
     record.observed_at = None;

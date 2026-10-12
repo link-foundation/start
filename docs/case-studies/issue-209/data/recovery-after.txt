@@ -1,0 +1,26 @@
+bun test v1.4.3 (c6da4a4d3)
+
+js/test/regression-191.js:
+(pass) manual in-place memory override updates before start and records the resolution [69.00ms]
+(pass) manual snapshot override applies limits to the new container at creation [75.52ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=true) [47.91ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=false) [28.78ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=false) [39.13ms]
+(pass) automatic memory change requires a qualifying OOM (exit=1, fresh=false) [7.92ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=true) [38.94ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=false) [50.99ms]
+(pass) a failed memory update prevents starting the old-limit command [60.92ms]
+
+js/test/regression-209.js:
+(pass) attributes the final Docker OOM event despite a 38-second-old child sample [2.50ms]
+(pass) uses daemon events over remote Docker connections without a host journal [0.27ms]
+(pass) rejects old, future and malformed events and ordinary exits [0.55ms]
+(pass) keeps daemon restart evidence ahead of even a recent OOM event [0.45ms]
+(pass) archives attributed evidence before a resume clears current options [2.96ms]
+(pass) recomputes history independently while the current attempt is executing [3.89ms]
+(pass) reads only each archived attempt log range and never leaks current fatal output [2.36ms]
+
+ 16 pass
+ 0 fail
+ 60 expect() calls
+Ran 16 tests across 2 files. [479.00ms]

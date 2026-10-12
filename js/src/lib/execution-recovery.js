@@ -323,14 +323,20 @@ function recoverKilledExecution(params = {}) {
     }
   }
   const evidence = require('./exit-evidence');
+  const logged = evidence.fromLog(
+    record.logPath
+      ? require('./execution-attempt').readAttemptLogTail(record, 65536)
+      : null
+  );
   const terminalOom =
-    (params.oomKilled === true || params.oomKilled === 'true') &&
-    evidence.recentOomDelta(params.cgroupMemory, params.finishedAt) &&
-    !evidence.fromLog(
-      record.logPath
-        ? require('./execution-attempt').readAttemptLogTail(record, 65536)
-        : null
-    ).daemonRestart;
+    !logged.daemonRestart &&
+    (logged.mainOom ||
+      ((params.oomKilled === true || params.oomKilled === 'true') &&
+        evidence.recentOomDelta(params.cgroupMemory, params.finishedAt)));
+  record.options.exitEvidence = {
+    mainOom: terminalOom,
+    daemonRestart: logged.daemonRestart,
+  };
   let recoveryLimits = null;
   if (opts.onKillResumeMemory && terminalOom) {
     try {

@@ -997,7 +997,8 @@
           "js/src/lib/attached-diagnostics.js"
         ],
         "tests": [
-          "js/test/regression-194.js"
+          "js/test/regression-194.js",
+          "js/test/regression-209.js"
         ]
       },
       "rust": {
@@ -1009,7 +1010,8 @@
           "rust/src/lib/attached_diagnostics.rs"
         ],
         "tests": [
-          "rust/tests/regression_194.rs"
+          "rust/tests/regression_194.rs",
+          "rust/tests/regression_209.rs"
         ]
       },
       "manualRust": [
@@ -1517,7 +1519,9 @@
           "js/src/lib/recovery-delay.js"
         ],
         "tests": [
-          "js/test/regression-181.js"
+          "js/test/regression-181.js",
+          "js/test/regression-209.js",
+          "js/test/regression-191.js"
         ]
       },
       "rust": {
@@ -1527,7 +1531,9 @@
           "rust/src/lib/recovery_delay.rs"
         ],
         "tests": [
-          "rust/tests/regression_181.rs"
+          "rust/tests/regression_181.rs",
+          "rust/tests/regression_209.rs",
+          "rust/tests/regression_191.rs"
         ]
       },
       "manualRust": [
@@ -1750,7 +1756,8 @@
         "tests": [
           "js/test/status-query.js",
           "js/test/session-probe.js",
-          "js/test/exit-reason.js"
+          "js/test/exit-reason.js",
+          "js/test/regression-209.js"
         ]
       },
       "rust": {
@@ -1767,7 +1774,8 @@
         "tests": [
           "rust/tests/status_formatter.rs",
           "rust/tests/isolation_log.rs",
-          "rust/tests/regression_201.rs"
+          "rust/tests/regression_201.rs",
+          "rust/tests/regression_209.rs"
         ]
       },
       "manualRust": [

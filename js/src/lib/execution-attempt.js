@@ -90,6 +90,9 @@ function archiveAttempt(record) {
     status: record.status,
     exitCode: record.exitCode,
     endTime: record.endTime,
+    ...(record.options?.exitEvidence
+      ? { exitEvidence: { ...record.options.exitEvidence } }
+      : {}),
   };
   for (const field of TERMINAL_FIELDS) {
     if (record[field] !== undefined) {
@@ -142,7 +145,31 @@ function readAttemptLogTail(record, bytes) {
   return readLogTail(record.logPath, bytes, record.attempt?.logOffset || 0);
 }
 
+function enrichAttemptHistory(record, enrich, bytes) {
+  return (record.attemptHistory || []).map((attempt, index, history) => {
+    const next = history[index + 1];
+    const end = next ? next.logOffset : record.attempt?.logOffset;
+    const bounded =
+      Number.isSafeInteger(attempt.logOffset) &&
+      attempt.logOffset >= 0 &&
+      Number.isSafeInteger(end) &&
+      end >= attempt.logOffset;
+    const tail =
+      record.logPath && bounded
+        ? readLogTail(record.logPath, bytes, attempt.logOffset, end)
+        : null;
+    const input = {
+      ...attempt,
+      options: { exitEvidence: attempt.exitEvidence },
+    };
+    const output = enrich(input, tail);
+    delete output.options;
+    return output;
+  });
+}
+
 module.exports = {
+  enrichAttemptHistory,
   activityPath,
   appendLifecycle,
   archiveAttempt,

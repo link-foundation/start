@@ -1,0 +1,1 @@
+[{"number":2838,"title":"Memory preflight reads host /proc/meminfo inside docker isolation; Claude gets no container memory budget (#2745 was Codex-only); hive starts 2 workers in a 2.92 GiB cgroup","url":"https://github.com/link-assistant/hive-mind/issues/2838"}]

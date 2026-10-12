@@ -1,0 +1,86 @@
+bun test v1.4.3 (c6da4a4d3)
+
+js/test/regression-209.js:
+25 |   return { line, calls };
+26 | }
+27 | 
+28 | it('attributes the final Docker OOM event despite a 38-second-old child sample', () => {
+29 |   const { line, calls } = collect('62\n99\n');
+30 |   expect(line).toBe('Exit evidence: main-oom (recent Docker oom event)');
+                    ^
+error: expect(received).toBe(expected)
+
+Expected: "Exit evidence: main-oom (recent Docker oom event)"
+Received: "Exit evidence: unavailable (no attributed exit-time OOM or daemon restart evidence)"
+
+      at <anonymous> (/tmp/gh-issue-solver-1791810452513/js/test/regression-209.js:30:16)
+(fail) attributes the final Docker OOM event despite a 38-second-old child sample [7.63ms]
+41 | it('uses daemon events over remote Docker connections without a host journal', () => {
+42 |   const previous = process.env.DOCKER_HOST;
+43 |   process.env.DOCKER_HOST = 'tcp://remote:2376';
+44 |   try {
+45 |     const { line, calls } = collect('100');
+46 |     expect(evidence.fromLog(line).mainOom).toBe(true);
+                                                ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/tmp/gh-issue-solver-1791810452513/js/test/regression-209.js:46:44)
+(fail) uses daemon events over remote Docker connections without a host journal [0.88ms]
+(pass) rejects old, future and malformed events and ordinary exits [0.71ms]
+(pass) keeps daemon restart evidence ahead of even a recent OOM event [0.57ms]
+72 | it('archives attributed evidence before a resume clears current options', () => {
+73 |   const record = new ExecutionRecord({ command: 'work', status: 'executed', options: {
+74 |     exitEvidence: { mainOom: true, daemonRestart: false },
+75 |   } });
+76 |   archiveAttempt(record);
+77 |   expect(record.attemptHistory[0].exitEvidence).toEqual(record.options.exitEvidence);
+                                                     ^
+error: expect(received).toEqual(expected)
+
+- {
+-   "daemonRestart": false,
+-   "mainOom": true,
+- }
++ undefined
+
+- Expected  - 4
++ Received  + 1
+
+      at <anonymous> (/tmp/gh-issue-solver-1791810452513/js/test/regression-209.js:77:49)
+(fail) archives attributed evidence before a resume clears current options [1.44ms]
+85 |   }, { status: 'executed', exitCode: 1, oomKilled: true,
+86 |     exitReason: 'memory-exhaustion (cgroup-oom-killer)',
+87 |     memoryExhausted: true, memoryExhaustedReason: 'Docker reported State.OOMKilled=true',
+88 |   }];
+89 |   const result = enrichDetachedStatus(record);
+90 |   expect(result.attemptHistory[0].exitReason).toBe('memory-exhaustion (cgroup-oom-killer)');
+                                                   ^
+error: expect(received).toBe(expected)
+
+Expected: "memory-exhaustion (cgroup-oom-killer)"
+Received: "signal (SIGKILL; cause unknown)"
+
+      at <anonymous> (/tmp/gh-issue-solver-1791810452513/js/test/regression-209.js:90:47)
+(fail) recomputes history independently while the current attempt is executing [7.61ms]
+107 |     record.attemptHistory = [
+108 |       { status: 'executed', number: 1, logOffset: 0, exitCode: 137, oomKilled: true },
+109 |       { status: 'executed', number: 2, logOffset: Buffer.byteLength(first), exitCode: 1, oomKilled: true },
+110 |     ];
+111 |     const result = enrichDetachedStatus(record);
+112 |     expect(result.attemptHistory[0].exitReason).toBe('memory-exhaustion (cgroup-oom-killer)');
+                                                      ^
+error: expect(received).toBe(expected)
+
+Expected: "memory-exhaustion (cgroup-oom-killer)"
+Received: undefined
+
+      at <anonymous> (/tmp/gh-issue-solver-1791810452513/js/test/regression-209.js:112:49)
+(fail) reads only each archived attempt log range and never leaks current fatal output [4.20ms]
+
+ 2 pass
+ 5 fail
+ 22 expect() calls
+Ran 7 tests across 1 file. [75.00ms]

@@ -206,6 +206,13 @@ function resolveMemoryExhaustion(input) {
       memoryExhaustedReason: `cgroup memory.events reported oom_kill=${oomKills}`,
     };
   }
+  if (isOomKillOfCommand(input)) {
+    return {
+      memoryExhausted: true,
+      memoryExhaustedReason:
+        'Exit-time evidence reported a main-process OOM kill',
+    };
+  }
   return null;
 }
 

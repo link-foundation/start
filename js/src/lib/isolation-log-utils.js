@@ -240,11 +240,16 @@ const FATAL_MARKER_TAIL_BYTES = 64 * 1024;
  * @param {number} [bytes] - Maximum number of trailing bytes to read
  * @returns {string|null} Tail content, or null when the file cannot be read
  */
-function readLogTail(logPath, bytes = LOG_TAIL_BYTES, offset = 0) {
+function readLogTail(
+  logPath,
+  bytes = LOG_TAIL_BYTES,
+  offset = 0,
+  end = Infinity
+) {
   let fd;
   try {
     fd = fs.openSync(logPath, 'r');
-    const size = fs.fstatSync(fd).size;
+    const size = Math.min(fs.fstatSync(fd).size, end);
     const length = Math.min(Math.max(0, size - offset), bytes);
     const buffer = Buffer.alloc(length);
     fs.readSync(fd, buffer, 0, length, size - length);

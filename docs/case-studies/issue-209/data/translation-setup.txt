@@ -1,0 +1,9 @@
+bun install v1.4.3 (c6da4a4d3)
+[3.04ms] migrated lockfile from package-lock.json
+Saved lockfile
+
++ links-notation@0.22.0
++ web-tree-sitter@0.27.0
+
+2 packages installed [215.00ms]
+Prepared meta-language eb0574d5528babd3b4aadece81590d8e2230b99b

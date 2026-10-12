@@ -1,0 +1,42 @@
+Actionlint	pass	7s	https://github.com/link-foundation/start/actions/runs/38257407823/job/114838918540	
+Behavioral Parity and Translation	pass	15s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114838920678	
+Check Links	pass	7s	https://github.com/link-foundation/start/actions/runs/38257407812/job/114838918506	
+Check for Changesets	pass	9s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114838993169	
+Check for Manual Version Changes	pass	7s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114838920273	
+Code Coverage (JavaScript)	pass	2m7s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114839093813	
+CodeQL (actions)	pass	1m0s	https://github.com/link-foundation/start/actions/runs/38257407825/job/114838918858	
+CodeQL (javascript-typescript)	pass	1m19s	https://github.com/link-foundation/start/actions/runs/38257407825/job/114838919245	
+Dependency Review	pass	7s	https://github.com/link-foundation/start/actions/runs/38257407825/job/114838918437	
+Detect Changes	pass	9s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114838920502	
+JavaScript Stage	pass	9s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114840469073	
+Lint and Format Check	pass	19s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114838993150	
+NPM Audit	pass	10s	https://github.com/link-foundation/start/actions/runs/38257407825/job/114838919140	
+Pipeline Status	pass	7s	https://github.com/link-foundation/start/actions/runs/38257407812/job/114838983278	
+Pipeline Status	pass	8s	https://github.com/link-foundation/start/actions/runs/38257407823/job/114839015705	
+Pipeline Status	pass	5s	https://github.com/link-foundation/start/actions/runs/38257407825/job/114839469050	
+Rust CI/CD / Cargo Audit	pass	13s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114840543269	
+Rust CI/CD / Changelog Fragment Check	pass	8s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114840612509	
+Rust CI/CD / Check for Manual Version Changes	pass	8s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114840543417	
+Rust CI/CD / Code Coverage (Rust, Linux only)	pass	6m10s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114840687896	
+Rust CI/CD / CodeQL (Rust)	pass	3m47s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114840543772	
+Rust CI/CD / Detect Changes	pass	7s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114840543060	
+Rust CI/CD / Feature Parity and Test Count Signal	pass	7s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114840612302	
+Rust CI/CD / Lint and Format Check	pass	34s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114840612280	
+Rust CI/CD / Rust Stage	pass	8s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114843248438	
+Rust CI/CD / Syntax Pre-Check (.mjs)	pass	9s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114840543305	
+Rust CI/CD / Test (macos-latest)	pass	2m15s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114840688231	
+Release	skipping	0	https://github.com/link-foundation/start/actions/runs/38257408096/job/114840470172	
+Create Changeset PR	skipping	0	https://github.com/link-foundation/start/actions/runs/38257408096/job/114838959012	
+Syntax Pre-Check (.mjs)	pass	10s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114838920431	
+Test (Bun on ubuntu-latest)	pass	3m24s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114839093868	
+Test (Bun on macos-latest)	pass	1m51s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114839094962	
+Rust CI/CD / Test (windows-latest)	pass	2m14s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114840688188	
+CodeQL	skipping	3s	https://github.com/link-foundation/start/runs/114839262167	
+Zizmor	pass	12s	https://github.com/link-foundation/start/actions/runs/38257407823/job/114838918931	
+Rust CI/CD / Test (ubuntu-latest)	pass	1m34s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114840688315	
+Test (Bun on windows-latest)	pass	1m23s	https://github.com/link-foundation/start/actions/runs/38257408096/job/114839093862	
+Secrets Scan	pass	13s	https://github.com/link-foundation/start/actions/runs/38257407825/job/114838918644	
+Instant Release	skipping	0	https://github.com/link-foundation/start/actions/runs/38257408096/job/114838921894	
+Rust CI/CD / Auto Release	skipping	0	https://github.com/link-foundation/start/actions/runs/38257408096/job/114841673448	
+Rust CI/CD / Build Package	skipping	0	https://github.com/link-foundation/start/actions/runs/38257408096/job/114841671799	
+Rust CI/CD / Manual Release	skipping	0	https://github.com/link-foundation/start/actions/runs/38257408096/job/114841673095	

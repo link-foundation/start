@@ -1,0 +1,16 @@
+bun test v1.4.3 (c6da4a4d3)
+
+js/test/regression-209.js:
+(pass) attributes the final Docker OOM event despite a 38-second-old child sample [2.27ms]
+(pass) uses daemon events over remote Docker connections without a host journal [0.20ms]
+(pass) rejects old, future and malformed events and ordinary exits [0.35ms]
+(pass) keeps daemon restart evidence ahead of even a recent OOM event [0.18ms]
+(pass) archives attributed evidence before a resume clears current options [0.74ms]
+(pass) recomputes history independently while the current attempt is executing [2.91ms]
+(pass) reads only each archived attempt log range and never leaks current fatal output [3.01ms]
+(pass) finalizes and preserves Docker event attribution after the log is removed [66.09ms]
+
+ 8 pass
+ 0 fail
+ 43 expect() calls
+Ran 8 tests across 1 file. [112.00ms]

@@ -500,7 +500,8 @@ function attachMemoryExhaustion(record, logTail) {
   if (!memory) {
     if (
       record.memoryExhaustedReason?.startsWith('Docker reported') ||
-      record.memoryExhaustedReason?.startsWith('cgroup memory.events')
+      record.memoryExhaustedReason?.startsWith('cgroup memory.events') ||
+      record.memoryExhaustedReason?.startsWith('Exit-time evidence')
     ) {
       const cleared = Object.assign(
         Object.create(Object.getPrototypeOf(record)),
@@ -558,6 +559,14 @@ function enrichDetachedStatus(record) {
     Object.create(Object.getPrototypeOf(enriched)),
     enriched
   );
+  if (record.attemptHistory) {
+    copy.attemptHistory = require('./execution-attempt').enrichAttemptHistory(
+      record,
+      (attempt, tail) =>
+        attachMemoryExhaustion(attachExitReason(attempt, tail), tail),
+      FATAL_MARKER_TAIL_BYTES
+    );
+  }
   return readAttemptActivity(copy);
 }
 

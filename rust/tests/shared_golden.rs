@@ -24,6 +24,36 @@ fn strings(value: &Value) -> Vec<String> {
 }
 
 #[test]
+fn attempt_status_output_matches_shared_goldens() {
+    for fixture in fixtures()["attempt-status-output"].as_array().unwrap() {
+        let record = ExecutionRecord::from_json(&fixture["record"]).unwrap();
+        let output = start_command::enrich_detached_status(&record);
+        let json: Value = serde_json::from_str(&format_record(&output, "json").unwrap()).unwrap();
+        assert_eq!(
+            json["attemptHistory"], fixture["attemptHistory"],
+            "{}",
+            fixture["name"]
+        );
+        assert_eq!(record.to_json(), fixture["record"]);
+    }
+}
+
+#[test]
+fn docker_oom_event_matches_shared_goldens() {
+    for fixture in fixtures()["docker-oom-event"].as_array().unwrap() {
+        assert_eq!(
+            start_command::exit_evidence::recent_docker_oom(
+                fixture["events"].as_str().unwrap(),
+                fixture["finishedAt"].as_str().unwrap()
+            ),
+            fixture["recent"].as_bool().unwrap(),
+            "{}",
+            fixture["name"]
+        );
+    }
+}
+
+#[test]
 fn cli_parsing_matches_shared_goldens() {
     for fixture in fixtures()["cli-parsing"].as_array().unwrap() {
         let parsed = parse_args(&strings(&fixture["argv"]));
