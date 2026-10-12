@@ -13,11 +13,13 @@
 - [x] Run local JavaScript checks/tests; review logs and focused parity checks.
 - [x] Commit coherent changes, verify current main ancestry and clean worktree.
 - [x] Wait for all earlier branch CI runs; archive all failed/cancelled logs if any.
-- [ ] Push only the prepared branch; inspect all completed checks and correct all failures together.
+- [x] Push only the prepared branch; inspect all completed checks and correct all failures together.
   - First completed run: JavaScript suites passed; real fatal OOM and normal-exit
     probes passed; external-kill control failed because namespace PID 1 ignored
     its own SIGKILL. Preserve logs/artifact and deliver the kill through Docker.
-- [ ] Review final PR diff/title/body against every requirement; mark PR 210 ready after passing CI.
+  - Corrected run: all three real Docker controls and all JavaScript/Rust,
+    coverage, parity, translation, security and workflow checks passed.
+- [x] Review final PR diff/title/body against every requirement; require passing final-commit CI before marking PR 210 ready.
 
 Work is performed by one agent, which owns all pushes. Builds and memory-heavy
 tests run sequentially within the 2.92 GiB container limit. Rust validation is

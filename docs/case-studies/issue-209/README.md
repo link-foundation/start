@@ -16,6 +16,9 @@ and bounded log ranges, including while the current attempt is running.
   [scope caveat](data/issue-185.json), [daemon restart incident](data/issue-194.json),
   [memory recovery requirements](data/issue-191.json) and
   [downstream report](data/hive-mind-2892.json) establish the surrounding contracts.
+- [Downstream comments](data/downstream-comments-before-followup.json) and
+  [the follow-up report](data/downstream-followup.md) preserve integration guidance
+  sent to the existing issue, including reproduction, workaround and code policy.
 - [Moby flag change](data/moby-43564.json), [its discussion](data/moby-43564-comments.json)
   and [daemon event implementation](data/moby-monitor.go) preserve upstream evidence.
   The daemon source revision is recorded in [moby-source-sha.txt](data/moby-source-sha.txt).
@@ -51,23 +54,23 @@ completed successfully before any solution push.
 
 ## Requirements and implementation plan
 
-| Requirement                                       | Implementation and evidence                                                                                                                                                                                    |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Explain fatal OOM after the final sample          | Query Docker's bounded event history for the inspected full container ID and correlate with exit 137; JavaScript and Rust issue-209 regressions                                                                |
-| Work inside DooD without the host journal         | Event query uses the configured Docker CLI/socket; mock test verifies remote `DOCKER_HOST` skips local journal only                                                                                            |
-| Avoid sticky child-OOM false positives            | Event attribution requires exit 137 and a timestamp near completion; ordinary exits, historical events and malformed events are rejected                                                                       |
-| Preserve daemon restart diagnosis                 | Matching local Docker service force-kill evidence takes precedence over both events and sampled deltas                                                                                                         |
-| Report `memoryExhausted` along with the reason    | Both resolvers recognize event-derived main evidence, even without a sticky flag or surviving counters                                                                                                         |
-| Recompute earlier attempts                        | Archive `exitEvidence`; independently enrich history from stored facts or its own byte range without mutating the input                                                                                        |
-| Recover with a larger configured memory limit     | Recovery accepts attributed main evidence from the attempt log, rather than requiring another sampled delta; issue-191 regressions cover ordering and persistence                                              |
-| Test child OOM then main OOM 30 seconds later     | Finite three-scenario Docker probe on the Linux JavaScript CI runner; deterministic unit test uses the incident's older sample                                                                                 |
-| Test child OOM then normal exit 1                 | Unit safeguards plus finite Docker probe; external SIGKILL after the earlier child OOM is a third control                                                                                                      |
-| Archive data and perform deep analysis            | This case study includes raw discussion, incident excerpts, source snapshots, timeline, alternatives and validation logs                                                                                       |
-| Search for external facts and reusable components | Authoritative Docker, kernel and Moby sources below; reuse existing CLI runner instead of introducing a second Docker client                                                                                   |
-| Add diagnostic output for missing evidence        | `START_DEBUG=1` records the container ID, finish time, event query availability/results and last sample; watcher captures stderr only in debug mode                                                            |
-| Report problems in related projects               | No new upstream product defect was established; documented sticky flag behavior already has Moby PR 43564, and downstream already has Hive Mind issue 2892. No duplicate report was filed                      |
-| Apply across the codebase and preserve parity     | Shared collector serves attached and detached paths; finalizer recognizes the new log marker; recovery and historical status are updated in both languages, with shared golden contracts and feature inventory |
-| Prepare a release and complete one PR             | JavaScript changeset and Rust changelog fragment; PR 210, regular commits, JavaScript-gated Rust CI, clean final worktree and current-main ancestry                                                            |
+| Requirement                                       | Implementation and evidence                                                                                                                                                                                           |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Explain fatal OOM after the final sample          | Query Docker's bounded event history for the inspected full container ID and correlate with exit 137; JavaScript and Rust issue-209 regressions                                                                       |
+| Work inside DooD without the host journal         | Event query uses the configured Docker CLI/socket; mock test verifies remote `DOCKER_HOST` skips local journal only                                                                                                   |
+| Avoid sticky child-OOM false positives            | Event attribution requires exit 137 and a timestamp near completion; ordinary exits, historical events and malformed events are rejected                                                                              |
+| Preserve daemon restart diagnosis                 | Matching local Docker service force-kill evidence takes precedence over both events and sampled deltas                                                                                                                |
+| Report `memoryExhausted` along with the reason    | Both resolvers recognize event-derived main evidence, even without a sticky flag or surviving counters                                                                                                                |
+| Recompute earlier attempts                        | Archive `exitEvidence`; independently enrich history from stored facts or its own byte range without mutating the input                                                                                               |
+| Recover with a larger configured memory limit     | Recovery accepts attributed main evidence from the attempt log, rather than requiring another sampled delta; issue-191 regressions cover ordering and persistence                                                     |
+| Test child OOM then main OOM 30 seconds later     | Finite three-scenario Docker probe on the Linux JavaScript CI runner; deterministic unit test uses the incident's older sample                                                                                        |
+| Test child OOM then normal exit 1                 | Unit safeguards plus finite Docker probe; external SIGKILL after the earlier child OOM is a third control                                                                                                             |
+| Archive data and perform deep analysis            | This case study includes raw discussion, incident excerpts, source snapshots, timeline, alternatives and validation logs                                                                                              |
+| Search for external facts and reusable components | Authoritative Docker, kernel and Moby sources below; reuse existing CLI runner instead of introducing a second Docker client                                                                                          |
+| Add diagnostic output for missing evidence        | `START_DEBUG=1` records the container ID, finish time, event query availability/results and last sample; watcher captures stderr only in debug mode                                                                   |
+| Report problems in related projects               | No new engine defect was established; Moby PR 43564 documents the flag behavior. A follow-up report with reproduction, workaround and code guidance was posted to existing Hive Mind issue 2892, avoiding a duplicate |
+| Apply across the codebase and preserve parity     | Shared collector serves attached and detached paths; finalizer recognizes the new log marker; recovery and historical status are updated in both languages, with shared golden contracts and feature inventory        |
+| Prepare a release and complete one PR             | JavaScript changeset and Rust changelog fragment; PR 210, regular commits, JavaScript-gated Rust CI, clean final worktree and current-main ancestry                                                                   |
 
 ## Root causes and chosen solution
 
@@ -149,7 +152,8 @@ The initial full run found one workflow invariant violation (`always()` outside
 the status job); the artifact step was corrected to `!cancelled()` and the full
 suite rerun. Both raw runs are preserved. Feature inventory, shared contracts,
 JavaScript-first workflow gating, generated-code verification and Rust formatting
-also pass. Rust compilation and real OOM execution remain for the gated CI runner.
+also pass. The gated CI runner subsequently passed Rust compilation/tests on
+Linux, macOS and Windows and the real Docker probe documented below.
 
 Run `bun test ./js/test/regression-209.js ./js/test/regression-191.js ./js/test/shared-golden.js`
 for deterministic behavior. Matching Rust targets run through the existing CI
@@ -198,3 +202,32 @@ delivered from an ancestor namespace. [Linux man-pages](https://www.man7.org/lin
 The correction sends `docker kill --signal=KILL` after 32 seconds instead,
 keeping the earlier child OOM outside the attribution window. The worker waits
 for that kill with the original 70-second alarm; no timeout was increased.
+
+Run [38257408096](https://github.com/link-foundation/start/actions/runs/38257408096)
+tested correction commit `42cccf0cf827515bfd9d3c62f1c61cb51afa19e1` after all
+earlier runs completed. The [corrected Docker artifact](data/ci-docker-probe-corrected/docker-probe.jsonl)
+passes all three scenarios:
+
+| Scenario                             | Exit | Sticky flag | Event evidence                                | Resolved diagnosis                          |
+| ------------------------------------ | ---- | ----------- | --------------------------------------------- | ------------------------------------------- |
+| Child OOM, then main OOM             | 137  | true        | `1791812585`, `1791812615` (30 seconds apart) | cgroup OOM; `memoryExhausted=true`          |
+| Child OOM, then normal exit          | 1    | true        | No event query needed                         | No OOM diagnosis                            |
+| Child OOM, then external Docker kill | 137  | true        | Only old event `1791812647`                   | SIGKILL, cause unknown; no memory diagnosis |
+
+The complete JavaScript stage succeeded before Rust began. The downstream
+[follow-up report](https://github.com/link-assistant/hive-mind/issues/2892#issuecomment-6125541863)
+explains this distinction and recommends consuming attributed diagnostics for
+each attempt instead of treating the sticky flag as a fatal-OOM verdict.
+
+All checks on that implementation commit passed, including JavaScript and Rust
+tests on all three platforms, both coverage jobs, shared parity contracts,
+translation, Rust audit, CodeQL, dependency review, secrets scan, workflow checks
+and link checks. [Run timestamps and SHAs](data/ci-validated-runs.json),
+[job results](data/ci-validated-jobs.json) and [check list](data/ci-validated-checks.txt)
+record the completed validation. Complete unmodified logs are archived with gzip:
+[JavaScript and gated Rust](../../../ci-logs/javascript-38257408096.log.gz),
+[Security](../../../ci-logs/security-38257407825.log.gz),
+[Workflows](../../../ci-logs/workflows-38257407823.log.gz) and
+[Links](../../../ci-logs/links-38257407812.log.gz). Use `gzip -dc` to inspect them.
+The documentation/evidence commit receives the same full CI checks before PR
+readiness; no source changes follow the passing implementation.
