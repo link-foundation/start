@@ -28,7 +28,7 @@ jobs:
   # push, pull request and weekly schedule (issue #168).
   npm-audit:
     name: NPM Audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-npm-audit
@@ -52,7 +52,7 @@ jobs:
 
   codeql:
     name: CodeQL (${{ matrix.language }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-codeql-${{ matrix.language }}
@@ -87,7 +87,7 @@ jobs:
   dependency-review:
     name: Dependency Review
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-dependency-review
@@ -135,7 +135,7 @@ jobs:
   # committed. Best practice #11 of docs/CI-CD-BEST-PRACTICES.md.
   secrets-scan:
     name: Secrets Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
       group: check-${{ github.workflow }}-${{ github.ref }}-secrets-scan
@@ -155,7 +155,7 @@ jobs:
     name: Pipeline Status
     needs: [npm-audit, codeql, dependency-review, secrets-scan]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6

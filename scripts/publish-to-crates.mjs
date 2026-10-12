@@ -172,11 +172,11 @@ function publishPackage(cargoTomlPath, token) {
       '--allow-dirty',
       '--manifest-path',
       cargoTomlPath,
-      '--token',
-      token,
     ],
     {
       encoding: 'utf8',
+      // `cargo publish --token` is deprecated; use Cargo's native variable.
+      env: { ...process.env, CARGO_REGISTRY_TOKEN: token },
     }
   );
 
