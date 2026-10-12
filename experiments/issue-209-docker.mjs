@@ -57,6 +57,12 @@ for (const mode of ['main-oom', 'normal-exit', 'external-kill']) {
   );
   try {
     run('start', id);
+    if (mode === 'external-kill') {
+      // Keep the child OOM outside the three-second attribution window, then
+      // deliver SIGKILL from Docker rather than from namespace PID 1 itself.
+      await new Promise((resolve) => setTimeout(resolve, 32000));
+      run('kill', '--signal=KILL', id);
+    }
     run('wait', id);
     const state = JSON.parse(run('inspect', '-f', '{{json .State}}', id));
     const log = run('logs', id);

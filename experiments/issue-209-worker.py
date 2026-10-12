@@ -1,6 +1,5 @@
 """Finite OOM probe: run ONLY in the experiment's 128 MiB Docker container."""
 import json
-import os
 import signal
 import subprocess
 import sys
@@ -28,5 +27,7 @@ if sys.argv[1] == "main-oom":
     allocations = [bytearray(8 * 1024 * 1024) for _ in range(64)]
     sys.exit(2)  # Finite fallback: never allocate endlessly if the OOM is absent.
 if sys.argv[1] == "external-kill":
-    os.kill(os.getpid(), signal.SIGKILL)
+    # Namespace PID 1 ignores an in-namespace SIGKILL. The runner kills it
+    # through Docker from the ancestor namespace; the alarm bounds failures.
+    time.sleep(35)
 sys.exit(1)

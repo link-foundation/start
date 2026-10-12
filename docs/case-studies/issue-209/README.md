@@ -21,6 +21,8 @@ and bounded log ranges, including while the current attempt is running.
   The daemon source revision is recorded in [moby-source-sha.txt](data/moby-source-sha.txt).
 - [Docker event documentation](data/docker-events.html) and
   [kernel cgroup documentation](data/cgroup-v2.html) are downloaded source snapshots.
+- [Linux PID namespace documentation](data/linux-pid-namespaces.html) explains
+  the external-kill probe correction described below.
 - [Before-fix regressions](data/regressions-before.txt) show five failures, including
   the stale-sample event and historical-status cases. Passing focused checks are
   retained in `data/`; final CI logs are retained under repository `ci-logs/`.
@@ -169,3 +171,30 @@ This workspace's Docker 29.9.0 cannot start the limited probe: runc reports
 are retained. No allocations ran and no host configuration was changed. The
 Linux JavaScript test job runs the probe and preserves its raw output as a
 downloadable artifact, before Rust can proceed.
+
+### First CI run and correction
+
+Run [38256483100](https://github.com/link-foundation/start/actions/runs/38256483100)
+tested commit `cf68c5cd174742f55addf0d3c31a0ca4d452b9e9` after its push.
+All JavaScript test suites, coverage, lint, translation and workflow checks passed.
+The Linux suite ran 1242 tests with zero failures (raw log lines 11840–11842).
+The real Docker probe was the only failing step; the aggregate JavaScript stage
+failed as required, and Rust did not run. Security and link workflows passed.
+The [complete raw log](../../../ci-logs/javascript-38256483100.log) and
+[probe artifact](data/ci-docker-probe-first/docker-probe.jsonl) preserve the evidence.
+
+The fatal-OOM scenario succeeded: the child event at `1791812130` and main event
+at `1791812161` were 31 seconds apart. Docker finished at
+`2026-10-12T13:36:01.036895222Z`, while the retained cgroup sample still had
+`oom_kill=1` at the child's timestamp. The new collector selected the final event
+and reported memory exhaustion. The ordinary exit-1 scenario also succeeded,
+preserving no memory diagnosis despite the sticky flag.
+
+The external-kill control attempted `os.kill(1, SIGKILL)` from namespace PID 1.
+That signal was ignored, and the worker fell through to exit 1; the assertion
+correctly rejected it ([stderr](data/ci-docker-probe-first/docker-probe-stderr.txt)).
+Linux documents special signal rules for namespace init, with SIGKILL forcibly
+delivered from an ancestor namespace. [Linux man-pages](https://www.man7.org/linux/man-pages/man7/pid_namespaces.7.html)
+The correction sends `docker kill --signal=KILL` after 32 seconds instead,
+keeping the earlier child OOM outside the attribution window. The worker waits
+for that kill with the original 70-second alarm; no timeout was increased.

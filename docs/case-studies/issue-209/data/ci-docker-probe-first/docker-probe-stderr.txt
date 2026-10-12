@@ -1,0 +1,14 @@
+Error response from daemon: No such image: python:3.13-alpine
+112 |         ? reason !== 'memory-exhaustion (cgroup-oom-killer)' || !memory
+113 |         : Boolean(memory) ||
+114 |           (mode === 'external-kill' &&
+115 |             reason !== 'signal (SIGKILL; cause unknown)')
+116 |     ) {
+117 |       throw new Error(`Unexpected attribution for ${mode}`);
+                      ^
+error: Unexpected attribution for external-kill
+      at /home/runner/work/start/start/experiments/issue-209-docker.mjs:117:17
+
+::error file=experiments/issue-209-docker.mjs,line=117,col=17,title=error: Unexpected attribution for external-kill::%0A      at /home/runner/work/start/start/experiments/issue-209-docker.mjs:117:17
+
+Bun v1.4.3 (Linux x64)

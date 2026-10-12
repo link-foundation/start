@@ -1,0 +1,53 @@
+bun test v1.4.3 (c6da4a4d3)
+
+js/test/regression-209.js:
+(pass) attributes the final Docker OOM event despite a 38-second-old child sample [2.28ms]
+(pass) uses daemon events over remote Docker connections without a host journal [0.27ms]
+(pass) rejects old, future and malformed events and ordinary exits [0.44ms]
+(pass) keeps daemon restart evidence ahead of even a recent OOM event [0.25ms]
+(pass) archives attributed evidence before a resume clears current options [0.77ms]
+(pass) recomputes history independently while the current attempt is executing [3.45ms]
+(pass) reads only each archived attempt log range and never leaks current fatal output [3.50ms]
+(pass) finalizes and preserves Docker event attribution after the log is removed [63.31ms]
+
+js/test/regression-191.js:
+(pass) manual in-place memory override updates before start and records the resolution [87.95ms]
+(pass) manual snapshot override applies limits to the new container at creation [69.67ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=true) [44.25ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=false) [36.00ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=false) [49.47ms]
+(pass) automatic memory change requires a qualifying OOM (exit=1, fresh=false) [14.73ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=true) [35.63ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=false) [32.41ms]
+(pass) a failed memory update prevents starting the old-limit command [35.61ms]
+
+js/test/shared-golden.js:
+(pass) shared JavaScript and Rust golden contracts > attempt diagnostics: independent OOM, ordinary and daemon-restart attempts [2.53ms]
+(pass) shared JavaScript and Rust golden contracts > Docker OOM event: final kill after child [0.20ms]
+(pass) shared JavaScript and Rust golden contracts > Docker OOM event: old child only [0.04ms]
+(pass) shared JavaScript and Rust golden contracts > Docker OOM event: future event [0.02ms]
+(pass) shared JavaScript and Rust golden contracts > Docker OOM event: malformed [0.02ms]
+(pass) shared JavaScript and Rust golden contracts > Docker OOM event: missing [0.02ms]
+(pass) shared JavaScript and Rust golden contracts > Docker OOM event: window boundary [0.02ms]
+(pass) shared JavaScript and Rust golden contracts > Docker OOM event: outside window [0.07ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: plain argv [1.30ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: explicit tmux separator [0.43ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: query without command [0.42ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: docker resource flags [0.32ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: unknown wrapper option [0.56ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: conflicting modes [0.06ms]
+(pass) shared JavaScript and Rust golden contracts > isolation argv: empty runtime flags [0.11ms]
+(pass) shared JavaScript and Rust golden contracts > isolation argv: resource, mount and network boundaries [0.06ms]
+(pass) shared JavaScript and Rust golden contracts > uses the same JSON and text status output [0.62ms]
+(pass) shared JavaScript and Rust golden contracts > preserves the complete execution record format (exit 0) [0.17ms]
+(pass) shared JavaScript and Rust golden contracts > preserves the complete execution record format (exit 137) [0.16ms]
+(pass) shared JavaScript and Rust golden contracts > preserves the complete execution record format (exit 0) [0.05ms]
+(pass) shared JavaScript and Rust golden contracts > executes the JavaScript source of the generated Rust parity policy [3.21ms]
+(pass) shared JavaScript and Rust golden contracts > CPU state: external four CPU base triggers and restores at default 95 percent [1.15ms]
+(pass) shared JavaScript and Rust golden contracts > CPU state: restart keeps observed base while own cap is visible [0.14ms]
+(pass) shared JavaScript and Rust golden contracts > CPU state: external override during penalty establishes new base [0.09ms]
+
+ 41 pass
+ 0 fail
+ 66 expect() calls
+Ran 41 tests across 3 files. [562.00ms]

@@ -11,9 +11,12 @@
 - [x] Document timeline, all requirements, root causes, alternatives and evidence limits.
 - [x] Add release fragments; generate supported policy code and verify regeneration.
 - [x] Run local JavaScript checks/tests; review logs and focused parity checks.
-- [ ] Commit coherent changes, verify current main ancestry and clean worktree.
+- [x] Commit coherent changes, verify current main ancestry and clean worktree.
 - [x] Wait for all earlier branch CI runs; archive all failed/cancelled logs if any.
 - [ ] Push only the prepared branch; inspect all completed checks and correct all failures together.
+  - First completed run: JavaScript suites passed; real fatal OOM and normal-exit
+    probes passed; external-kill control failed because namespace PID 1 ignored
+    its own SIGKILL. Preserve logs/artifact and deliver the kill through Docker.
 - [ ] Review final PR diff/title/body against every requirement; mark PR 210 ready after passing CI.
 
 Work is performed by one agent, which owns all pushes. Builds and memory-heavy
