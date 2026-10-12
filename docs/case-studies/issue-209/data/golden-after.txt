@@ -1,0 +1,42 @@
+bun test v1.4.3 (c6da4a4d3)
+
+js/test/shared-golden.js:
+(pass) shared JavaScript and Rust golden contracts > attempt diagnostics: independent OOM, ordinary and daemon-restart attempts [7.09ms]
+(pass) shared JavaScript and Rust golden contracts > Docker OOM event: final kill after child [0.47ms]
+(pass) shared JavaScript and Rust golden contracts > Docker OOM event: old child only [0.07ms]
+(pass) shared JavaScript and Rust golden contracts > Docker OOM event: future event [0.03ms]
+(pass) shared JavaScript and Rust golden contracts > Docker OOM event: malformed [0.11ms]
+(pass) shared JavaScript and Rust golden contracts > Docker OOM event: missing [0.03ms]
+(pass) shared JavaScript and Rust golden contracts > Docker OOM event: window boundary [0.02ms]
+(pass) shared JavaScript and Rust golden contracts > Docker OOM event: outside window [0.02ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: plain argv [1.14ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: explicit tmux separator [0.63ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: query without command [0.44ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: docker resource flags [0.53ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: unknown wrapper option [0.99ms]
+(pass) shared JavaScript and Rust golden contracts > CLI parsing: conflicting modes [0.09ms]
+(pass) shared JavaScript and Rust golden contracts > isolation argv: empty runtime flags [1.10ms]
+(pass) shared JavaScript and Rust golden contracts > isolation argv: resource, mount and network boundaries [0.21ms]
+(pass) shared JavaScript and Rust golden contracts > uses the same JSON and text status output [0.71ms]
+(pass) shared JavaScript and Rust golden contracts > preserves the complete execution record format (exit 0) [0.15ms]
+(pass) shared JavaScript and Rust golden contracts > preserves the complete execution record format (exit 137) [0.07ms]
+(pass) shared JavaScript and Rust golden contracts > preserves the complete execution record format (exit 0) [0.03ms]
+(pass) shared JavaScript and Rust golden contracts > executes the JavaScript source of the generated Rust parity policy [5.79ms]
+(pass) shared JavaScript and Rust golden contracts > CPU state: external four CPU base triggers and restores at default 95 percent [1.35ms]
+(pass) shared JavaScript and Rust golden contracts > CPU state: restart keeps observed base while own cap is visible [0.13ms]
+(pass) shared JavaScript and Rust golden contracts > CPU state: external override during penalty establishes new base [0.05ms]
+
+js/test/regression-209.js:
+(pass) attributes the final Docker OOM event despite a 38-second-old child sample [1.41ms]
+(pass) uses daemon events over remote Docker connections without a host journal [0.23ms]
+(pass) rejects old, future and malformed events and ordinary exits [0.70ms]
+(pass) keeps daemon restart evidence ahead of even a recent OOM event [0.25ms]
+(pass) archives attributed evidence before a resume clears current options [0.45ms]
+(pass) recomputes history independently while the current attempt is executing [0.31ms]
+(pass) reads only each archived attempt log range and never leaks current fatal output [3.50ms]
+(pass) finalizes and preserves Docker event attribution after the log is removed [40.53ms]
+
+ 32 pass
+ 0 fail
+ 41 expect() calls
+Ran 32 tests across 2 files. [147.00ms]

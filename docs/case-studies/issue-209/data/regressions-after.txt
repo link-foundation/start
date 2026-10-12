@@ -1,0 +1,47 @@
+bun test v1.4.3 (c6da4a4d3)
+
+js/test/regression-209.js:
+(pass) attributes the final Docker OOM event despite a 38-second-old child sample [2.83ms]
+(pass) uses daemon events over remote Docker connections without a host journal [0.32ms]
+(pass) rejects old, future and malformed events and ordinary exits [0.62ms]
+(pass) keeps daemon restart evidence ahead of even a recent OOM event [0.31ms]
+(pass) archives attributed evidence before a resume clears current options [2.71ms]
+(pass) recomputes history independently while the current attempt is executing [4.23ms]
+(pass) reads only each archived attempt log range and never leaks current fatal output [2.86ms]
+
+js/test/regression-194.js:
+(pass) historical child OOM kills cannot explain a subsequent SIGKILL [0.58ms]
+(pass) requires a recent sampled delta and rejects historical or malformed evidence [0.29ms]
+(pass) requires Docker service and matching-container force-kill evidence for a daemon restart [0.34ms]
+(pass) persists terminal evidence without requiring a surviving log file [58.91ms]
+(pass) keeps logged main-process evidence when no cgroup sample reaches the finalizer [54.96ms]
+(pass) attached reporting uses attributed evidence and keeps ordinary exits final [2.22ms]
+
+js/test/regression-180.js:
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > exit 0 with oomKilled=true [0.14ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > exit 1 with oomKilled=true [0.69ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > exit 1 with oomKilled=false [0.02ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > exit 137 with oomKilled=true [0.70ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > exit 137 with oomKilled=false [0.06ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > exit -1 with oomKilled=true [0.02ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > exit 139 with oomKilled=true [0.04ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > requires fresh attribution in addition to SIGKILL or an unknown exit [1.32ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > still trusts a memory marker the command printed itself [0.19ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > reports the incident record without a memory verdict [0.65ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > drops a stale cgroup reason stored before the fix [0.92ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > the finalizer does not record the flag as the reason for exit 1 [34.51ms]
+(pass) issue #180: the sticky OOMKilled flag is not an exit reason > the attached kept message names a child OOM kill, not the command [0.43ms]
+
+js/test/regression-191.js:
+(pass) manual in-place memory override updates before start and records the resolution [53.55ms]
+(pass) manual snapshot override applies limits to the new container at creation [84.64ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=true) [103.83ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=false) [54.52ms]
+(pass) automatic memory change requires a qualifying OOM (exit=137, fresh=false) [58.86ms]
+(pass) automatic memory change requires a qualifying OOM (exit=1, fresh=false) [18.75ms]
+(pass) a failed memory update prevents starting the old-limit command [65.32ms]
+
+ 33 pass
+ 0 fail
+ 115 expect() calls
+Ran 33 tests across 4 files. [685.00ms]
