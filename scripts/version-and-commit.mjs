@@ -470,8 +470,15 @@ async function main() {
       // the surrounding quotes) would end up in the commit message verbatim.
       await $`git commit -m ${commitMessage}`;
 
-      // Push directly to main
-      await $`git push origin main`;
+      // Push directly to main. command-stream resolves on a non-zero exit, so
+      // a rejected push (such as a ruleset violation, #211) must fail here
+      // instead of reporting a release that never reached main.
+      const pushResult = await $`git push origin main`;
+      if (pushResult.code !== 0) {
+        throw new Error(
+          `git push origin main failed with exit code ${pushResult.code}; the version commit did not reach main`
+        );
+      }
 
       console.log('✅ Version bump committed and pushed to main');
       setOutput('version_committed', 'true');
