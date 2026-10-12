@@ -798,9 +798,8 @@ jobs:
       contents: write
       actions: read
       security-events: write
-    secrets:
-      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-      CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
+      # The Rust release jobs publish to crates.io through trusted publishing.
+      id-token: write
     concurrency:
       group: check-rust-stage-${{ github.ref }}
       cancel-in-progress: false
