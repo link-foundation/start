@@ -800,6 +800,11 @@ jobs:
       security-events: write
       # The Rust release jobs publish to crates.io through trusted publishing.
       id-token: write
+    # The release jobs push the version commit with START_RELEASE_SSH_KEY, an
+    # environment secret of release-main (the ruleset lets only the deploy key
+    # bypass its required checks). A called workflow receives environment
+    # secrets only when the caller inherits secrets (#211).
+    secrets: inherit # zizmor: ignore[secrets-inherit] -- environment secrets reach the called release-main jobs only through inherit.
     concurrency:
       group: check-rust-stage-${{ github.ref }}
       cancel-in-progress: false
