@@ -1,5 +1,11 @@
 # start-command
 
+## 0.37.4
+
+### Patch Changes
+
+- 519ce86: CI/CD: the Rust release jobs receive the release deploy key again (the called workflow inherits secrets), and a rejected version push now fails the release instead of reporting success (#211).
+
 ## 0.37.3
 
 ### Patch Changes
