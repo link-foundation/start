@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.24.0] - 2026-10-13
+
+Match JavaScript Docker command handoff, snapshot safety, task labels, wrapper
+help, private sanitized log uploads, and shell argument boundaries. Gate native
+checks behind the complete JavaScript stage and verify shared feature contracts.
+
+Observe post-launch Docker CPU quotas and preserve the base across penalty lifts and resume. Supervise CPU monitors, reclaim zombie/reused-PID locks, retry failed ticks and restore owned quotas on graceful stop.
+
+Use recent Docker OOM events to attribute exit 137 after the last cgroup sample. Preserve daemon restart and ordinary-exit safeguards, apply attributed evidence to recovery memory limits, and recompute archived attempts from their own stored evidence and bounded log ranges.
+
+Release automation: the version commit is pushed with the release deploy key again, and a rejected push fails the release (#211).
+
+Pass the crates.io token through CARGO_REGISTRY_TOKEN instead of the deprecated `cargo publish --token` flag, and pin GitHub runner images.
+
+Publish to crates.io through trusted publishing (OIDC) instead of the long-lived CARGO_TOKEN / CARGO_REGISTRY_TOKEN secrets.
+
 ## [0.23.0] - 2026-10-09
 
 Add Docker launch/recovery limits with daemon percentages and random ranges, opt-in delayed CPU penalties, remote/DinD memory diagnostics, durable launch reservations and atomic store writes. Require exit-time OOM evidence and recognize attributed Docker daemon restarts in attached/detached status.
