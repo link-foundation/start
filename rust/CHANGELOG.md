@@ -8,7 +8,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- changelog-insert-here -->
 ## [0.25.0] - 2026-10-13
 
-Manual minor release.
+Manual minor release. First crates.io release with the changes listed under 0.24.0 (#211).
 
 ## [0.24.0] - 2026-10-13
 

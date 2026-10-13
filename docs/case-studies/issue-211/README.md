@@ -62,9 +62,12 @@ Fix:
   existed before it tried to publish. `rust.yml` fails the job if that version
   was committed by the same run. A retry that finds its own earlier upload does
   not set the output, so it is not a false positive.
-- `rust/changelog.d/211.md` is a minor fragment. The next release bumps
-  0.24.0 to 0.25.0, which ships the changes listed under 0.24.0. That entry is
-  annotated as not on crates.io.
+- A maintainer ran a manual minor release at 07:10Z (commit 69c82b4,
+  `rust-v0.25.0`). crates.io has had `start-command@0.25.0` since
+  2026-10-13T07:11:48Z, built from a tree that includes PR #208 and PR #210.
+  The `## [0.24.0]` entry is annotated as not on crates.io, and the 0.25.0
+  entry says that it ships those changes. `rust/changelog.d/211.md` is a patch
+  fragment for the automation fix itself.
 
 ## Not implemented: "fragments remain on main" check
 
