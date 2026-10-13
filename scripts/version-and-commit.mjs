@@ -25,6 +25,12 @@ import {
 } from 'fs';
 import path from 'path';
 import { loadCommandStream } from './load-command-stream.mjs';
+import {
+  checked,
+  isCrateVersionPublished,
+  nextUnpublishedVersion,
+  verifyCommitOnRemote,
+} from './release-git.mjs';
 
 const repoRoot = process.cwd();
 
@@ -170,6 +176,19 @@ function countReleaseFragments() {
 }
 
 /**
+ * Parse the package name from Cargo.toml content.
+ * @param {string} cargoToml
+ * @returns {string}
+ */
+function parseCargoName(cargoToml) {
+  const match = cargoToml.match(/^name\s*=\s*"([^"]+)"/m);
+  if (!match) {
+    throw new Error('Could not find name in Cargo.toml');
+  }
+  return match[1];
+}
+
+/**
  * Parse version from Cargo.toml content.
  * @param {string} cargoToml
  * @returns {string}
@@ -194,7 +213,10 @@ async function getVersion(source = 'local') {
         ? repoPath('Cargo.toml')
         : repoPath('package.json');
     const remoteRef = `origin/main:${versionPath}`;
-    const result = await $`git show ${remoteRef}`.run({ capture: true });
+    const result = await checked(
+      $`git show ${remoteRef}`.run({ capture: true }),
+      `git show ${remoteRef}`
+    );
     return packageKind === 'rust'
       ? parseCargoVersion(result.stdout)
       : JSON.parse(result.stdout).version;
@@ -205,34 +227,6 @@ async function getVersion(source = 'local') {
   }
 
   return JSON.parse(readFileSync('package.json', 'utf8')).version;
-}
-
-/**
- * Bump a semantic version.
- * @param {string} version
- * @param {'major'|'minor'|'patch'} type
- * @returns {string}
- */
-function bumpVersion(version, type) {
-  const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/);
-  if (!match) {
-    throw new Error(`Unsupported semantic version: ${version}`);
-  }
-
-  let [, major, minor, patch] = match.map(Number);
-
-  if (type === 'major') {
-    major += 1;
-    minor = 0;
-    patch = 0;
-  } else if (type === 'minor') {
-    minor += 1;
-    patch = 0;
-  } else {
-    patch += 1;
-  }
-
-  return `${major}.${minor}.${patch}`;
 }
 
 /**
@@ -334,13 +328,20 @@ ${newEntry}
 }
 
 /**
- * Bump Cargo.toml and collect Rust changelog content.
+ * Bump Cargo.toml and collect Rust changelog content. The new version skips
+ * every version crates.io already has, so the publish step can never turn
+ * into a silent "already published" no-op (#211).
  * @param {string} oldVersion
- * @returns {string}
+ * @returns {Promise<string>}
  */
-function runRustVersionBump(oldVersion) {
-  const newVersion = bumpVersion(oldVersion, bumpType);
+async function runRustVersionBump(oldVersion) {
   const cargoToml = readFileSync('Cargo.toml', 'utf8');
+  const crateName = parseCargoName(cargoToml);
+  const newVersion = await nextUnpublishedVersion(
+    oldVersion,
+    bumpType,
+    (version) => isCrateVersionPublished(crateName, version)
+  );
   writeFileSync(
     'Cargo.toml',
     cargoToml.replace(/^version\s*=\s*"[^"]+"/m, `version = "${newVersion}"`),
@@ -379,26 +380,38 @@ async function stageReleaseFiles() {
       : ['package.json', 'package-lock.json', 'CHANGELOG.md', '.changeset'];
 
   for (const pathspec of pathspecs) {
-    await $`git add -A -- ${pathspec}`;
+    await checked($`git add -A -- ${pathspec}`, `git add -A -- ${pathspec}`);
   }
 }
 
 async function main() {
   try {
     // Configure git
-    await $`git config user.name "github-actions[bot]"`;
-    await $`git config user.email "github-actions[bot]@users.noreply.github.com"`;
+    // Every command below that changes or reads release state goes through
+    // checked(): command-stream resolves on a non-zero exit (#211).
+    await checked(
+      $`git config user.name "github-actions[bot]"`,
+      'git config user.name'
+    );
+    await checked(
+      $`git config user.email "github-actions[bot]@users.noreply.github.com"`,
+      'git config user.email'
+    );
 
     // Check if remote main has advanced (handles re-runs after partial success)
     console.log('Checking for remote changes...');
-    await $`git fetch origin main`;
+    await checked($`git fetch origin main`, 'git fetch origin main');
 
-    const localHeadResult = await $`git rev-parse HEAD`.run({ capture: true });
+    const localHeadResult = await checked(
+      $`git rev-parse HEAD`.run({ capture: true }),
+      'git rev-parse HEAD'
+    );
     const localHead = localHeadResult.stdout.trim();
 
-    const remoteHeadResult = await $`git rev-parse origin/main`.run({
-      capture: true,
-    });
+    const remoteHeadResult = await checked(
+      $`git rev-parse origin/main`.run({ capture: true }),
+      'git rev-parse origin/main'
+    );
     const remoteHead = remoteHeadResult.stdout.trim();
 
     if (localHead !== remoteHead) {
@@ -424,7 +437,7 @@ async function main() {
       }
 
       console.log('Rebasing on remote main to incorporate changes...');
-      await $`git rebase origin/main`;
+      await checked($`git rebase origin/main`, 'git rebase origin/main');
     }
 
     // Get current version before bump
@@ -438,16 +451,22 @@ async function main() {
         'scripts/instant-version-bump.mjs'
       );
       if (description) {
-        await $`node ${instantScript} --bump-type ${bumpType} --description ${description}`;
+        await checked(
+          $`node ${instantScript} --bump-type ${bumpType} --description ${description}`,
+          'instant-version-bump.mjs'
+        );
       } else {
-        await $`node ${instantScript} --bump-type ${bumpType}`;
+        await checked(
+          $`node ${instantScript} --bump-type ${bumpType}`,
+          'instant-version-bump.mjs'
+        );
       }
     } else if (mode === 'changeset') {
       console.log('Running changeset version...');
-      await $`npm run changeset:version`;
+      await checked($`npm run changeset:version`, 'npm run changeset:version');
     } else {
       console.log(`Running Rust ${mode} version bump...`);
-      runRustVersionBump(oldVersion);
+      await runRustVersionBump(oldVersion);
     }
 
     // Get new version after bump
@@ -458,7 +477,10 @@ async function main() {
     await stageReleaseFiles();
 
     // Check if there are changes to commit
-    const statusResult = await $`git status --porcelain`.run({ capture: true });
+    const statusResult = await checked(
+      $`git status --porcelain`.run({ capture: true }),
+      'git status --porcelain'
+    );
     const status = statusResult.stdout.trim();
 
     if (status) {
@@ -468,17 +490,14 @@ async function main() {
         packageKind === 'rust' ? `rust-v${newVersion}` : newVersion;
       // command-stream quotes interpolated values itself; escaping here (and
       // the surrounding quotes) would end up in the commit message verbatim.
-      await $`git commit -m ${commitMessage}`;
+      await checked($`git commit -m ${commitMessage}`, 'git commit');
 
-      // Push directly to main. command-stream resolves on a non-zero exit, so
-      // a rejected push (such as a ruleset violation, #211) must fail here
-      // instead of reporting a release that never reached main.
-      const pushResult = await $`git push origin main`;
-      if (pushResult.code !== 0) {
-        throw new Error(
-          `git push origin main failed with exit code ${pushResult.code}; the version commit did not reach main`
-        );
-      }
+      // Push directly to main. A rejected push (such as a ruleset violation,
+      // #211) must fail here instead of reporting a release that never
+      // reached main; the ancestry check catches anything the exit code hides.
+      await checked($`git push origin main`, 'git push origin main');
+      const pushedCommit = await verifyCommitOnRemote($);
+      console.log(`Verified ${pushedCommit} is on origin/main`);
 
       console.log('✅ Version bump committed and pushed to main');
       setOutput('version_committed', 'true');

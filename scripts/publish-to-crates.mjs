@@ -213,6 +213,9 @@ async function main() {
     setOutput('published_version', cargoPackage.version);
     setOutput('already_published', 'true');
     setOutput('publish_result', 'already_published');
+    // Published before this job tried: a version the job just committed must
+    // never be in this state (#211), unlike a retry finding its own upload.
+    setOutput('published_before_run', 'true');
     return;
   }
 

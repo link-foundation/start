@@ -135,6 +135,11 @@ describe('publish-to-crates script', () => {
         expect(result.status).toBe(0);
         expect(result.stdout).toContain('already_published=true');
         expect(readFileSync(outputPath, 'utf8')).toContain('published=true');
+        // rust.yml fails the release when the version it just committed was
+        // already on crates.io before the publish step (#211).
+        expect(readFileSync(outputPath, 'utf8')).toContain(
+          'published_before_run=true'
+        );
         expect(requests).toEqual(['/api/v1/crates/example-crate/1.2.3']);
       } finally {
         rmSync(tempDir, { force: true, recursive: true });
@@ -179,6 +184,9 @@ describe('publish-to-crates script', () => {
         expect(result.status).toBe(0);
         expect(result.stdout).toContain('publish_result=published');
         expect(readFileSync(outputPath, 'utf8')).toContain('published=true');
+        expect(readFileSync(outputPath, 'utf8')).not.toContain(
+          'published_before_run'
+        );
         expect(JSON.parse(readFileSync(cargoArgsPath, 'utf8'))).toEqual([
           'publish',
           '--allow-dirty',
