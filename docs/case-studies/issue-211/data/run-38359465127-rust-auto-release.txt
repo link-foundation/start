@@ -1,0 +1,11 @@
+2026-10-13T07:04:33.0072140Z   ssh-key: ***
+2026-10-13T07:04:33.1514228Z [command]/usr/bin/git remote add origin git@github.com:link-foundation/start.git
+2026-10-13T07:04:40.6357727Z Output: should_release=true
+2026-10-13T07:04:40.6358228Z Output: skip_bump=false
+2026-10-13T07:04:51.0314362Z New version: 0.24.0
+2026-10-13T07:04:51.0967023Z [main b1e1cfb] rust-v0.24.0
+2026-10-13T07:04:52.6335017Z ✅ Version bump committed and pushed to main
+2026-10-13T07:05:27.1440811Z start-command@0.24.0 is already published to crates.io
+2026-10-13T07:05:27.1445556Z publish_result=already_published
+2026-10-13T07:05:27.2366405Z Creating GitHub release: tag=rust-v0.24.0, name=[Rust] 0.24.0, prefix=rust-
+2026-10-13T07:05:27.7128120Z GitHub release already exists: rust-v0.24.0 ([Rust] 0.24.0)

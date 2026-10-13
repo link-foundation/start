@@ -8,6 +8,8 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- changelog-insert-here -->
 ## [0.24.0] - 2026-10-13
 
+> **Not on crates.io.** crates.io already had a `start-command@0.24.0` built from an older tree (2026-10-10), so this entry was never published under 0.24.0. These changes first ship in 0.25.0 (#211).
+
 Match JavaScript Docker command handoff, snapshot safety, task labels, wrapper
 help, private sanitized log uploads, and shell argument boundaries. Gate native
 checks behind the complete JavaScript stage and verify shared feature contracts.
