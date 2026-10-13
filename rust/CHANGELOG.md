@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.25.2] - 2026-10-13
+
+Manual patch release.
+
 ## [0.25.1] - 2026-10-13
 
 Release automation bumps past versions crates.io already has, verifies the version commit reached main before publishing, and fails when a git command in the release script fails (#211).
