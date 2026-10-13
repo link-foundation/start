@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.25.4] - 2026-10-13
+
+Manual patch release.
+
 ## [0.25.3] - 2026-10-13
 
 CI/CD: crates.io publishing tries trusted publishing (OIDC) first and falls back to the CARGO_REGISTRY_TOKEN / CARGO_TOKEN secret when it is unavailable.
