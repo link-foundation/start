@@ -1,5 +1,11 @@
 # start-command
 
+## 0.37.6
+
+### Patch Changes
+
+- cb594a6: CI/CD: crates.io publishing tries trusted publishing (OIDC) first and falls back to the token secret.
+
 ## 0.37.5
 
 ### Patch Changes
