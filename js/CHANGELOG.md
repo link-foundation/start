@@ -1,5 +1,11 @@
 # start-command
 
+## 0.37.5
+
+### Patch Changes
+
+- 1f6c17c: CI/CD: the release script checks the exit code of every git command and verifies the version commit reached main before publishing. The Rust bump skips versions crates.io already has (#211).
+
 ## 0.37.4
 
 ### Patch Changes
