@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.25.0] - 2026-10-13
+
+Manual minor release.
+
 ## [0.24.0] - 2026-10-13
 
 > **Not on crates.io.** crates.io already had a `start-command@0.24.0` built from an older tree (2026-10-10), so this entry was never published under 0.24.0. These changes first ship in 0.25.0 (#211).
