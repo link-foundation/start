@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.25.5] - 2026-10-14
+
+`--cpu-penalty`: a graceful stop (SIGTERM/SIGINT) lifts the cap within a fraction of a second instead of waiting out the monitor tick of up to 30 s (#219), and `penalizedMs` keeps the time since the last tick when a graceful stop or a supervisor override ends a penalty (#218).
+
 ## [0.25.4] - 2026-10-13
 
 Manual patch release.
