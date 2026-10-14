@@ -8,11 +8,28 @@ use crate::{
 use chrono::Utc;
 use serde_json::{json, Value};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::{fs, path::PathBuf, thread, time::Duration};
+use std::{
+    fs,
+    path::PathBuf,
+    thread,
+    time::{Duration, Instant},
+};
 static STOP: AtomicBool = AtomicBool::new(false);
+const STOP_POLL: Duration = Duration::from_millis(50);
 #[cfg(unix)]
 extern "C" fn stop_monitor(_: libc::c_int) {
     STOP.store(true, Ordering::Relaxed);
+}
+/// `thread::sleep` resumes after EINTR, so a handler that only sets `STOP`
+/// would wait out the whole tick; short slices lift the cap promptly.
+fn sleep_until_stopped(interval: Duration) {
+    let started = Instant::now();
+    while !STOP.load(Ordering::Relaxed) {
+        let Some(rest) = interval.checked_sub(started.elapsed()) else {
+            break;
+        };
+        thread::sleep(rest.min(STOP_POLL));
+    }
 }
 fn debug(record: &ExecutionRecord, error: &str) {
     if std::env::var("START_DEBUG").as_deref() == Ok("1") {
@@ -256,7 +273,7 @@ fn monitor(uuid: &str, name: &str, attempt: u64, standalone: Option<&str>) -> Re
                     debug(&record, &format!("tick failed: {}", error));
                 }
             }
-            thread::sleep(Duration::from_millis(interval as u64));
+            sleep_until_stopped(Duration::from_millis(interval as u64));
         }
         let current = store
             .as_ref()
@@ -309,9 +326,11 @@ fn monitor(uuid: &str, name: &str, attempt: u64, standalone: Option<&str>) -> Re
                             .concat(),
                         );
                         if update.success {
+                            let now = Utc::now().timestamp_millis();
+                            cpu_penalty::accrue(&mut state, now);
                             state.phase = "observing".into();
                             state.limit_cpus = Some(cpus);
-                            state.since = Utc::now().timestamp_millis();
+                            state.since = now;
                             crate::isolation::isolation_log::append_log_file(
                                 &PathBuf::from(&record.log_path),
                                 &format!(

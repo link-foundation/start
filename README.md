@@ -402,7 +402,9 @@ capacity are skipped. Each transition logs once. Lifting restores a finite
 base/daemon quota; the original base survives a resume while penalized.
 
 Status exposes `cpuPenalty` with `phase`, `since`, `limitCpus`, `baseCpus`,
-`penaltyCount` and `penalizedMs`. Monitoring also works during attached runs and
+`penaltyCount` and `penalizedMs`; `penalizedMs` counts until the cap is lifted
+and never decreases. A monitor stopped with SIGTERM/SIGINT lifts its cap within
+about a second. Monitoring also works during attached runs and
 when execution tracking is disabled. JS stacked isolation forwards requests
 until the Docker level resolves daemon capacity.
 
