@@ -296,7 +296,7 @@ impl ExecutionStore {
     /// Log verbose message
     fn log(&self, message: &str) {
         if self.verbose {
-            println!("[ExecutionStore] {}", message);
+            safe_println!("[ExecutionStore] {}", message);
         }
     }
 

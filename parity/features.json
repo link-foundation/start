@@ -16,7 +16,8 @@
           "js/test/cli.js",
           "js/test/version.js",
           "js/test/regression-201.js",
-          "js/test/regression-202.js"
+          "js/test/regression-202.js",
+          "js/test/regression-222.js"
         ]
       },
       "rust": {
@@ -31,7 +32,8 @@
           "rust/tests/integration.rs",
           "rust/tests/signal_handler.rs",
           "rust/tests/regression_201.rs",
-          "rust/tests/regression_202.rs"
+          "rust/tests/regression_202.rs",
+          "rust/tests/regression_222.rs"
         ]
       },
       "manualRust": [

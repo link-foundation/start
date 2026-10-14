@@ -16,7 +16,7 @@ fn is_debug() -> bool {
 
 fn debug_log(message: &str) {
     if is_debug() {
-        eprintln!("[docker-network] {message}");
+        safe_eprintln!("[docker-network] {message}");
     }
 }
 
@@ -135,7 +135,7 @@ mod tests {
         // The test process never sets START_DEBUG, so tracing stays silent
         // unless a user opts in (issue #158).
         if env::var("START_DEBUG").is_ok() {
-            eprintln!("Skipping: START_DEBUG is set in this environment");
+            safe_eprintln!("Skipping: START_DEBUG is set in this environment");
             return;
         }
         assert!(!is_debug());

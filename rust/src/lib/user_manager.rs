@@ -72,7 +72,7 @@ pub fn get_current_user_groups() -> Vec<String> {
     }
 
     if is_debug() {
-        eprintln!("[DEBUG] Failed to get user groups");
+        safe_eprintln!("[DEBUG] Failed to get user groups");
     }
     Vec::new()
 }
@@ -232,8 +232,8 @@ pub fn create_user(
     cmd.arg(username);
 
     if is_debug() {
-        eprintln!("[DEBUG] Creating user: {:?}", cmd);
-        eprintln!(
+        safe_eprintln!("[DEBUG] Creating user: {:?}", cmd);
+        safe_eprintln!(
             "[DEBUG] Groups to add: {}",
             existing_groups
                 .iter()
@@ -332,9 +332,9 @@ pub fn create_isolated_user(
         .collect();
 
     if is_debug() {
-        eprintln!("[DEBUG] Current user groups: {}", current_groups.join(", "));
-        eprintln!("[DEBUG] Groups to inherit: {}", groups.join(", "));
-        eprintln!(
+        safe_eprintln!("[DEBUG] Current user groups: {}", current_groups.join(", "));
+        safe_eprintln!("[DEBUG] Groups to inherit: {}", groups.join(", "));
+        safe_eprintln!(
             "[DEBUG] Important groups found: {}",
             inherited_important.join(", ")
         );
@@ -386,7 +386,7 @@ pub fn delete_user(username: &str, options: &DeleteUserOptions) -> UserOperation
     cmd.arg(username);
 
     if is_debug() {
-        eprintln!("[DEBUG] Deleting user: {:?}", cmd);
+        safe_eprintln!("[DEBUG] Deleting user: {:?}", cmd);
     }
 
     match cmd.output() {

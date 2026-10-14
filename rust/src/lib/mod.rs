@@ -2,6 +2,44 @@
 //!
 //! Provides command execution with isolation, substitution, and failure handling.
 
+// Print macros that drop write errors instead of panicking like `println!`.
+// Rust ignores SIGPIPE, so printing into a closed pipe (`start --version |
+// head -1`) fails with EPIPE; like the JavaScript edition, start keeps running
+// and exits with its own code (issue #222). Defined before the modules so all
+// of them can use the macros; `rust/tests/regression_222.rs` keeps the std
+// print macros out of `rust/src`.
+#[macro_export]
+macro_rules! safe_print {
+    ($($arg:tt)*) => {{
+        use ::std::io::Write as _;
+        let _ = ::std::write!(::std::io::stdout(), $($arg)*);
+    }};
+}
+
+#[macro_export]
+macro_rules! safe_println {
+    ($($arg:tt)*) => {{
+        use ::std::io::Write as _;
+        let _ = ::std::writeln!(::std::io::stdout(), $($arg)*);
+    }};
+}
+
+#[macro_export]
+macro_rules! safe_eprint {
+    ($($arg:tt)*) => {{
+        use ::std::io::Write as _;
+        let _ = ::std::write!(::std::io::stderr(), $($arg)*);
+    }};
+}
+
+#[macro_export]
+macro_rules! safe_eprintln {
+    ($($arg:tt)*) => {{
+        use ::std::io::Write as _;
+        let _ = ::std::writeln!(::std::io::stderr(), $($arg)*);
+    }};
+}
+
 pub mod args_parser;
 pub mod args_parser_queries;
 mod atomic_write;

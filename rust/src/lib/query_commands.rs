@@ -83,12 +83,12 @@ impl From<ExecutionResumeAllResult> for QueryOutcome {
 pub fn report_result(result: QueryOutcome) -> i32 {
     if result.success {
         if let Some(output) = result.output {
-            println!("{}", output);
+            safe_println!("{}", output);
         }
         return result.exit_code.unwrap_or(0);
     }
     if let Some(error) = result.error {
-        eprintln!("Error: {}", error);
+        safe_eprintln!("Error: {}", error);
     }
     result.exit_code.unwrap_or(1)
 }
@@ -98,7 +98,7 @@ pub fn handle_upload_log_query(store: Option<&ExecutionStore>, identifier: &str)
     match upload_execution_log(store, identifier) {
         Ok(code) => code,
         Err(error) => {
-            eprintln!("Error: {}", error);
+            safe_eprintln!("Error: {}", error);
             1
         }
     }
@@ -109,7 +109,7 @@ pub fn handle_upload_log_query(store: Option<&ExecutionStore>, identifier: &str)
 /// Cleans up stale "executing" records (processes that crashed or were killed).
 pub fn handle_cleanup(store: Option<&ExecutionStore>, dry_run: bool) -> i32 {
     let Some(store) = store else {
-        eprintln!("Error: Execution tracking is disabled.");
+        safe_eprintln!("Error: Execution tracking is disabled.");
         return 1;
     };
 
@@ -119,21 +119,21 @@ pub fn handle_cleanup(store: Option<&ExecutionStore>, dry_run: bool) -> i32 {
     });
 
     for error in &result.errors {
-        eprintln!("Error: {}", error);
+        safe_eprintln!("Error: {}", error);
     }
 
     if result.records.is_empty() {
-        println!("No stale records found.");
+        safe_println!("No stale records found.");
         return 0;
     }
 
     if dry_run {
-        println!(
+        safe_println!(
             "Found {} stale record(s) that would be cleaned up:\n",
             result.records.len()
         );
     } else {
-        println!("Cleaned up {} stale record(s):\n", result.cleaned);
+        safe_println!("Cleaned up {} stale record(s):\n", result.cleaned);
     }
 
     for record in &result.records {
@@ -141,21 +141,21 @@ pub fn handle_cleanup(store: Option<&ExecutionStore>, dry_run: bool) -> i32 {
             .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
             .unwrap_or_else(|_| record.start_time.clone());
 
-        println!("  UUID: {}", record.uuid);
-        println!("  Command: {}", record.command);
-        println!("  Started: {}", start_time_display);
-        println!(
+        safe_println!("  UUID: {}", record.uuid);
+        safe_println!("  Command: {}", record.command);
+        safe_println!("  Started: {}", start_time_display);
+        safe_println!(
             "  PID: {}",
             record
                 .pid
                 .map(|p| p.to_string())
                 .unwrap_or("N/A".to_string())
         );
-        println!();
+        safe_println!();
     }
 
     if dry_run {
-        println!("Run with --cleanup to actually clean up these records.");
+        safe_println!("Run with --cleanup to actually clean up these records.");
     }
     0
 }
@@ -191,7 +191,7 @@ pub fn dispatch_query_command(
             ) {
                 Ok(code) => code,
                 Err(error) => {
-                    eprintln!("Error: {}", error);
+                    safe_eprintln!("Error: {}", error);
                     1
                 }
             },

@@ -379,8 +379,8 @@ pub fn run_in_ssh(command: &str, options: &IsolationOptions) -> IsolationResult 
         let ssh_args = vec![endpoint.as_str(), remote_command.as_str()];
 
         if is_debug() {
-            eprintln!("[DEBUG] Running: ssh {:?}", ssh_args);
-            eprintln!("[DEBUG] shell: {}", shell_invocation);
+            safe_eprintln!("[DEBUG] Running: ssh {:?}", ssh_args);
+            safe_eprintln!("[DEBUG] shell: {}", shell_invocation);
         }
 
         let status = Command::new("ssh").args(&ssh_args).status();
@@ -413,8 +413,8 @@ pub fn run_in_ssh(command: &str, options: &IsolationOptions) -> IsolationResult 
         ssh_cmd_args.push(command.to_string());
 
         if is_debug() {
-            eprintln!("[DEBUG] Running: ssh {:?}", ssh_cmd_args);
-            eprintln!("[DEBUG] shell: {}", shell_to_use);
+            safe_eprintln!("[DEBUG] Running: ssh {:?}", ssh_cmd_args);
+            safe_eprintln!("[DEBUG] shell: {}", shell_to_use);
         }
 
         let status = Command::new("ssh").args(&ssh_cmd_args).status();
@@ -469,11 +469,11 @@ pub fn docker_pull_image(image: &str, log_path: Option<&PathBuf>) -> (bool, Stri
     use std::time::Instant;
 
     // Print the virtual command line followed by empty line for visual separation
-    println!(
+    safe_println!(
         "{}",
         crate::output_blocks::create_virtual_command_block(&format!("docker pull {}", image))
     );
-    println!();
+    safe_println!();
 
     // Record the start of the image-preparation phase in the session log so
     // operators tailing the log see progress instead of a header-only file.
@@ -499,7 +499,7 @@ pub fn docker_pull_image(image: &str, log_path: Option<&PathBuf>) -> (bool, Stri
         Ok(c) => c,
         Err(e) => {
             let error_msg = format!("Failed to run docker pull: {}", e);
-            eprintln!("{}", error_msg);
+            safe_eprintln!("{}", error_msg);
             if let Some(path) = log_path {
                 append_log_file(
                     path,
@@ -510,8 +510,8 @@ pub fn docker_pull_image(image: &str, log_path: Option<&PathBuf>) -> (bool, Stri
                     ),
                 );
             }
-            println!();
-            println!(
+            safe_println!();
+            safe_println!(
                 "{}",
                 crate::output_blocks::create_virtual_command_result(false)
             );
@@ -525,7 +525,7 @@ pub fn docker_pull_image(image: &str, log_path: Option<&PathBuf>) -> (bool, Stri
     if let Some(stdout) = child.stdout.take() {
         let reader = BufReader::new(stdout);
         for line in reader.lines().map_while(Result::ok) {
-            println!("{}", line);
+            safe_println!("{}", line);
             if let Some(path) = log_path {
                 append_log_file(path, &format!("{}\n", line));
             }
@@ -538,7 +538,7 @@ pub fn docker_pull_image(image: &str, log_path: Option<&PathBuf>) -> (bool, Stri
     if let Some(stderr) = child.stderr.take() {
         let reader = BufReader::new(stderr);
         for line in reader.lines().map_while(Result::ok) {
-            eprintln!("{}", line);
+            safe_eprintln!("{}", line);
             if let Some(path) = log_path {
                 append_log_file(path, &format!("{}\n", line));
             }
@@ -565,12 +565,12 @@ pub fn docker_pull_image(image: &str, log_path: Option<&PathBuf>) -> (bool, Stri
 
     // Print empty line before result marker for visual separation (issue #73)
     // This ensures output is visually separated from the result marker
-    println!();
-    println!(
+    safe_println!();
+    safe_println!(
         "{}",
         crate::output_blocks::create_virtual_command_result(success)
     );
-    println!("{}", crate::output_blocks::create_timeline_separator());
+    safe_println!("{}", crate::output_blocks::create_timeline_separator());
 
     (success, output)
 }
@@ -632,11 +632,11 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
     let shell_interactive_flag = get_shell_interactive_flag(&shell_to_use);
 
     // Print the user command (this appears after any virtual commands like docker pull)
-    println!(
+    safe_println!(
         "{}",
         crate::output_blocks::create_command_line(&build_display_command(command))
     );
-    println!();
+    safe_println!();
 
     let needs_network_setup = docker_networks(options).len() > 1;
 
@@ -685,8 +685,8 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         args.extend(cmd_args.iter().map(String::as_str));
 
         if is_debug() {
-            eprintln!("[DEBUG] Running: docker {:?}", args);
-            eprintln!("[DEBUG] shell: {}", shell_to_use);
+            safe_eprintln!("[DEBUG] Running: docker {:?}", args);
+            safe_eprintln!("[DEBUG] shell: {}", shell_to_use);
         }
 
         match Command::new("docker").args(&args).output() {
@@ -798,7 +798,7 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         args.extend(build_docker_runtime_args(options));
 
         if is_debug() {
-            eprintln!("[DEBUG] shell: {}", shell_to_use);
+            safe_eprintln!("[DEBUG] shell: {}", shell_to_use);
         }
 
         args.push(&image);

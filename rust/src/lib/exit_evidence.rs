@@ -162,7 +162,7 @@ pub fn collect<R: CommandRunner>(
                     return DOCKER_OOM.into();
                 }
                 if std::env::var("START_DEBUG").as_deref() == Ok("1") {
-                    eprintln!("[DEBUG] Exit evidence: container={} finishedAt={} eventsAvailable={} oomEvents={:?} sample={:?}", id_text, finished, events.success, events.stdout, sample);
+                    safe_eprintln!("[DEBUG] Exit evidence: container={} finishedAt={} eventsAvailable={} oomEvents={:?} sample={:?}", id_text, finished, events.success, events.stdout, sample);
                 }
             }
         }
@@ -178,7 +178,7 @@ pub fn collect<R: CommandRunner>(
 
 pub fn main(args: &[String]) {
     if args.len() >= 5 {
-        println!(
+        safe_println!(
             "{}",
             collect(
                 &args[0],

@@ -156,7 +156,7 @@ pub fn create_rule(pattern: &str, replacement: &str) -> Option<Rule> {
         }),
         Err(e) => {
             if is_debug() {
-                eprintln!("Invalid pattern: {} - {}", pattern, e);
+                safe_eprintln!("Invalid pattern: {} - {}", pattern, e);
             }
             None
         }
@@ -298,8 +298,8 @@ pub fn process_command(input: &str, options: &ProcessOptions) -> SubstitutionRes
 
     if options.verbose && result.matched {
         if let Some(ref rule) = result.rule {
-            println!("Pattern matched: \"{}\"", rule.pattern);
-            println!("Translated to: {}", result.command);
+            safe_println!("Pattern matched: \"{}\"", rule.pattern);
+            safe_println!("Translated to: {}", result.command);
         }
     }
 

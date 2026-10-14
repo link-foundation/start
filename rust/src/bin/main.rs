@@ -32,7 +32,7 @@ use start_command::{
     isolation::{run_as_isolated_user, run_isolated, IsolationOptions},
     output_blocks::{FinishBlockOptions, StartBlockOptions},
     query_commands::dispatch_query_command,
-    set_current_execution, setup_signal_handlers,
+    safe_eprintln, safe_println, set_current_execution, setup_signal_handlers,
     substitution::{process_command, ProcessOptions},
     usage::print_usage,
     user_manager::{
@@ -162,7 +162,7 @@ fn main() {
     let parsed = match parse_args(&args) {
         Ok(p) => p,
         Err(e) => {
-            eprintln!("Error: {}", e);
+            safe_eprintln!("Error: {}", e);
             process::exit(1);
         }
     };
@@ -184,14 +184,14 @@ fn main() {
     drop(query_store);
     if wrapper_options.isolated.as_deref() == Some("docker") {
         if let Err(error) = start_command::docker_resource_options::prepare(&mut wrapper_options) {
-            eprintln!("Error: {}", error);
+            safe_eprintln!("Error: {}", error);
             process::exit(1);
         }
     }
 
     // Check if no command was provided
     if parsed_command.is_empty() {
-        eprintln!("Error: No command provided");
+        safe_eprintln!("Error: No command provided");
         print_usage();
         process::exit(1);
     }
@@ -212,8 +212,8 @@ fn main() {
         if result.matched {
             command = result.command.clone();
             if config.verbose {
-                println!("[Substitution] \"{}\" -> \"{}\"", parsed_command, command);
-                println!();
+                safe_println!("[Substitution] \"{}\" -> \"{}\"", parsed_command, command);
+                safe_println!();
             }
             substitution_result = Some(result);
         }
@@ -251,39 +251,39 @@ fn main() {
 /// Print version information
 fn print_version(verbose: bool) {
     let version = env!("CARGO_PKG_VERSION");
-    println!("start-command version: {} (Rust)", version);
-    println!();
+    safe_println!("start-command version: {} (Rust)", version);
+    safe_println!();
 
-    println!("OS: {}", std::env::consts::OS);
-    println!("Architecture: {}", std::env::consts::ARCH);
-    println!();
+    safe_println!("OS: {}", std::env::consts::OS);
+    safe_println!("Architecture: {}", std::env::consts::ARCH);
+    safe_println!();
 
     // Check for installed isolation tools
-    println!("Isolation tools:");
+    safe_println!("Isolation tools:");
 
     if verbose {
-        println!("[verbose] Checking isolation tools...");
+        safe_println!("[verbose] Checking isolation tools...");
     }
 
     // Check screen
     if let Some(version) = get_tool_version("screen", "-v", verbose) {
-        println!("  screen: {}", version);
+        safe_println!("  screen: {}", version);
     } else {
-        println!("  screen: not installed");
+        safe_println!("  screen: not installed");
     }
 
     // Check tmux
     if let Some(version) = get_tool_version("tmux", "-V", verbose) {
-        println!("  tmux: {}", version);
+        safe_println!("  tmux: {}", version);
     } else {
-        println!("  tmux: not installed");
+        safe_println!("  tmux: not installed");
     }
 
     // Check docker
     if let Some(version) = get_tool_version("docker", "--version", verbose) {
-        println!("  docker: {}", version);
+        safe_println!("  docker: {}", version);
     } else {
-        println!("  docker: not installed");
+        safe_println!("  docker: not installed");
     }
 }
 
@@ -302,7 +302,7 @@ fn get_tool_version(tool_name: &str, version_flag: &str, verbose: bool) -> Optio
 
     if !exists {
         if verbose {
-            println!("[verbose] {}: not found in PATH", tool_name);
+            safe_println!("[verbose] {}: not found in PATH", tool_name);
         }
         return None;
     }
@@ -315,7 +315,7 @@ fn get_tool_version(tool_name: &str, version_flag: &str, verbose: bool) -> Optio
     let combined = format!("{}{}", stdout, stderr).trim().to_string();
 
     if verbose {
-        println!(
+        safe_println!(
             "[verbose] {} {}: exit={}, output=\"{}\"",
             tool_name,
             version_flag,
@@ -357,8 +357,8 @@ fn run_with_isolation(
     if wrapper_options.user {
         // Check for sudo access
         if !has_sudo_access() {
-            eprintln!("Error: --isolated-user requires sudo access without password.");
-            eprintln!("Configure NOPASSWD in sudoers or run with appropriate permissions.");
+            safe_eprintln!("Error: --isolated-user requires sudo access without password.");
+            safe_eprintln!("Configure NOPASSWD in sudoers or run with appropriate permissions.");
             process::exit(1);
         }
 
@@ -385,7 +385,7 @@ fn run_with_isolation(
         );
 
         if !user_result.success {
-            eprintln!(
+            safe_eprintln!(
                 "Error: Failed to create isolated user: {}",
                 user_result.message
             );
@@ -429,7 +429,7 @@ fn run_with_isolation(
     // For Docker isolation, defer the command display since virtual commands may be shown first
     let is_docker_isolation = environment == Some("docker");
     let extra_lines_refs: Vec<&str> = extra_lines.iter().map(|s| s.as_str()).collect();
-    println!(
+    safe_println!(
         "{}",
         create_start_block(&StartBlockOptions {
             session_id,
@@ -447,7 +447,7 @@ fn run_with_isolation(
     );
     // Only print empty line when not deferring command (docker isolation handles its own spacing)
     if !is_docker_isolation {
-        println!();
+        safe_println!();
     }
 
     // Create log header
@@ -483,7 +483,7 @@ fn run_with_isolation(
         start_command::launch_owner::mark_launch(&mut execution_record);
         match store.save(&execution_record) {
             Err(e) => {
-                eprintln!(
+                safe_eprintln!(
                     "{}",
                     serde_json::json!({"code": "LAUNCH_RESERVATION_FAILED", "uuid": execution_record.uuid, "containerName": session_name, "error": e})
                 );
@@ -491,7 +491,7 @@ fn run_with_isolation(
             }
             Ok(()) => {
                 if config.verbose {
-                    println!("[ExecutionStore] Execution ID: {}", execution_record.uuid);
+                    safe_println!("[ExecutionStore] Execution ID: {}", execution_record.uuid);
                 }
                 set_current_execution(execution_record.clone(), store.clone());
             }
@@ -610,14 +610,14 @@ fn run_with_isolation(
                     execution_record.complete(-1);
                     let _ = store.save(&execution_record);
                 }
-                eprintln!(
+                safe_eprintln!(
                     "{}",
                     serde_json::json!({"code":"LAUNCH_PERSISTENCE_FAILED", "uuid":execution_record.uuid, "containerName":session_name, "running":!stop.success, "error":e})
                 );
                 clear_current_execution();
                 process::exit(1);
             }
-            eprintln!("[ExecutionStore] Failed to update record: {}", e);
+            safe_eprintln!("[ExecutionStore] Failed to update record: {}", e);
         }
         clear_current_execution();
     }
@@ -626,30 +626,31 @@ fn run_with_isolation(
     // This output goes to stdout but NOT inside the boxes - it's operational info
     if let Some(ref user) = created_user {
         if !wrapper_options.keep_user {
-            println!("[User Isolation] Cleaning up user: {}", user);
+            safe_println!("[User Isolation] Cleaning up user: {}", user);
             let delete_result = delete_user(user, &DeleteUserOptions { remove_home: true });
             if delete_result.success {
-                println!("[User Isolation] User deleted successfully");
+                safe_println!("[User Isolation] User deleted successfully");
             } else {
-                println!("[User Isolation] Warning: {}", delete_result.message);
+                safe_println!("[User Isolation] Warning: {}", delete_result.message);
             }
-            println!();
+            safe_println!();
         } else {
-            println!(
+            safe_println!(
                 "[User Isolation] Keeping user: {} (use 'sudo userdel -r {}' to delete)",
-                user, user
+                user,
+                user
             );
-            println!();
+            safe_println!();
         }
     }
 
     // Print finish block with result message inside
     // Add empty line before finish block for visual separation
-    println!();
+    safe_println!();
     let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
     // Convert extra_lines to &str references for the finish block
     let extra_lines_refs: Vec<&str> = extra_lines.iter().map(|s| s.as_str()).collect();
-    println!(
+    safe_println!(
         "{}",
         create_finish_block(&FinishBlockOptions {
             session_id,
@@ -694,7 +695,7 @@ fn run_direct(
     };
 
     // Print start block with session ID (no extra lines for direct execution)
-    println!(
+    safe_println!(
         "{}",
         create_start_block(&StartBlockOptions {
             session_id,
@@ -706,7 +707,7 @@ fn run_direct(
             defer_command: false,
         })
     );
-    println!();
+    safe_println!();
     let command_name = command_name(command);
     let command_name = command_name.as_str();
 
@@ -741,14 +742,14 @@ fn run_direct(
     if let Some(ref store) = execution_store {
         if let Err(e) = store.save(&execution_record) {
             if config.verbose {
-                eprintln!(
+                safe_eprintln!(
                     "[ExecutionStore] Warning: Failed to save initial record: {}",
                     e
                 );
             }
         } else {
             if config.verbose {
-                println!("[ExecutionStore] Execution ID: {}", execution_record.uuid);
+                safe_println!("[ExecutionStore] Execution ID: {}", execution_record.uuid);
             }
             // Set up global state for signal cleanup
             // Clone the store since we need to pass it to the signal handler
@@ -791,7 +792,7 @@ fn run_direct(
         Err(e) => {
             let error_msg = format!("Error executing command: {}", e);
             log_content.push_str(&format!("\n{}\n", error_msg));
-            eprintln!("\n{}", error_msg);
+            safe_eprintln!("\n{}", error_msg);
 
             let end_time = get_timestamp();
             log_content.push_str(&format!("\n{}\n", "=".repeat(50)));
@@ -801,8 +802,8 @@ fn run_direct(
             write_log_file(&log_file_path, &log_content);
 
             let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
-            println!();
-            println!(
+            safe_println!();
+            safe_println!(
                 "{}",
                 create_finish_block(&FinishBlockOptions {
                     session_id,
@@ -832,7 +833,7 @@ fn run_direct(
         if let Some(stdout) = stdout {
             let reader = BufReader::new(stdout);
             for line in reader.lines().map_while(Result::ok) {
-                println!("{}", line);
+                safe_println!("{}", line);
                 append_log_file(&stdout_log_path, &format!("{}\n", line));
                 output.push_str(&line);
                 output.push('\n');
@@ -847,7 +848,7 @@ fn run_direct(
         if let Some(stderr) = stderr {
             let reader = BufReader::new(stderr);
             for line in reader.lines().map_while(Result::ok) {
-                eprintln!("{}", line);
+                safe_eprintln!("{}", line);
                 append_log_file(&stderr_log_path, &format!("{}\n", line));
                 output.push_str(&line);
                 output.push('\n');
@@ -867,7 +868,7 @@ fn run_direct(
             let error_msg = format!("Error waiting for command: {}", e);
             log_content.push_str(&format!("\n{}\n", error_msg));
             append_log_file(&log_file_path, &format!("\n{}\n", error_msg));
-            eprintln!("\n{}", error_msg);
+            safe_eprintln!("\n{}", error_msg);
             1
         }
     };
@@ -899,8 +900,8 @@ fn run_direct(
 
     // Print finish block (no result_message for direct execution)
     let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
-    println!();
-    println!(
+    safe_println!();
+    safe_println!(
         "{}",
         create_finish_block(&FinishBlockOptions {
             session_id,
@@ -920,7 +921,7 @@ fn run_direct(
         execution_record.complete(exit_code);
         if let Err(e) = store.save(&execution_record) {
             if config.verbose {
-                eprintln!(
+                safe_eprintln!(
                     "[ExecutionStore] Warning: Failed to save completion record: {}",
                     e
                 );

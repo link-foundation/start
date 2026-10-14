@@ -34,7 +34,7 @@ fn sleep_until_stopped(interval: Duration) {
 fn debug(record: &ExecutionRecord, error: &str) {
     if std::env::var("START_DEBUG").as_deref() == Ok("1") {
         let text = format!("[DEBUG] CPU monitor: {}\n", error);
-        eprint!("{}", text);
+        safe_eprint!("{}", text);
         crate::isolation::isolation_log::append_log_file(&PathBuf::from(&record.log_path), &text);
     }
 }
@@ -368,7 +368,7 @@ pub fn main(args: &[String]) {
         args.get(3).map(String::as_str),
     ) {
         if std::env::var("START_DEBUG").as_deref() == Ok("1") {
-            eprintln!("[DEBUG] CPU monitor: {}", error);
+            safe_eprintln!("[DEBUG] CPU monitor: {}", error);
         }
         std::process::exit(1);
     }

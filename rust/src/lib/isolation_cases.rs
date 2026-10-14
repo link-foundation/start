@@ -48,11 +48,11 @@ fn test_run_in_screen_captures_version_output() {
     // Issue #96: quick-completing commands like `node --version` must have their
     // output captured in screen isolation (was silently lost due to log flush timing).
     if !is_command_available("screen") {
-        eprintln!("Skipping: screen not installed");
+        safe_eprintln!("Skipping: screen not installed");
         return;
     }
     if !is_command_available("node") {
-        eprintln!("Skipping: node not installed");
+        safe_eprintln!("Skipping: node not installed");
         return;
     }
 
@@ -90,7 +90,7 @@ fn test_run_in_screen_captures_exit_code() {
     // Issue #96: screen isolation should capture the actual exit code from the command,
     // not always report 0.
     if !is_command_available("screen") {
-        eprintln!("Skipping: screen not installed");
+        safe_eprintln!("Skipping: screen not installed");
         return;
     }
 
@@ -123,7 +123,7 @@ fn test_run_in_screen_captures_exit_code() {
 fn test_run_in_screen_captures_stderr() {
     // Issue #96: stderr should be captured via screen's logging mechanism
     if !is_command_available("screen") {
-        eprintln!("Skipping: screen not installed");
+        safe_eprintln!("Skipping: screen not installed");
         return;
     }
 
@@ -154,7 +154,7 @@ fn test_run_in_screen_captures_stderr() {
 #[test]
 fn test_run_in_screen_detached_writes_to_provided_log_path() {
     if !is_command_available("screen") {
-        eprintln!("Skipping: screen not installed");
+        safe_eprintln!("Skipping: screen not installed");
         return;
     }
 
