@@ -4,6 +4,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const {
   initialState,
+  accrue,
   evaluate,
   observeBase,
   transitionLog,
@@ -289,11 +290,12 @@ async function monitor(
             name,
           ]);
           if (update.success) {
+            const now = Date.now();
             state = {
-              ...state,
+              ...accrue(state, now),
               phase: 'observing',
               limitCpus: cpus,
-              since: Date.now(),
+              since: now,
             };
             log(`[start] CPU penalty lifted: ${cpus} CPUs (monitor stopped)`);
             publish();

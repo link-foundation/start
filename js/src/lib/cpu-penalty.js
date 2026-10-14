@@ -85,13 +85,24 @@ function initialState(baseCpus = null, now = Date.now(), saved = null) {
     capacity: null,
   };
 }
+// Penalized time counts until the phase leaves `penalized`; `--status` only
+// extrapolates while penalized, so every transition settles it first.
+function accrue(state, now) {
+  return {
+    ...state,
+    penalizedMs:
+      state.penalizedMs +
+      (state.phase === 'penalized' ? Math.max(0, now - state.lastAt) : 0),
+    lastAt: now,
+  };
+}
 // A quota different from our cap is a supervisor override, not our penalty.
 function observeBase(state, baseCpus, now) {
   if (baseCpus === state.limitCpus) {
     return state;
   }
   return {
-    ...state,
+    ...accrue(state, now),
     phase: 'observing',
     baseCpus,
     limitCpus: baseCpus,
@@ -133,11 +144,7 @@ function evaluate(
   { now, cores, daemonCpus, maxGapMs },
   config = DEFAULTS
 ) {
-  const s = { ...state, samples: [...state.samples] };
-  if (s.phase === 'penalized') {
-    s.penalizedMs += Math.max(0, now - s.lastAt);
-  }
-  s.lastAt = now;
+  const s = { ...accrue(state, now), samples: [...state.samples] };
   const capacity = Number.isFinite(daemonCpus)
     ? Math.min(s.baseCpus || Infinity, daemonCpus)
     : NaN;
@@ -197,6 +204,7 @@ module.exports = {
   validate,
   duration,
   initialState,
+  accrue,
   observeBase,
   transitionLog,
   average,

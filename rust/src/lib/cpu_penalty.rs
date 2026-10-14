@@ -155,11 +155,20 @@ pub fn initial(base: Option<f64>, now: i64, saved: Option<State>) -> State {
         capacity: None,
     }
 }
+/// Penalized time counts until the phase leaves `penalized`; `--status` only
+/// extrapolates while penalized, so every transition settles it first.
+pub fn accrue(state: &mut State, now: i64) {
+    if state.phase == "penalized" {
+        state.penalized_ms += (now - state.last_at).max(0) as u64;
+    }
+    state.last_at = now;
+}
 pub fn observe_base(state: &State, base: Option<f64>, now: i64) -> State {
     if base == state.limit_cpus {
         return state.clone();
     }
     let mut next = state.clone();
+    accrue(&mut next, now);
     next.phase = "observing".into();
     next.base_cpus = base;
     next.limit_cpus = base;
@@ -233,10 +242,7 @@ pub fn evaluate(
     config: &Config,
 ) -> (State, Option<Action>) {
     let mut s = state.clone();
-    if s.phase == "penalized" {
-        s.penalized_ms += (now - s.last_at).max(0) as u64;
-    }
-    s.last_at = now;
+    accrue(&mut s, now);
     let capacity = s.base_cpus.unwrap_or(f64::INFINITY).min(daemon_cpus);
     if !cores.is_finite()
         || cores < 0.0
