@@ -1,6 +1,6 @@
 /// Print usage information
 pub fn print_usage() {
-    safe_println!(
+    println!(
         r#"Usage: start [options] [--] <command> [args...]
        start <command> [args...]
        start --status <uuid> [--output-format <format>]

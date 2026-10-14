@@ -124,7 +124,7 @@ pub fn run_screen_with_log_capture(
     );
     if let Err(e) = fs::write(&screenrc_path, &screenrc_content) {
         if is_debug() {
-            safe_eprintln!("[screen-isolation] Failed to create screenrc: {}", e);
+            eprintln!("[screen-isolation] Failed to create screenrc: {}", e);
         }
         return IsolationResult {
             success: false,
@@ -170,10 +170,10 @@ pub fn run_screen_with_log_capture(
     };
 
     if is_debug() {
-        safe_eprintln!("[screen-isolation] Running: screen {:?}", screen_args);
-        safe_eprintln!("[screen-isolation] screenrc: {}", screenrc_content.trim());
-        safe_eprintln!("[screen-isolation] Log file: {}", log_file.display());
-        safe_eprintln!(
+        eprintln!("[screen-isolation] Running: screen {:?}", screen_args);
+        eprintln!("[screen-isolation] screenrc: {}", screenrc_content.trim());
+        eprintln!("[screen-isolation] Log file: {}", log_file.display());
+        eprintln!(
             "[screen-isolation] Exit code file: {}",
             exit_code_file.display()
         );
@@ -213,7 +213,7 @@ pub fn run_screen_with_log_capture(
         // Retry with increasing delays
         for (i, delay) in retry_delays.iter().enumerate() {
             if is_debug() {
-                safe_eprintln!(
+                eprintln!(
                     "[screen-isolation] Log file empty, retry {}/{} after {}ms",
                     i + 1,
                     retry_delays.len(),
@@ -232,16 +232,16 @@ pub fn run_screen_with_log_capture(
         }
 
         if is_debug() {
-            safe_eprintln!(
+            eprintln!(
                 "[screen-isolation] Log file still empty after {} retries",
                 retry_delays.len()
             );
             match fs::metadata(&log_file) {
-                Ok(meta) => safe_eprintln!(
+                Ok(meta) => eprintln!(
                     "[screen-isolation] Log file exists, size: {} bytes",
                     meta.len()
                 ),
-                Err(_) => safe_eprintln!("[screen-isolation] Log file does not exist"),
+                Err(_) => eprintln!("[screen-isolation] Log file does not exist"),
             }
         }
 
@@ -257,15 +257,13 @@ pub fn run_screen_with_log_capture(
             Ok(content) => {
                 let code = content.trim().parse::<i32>().unwrap_or(0);
                 if is_debug() {
-                    safe_eprintln!("[screen-isolation] Captured exit code: {}", code);
+                    eprintln!("[screen-isolation] Captured exit code: {}", code);
                 }
                 code
             }
             Err(_) => {
                 if is_debug() {
-                    safe_eprintln!(
-                        "[screen-isolation] Could not read exit code file, defaulting to 0"
-                    );
+                    eprintln!("[screen-isolation] Could not read exit code file, defaulting to 0");
                 }
                 0
             }
@@ -302,7 +300,7 @@ pub fn run_screen_with_log_capture(
             // Display output
             if let Some(ref out) = output {
                 if !out.trim().is_empty() {
-                    safe_print!("{}", out);
+                    print!("{}", out);
                 }
             }
 
@@ -368,7 +366,7 @@ pub fn start_detached_screen_with_log_capture(
     );
     if let Err(e) = fs::write(&screenrc_path, &screenrc_content) {
         if is_debug() {
-            safe_eprintln!("[screen-isolation] Failed to create screenrc: {}", e);
+            eprintln!("[screen-isolation] Failed to create screenrc: {}", e);
         }
         return IsolationResult {
             success: false,
@@ -392,9 +390,9 @@ pub fn start_detached_screen_with_log_capture(
     ];
 
     if is_debug() {
-        safe_eprintln!("[screen-isolation] Running: screen {:?}", screen_args);
-        safe_eprintln!("[screen-isolation] screenrc: {}", screenrc_content.trim());
-        safe_eprintln!("[screen-isolation] Log file: {}", log_file.display());
+        eprintln!("[screen-isolation] Running: screen {:?}", screen_args);
+        eprintln!("[screen-isolation] screenrc: {}", screenrc_content.trim());
+        eprintln!("[screen-isolation] Log file: {}", log_file.display());
     }
 
     match Command::new("screen").args(&screen_args).status() {

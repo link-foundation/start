@@ -294,7 +294,7 @@ fn parse_wrapper_args(args: &[String], options: &mut WrapperOptions) -> Result<(
                     return Err(format!("Unknown wrapper option: {}", args[i]));
                 }
                 if env::var("START_DEBUG").is_ok_and(|v| v == "1" || v == "true") {
-                    safe_eprintln!("Unknown wrapper option: {}", args[i]);
+                    eprintln!("Unknown wrapper option: {}", args[i]);
                 }
                 i += 1;
             }

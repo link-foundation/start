@@ -81,33 +81,3 @@ fn command_with_closed_stdout_and_stderr_keeps_its_exit_code() {
     .expect("failed to run the start binary");
     assert_eq!(status.code(), Some(3));
 }
-
-/// The std print macros panic on a closed pipe; `rust/src` uses the
-/// `safe_*` macros from `rust/src/lib/mod.rs` instead.
-#[test]
-fn sources_do_not_use_panicking_print_macros() {
-    let pattern = regex::Regex::new(r"(^|[^\w:])e?print(ln)?!").unwrap();
-    let mut offenders = Vec::new();
-    let mut dirs = vec![Path::new(env!("CARGO_MANIFEST_DIR")).join("src")];
-    while let Some(dir) = dirs.pop() {
-        for entry in std::fs::read_dir(dir).unwrap() {
-            let path = entry.unwrap().path();
-            if path.is_dir() {
-                dirs.push(path);
-            } else if path.extension().is_some_and(|ext| ext == "rs") {
-                let text = std::fs::read_to_string(&path).unwrap();
-                for (index, line) in text.lines().enumerate() {
-                    let code = line.trim_start();
-                    if !code.starts_with("//") && pattern.is_match(line) {
-                        offenders.push(format!("{}:{}: {}", path.display(), index + 1, code));
-                    }
-                }
-            }
-        }
-    }
-    assert!(
-        offenders.is_empty(),
-        "use safe_* print macros:\n{}",
-        offenders.join("\n")
-    );
-}

@@ -281,7 +281,7 @@ fn sanitize_log_to_temp_with_bytes(
 ) -> Result<PreparedLog, String> {
     let blocked_at = |stage| {
         if verbose {
-            safe_eprintln!("Log sanitization failed at stage: {}.", stage);
+            eprintln!("Log sanitization failed at stage: {}.", stage);
         }
         BLOCKED.to_string()
     };
@@ -347,10 +347,9 @@ fn sanitize_log_to_temp_with_bytes(
     destination.sync_all().map_err(|_| blocked_at("sync"))?;
     drop(destination);
     if verbose {
-        safe_println!(
+        println!(
             "Prepared private sanitized log: {} bytes scanned, {} redactions.",
-            bytes,
-            sanitizer.redactions
+            bytes, sanitizer.redactions
         );
     }
     Ok(prepared)

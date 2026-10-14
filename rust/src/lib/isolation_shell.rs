@@ -309,7 +309,7 @@ pub fn detect_shell_in_environment(environment: &str, options: &IsolationOptions
     // If a specific shell is requested (not auto), use it directly
     if !shell_preference.is_empty() && shell_preference != "auto" {
         if is_debug() {
-            safe_eprintln!("[DEBUG] Using forced shell: {}", shell_preference);
+            eprintln!("[DEBUG] Using forced shell: {}", shell_preference);
         }
         return shell_preference.clone();
     }
@@ -342,10 +342,9 @@ pub fn detect_shell_in_environment(environment: &str, options: &IsolationOptions
                     let detected = String::from_utf8_lossy(&output.stdout).trim().to_string();
                     if !detected.is_empty() {
                         if is_debug() {
-                            safe_eprintln!(
+                            eprintln!(
                                 "[DEBUG] Detected shell in docker image {}: {}",
-                                image,
-                                detected
+                                image, detected
                             );
                         }
                         return detected;
@@ -355,7 +354,7 @@ pub fn detect_shell_in_environment(environment: &str, options: &IsolationOptions
         }
 
         if is_debug() {
-            safe_eprintln!(
+            eprintln!(
                 "[DEBUG] Could not detect shell in docker image {}, falling back to sh",
                 image
             );
@@ -387,10 +386,9 @@ pub fn detect_shell_in_environment(environment: &str, options: &IsolationOptions
                 let detected = String::from_utf8_lossy(&output.stdout).trim().to_string();
                 if !detected.is_empty() {
                     if is_debug() {
-                        safe_eprintln!(
+                        eprintln!(
                             "[DEBUG] Detected shell on SSH host {}: {}",
-                            endpoint,
-                            detected
+                            endpoint, detected
                         );
                     }
                     return detected;
@@ -399,7 +397,7 @@ pub fn detect_shell_in_environment(environment: &str, options: &IsolationOptions
         }
 
         if is_debug() {
-            safe_eprintln!(
+            eprintln!(
                 "[DEBUG] Could not detect shell on SSH host {}, falling back to sh",
                 endpoint
             );

@@ -73,10 +73,9 @@ fn cleanup_execution_on_signal(signal: i32, exit_code: i32) {
             record.complete(exit_code);
             if let Err(e) = store.save(record) {
                 // Log error to stderr (can't easily check config here)
-                safe_eprintln!(
+                eprintln!(
                     "\n[Tracking] Warning: Could not save execution record on signal {}: {}",
-                    signal,
-                    e
+                    signal, e
                 );
             }
             // Clear the record to prevent double cleanup

@@ -32,7 +32,7 @@ impl LockManager {
         let started = Instant::now();
         let debug = |message: &str| {
             if std::env::var("START_DEBUG").as_deref() == Ok("1") {
-                safe_eprintln!("[DEBUG] Store lock {}: {}", self.path.display(), message);
+                eprintln!("[DEBUG] Store lock {}: {}", self.path.display(), message);
             }
         };
         while started.elapsed() < Duration::from_millis(timeout) {

@@ -91,14 +91,14 @@ pub fn create_log_footer(end_time: &str, exit_code: i32) -> String {
 pub fn write_log_file(log_path: &PathBuf, content: &str) -> bool {
     if let Some(parent) = log_path.parent() {
         if let Err(e) = fs::create_dir_all(parent) {
-            safe_eprintln!("\nWarning: Could not create log directory: {}", e);
+            eprintln!("\nWarning: Could not create log directory: {}", e);
             return false;
         }
     }
     match File::create(log_path) {
         Ok(mut file) => file.write_all(content.as_bytes()).is_ok(),
         Err(e) => {
-            safe_eprintln!("\nWarning: Could not save log file: {}", e);
+            eprintln!("\nWarning: Could not save log file: {}", e);
             false
         }
     }
@@ -108,14 +108,14 @@ pub fn write_log_file(log_path: &PathBuf, content: &str) -> bool {
 pub fn append_log_file(log_path: &PathBuf, content: &str) -> bool {
     if let Some(parent) = log_path.parent() {
         if let Err(e) = fs::create_dir_all(parent) {
-            safe_eprintln!("\nWarning: Could not create log directory: {}", e);
+            eprintln!("\nWarning: Could not create log directory: {}", e);
             return false;
         }
     }
     match OpenOptions::new().create(true).append(true).open(log_path) {
         Ok(mut file) => file.write_all(content.as_bytes()).is_ok(),
         Err(e) => {
-            safe_eprintln!("\nWarning: Could not append log file: {}", e);
+            eprintln!("\nWarning: Could not append log file: {}", e);
             false
         }
     }

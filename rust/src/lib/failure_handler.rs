@@ -39,12 +39,12 @@ pub fn handle_failure(
     exit_code: i32,
     log_path: &str,
 ) {
-    safe_println!();
+    println!();
 
     // Check if auto-issue is disabled
     if config.disable_auto_issue {
         if config.verbose {
-            safe_println!("Auto-issue creation disabled via START_DISABLE_AUTO_ISSUE");
+            println!("Auto-issue creation disabled via START_DISABLE_AUTO_ISSUE");
         }
         return;
     }
@@ -53,17 +53,17 @@ pub fn handle_failure(
     let repo_info = match detect_repository(cmd_name) {
         Some(info) => info,
         None => {
-            safe_println!("Repository not detected - automatic issue creation skipped");
+            println!("Repository not detected - automatic issue creation skipped");
             return;
         }
     };
 
-    safe_println!("Detected repository: {}", repo_info.url);
+    println!("Detected repository: {}", repo_info.url);
 
     // Check if gh CLI is available and authenticated
     if !is_gh_authenticated() {
-        safe_println!("GitHub CLI not authenticated - automatic issue creation skipped");
-        safe_println!("Run \"gh auth login\" to enable automatic issue creation");
+        println!("GitHub CLI not authenticated - automatic issue creation skipped");
+        println!("Run \"gh auth login\" to enable automatic issue creation");
         return;
     }
 
@@ -71,27 +71,27 @@ pub fn handle_failure(
     let mut log_url = None;
     if config.disable_log_upload {
         if config.verbose {
-            safe_println!("Log upload disabled via START_DISABLE_LOG_UPLOAD");
+            println!("Log upload disabled via START_DISABLE_LOG_UPLOAD");
         }
     } else if is_gh_upload_log_available() {
         log_url = upload_log_with_options(log_path, config.verbose);
         if let Some(ref url) = log_url {
-            safe_println!("Log uploaded: {}", url);
+            println!("Log uploaded: {}", url);
         }
     } else {
-        safe_println!("gh-upload-log not installed - log upload skipped");
-        safe_println!("Install with: bun install -g gh-upload-log");
+        println!("gh-upload-log not installed - log upload skipped");
+        println!("Install with: bun install -g gh-upload-log");
     }
 
     // Check if we can create issues in this repository
     if !can_create_issue(&repo_info.owner, &repo_info.repo) {
-        safe_println!("Cannot create issue in repository - skipping issue creation");
+        println!("Cannot create issue in repository - skipping issue creation");
         return;
     }
 
     // Create issue
     if let Some(issue_url) = create_issue(&repo_info, full_command, exit_code, log_url.as_deref()) {
-        safe_println!("Issue created: {}", issue_url);
+        println!("Issue created: {}", issue_url);
     }
 }
 
@@ -276,7 +276,7 @@ pub fn ensure_gh_upload_log_available() -> Result<(), String> {
             continue;
         }
 
-        safe_println!(
+        println!(
             "gh-upload-log not found; installing with: {} {}",
             command,
             args.join(" ")
@@ -342,7 +342,7 @@ pub fn upload_log_with_options(log_path: &str, verbose: bool) -> Option<String> 
     let prepared = match sanitize_log_to_temp(std::path::Path::new(log_path), verbose) {
         Ok(copy) => copy,
         Err(_) => {
-            safe_println!("Warning: Log sanitization failed; upload blocked.");
+            println!("Warning: Log sanitization failed; upload blocked.");
             return None;
         }
     };
@@ -353,7 +353,7 @@ pub fn upload_log_with_options(log_path: &str, verbose: bool) -> Option<String> 
         .ok()?;
 
     if !output.status.success() {
-        safe_println!("Warning: Log upload failed.");
+        println!("Warning: Log upload failed.");
         return None;
     }
 
@@ -453,7 +453,7 @@ pub fn create_issue(
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        safe_println!("Warning: Issue creation failed - {}", stderr);
+        println!("Warning: Issue creation failed - {}", stderr);
         return None;
     }
 
