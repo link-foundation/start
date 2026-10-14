@@ -1,5 +1,11 @@
 # start-command
 
+## 0.37.8
+
+### Patch Changes
+
+- 9ffcae7: A closed stdout/stderr pipe (`$ -- cmd | head -1`) no longer crashes start with an unhandled `EPIPE` and exit code 1: the command keeps running, its log and record are written, and start exits with the command's own exit code (#222).
+
 ## 0.37.7
 
 ### Patch Changes
