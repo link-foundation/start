@@ -11,6 +11,7 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{self, Command, Stdio};
 
+// Non-panicking print macros: a closed stdout pipe must not abort (issue #222)
 use start_command::{
     append_log_file,
     args_parser::{
@@ -41,6 +42,7 @@ use start_command::{
     },
     write_log_file, LogHeaderParams,
 };
+use start_command::{eprintln, println};
 
 /// Configuration from environment variables
 struct Config {

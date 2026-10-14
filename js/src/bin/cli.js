@@ -42,6 +42,17 @@ const { resolveChildExitCode } = require('../lib/exit-reason');
 const { printUsage } = require('../lib/usage');
 const { buildDisplayCommand, getCommandName } = require('../lib/shell-utils');
 
+// A closed stdout/stderr pipe (`$ --version | head -1`) must neither crash
+// start nor replace the command's exit code: drop the failed output and keep
+// running, logging and recording as usual (issue #222).
+for (const stream of [process.stdout, process.stderr]) {
+  stream.on('error', (err) => {
+    if (err.code !== 'EPIPE' && err.code !== 'ERR_STREAM_DESTROYED') {
+      throw err;
+    }
+  });
+}
+
 // Configuration from environment variables
 const config = {
   // Disable automatic issue creation (useful for testing)
