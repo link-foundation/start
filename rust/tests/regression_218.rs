@@ -1,6 +1,4 @@
-use serde_json::json;
 use start_command::cpu_penalty::{accrue, evaluate, initial, observe_base, Config, State};
-use start_command::{cpu_penalty_monitor, ExecutionRecord};
 
 fn penalized(last_at: i64) -> State {
     let mut state = initial(Some(4.0), 0, None);
@@ -38,6 +36,8 @@ fn supervisor_override_keeps_penalized_time_before_it() {
 #[test]
 #[cfg(unix)]
 fn graceful_stop_lifts_at_once_and_keeps_penalized_ms() {
+    use serde_json::json;
+    use start_command::{cpu_penalty_monitor, ExecutionRecord};
     for mode in ["graceful", "supervise"] {
         let dir = tempfile::tempdir().unwrap();
         let mut record = ExecutionRecord::new("CPU monitor");
