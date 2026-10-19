@@ -164,6 +164,10 @@ pub struct WrapperOptions {
     pub cleanup: bool,
     /// Show what would be cleaned without actually cleaning
     pub cleanup_dry_run: bool,
+    /// UUID/session name whose containers and images --cleanup removes
+    pub cleanup_target: Option<String>,
+    /// --snapshot-wait, --remove-original-after, ... (issue #224)
+    pub snapshot: crate::snapshot_resume_options::SnapshotResumeOptions,
 }
 
 impl Default for WrapperOptions {
@@ -221,6 +225,8 @@ impl Default for WrapperOptions {
             resume_all: false,
             cleanup: false,
             cleanup_dry_run: false,
+            cleanup_target: None,
+            snapshot: Default::default(),
         }
     }
 }
@@ -640,6 +646,12 @@ fn parse_option(
         return Ok(recovery_consumed);
     }
 
+    // Snapshot resume options (--snapshot-wait, --remove-original-after, ...)
+    let snapshot_consumed = crate::snapshot_resume_options::parse(args, index, options)?;
+    if snapshot_consumed > 0 {
+        return Ok(snapshot_consumed);
+    }
+
     // Query/control options (--status, --list, --attach, --resume, ...)
     let query_consumed = parse_query_option(args, index, options)?;
     if query_consumed > 0 {
@@ -808,6 +820,7 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
         return Err("--keep-user option is only valid with --isolated-user".to_string());
     }
 
+    crate::snapshot_resume_options::validate(options)?;
     // Query/control option combinations (--status, --attach, --resume, ...)
     validate_query_options(options)?;
     crate::docker_resource_options::validate(options)?;

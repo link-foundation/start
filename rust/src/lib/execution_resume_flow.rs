@@ -1,5 +1,14 @@
 //! Apply a durable resume plan without holding the database lock over Docker.
 use super::*;
+use crate::docker_snapshot_resume::{
+    commit_with_progress, progress_interval_seconds, remove_original_after, run_snapshot_prepare,
+    SnapshotReporter,
+};
+use crate::docker_snapshot_safety::{
+    acquire_snapshot_lock_with, df_free_bytes, preflight_snapshot_guarded, PreflightOptions,
+    SnapshotFailure, SnapshotLockRequest,
+};
+use crate::snapshot_resume_options::SnapshotSettings;
 
 /// Resume a tracked execution by UUID or session name.
 pub fn resume_execution(
@@ -49,6 +58,7 @@ pub fn resume_execution_with_options(
     let mut overrides = crate::docker_resource_options::specs(options);
     overrides["removeOriginal"] = json!(options.remove_original);
     overrides["labels"] = json!(options.labels);
+    crate::snapshot_resume_options::insert_overrides(&options.snapshot, &mut overrides);
     resume_execution_with_resources(
         store,
         identifier,
@@ -75,6 +85,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
             success: false,
             output: None,
             error: Some("Execution tracking is disabled.".to_string()),
+            exit_code: None,
         };
     };
 
@@ -86,6 +97,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
                 "No execution found with UUID or session name: {}",
                 identifier
             )),
+            exit_code: None,
         };
     };
 
@@ -94,6 +106,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
             success: false,
             output: None,
             error: Some("An execution launch is already reserved.".into()),
+            exit_code: None,
         };
     }
     let previous = record.clone();
@@ -106,6 +119,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
                 success: false,
                 output: None,
                 error: Some(error),
+                exit_code: None,
             }
         }
     };
@@ -137,6 +151,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
                 success: false,
                 output: None,
                 error: Some("Docker labels require a Docker execution when resuming.".into()),
+                exit_code: None,
             };
         }
         planning_record
@@ -156,6 +171,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
                     success: false,
                     output: None,
                     error: Some(error),
+                    exit_code: None,
                 }
             }
         };
@@ -233,6 +249,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
             success: false,
             output: None,
             error: Some(format!("Launch reservation failed: {}", error)),
+            exit_code: None,
         };
     }
 
@@ -271,6 +288,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
                     "Failed to relaunch {} session \"{}\": {}",
                     plan.backend, plan.session_name, launch_result.message
                 )),
+                exit_code: None,
             };
         }
         container_id = launch_result.container_id;
@@ -280,15 +298,47 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
         let handoff = plan.mode == ResumeMode::DockerStart
             && command.is_some()
             && record_flag(&previous, "commandHandoff");
+        let settings = SnapshotSettings::from_overrides(overrides);
+        let notify = |line: &str| eprintln!("{}", line);
+        let reporter = SnapshotReporter {
+            log_path: &record.log_path,
+            notify: &notify,
+        };
+        let mut failure_exit_code = None;
         let launch_result = (|| -> Result<(), String> {
+            let mut exit_code_of = |failure: SnapshotFailure| {
+                failure_exit_code = failure.exit_code;
+                failure.message
+            };
             let _snapshot_lock = if plan.mode == ResumeMode::DockerSnapshot {
-                Some(crate::docker_snapshot_safety::acquire_snapshot_lock()?)
+                Some(
+                    acquire_snapshot_lock_with(&SnapshotLockRequest {
+                        lock_path: settings.lock_path.clone(),
+                        holder: Some(&plan.session_name),
+                        wait_seconds: settings.wait_seconds,
+                        notify: &notify,
+                    })
+                    .map_err(&mut exit_code_of)?,
+                )
             } else {
                 None
             };
             if plan.mode == ResumeMode::DockerSnapshot {
+                if let Some(prepare) = &settings.prepare {
+                    run_snapshot_prepare(&plan.session_name, prepare, runner, &reporter);
+                }
+                let options = PreflightOptions {
+                    size_hint: settings.size_hint,
+                    disk_wait_seconds: settings.disk_wait_seconds,
+                    disk_poll_seconds: settings.disk_poll_seconds,
+                    notify: &notify,
+                    ..Default::default()
+                };
                 let message =
-                    crate::docker_snapshot_safety::preflight_snapshot(&plan.session_name, runner)?;
+                    preflight_snapshot_guarded(&plan.session_name, runner, &options, &|root| {
+                        df_free_bytes(runner, root)
+                    })
+                    .map_err(&mut exit_code_of)?;
                 plan.message.push_str(&format!("\n{}", message));
                 if !record.log_path.is_empty() {
                     append_log_file(&PathBuf::from(&record.log_path), &format!("{}\n", message));
@@ -313,7 +363,20 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
                 }
             }
             for step in &plan.steps {
-                let result = runner.run(&step.command, &step.args);
+                let result = if step.args[0] == "commit" {
+                    commit_with_progress(
+                        runner,
+                        &step.command,
+                        &step.args,
+                        &plan.session_name,
+                        &reporter,
+                        settings
+                            .progress_interval_seconds
+                            .unwrap_or_else(progress_interval_seconds),
+                    )
+                } else {
+                    runner.run(&step.command, &step.args)
+                };
                 if !result.success {
                     let detail = if !result.stderr.trim().is_empty() {
                         result.stderr.trim().to_string()
@@ -343,6 +406,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
             }
             if plan.mode == ResumeMode::DockerSnapshot
                 && overrides.get("removeOriginal").and_then(Value::as_bool) == Some(true)
+                && settings.remove_original_after <= 0.0
             {
                 let running = runner.run(
                     &docker_command().to_string_lossy(),
@@ -408,6 +472,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
                     "Failed to resume {} session \"{}\": {}",
                     plan.backend, plan.session_name, detail
                 )),
+                exit_code: failure_exit_code,
             };
         }
 
@@ -458,6 +523,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
                 "error": error})
                 .to_string(),
             ),
+            exit_code: None,
         };
     }
     crate::execution_attempt::append_lifecycle(&record, "launch-accepted", json!({}));
@@ -483,6 +549,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
                     success: false,
                     output: None,
                     error: Some(error),
+                    exit_code: None,
                 }
             }
         }
@@ -494,8 +561,29 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
                     "Launch accepted, but completion watcher attachment failed: {}",
                     error
                 )),
+                exit_code: None,
             };
         }
+    }
+
+    let remove_after = SnapshotSettings::from_overrides(overrides).remove_original_after;
+    if plan.mode == ResumeMode::DockerSnapshot
+        && overrides.get("removeOriginal").and_then(Value::as_bool) == Some(true)
+        && remove_after > 0.0
+    {
+        let notify = |line: &str| eprintln!("{}", line);
+        let note = remove_original_after(
+            &plan.session_name,
+            active_session_name(&plan),
+            remove_after,
+            runner,
+            &SnapshotReporter {
+                log_path: &record.log_path,
+                notify: &notify,
+            },
+            &std::thread::sleep,
+        );
+        plan.message.push_str(&format!("\n{}", note));
     }
 
     let session_name = record_option(&record, "sessionName")
@@ -520,6 +608,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
             output_format,
         )),
         error: None,
+        exit_code: None,
     }
 }
 

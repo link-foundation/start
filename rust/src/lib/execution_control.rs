@@ -37,6 +37,18 @@ pub struct CommandRunOutput {
 
 pub trait CommandRunner {
     fn run(&self, command: &str, args: &[String]) -> CommandRunOutput;
+
+    /// Run with an upper bound; the process is killed once `timeout` passes.
+    /// Runners that cannot time out simply run the command.
+    fn run_with_timeout(
+        &self,
+        command: &str,
+        args: &[String],
+        timeout: std::time::Duration,
+    ) -> CommandRunOutput {
+        let _ = timeout;
+        self.run(command, args)
+    }
 }
 
 #[derive(Debug, Default)]
@@ -58,6 +70,84 @@ impl CommandRunner for SystemCommandRunner {
                 stderr: String::new(),
                 status: None,
                 error: Some(err.to_string()),
+            },
+        }
+    }
+
+    fn run_with_timeout(
+        &self,
+        command: &str,
+        args: &[String],
+        timeout: std::time::Duration,
+    ) -> CommandRunOutput {
+        use std::io::Read;
+        use std::process::Stdio;
+        let spawned = Command::new(command)
+            .args(args)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn();
+        let mut child = match spawned {
+            Ok(child) => child,
+            Err(err) => {
+                return CommandRunOutput {
+                    error: Some(err.to_string()),
+                    ..Default::default()
+                }
+            }
+        };
+        let drain = |pipe: Option<Box<dyn Read + Send>>| {
+            std::thread::spawn(move || {
+                let mut text = String::new();
+                if let Some(mut pipe) = pipe {
+                    let mut bytes = Vec::new();
+                    let _ = pipe.read_to_end(&mut bytes);
+                    text = String::from_utf8_lossy(&bytes).to_string();
+                }
+                text
+            })
+        };
+        let stdout = drain(
+            child
+                .stdout
+                .take()
+                .map(|p| Box::new(p) as Box<dyn Read + Send>),
+        );
+        let stderr = drain(
+            child
+                .stderr
+                .take()
+                .map(|p| Box::new(p) as Box<dyn Read + Send>),
+        );
+        let started = std::time::Instant::now();
+        let status = loop {
+            match child.try_wait() {
+                Ok(Some(status)) => break Ok(status),
+                Ok(None) if started.elapsed() >= timeout => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    break Err(format!("timed out after {}s", timeout.as_secs_f64()));
+                }
+                Ok(None) => std::thread::sleep(std::time::Duration::from_millis(50)),
+                Err(err) => break Err(err.to_string()),
+            }
+        };
+        let stdout = stdout.join().unwrap_or_default();
+        let stderr = stderr.join().unwrap_or_default();
+        match status {
+            Ok(status) => CommandRunOutput {
+                success: status.success(),
+                stdout,
+                stderr,
+                status: status.code(),
+                error: None,
+            },
+            Err(error) => CommandRunOutput {
+                stdout,
+                stderr,
+                error: Some(error),
+                ..Default::default()
             },
         }
     }

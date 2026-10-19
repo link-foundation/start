@@ -53,6 +53,14 @@ fn docker_oom_event_matches_shared_goldens() {
     }
 }
 
+/// Seconds as JSON numbers compare in JavaScript: 600, not 600.0.
+fn seconds(value: Option<f64>) -> serde_json::Value {
+    match value {
+        Some(whole) if whole.fract() == 0.0 && whole >= 0.0 => json!(whole as u64),
+        other => json!(other),
+    }
+}
+
 #[test]
 fn cli_parsing_matches_shared_goldens() {
     for fixture in fixtures()["cli-parsing"].as_array().unwrap() {
@@ -72,7 +80,13 @@ fn cli_parsing_matches_shared_goldens() {
         let options = parsed.wrapper_options;
         let observed = json!({"isolated": options.isolated, "detached": options.detached,
             "session": options.session, "status": options.status, "outputFormat": options.output_format,
-            "memory": options.memory, "cpus": options.cpus});
+            "memory": options.memory, "cpus": options.cpus, "resume": options.resume,
+            "snapshotWait": seconds(options.snapshot.wait),
+            "snapshotDiskWait": seconds(options.snapshot.disk_wait),
+            "removeOriginalAfter": seconds(options.snapshot.remove_original_after),
+            "snapshotSizeHint": options.snapshot.size_hint, "snapshotPrepare": options.snapshot.prepare,
+            "removeOriginal": options.remove_original, "cleanup": options.cleanup,
+            "cleanupDryRun": options.cleanup_dry_run, "cleanupTarget": options.cleanup_target});
         for (key, expected) in fixture["options"].as_object().unwrap() {
             assert_eq!(&observed[key], expected, "{}: {}", fixture["name"], key);
         }

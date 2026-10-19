@@ -63,7 +63,7 @@ impl From<ExecutionResumeResult> for QueryOutcome {
             success: result.success,
             output: result.output,
             error: result.error,
-            exit_code: None,
+            exit_code: result.exit_code,
         }
     }
 }
@@ -106,8 +106,31 @@ pub fn handle_upload_log_query(store: Option<&ExecutionStore>, identifier: &str)
 
 /// Handle `--cleanup` / `--cleanup-dry-run`.
 ///
-/// Cleans up stale "executing" records (processes that crashed or were killed).
+/// Cleans up stale "executing" records (processes that crashed or were killed),
+/// or with a target the Docker containers and snapshot images of one execution.
 pub fn handle_cleanup(store: Option<&ExecutionStore>, dry_run: bool) -> i32 {
+    handle_cleanup_target(store, dry_run, None)
+}
+
+pub fn handle_cleanup_target(
+    store: Option<&ExecutionStore>,
+    dry_run: bool,
+    target: Option<&str>,
+) -> i32 {
+    if let Some(target) = target {
+        let result = crate::execution_cleanup::cleanup_execution(
+            store,
+            target,
+            dry_run,
+            &crate::execution_control::SystemCommandRunner,
+        );
+        if !result.success {
+            if let Some(output) = &result.output {
+                println!("{}", output);
+            }
+        }
+        return report_result(result);
+    }
     let Some(store) = store else {
         eprintln!("Error: Execution tracking is disabled.");
         return 1;
@@ -229,7 +252,11 @@ pub fn dispatch_query_command(
         ));
     }
     if options.cleanup {
-        return Some(handle_cleanup(store, options.cleanup_dry_run));
+        return Some(handle_cleanup_target(
+            store,
+            options.cleanup_dry_run,
+            options.cleanup_target.as_deref(),
+        ));
     }
 
     None

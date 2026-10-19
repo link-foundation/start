@@ -170,7 +170,8 @@
       "javascript": {
         "implementation": [
           "js/src/lib/args-parser.js",
-          "js/src/lib/args-parser-queries.js"
+          "js/src/lib/args-parser-queries.js",
+          "js/src/lib/snapshot-resume-options.js"
         ],
         "tests": [
           "js/test/args-parser.js",
@@ -181,7 +182,8 @@
         "implementation": [
           "rust/src/lib/args_parser.rs",
           "rust/src/lib/args_parser_queries.rs",
-          "rust/src/lib/args_parser_cases.rs"
+          "rust/src/lib/args_parser_cases.rs",
+          "rust/src/lib/snapshot_resume_options.rs"
         ],
         "tests": [
           "rust/tests/args_parser.rs"
@@ -216,6 +218,19 @@
         },
         {
           "path": "rust/src/lib/args_parser_cases.rs",
+          "reason": "Typed native representation and control flow for arguments; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, regular expressions. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/211"
+          ]
+        },
+        {
+          "path": "rust/src/lib/snapshot_resume_options.rs",
           "reason": "Typed native representation and control flow for arguments; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, regular expressions. See the feature's anchored translationBlockers; carried code is not executable Rust.",
           "blockers": [
             "https://github.com/link-foundation/meta-language/issues/222",
@@ -1167,7 +1182,8 @@
         "implementation": [
           "js/src/lib/execution-control.js",
           "js/src/lib/execution-attach.js",
-          "js/src/lib/query-commands.js"
+          "js/src/lib/query-commands.js",
+          "js/src/lib/execution-cleanup.js"
         ],
         "tests": [
           "js/test/execution-control.js",
@@ -1179,7 +1195,8 @@
           "rust/src/lib/execution_control.rs",
           "rust/src/lib/execution_attach.rs",
           "rust/src/lib/execution_attach_cases.rs",
-          "rust/src/lib/query_commands.rs"
+          "rust/src/lib/query_commands.rs",
+          "rust/src/lib/execution_cleanup.rs"
         ],
         "tests": [
           "rust/tests/execution_control.rs"
@@ -1234,6 +1251,21 @@
         {
           "path": "rust/src/lib/query_commands.rs",
           "reason": "Typed native representation and control flow for execution-control; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/210",
+            "https://github.com/link-foundation/meta-language/issues/211",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/execution_cleanup.rs",
+          "reason": "Native filesystem/process adapter for execution-control; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
           "blockers": [
             "https://github.com/link-foundation/meta-language/issues/222",
             "https://github.com/link-foundation/meta-language/issues/223",
@@ -1311,14 +1343,16 @@
           "js/src/lib/execution-resume.js",
           "js/src/lib/execution-resume-all.js",
           "js/src/lib/docker-snapshot-safety.js",
-          "js/src/lib/docker-command-handoff.js"
+          "js/src/lib/docker-command-handoff.js",
+          "js/src/lib/docker-snapshot-resume.js"
         ],
         "tests": [
           "js/test/execution-resume.js",
           "js/test/regression-193.js",
           "js/test/regression-198.js",
           "js/test/docker-command-handoff.js",
-          "js/test/docker-snapshot-safety.js"
+          "js/test/docker-snapshot-safety.js",
+          "js/test/regression-224.js"
         ]
       },
       "rust": {
@@ -1329,10 +1363,13 @@
           "rust/src/lib/execution_resume_all.rs",
           "rust/src/lib/execution_resume_all_cases.rs",
           "rust/src/lib/docker_snapshot_safety.rs",
-          "rust/src/lib/docker_command_handoff.rs"
+          "rust/src/lib/docker_command_handoff.rs",
+          "rust/src/lib/docker_snapshot_resume.rs"
         ],
         "tests": [
-          "rust/tests/regression_176.rs"
+          "rust/tests/regression_176.rs",
+          "rust/tests/regression_224.rs",
+          "rust/tests/regression_224_resume.rs"
         ]
       },
       "manualRust": [
@@ -1434,6 +1471,22 @@
         },
         {
           "path": "rust/src/lib/docker_command_handoff.rs",
+          "reason": "Native filesystem/process adapter for execution-resume; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/210",
+            "https://github.com/link-foundation/meta-language/issues/211",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/docker_snapshot_resume.rs",
           "reason": "Native filesystem/process adapter for execution-resume; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
           "blockers": [
             "https://github.com/link-foundation/meta-language/issues/222",

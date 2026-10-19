@@ -12,6 +12,8 @@ pub struct LockManager {
     path: PathBuf,
     token: Option<String>,
     monitor_owner: bool,
+    /// Extra fields published in the lock file, for example who holds it.
+    metadata: serde_json::Map<String, Value>,
 }
 
 impl LockManager {
@@ -20,7 +22,21 @@ impl LockManager {
             path,
             token: None,
             monitor_owner: false,
+            metadata: serde_json::Map::new(),
         }
+    }
+
+    /// Publish `key` in the lock file while it is held.
+    pub fn with_metadata(mut self, key: &str, value: Value) -> Self {
+        self.metadata.insert(key.to_string(), value);
+        self
+    }
+
+    /// The published lock file, if one is readable.
+    pub fn read_lock_file(&self) -> Option<Value> {
+        fs::read_to_string(&self.path)
+            .ok()
+            .and_then(|s| serde_json::from_str::<Value>(&s).ok())
     }
 
     pub fn for_cpu_monitor(mut self) -> Self {
@@ -58,11 +74,16 @@ impl LockManager {
                     .write(true)
                     .create_new(true)
                     .open(&temp)?;
-                let data = json!({"pid": std::process::id(), "timestamp":
+                let owner = json!({"pid": std::process::id(), "timestamp":
                     SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis(),
                     "hostname": local_hostname::get().map(|h| h.to_string_lossy().to_string()).unwrap_or_default(),
                     "token": token, "processStart": Self::process_info(std::process::id() as u64).map(|p| p.1)});
-                file.write_all(data.to_string().as_bytes())?;
+                // Metadata goes first so it can never replace the owner fields.
+                let mut data = self.metadata.clone();
+                if let Value::Object(owner) = owner {
+                    data.extend(owner);
+                }
+                file.write_all(Value::Object(data).to_string().as_bytes())?;
                 file.sync_all()?;
                 fs::hard_link(&temp, &self.path)
             })();

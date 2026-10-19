@@ -64,9 +64,16 @@ Options:
   --resume <id>         Restart a stopped detached execution in the same environment
                         (append -- <command> to run a different command there)
   --remove-original    With legacy snapshot resume, remove the stopped original after launch
+  --remove-original-after <s>  Remove it only if the replacement still runs after <s> seconds
+  --snapshot-wait <s>   Wait up to <s> seconds for another snapshot on this host (exit 75 after)
+  --snapshot-disk-wait <s>  Wait up to <s> seconds for free disk instead of refusing (exit 75 after)
+  --snapshot-size-hint <bytes>  Use this writable-layer size instead of docker inspect --size
+  --snapshot-prepare <cmd>  docker exec <cmd> in the started original before it is snapshotted
   --resume-all          Re-attach or reconcile every execution still marked running
   --cleanup             Clean up stale "executing" records (crashed/killed processes)
   --cleanup-dry-run     Show stale records that would be cleaned up (without cleaning)
+  --cleanup <id>        Remove a Docker execution's containers and snapshot images (never forced)
+  --cleanup-dry-run <id>  Show the containers and images --cleanup <id> would remove
   --version, -v         Show version information
 
 Examples:
