@@ -13,6 +13,8 @@ import { join } from 'node:path';
 import { $ } from 'command-stream';
 
 import {
+  DEFAULT_VERIFY_ATTEMPTS,
+  isAlreadyPublishedError,
   isNpmVersionPublished,
   publishToNpm,
 } from '../../scripts/npm-publish.mjs';
@@ -109,6 +111,27 @@ describe.skipIf(process.platform === 'win32')('npm-publish', () => {
     expect(publishCalls()).toBe(1);
   });
 
+  // npm can take minutes to show a version it accepted; the template has
+  // seen 874s. A 60-second wait failed a release that had published (#234).
+  it('waits as long as npm takes to show a published version', async () => {
+    mode('land-late');
+    expect(await publishToNpm($npm, options)).toEqual({
+      alreadyPublished: false,
+    });
+    expect(publishCalls()).toBe(1);
+  });
+
+  // A retry after a timed-out attempt that landed is rejected with "cannot
+  // publish over the previously published versions". That is a cue to wait
+  // for the registry, not a failure to retry (#234).
+  it('waits instead of republishing when npm says the version exists', async () => {
+    mode('time-out-while-landing');
+    expect(await publishToNpm($npm, options)).toEqual({
+      alreadyPublished: false,
+    });
+    expect(publishCalls()).toBe(2);
+  });
+
   it('skips publishing a version that is already on npm', async () => {
     writeFileSync(join(dir, 'published'), `${VERSION}\n`);
     expect(await publishToNpm($npm, options)).toEqual({
@@ -123,5 +146,36 @@ describe.skipIf(process.platform === 'win32')('npm-publish', () => {
     await expect(isNpmVersionPublished($npm, NAME, VERSION)).rejects.toThrow(
       'ECONNRESET'
     );
+  });
+
+  it('reads every "npm already has this version" answer as landed', () => {
+    for (const output of [
+      'npm error code E403\nnpm error You cannot publish over the previously published versions: 9.9.9.',
+      'npm error code E409\nnpm error 409 Conflict - PUT https://registry.npmjs.org/start-command - Cannot publish over previously staged version 9.9.9',
+      'npm ERR! code EPUBLISHCONFLICT',
+    ]) {
+      expect(isAlreadyPublishedError(output)).toBe(true);
+    }
+    expect(
+      isAlreadyPublishedError('npm error code E403\nnpm error 403 Forbidden')
+    ).toBe(false);
+  });
+
+  // The registry wait is useless if the job is killed first (#234).
+  it('gives every publishing job time to outlast the registry wait', () => {
+    const workflow = readFileSync(
+      join(import.meta.dir, '..', '..', '.github', 'workflows', 'js.yml'),
+      'utf8'
+    );
+    const jobs = workflow.split(/\n(?= {2}[a-z-]+:\n)/);
+    const publishers = jobs.filter((job) =>
+      job.includes('scripts/publish-to-npm.mjs')
+    );
+    expect(publishers.length).toBe(2);
+    const waitMinutes = (DEFAULT_VERIFY_ATTEMPTS * 10) / 60;
+    for (const job of publishers) {
+      const minutes = Number(/^ {4}timeout-minutes: (\d+)$/m.exec(job)[1]);
+      expect(minutes).toBeGreaterThanOrEqual(waitMinutes + 15);
+    }
   });
 });

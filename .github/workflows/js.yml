@@ -501,7 +501,9 @@ jobs:
       !contains(needs.*.result, 'skipped')
     environment: release-main
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # Room for scripts/npm-publish.mjs to wait 20 minutes for npm to show
+    # the published version (#234).
+    timeout-minutes: 45
     permissions:
       contents: write
       pull-requests: write
@@ -616,7 +618,9 @@ jobs:
       !contains(needs.*.result, 'skipped')
     environment: release-main
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # Room for scripts/npm-publish.mjs to wait 20 minutes for npm to show
+    # the published version (#234).
+    timeout-minutes: 45
     permissions:
       contents: write
       pull-requests: write
