@@ -706,16 +706,29 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_mode == 'changeset-pr'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    # The pull request is opened with RELEASE_PR_TOKEN, not with this job's
+    # GITHUB_TOKEN, so the job itself only needs to read the repository.
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     steps:
-      # Writer job: the checkout credentials are what pushes the version
-      # commit/tag back to main, so `persist-credentials: false` (applied to
-      # every read-only checkout in this file) must not be set here.
-      - uses: actions/checkout@v6 # zizmor: ignore[artipacked] -- writer job: pushes with these credentials
+      # peter-evans/create-pull-request receives the dedicated token directly;
+      # nothing here pushes with the checkout credentials.
+      - uses: actions/checkout@v6
         with:
+          persist-credentials: false
           fetch-depth: 0
+
+      # A pull request opened with the built-in GITHUB_TOKEN starts no
+      # pull_request workflows, so the changeset PR would never run its
+      # checks (issue #234). Fail loudly until the secret exists.
+      - name: Require release pull-request token
+        env:
+          RELEASE_PR_TOKEN: ${{ secrets.RELEASE_PR_TOKEN }}
+        run: |
+          if [[ -z "$RELEASE_PR_TOKEN" ]]; then
+            echo "::error::RELEASE_PR_TOKEN is required to create a changeset pull request. Add a fine-grained token with contents and pull-requests write access as a repository secret."
+            exit 1
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -731,7 +744,7 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PR_TOKEN }}
           commit-message: 'chore(js): add changeset for manual ${{ github.event.inputs.bump_type }} release'
           branch: changeset-js-manual-release-${{ github.run_id }}
           delete-branch: true

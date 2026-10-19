@@ -584,6 +584,28 @@ describe('CI workflow invariants', () => {
       }
     }
   });
+  it('opens release pull requests with a token that triggers their checks', () => {
+    // A pull request opened with the built-in GITHUB_TOKEN starts no
+    // pull_request workflows, so the changeset PR never ran its checks
+    // (issue #234; template issue #192).
+    for (const name of workflows) {
+      for (const { name: key, body } of parseJobs(readWorkflow(name))) {
+        if (!body.includes('peter-evans/create-pull-request@')) {
+          continue;
+        }
+        assert.ok(
+          !/^ {10}token: \$\{\{ secrets\.GITHUB_TOKEN \}\}/m.test(body),
+          `${name}: ${key} opens its pull request with GITHUB_TOKEN`
+        );
+        assert.ok(
+          /^ {10}token: \$\{\{ secrets\.RELEASE_PR_TOKEN \}\}/m.test(body) &&
+            body.includes('::error::RELEASE_PR_TOKEN is required'),
+          `${name}: ${key} must use RELEASE_PR_TOKEN and fail loudly without it`
+        );
+      }
+    }
+  });
+
   it('re-runs a path-filtered workflow when a script it runs changes', () => {
     // workflows.yml ran only on `.github/**`, so a broken
     // scripts/install-actionlint.sh merged without the linter running.

@@ -882,3 +882,32 @@ fn re_runs_a_path_filtered_workflow_when_a_script_it_runs_changes() {
         }
     }
 }
+
+#[test]
+fn opens_release_pull_requests_with_a_token_that_triggers_their_checks() {
+    // A pull request opened with the built-in GITHUB_TOKEN starts no
+    // pull_request workflows, so the changeset PR never ran its checks
+    // (issue #234; template issue #192).
+    for name in list_workflows() {
+        for job in parse_jobs(&read_workflow(&name)) {
+            if !job.body.contains("peter-evans/create-pull-request@") {
+                continue;
+            }
+            assert!(
+                !job.body
+                    .lines()
+                    .any(|line| line == "          token: ${{ secrets.GITHUB_TOKEN }}"),
+                "{name}: {} opens its pull request with GITHUB_TOKEN",
+                job.name
+            );
+            assert!(
+                job.body
+                    .lines()
+                    .any(|line| line == "          token: ${{ secrets.RELEASE_PR_TOKEN }}")
+                    && job.body.contains("::error::RELEASE_PR_TOKEN is required"),
+                "{name}: {} must use RELEASE_PR_TOKEN and fail loudly without it",
+                job.name
+            );
+        }
+    }
+}
