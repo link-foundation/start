@@ -234,6 +234,12 @@ jobs:
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock', 'rust/Cargo.toml') }}
 
+      # A release bump that rewrote only Cargo.toml left Cargo.lock at an old
+      # version, and every later cargo run silently rewrote it (issue #234).
+      - name: Check Cargo.lock matches Cargo.toml
+        working-directory: rust
+        run: cargo metadata --locked --format-version 1 > /dev/null
+
       - name: Check formatting
         working-directory: rust
         run: cargo fmt --all -- --check

@@ -682,3 +682,14 @@ fn scopes_codeql_to_this_projects_own_code() {
         "{config_path} must exclude dev/log"
     );
 }
+
+#[test]
+fn fails_a_pull_request_whose_cargo_lock_is_out_of_date() {
+    // A release bump that rewrote only Cargo.toml left Cargo.lock behind and
+    // every later cargo run silently rewrote it (issue #234).
+    let lint = parse_jobs(&read_workflow("rust.yml"))
+        .into_iter()
+        .find(|job| job.name == "lint")
+        .expect("rust.yml has no lint job");
+    assert!(lint.body.contains("cargo metadata --locked"));
+}

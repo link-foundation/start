@@ -449,6 +449,16 @@ describe('CI workflow invariants', () => {
     );
   });
 
+  it('fails a pull request whose Cargo.lock is out of date', () => {
+    // A release bump that rewrote only Cargo.toml left Cargo.lock behind and
+    // every later cargo run silently rewrote it (issue #234).
+    const lint = parseJobs(readWorkflow('rust.yml')).find(
+      (job) => job.name === 'lint'
+    );
+    assert.ok(lint, 'rust.yml has no lint job');
+    assert.match(lint.body, /cargo metadata --locked/);
+  });
+
   it('parses coverage through the tested helper, not an inline grep', () => {
     const js = readWorkflow('js.yml');
     assert.doesNotMatch(
