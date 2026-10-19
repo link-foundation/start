@@ -193,7 +193,11 @@ describe('issue #224: options', () => {
   });
 
   it('takes both waits from the environment unless a flag sets them', () => {
-    const saved = { ...process.env };
+    // Only these two keys are restored: replacing `process.env` itself would
+    // drop its case-insensitive keys on Windows (PATH vs Path, ComSpec) and
+    // break every later spawn in this Bun process.
+    const names = ['START_SNAPSHOT_LOCK_WAIT', 'START_SNAPSHOT_DISK_WAIT'];
+    const saved = names.map((name) => process.env[name]);
     process.env.START_SNAPSHOT_LOCK_WAIT = '120';
     process.env.START_SNAPSHOT_DISK_WAIT = '60';
     try {
@@ -215,7 +219,13 @@ describe('issue #224: options', () => {
         /START_SNAPSHOT_LOCK_WAIT/
       );
     } finally {
-      process.env = saved;
+      names.forEach((name, index) => {
+        if (saved[index] === undefined) {
+          delete process.env[name];
+        } else {
+          process.env[name] = saved[index];
+        }
+      });
     }
   });
 
