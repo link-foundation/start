@@ -815,3 +815,70 @@ fn gives_every_required_dispatch_input_a_default() {
         }
     }
 }
+
+/// Every `paths:` filter of a workflow, as lists of patterns without quotes.
+fn path_filters(workflow: &str) -> Vec<Vec<String>> {
+    let lines: Vec<&str> = workflow.lines().collect();
+    let mut filters = Vec::new();
+    for (index, line) in lines.iter().enumerate() {
+        if *line != "    paths:" {
+            continue;
+        }
+        let paths: Vec<String> = lines[index + 1..]
+            .iter()
+            .map_while(|line| line.strip_prefix("      - "))
+            .map(|path| path.replace('\'', "").trim().to_string())
+            .collect();
+        if !paths.is_empty() {
+            filters.push(paths);
+        }
+    }
+    filters
+}
+
+/// Every `scripts/<name>.{sh,mjs,js}` the workflow mentions.
+fn referenced_scripts(workflow: &str) -> Vec<String> {
+    let mut scripts: Vec<String> = Vec::new();
+    for (start, _) in workflow.match_indices("scripts/") {
+        if start > 0 {
+            let before = workflow.as_bytes()[start - 1];
+            if before.is_ascii_alphanumeric() || before == b'_' {
+                continue;
+            }
+        }
+        let rest = &workflow[start + "scripts/".len()..];
+        let name: String = rest
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-'))
+            .collect();
+        let name = name.trim_end_matches('.');
+        if [".sh", ".mjs", ".js"]
+            .iter()
+            .any(|extension| name.ends_with(extension))
+        {
+            let script = format!("scripts/{name}");
+            if !scripts.contains(&script) {
+                scripts.push(script);
+            }
+        }
+    }
+    scripts
+}
+
+#[test]
+fn re_runs_a_path_filtered_workflow_when_a_script_it_runs_changes() {
+    // workflows.yml ran only on `.github/**`, so a broken
+    // scripts/install-actionlint.sh merged without the linter running.
+    for name in list_workflows() {
+        let workflow = read_workflow(&name);
+        let scripts = referenced_scripts(&workflow);
+        for paths in path_filters(&workflow) {
+            for script in &scripts {
+                assert!(
+                    paths.contains(script) || paths.iter().any(|path| path == "scripts/**"),
+                    "{name}: {script} changes do not trigger the workflow"
+                );
+            }
+        }
+    }
+}

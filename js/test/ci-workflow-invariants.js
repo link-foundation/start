@@ -584,4 +584,40 @@ describe('CI workflow invariants', () => {
       }
     }
   });
+  it('re-runs a path-filtered workflow when a script it runs changes', () => {
+    // workflows.yml ran only on `.github/**`, so a broken
+    // scripts/install-actionlint.sh merged without the linter running.
+    for (const name of workflows) {
+      const workflow = readWorkflow(name);
+      const filters = [
+        ...workflow.matchAll(/^ {4}paths:\n((?: {6}- .*\n)+)/gm),
+      ].map((match) =>
+        match[1]
+          .split('\n')
+          .map((line) =>
+            line
+              .replace(/^ {6}- /, '')
+              .replace(/'/g, '')
+              .trim()
+          )
+          .filter(Boolean)
+      );
+      if (filters.length === 0) {
+        continue;
+      }
+      const scripts = new Set(
+        [...workflow.matchAll(/\bscripts\/[\w.-]+\.(?:sh|mjs|js)\b/g)].map(
+          (match) => match[0]
+        )
+      );
+      for (const paths of filters) {
+        for (const script of scripts) {
+          assert.ok(
+            paths.includes(script) || paths.includes('scripts/**'),
+            `${name}: ${script} changes do not trigger the workflow`
+          );
+        }
+      }
+    }
+  });
 });
