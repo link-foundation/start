@@ -25,6 +25,8 @@ for (const mode of [
   'reused',
   'supervise',
   'publish-fault',
+  // publish-fault with the monitor's republish window forced open (#234).
+  'publish-race',
   'graceful',
   'override',
 ]) {
@@ -66,15 +68,19 @@ for (const mode of [
         const script = `${cpu.startSnippet(null, 'cpu-task', 1, { ...record.options, logPath })}; read done; ${cpu.stopSnippet()}`;
         command.splice(0, command.length, 'sh', '-c', script);
       }
+      const env = { ...process.env };
+      if (mode === 'publish-race') {
+        env.START_FIXTURE_UNLINK_DELAY = '1.2';
+      }
       const result = spawnSync(
         'python3',
         [
           path.resolve(__dirname, '../../experiments/issue-207-monitor.py'),
-          mode,
+          mode === 'publish-race' ? 'publish-fault' : mode,
           logPath,
           ...command,
         ],
-        { encoding: 'utf8' }
+        { encoding: 'utf8', env }
       );
       expect(result.status, result.stderr).toBe(0);
       const state = cpu.readState(record);
