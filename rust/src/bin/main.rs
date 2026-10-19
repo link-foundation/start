@@ -593,6 +593,10 @@ fn run_with_isolation(
         if mode != "detached" {
             execution_record.complete(exit_code);
         }
+        if result.container_removed {
+            // The cleanup policy removed the container (issue #225).
+            start_command::container_removal::mark_container_removed(&mut execution_record, None);
+        }
         // A container that exits immediately can be finalized by the detached
         // watcher before this save runs; the terminal record must win over the
         // in-memory `executing` copy (issue #170.1).

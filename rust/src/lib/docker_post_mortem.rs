@@ -56,6 +56,8 @@ pub mod shell_vars {
     pub const EXIT_TEXT: &str = "__start_command_exit_text";
     pub const LIFETIME: &str = "__start_command_lifetime";
     pub const RUNNING: &str = "__start_command_running";
+    /// `true` once the watcher's own `docker rm -f` succeeded (issue #225).
+    pub const REMOVED: &str = "__start_command_removed";
 }
 
 /// `docker inspect -f` template answering "is the container still running?".

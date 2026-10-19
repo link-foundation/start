@@ -139,6 +139,8 @@ const SHELL_VARS = {
   exitText: '__start_command_exit_text',
   lifetime: '__start_command_lifetime',
   running: '__start_command_running',
+  /** `true` once the watcher's own `docker rm -f` succeeded (issue #225). */
+  removed: '__start_command_removed',
 };
 
 /** `docker inspect -f` template collecting every post-mortem fact at once. */

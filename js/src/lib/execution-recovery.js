@@ -458,6 +458,8 @@ function recoverKilledExecution(params = {}) {
   record.observedAt = undefined;
   record.staleDetectedAt = undefined;
   record.containerStartedAt = undefined;
+  record.containerState = undefined;
+  record.containerRemovedObservedAt = undefined;
   const previousData = globalThis.structuredClone(store.get(executionId));
   const previous = record.constructor.fromObject
     ? record.constructor.fromObject(previousData)

@@ -7,7 +7,7 @@
  * - Text: Human-readable text format
  */
 
-const { execSync, spawnSync } = require('child_process');
+const { execSync } = require('child_process');
 const { escapeForLinksNotation } = require('./output-blocks');
 const {
   appendLinksValue,
@@ -28,6 +28,11 @@ const {
 const { normalizeDockerTimestamp } = require('./docker-post-mortem');
 const { END_TIME_SOURCE } = require('./detached-finalize');
 const { formatCgroupMemory } = require('./cgroup-memory');
+const {
+  attachContainerRemoval,
+  dockerInspect,
+  persistContainerRemoval,
+} = require('./container-removal');
 
 /**
  * Inspect the live state of a detached docker container by name.
@@ -44,32 +49,31 @@ const { formatCgroupMemory } = require('./cgroup-memory');
  * instead of fabricating a terminal `-1` result.
  *
  * @param {string} sessionName - Container name
+ * @param {Object|null} [probe] - Receives `sessionNotFound` (issue #225)
  * @returns {{running: boolean, exitCode: number|null, oomKilled: boolean|null}|null} State,
  *   or null when the container cannot be inspected (not found yet, removed, or docker error)
  */
-function inspectDockerState(sessionName) {
-  const result = spawnSync(
+function inspectDockerState(sessionName, probe = null) {
+  const { stdout, notFound } = dockerInspect(
     getDockerCommand(),
-    [
-      'inspect',
-      '-f',
-      '{{.State.Running}} {{.State.ExitCode}} {{.State.OOMKilled}} ' +
-        '{{.State.StartedAt}} {{.State.FinishedAt}}',
-      sessionName,
-    ],
-    getDockerSpawnOptions({
-      encoding: 'utf8',
-      env: process.env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    })
+    dockerProbeSpawnOptions(),
+    '{{.State.Running}} {{.State.ExitCode}} {{.State.OOMKilled}} ' +
+      '{{.State.StartedAt}} {{.State.FinishedAt}}',
+    sessionName
   );
-  if (result.error || result.status !== 0 || !result.stdout) {
+  if (probe) {
+    // "No such container" is a fact, unlike a docker that cannot be reached
+    // (issue #225); it still reads as unknown liveness here (issue #136).
+    probe.sessionNotFound = notFound;
+  }
+  if (stdout === null) {
     return null;
   }
   // Parsed positionally and defensively: an older docker (or a stubbed one)
   // may answer with fewer fields than the template asks for.
-  const [runningRaw, exitRaw, oomKilledRaw, startedRaw, finishedRaw] =
-    result.stdout.trim().split(/\s+/);
+  const [runningRaw, exitRaw, oomKilledRaw, startedRaw, finishedRaw] = stdout
+    .trim()
+    .split(/\s+/);
   const exitCode = Number.parseInt(exitRaw, 10);
   return {
     running: runningRaw === 'true',
@@ -90,12 +94,20 @@ function isDetachedDockerRecord(record) {
   );
 }
 
-function readDockerState(record) {
+function dockerProbeSpawnOptions() {
+  return getDockerSpawnOptions({
+    encoding: 'utf8',
+    env: process.env,
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+}
+
+function readDockerState(record, probe = null) {
   const opts = record.options || {};
   if (opts.isolated !== 'docker' || !opts.sessionName) {
     return null;
   }
-  const state = inspectDockerState(opts.sessionName);
+  const state = inspectDockerState(opts.sessionName, probe);
   if (
     record.attempt &&
     state?.startedAt &&
@@ -326,14 +338,14 @@ function applyEndTime(enriched, dockerState, footerFinishedAt) {
   enriched.observedAt = enriched.endTime;
 }
 
-function resolveDetachedStatus(record, logTail) {
+function resolveDetachedStatus(record, logTail, probe = null) {
   if (require('./launch-owner').hasActiveLaunch(record)) {
     return record;
   }
   const footer = parseFooterFromTail(logTail);
   const footerExit = footer.exitCode;
   const dockerState = isDetachedDockerRecord(record)
-    ? readDockerState(record)
+    ? readDockerState(record, probe)
     : null;
   const alive = isDetachedDockerRecord(record)
     ? dockerState === null
@@ -551,7 +563,14 @@ function enrichDetachedStatus(record) {
   const logTail = record
     ? readAttemptLogTail(record, FATAL_MARKER_TAIL_BYTES)
     : null;
-  const resolved = resolveDetachedStatus(record, logTail);
+  const probe = {
+    dockerCommand: getDockerCommand(),
+    spawnOptions: dockerProbeSpawnOptions(),
+  };
+  const resolved = attachContainerRemoval(
+    resolveDetachedStatus(record, logTail, probe),
+    probe
+  );
   const enriched = attachMemoryExhaustion(
     attachExitReason(resolved, logTail),
     logTail
@@ -751,6 +770,11 @@ function formatRecordAsText(record) {
   if (obj.staleDetectedAt) {
     lines.push(`Stale Detected At: ${obj.staleDetectedAt}`);
   }
+  if (obj.containerState) {
+    // The container no longer exists; `containerId` is history (issue #225).
+    lines.push(`Container State:   ${obj.containerState}`);
+    lines.push(`Container Removed: ${obj.containerRemovedObservedAt || 'N/A'}`);
+  }
   lines.push(`Log Path:          ${obj.logPath}`);
   if (obj.attempt) {
     lines.push(
@@ -897,6 +921,7 @@ function queryStatus(store, identifier, outputFormat) {
   try {
     // Enrich detached execution status with live session check
     const enrichedRecord = enrichDetachedStatus(record);
+    persistContainerRemoval(store, record, enrichedRecord);
     const withProcessIds = attachProcessIds(enrichedRecord);
     // Attach currentTime so callers can see how long an executing command has been running
     const withCurrentTime = attachCurrentTime(withProcessIds);

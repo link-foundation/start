@@ -39,7 +39,8 @@ pub fn read_exit_code_from_log(log_path: &str) -> Option<i32> {
 /// yields the `memoryExhausted` observation for consumers that key off
 /// `oomKilled` (issue #165).
 pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
-    let mut enriched = resolve_detached_status(record);
+    let mut enriched =
+        crate::container_removal::attach_container_removal(resolve_detached_status(record));
     if let Some(state) = crate::cpu_penalty_monitor::read_state(record) {
         enriched.cpu_penalty = Some(state);
     }
@@ -540,6 +541,17 @@ fn format_record_as_text_with_enrichments(
     if let Some(ref detected) = record.stale_detected_at {
         lines.push(format!("Stale Detected At: {}", detected));
     }
+    if let Some(ref state) = record.container_state {
+        // The container no longer exists; `containerId` is history (issue #225).
+        lines.push(format!("Container State:   {}", state));
+        lines.push(format!(
+            "Container Removed: {}",
+            record
+                .container_removed_observed_at
+                .as_deref()
+                .unwrap_or("N/A")
+        ));
+    }
     lines.push(format!("Log Path:          {}", record.log_path));
     if let Some(attempt) = &record.attempt {
         lines.extend([
@@ -882,6 +894,7 @@ pub fn query_status(
 
     // Enrich detached execution status with live session check
     let enriched = enrich_detached_status(&record);
+    crate::container_removal::persist_container_removal(store, &record, &enriched);
     // Attach currentTime so callers can see how long an executing command has been running
     let current_time = attach_current_time(&enriched);
     let process_ids = collect_process_ids(&enriched);

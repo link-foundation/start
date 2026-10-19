@@ -44,6 +44,7 @@ pub mod args_parser_queries;
 mod atomic_write;
 pub mod attached_diagnostics;
 pub mod cgroup_memory;
+pub mod container_removal;
 pub mod cpu_penalty;
 pub mod cpu_penalty_monitor;
 pub mod detached_finalize;

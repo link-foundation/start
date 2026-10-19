@@ -1753,6 +1753,7 @@
         "implementation": [
           "js/src/lib/status-formatter.js",
           "js/src/lib/status-links-notation.js",
+          "js/src/lib/container-removal.js",
           "js/src/lib/session-probe.js",
           "js/src/lib/isolation-log-utils.js",
           "js/src/lib/exit-reason.js",
@@ -1763,6 +1764,7 @@
           "js/test/session-probe.js",
           "js/test/exit-reason.js",
           "js/test/regression-209.js",
+          "js/test/regression-225.js",
           "js/test/regression-226.js"
         ]
       },
@@ -1771,6 +1773,7 @@
           "rust/src/lib/status_formatter.rs",
           "rust/src/lib/status_footer.rs",
           "rust/src/lib/status_probe.rs",
+          "rust/src/lib/container_removal.rs",
           "rust/src/lib/session_probe.rs",
           "rust/src/lib/session_probe_cases.rs",
           "rust/src/lib/isolation_log.rs",
@@ -1782,6 +1785,7 @@
           "rust/tests/isolation_log.rs",
           "rust/tests/regression_201.rs",
           "rust/tests/regression_209.rs",
+          "rust/tests/regression_225.rs",
           "rust/tests/regression_226.rs"
         ]
       },
@@ -1816,6 +1820,20 @@
         },
         {
           "path": "rust/src/lib/status_probe.rs",
+          "reason": "Native filesystem/process adapter for status; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/211",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/container_removal.rs",
           "reason": "Native filesystem/process adapter for status; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
           "blockers": [
             "https://github.com/link-foundation/meta-language/issues/222",

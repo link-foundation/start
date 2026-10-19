@@ -101,6 +101,14 @@ class ExecutionRecord {
       options.containerStartedAt !== undefined
         ? options.containerStartedAt
         : undefined;
+    // `removed` once the container is known to be gone (issue #225), with
+    // when that was observed; `options.containerId` is kept as history.
+    this.containerState =
+      options.containerState !== undefined ? options.containerState : undefined;
+    this.containerRemovedObservedAt =
+      options.containerRemovedObservedAt !== undefined
+        ? options.containerRemovedObservedAt
+        : undefined;
     this.oomKilled =
       options.oomKilled !== undefined ? options.oomKilled : undefined;
     // Query-time hint explaining an opaque exit code (issue #162). Derived from
@@ -178,6 +186,15 @@ class ExecutionRecord {
       this.containerStartedAt !== null
     ) {
       obj.containerStartedAt = this.containerStartedAt;
+    }
+    if (this.containerState !== undefined && this.containerState !== null) {
+      obj.containerState = this.containerState;
+    }
+    if (
+      this.containerRemovedObservedAt !== undefined &&
+      this.containerRemovedObservedAt !== null
+    ) {
+      obj.containerRemovedObservedAt = this.containerRemovedObservedAt;
     }
     if (this.oomKilled !== undefined && this.oomKilled !== null) {
       obj.oomKilled = this.oomKilled;
@@ -479,6 +496,41 @@ class ExecutionStore {
         return null;
       }
       current.attempt = { ...current.attempt, ...fields };
+      this.writeLinoRecords(records);
+      if (this.useLinks) {
+        this.writeLinksRecord(current);
+      }
+      return current;
+    } finally {
+      lock.release();
+    }
+  }
+
+  /**
+   * Record that a finished execution's container no longer exists
+   * (issue #225). Applied under the database lock to the stored record, and
+   * only while it is still finished, so a concurrent resume is never undone.
+   * @param {string} uuid - Execution UUID
+   * @param {string} observedAt - When the removal was observed
+   * @returns {ExecutionRecord|null} The updated record, or null
+   */
+  markContainerRemoved(uuid, observedAt) {
+    const lock = new LockManager(this.lockFilePath);
+    if (!lock.acquire()) {
+      throw new Error('Failed to acquire lock for container state');
+    }
+    try {
+      const records = this.readLinoRecords();
+      const current = records.find((record) => record.uuid === uuid);
+      if (
+        !current ||
+        current.status !== ExecutionStatus.EXECUTED ||
+        current.containerState === 'removed'
+      ) {
+        return null;
+      }
+      current.containerState = 'removed';
+      current.containerRemovedObservedAt = observedAt;
       this.writeLinoRecords(records);
       if (this.useLinks) {
         this.writeLinksRecord(current);

@@ -318,6 +318,7 @@ pub fn run_screen_with_log_capture(
                 ),
                 exit_code: Some(exit_code),
                 output,
+                container_removed: false,
             };
         }
 

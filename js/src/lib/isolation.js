@@ -813,8 +813,10 @@ function runInDocker(command, options = {}) {
             !containerExistedBeforeLaunch &&
             readDockerContainerStatus(containerName) === 'created';
 
+          let containerRemoved = false;
           if (launchFailed) {
             if (removeDockerContainer(containerName, options.logPath)) {
+              containerRemoved = true;
               message += `\nContainer removed after launch failure.`;
             } else {
               message += `\nWarning: failed to remove container after launch failure.`;
@@ -823,6 +825,7 @@ function runInDocker(command, options = {}) {
             shouldCleanupDockerContainer(cleanupPolicy, exitCode, oomKilled)
           ) {
             if (removeDockerContainer(containerName, options.logPath)) {
+              containerRemoved = true;
               message += `\nContainer removed after completion.${postMortem(true)}`;
             } else {
               message += `\nWarning: failed to remove container automatically.`;
@@ -848,6 +851,7 @@ function runInDocker(command, options = {}) {
             diagnostics: diagnosticFacts,
             message,
             exitCode,
+            containerRemoved,
           });
         });
 

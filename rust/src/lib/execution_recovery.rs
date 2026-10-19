@@ -641,6 +641,8 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
     record.observed_at = None;
     record.stale_detected_at = None;
     record.container_started_at = None;
+    record.container_state = None;
+    record.container_removed_observed_at = None;
     let previous = store.get(execution_id).unwrap_or_else(|| record.clone());
     crate::launch_owner::mark_launch(&mut record);
     if let Err(error) = store.reserve_launch(&record, &previous) {

@@ -7,6 +7,8 @@ const TERMINAL_FIELDS = [
   'observedAt',
   'staleDetectedAt',
   'containerStartedAt',
+  'containerState',
+  'containerRemovedObservedAt',
   'exitReason',
   'oomKilled',
   'memoryExhausted',

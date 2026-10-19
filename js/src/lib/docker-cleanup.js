@@ -381,7 +381,10 @@ function buildDetachedDockerCompletionScript(
   }
   // Everything that assumes the container has exited: cleanup, footer and
   // finalization. Guarded as a whole by `.State.Running` below.
-  const exited = [];
+  // `removed` tells the finalizer whether the cleanup policy removed the
+  // container (issue #225).
+  const removed = SHELL_VARS.removed;
+  const exited = [`${removed}=false`];
 
   if (logPath) {
     const quotedLogPath = shellQuote(logPath);
@@ -394,7 +397,7 @@ function buildDetachedDockerCompletionScript(
       quotedLogPath
     );
     const memory = buildCgroupMemoryLogSnippet(quotedLogPath);
-    const remove = `${imageCleanup.capture}; if docker rm -f ${quotedName} >> ${quotedLogPath} 2>&1; then ${imageCleanup.remove}; fi; ${removalNote}; ${memory}`;
+    const remove = `${imageCleanup.capture}; if docker rm -f ${quotedName} >> ${quotedLogPath} 2>&1; then ${removed}=true; ${imageCleanup.remove}; fi; ${removalNote}; ${memory}`;
     const keep = `${postMortem}; ${memory}; ${buildDockerKeptLogSnippet(containerName, quotedLogPath)}`;
 
     const since = watcherOptions.since
@@ -444,14 +447,14 @@ function buildDetachedDockerCompletionScript(
     parts.push(buildDockerStateSnippet(containerName));
     if (policy === DOCKER_CONTAINER_CLEANUP_POLICY.ALWAYS) {
       exited.push(
-        `${imageCleanup.capture}; if docker rm -f ${quotedName} >/dev/null 2>&1; then ${imageCleanup.remove}; fi`
+        `${imageCleanup.capture}; if docker rm -f ${quotedName} >/dev/null 2>&1; then ${removed}=true; ${imageCleanup.remove}; fi`
       );
     } else if (
       policy === DOCKER_CONTAINER_CLEANUP_POLICY.DEFAULT ||
       policy === DOCKER_CONTAINER_CLEANUP_POLICY.KEEP_ON_FAIL
     ) {
       exited.push(
-        `if ${buildSuccessfulNonOomCondition()}; then ${imageCleanup.capture}; if docker rm -f ${quotedName} >/dev/null 2>&1; then ${imageCleanup.remove}; fi; fi`
+        `if ${buildSuccessfulNonOomCondition()}; then ${imageCleanup.capture}; if docker rm -f ${quotedName} >/dev/null 2>&1; then ${removed}=true; ${imageCleanup.remove}; fi; fi`
       );
     }
   }

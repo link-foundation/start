@@ -79,6 +79,12 @@ pub struct ExecutionRecord {
     /// `docker inspect .State.StartedAt` of the container that ran the command.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub container_started_at: Option<String>,
+    /// `removed` once the container is known to be gone (issue #225), with
+    /// when that was observed; `options.containerId` is kept as history.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub container_state: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub container_removed_observed_at: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub oom_killed: Option<bool>,
     /// cgroup v2 memory counters the detached watcher sampled while the
@@ -129,6 +135,8 @@ impl ExecutionRecord {
             observed_at: None,
             stale_detected_at: None,
             container_started_at: None,
+            container_state: None,
+            container_removed_observed_at: None,
             oom_killed: None,
             cgroup_memory: None,
             cpu_penalty: None,
@@ -520,6 +528,37 @@ impl ExecutionStore {
             }
         }
         current.attempt = Some(serde_json::from_value(value).map_err(|e| e.to_string())?);
+        let updated = current.clone();
+        self.write_lino_records(&records)
+            .map_err(|e| e.to_string())?;
+        if self.use_links {
+            self.write_links_record(&updated);
+        }
+        Ok(Some(updated))
+    }
+
+    /// Record that a finished execution's container no longer exists (issue
+    /// #225). Applied under the lock, and only while the record is still
+    /// finished, so a concurrent resume is never undone.
+    pub fn mark_container_removed(
+        &self,
+        uuid: &str,
+        observed_at: &str,
+    ) -> Result<Option<ExecutionRecord>, String> {
+        let mut lock = LockManager::new(self.lock_file_path.clone());
+        if !lock.acquire(LOCK_TIMEOUT_MS) {
+            return Err("Failed to acquire lock for container state".into());
+        }
+        let mut records = self.read_lino_records();
+        let Some(current) = records.iter_mut().find(|r| {
+            r.uuid == uuid
+                && r.status == ExecutionStatus::Executed
+                && r.container_state.as_deref() != Some("removed")
+        }) else {
+            return Ok(None);
+        };
+        current.container_state = Some("removed".to_string());
+        current.container_removed_observed_at = Some(observed_at.to_string());
         let updated = current.clone();
         self.write_lino_records(&records)
             .map_err(|e| e.to_string())?;

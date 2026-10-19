@@ -303,7 +303,7 @@ pub(crate) fn append_attached_docker_cleanup_message(
     exit_code: i32,
     log_path: Option<&PathBuf>,
     container_existed_before_launch: bool,
-) {
+) -> bool {
     let state = read_docker_container_state(container_name);
     let oom_killed = state
         .as_ref()
@@ -316,6 +316,7 @@ pub(crate) fn append_attached_docker_cleanup_message(
     {
         if remove_docker_container(container_name, log_path) {
             message.push_str("\nContainer removed after launch failure.");
+            return true;
         } else {
             message.push_str("\nWarning: failed to remove container after launch failure.");
         }
@@ -323,6 +324,7 @@ pub(crate) fn append_attached_docker_cleanup_message(
         if remove_docker_container(container_name, log_path) {
             message.push_str("\nContainer removed after completion.");
             message.push_str(&post_mortem(true));
+            return true;
         } else {
             message.push_str("\nWarning: failed to remove container automatically.");
             message.push_str(&format!(
@@ -366,6 +368,7 @@ pub(crate) fn append_attached_docker_cleanup_message(
         ));
         message.push_str(&post_mortem(false));
     }
+    false
 }
 
 pub(crate) fn remove_docker_container(container_name: &str, log_path: Option<&PathBuf>) -> bool {
@@ -470,7 +473,10 @@ pub fn build_detached_docker_completion_script_with(
     }
     // Everything that assumes the container has exited: cleanup, footer and
     // finalization. Guarded as a whole by `.State.Running` below.
-    let mut exited = Vec::new();
+    // `removed` tells the finalizer whether the cleanup policy removed the
+    // container (issue #225).
+    let removed = crate::docker_post_mortem::shell_vars::REMOVED;
+    let mut exited = vec![format!("{}=false", removed)];
     let quoted_log_path = log_path.map(|path| shell_quote(&path.to_string_lossy()));
 
     if let Some(quoted_log_path) = quoted_log_path.as_deref() {
@@ -516,10 +522,11 @@ pub fn build_detached_docker_completion_script_with(
                 &format!(">> {} 2>&1", quoted_log_path),
             );
         let remove = format!(
-            "{}; if docker rm -f {} >> {} 2>&1; then {}; fi; {}; {}",
+            "{}; if docker rm -f {} >> {} 2>&1; then {}=true; {}; fi; {}; {}",
             capture_image,
             quoted_name,
             quoted_log_path,
+            removed,
             remove_image,
             build_docker_removal_note_snippet(container_name, quoted_log_path),
             memory
@@ -564,15 +571,16 @@ pub fn build_detached_docker_completion_script_with(
             );
         match policy {
             DockerContainerCleanupPolicy::Always => exited.push(format!(
-                "{}; if docker rm -f {} >/dev/null 2>&1; then {}; fi",
-                capture_image, quoted_name, remove_image
+                "{}; if docker rm -f {} >/dev/null 2>&1; then {}=true; {}; fi",
+                capture_image, quoted_name, removed, remove_image
             )),
             DockerContainerCleanupPolicy::Default | DockerContainerCleanupPolicy::KeepOnFail => {
                 exited.push(format!(
-                    "if {}; then {}; if docker rm -f {} >/dev/null 2>&1; then {}; fi; fi",
+                    "if {}; then {}; if docker rm -f {} >/dev/null 2>&1; then {}=true; {}; fi; fi",
                     successful_non_oom_condition(),
                     capture_image,
                     quoted_name,
+                    removed,
                     remove_image
                 ))
             }
