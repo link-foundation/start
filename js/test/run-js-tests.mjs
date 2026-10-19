@@ -28,8 +28,20 @@ describe('run-js-tests timeout defaults', () => {
     ]);
   });
 
-  test('preserves Bun short timeout flag', () => {
-    expect(hasExplicitTimeout(['-t', '45000'])).toBe(true);
-    expect(applyDefaultTimeout(['-t', '45000'])).toEqual(['-t', '45000']);
+  // `bun test -t` is --test-name-pattern, not a timeout (#234).
+  test('keeps the default timeout for a -t name pattern', () => {
+    expect(hasExplicitTimeout(['-t', 'slow'])).toBe(false);
+    expect(applyDefaultTimeout(['-t', 'slow'])).toEqual([
+      '--timeout',
+      '30000',
+      '-t',
+      'slow',
+    ]);
+    expect(applyDefaultTimeout(['--test-name-pattern', 'slow'])).toEqual([
+      '--timeout',
+      '30000',
+      '--test-name-pattern',
+      'slow',
+    ]);
   });
 });

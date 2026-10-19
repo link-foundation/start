@@ -49,6 +49,21 @@ else: sys.exit(1)
                 raise AssertionError('monitor exited: ' + description)
             time.sleep(.05)
         raise AssertionError('no progress: ' + description)
+    def replace_with_directory(path):
+        # The monitor republishes its state by renaming a temp file over it on
+        # every tick, so it can recreate the file between unlink() and mkdir().
+        # Retry until the directory wins (issue #234). START_FIXTURE_UNLINK_DELAY
+        # widens that window to reproduce the race; it is 0 (off) by default.
+        delay = float(os.environ.get('START_FIXTURE_UNLINK_DELAY') or 0)
+        end = time.monotonic() + 7
+        while True:
+            try: path.unlink()
+            except FileNotFoundError: pass
+            time.sleep(delay)
+            try: return path.mkdir()
+            except FileExistsError:
+                if time.monotonic() > end: raise
+                delay = 0
     def state():
         try: return json.loads(state_file.read_text())
         except (OSError, ValueError): return {}
@@ -76,8 +91,7 @@ else: sys.exit(1)
             if mode == 'override': (root / 'limit').write_text('3')
             if mode == 'publish-fault':
                 saved = state_file.read_text()
-                state_file.unlink()
-                state_file.mkdir()
+                replace_with_directory(state_file)
                 wait_for(lambda: '[DEBUG] CPU monitor: tick failed:' in Path(log).read_text(), 'publication failure is logged and retried')
                 state_file.rmdir()
                 state_file.write_text(saved)

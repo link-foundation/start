@@ -1,0 +1,9 @@
+Publish failed with exit code 1
+Publish failed with exit code 1
+Publish failed with exit code 1
+Publish failed with exit code 1
+Publish failed with exit code 1
+start-command@9.9.9 is on npm despite the failed exit
+Publish failed with exit code 1
+ 9 pass
+ 0 fail

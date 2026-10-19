@@ -682,3 +682,232 @@ fn scopes_codeql_to_this_projects_own_code() {
         "{config_path} must exclude dev/log"
     );
 }
+
+#[test]
+fn fails_a_pull_request_whose_cargo_lock_is_out_of_date() {
+    // A release bump that rewrote only Cargo.toml left Cargo.lock behind and
+    // every later cargo run silently rewrote it (issue #234).
+    let lint = parse_jobs(&read_workflow("rust.yml"))
+        .into_iter()
+        .find(|job| job.name == "lint")
+        .expect("rust.yml has no lint job");
+    assert!(lint.body.contains("cargo metadata --locked"));
+}
+
+#[test]
+fn rust_coverage_reports_a_failed_test_as_a_failed_test() {
+    // Without pipefail a failing test reached the threshold check as an empty
+    // value: "Coverage % is below the 50% threshold" (issue #234).
+    let coverage = parse_jobs(&read_workflow("rust.yml"))
+        .into_iter()
+        .find(|job| job.name == "coverage")
+        .expect("rust.yml has no coverage job");
+    assert!(coverage.body.contains("set -o pipefail"));
+    assert!(coverage.body.contains("scripts/check-rust-coverage.mjs"));
+    assert!(
+        !coverage.body.contains("grep -oP"),
+        "parse tarpaulin output through the tested helper"
+    );
+    assert!(
+        coverage
+            .body
+            .contains("cargo-tarpaulin-bin-${{ env.TARPAULIN_VERSION }}"),
+        "an unversioned tarpaulin cache key never picks up a new release"
+    );
+}
+
+/// Jobs the stage's pipeline-status gate passes to `--required`.
+fn required_stage_jobs(jobs: &[Job]) -> Vec<String> {
+    let Some(status) = jobs.iter().find(|job| job.name == "pipeline-status") else {
+        return Vec::new();
+    };
+    let Some(start) = status.body.find("--required ") else {
+        return Vec::new();
+    };
+    status.body[start + "--required ".len()..]
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == ','))
+        .next()
+        .unwrap_or_default()
+        .split(',')
+        .filter(|name| !name.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// `workflow_dispatch` inputs as `(name, body)` blocks.
+fn dispatch_inputs(workflow: &str) -> Vec<(String, String)> {
+    let lines: Vec<&str> = workflow.lines().collect();
+    let Some(start) = lines
+        .windows(2)
+        .position(|pair| pair[0] == "  workflow_dispatch:" && pair[1] == "    inputs:")
+    else {
+        return Vec::new();
+    };
+    let mut inputs: Vec<(String, String)> = Vec::new();
+    for line in &lines[start + 2..] {
+        if !line.is_empty() && !line.starts_with("      ") {
+            break;
+        }
+        let header = line
+            .strip_prefix("      ")
+            .filter(|rest| !rest.starts_with(' '))
+            .and_then(|rest| rest.strip_suffix(':'));
+        match header {
+            Some(name) => inputs.push((name.to_string(), String::new())),
+            None => {
+                if let Some((_, body)) = inputs.last_mut() {
+                    body.push_str(line);
+                    body.push('\n');
+                }
+            }
+        }
+    }
+    inputs
+}
+
+#[test]
+fn releases_only_after_every_check_its_stage_requires_has_passed() {
+    // Rust Auto Release needed only [lint, test, build] and started in run
+    // 39257928573 while the tarpaulin test run was failing (issue #234).
+    for name in ["js.yml", "rust.yml"] {
+        let jobs = parse_jobs(&read_workflow(name));
+        let required = required_stage_jobs(&jobs);
+        assert!(!required.is_empty(), "{name}: no --required list");
+        let releases: Vec<&Job> = jobs
+            .iter()
+            .filter(|job| WRITER_JOBS.contains(&job.name.as_str()) && job.name != "changeset-pr")
+            .collect();
+        assert!(!releases.is_empty(), "{name}: no release jobs");
+        for job in releases {
+            let needs = parse_needs(&job.body).unwrap_or_default();
+            for check in &required {
+                assert!(
+                    needs.contains(check),
+                    "{name}: {} does not wait for {check}",
+                    job.name
+                );
+            }
+            for result in ["failure", "cancelled", "skipped"] {
+                assert!(
+                    job.body
+                        .contains(&format!("!contains(needs.*.result, '{result}')")),
+                    "{name}: {} may start after a {result} check",
+                    job.name
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn gives_every_required_dispatch_input_a_default() {
+    // `gh workflow run` cannot fill a form; a required input without a
+    // default makes the dispatch API answer HTTP 422 (issue #234).
+    for name in list_workflows() {
+        for (input, body) in dispatch_inputs(&read_workflow(&name)) {
+            if body.lines().any(|line| line == "        required: true") {
+                assert!(
+                    body.lines()
+                        .any(|line| line.starts_with("        default: ")),
+                    "{name}: dispatch input \"{input}\" has no default"
+                );
+            }
+        }
+    }
+}
+
+/// Every `paths:` filter of a workflow, as lists of patterns without quotes.
+fn path_filters(workflow: &str) -> Vec<Vec<String>> {
+    let lines: Vec<&str> = workflow.lines().collect();
+    let mut filters = Vec::new();
+    for (index, line) in lines.iter().enumerate() {
+        if *line != "    paths:" {
+            continue;
+        }
+        let paths: Vec<String> = lines[index + 1..]
+            .iter()
+            .map_while(|line| line.strip_prefix("      - "))
+            .map(|path| path.replace('\'', "").trim().to_string())
+            .collect();
+        if !paths.is_empty() {
+            filters.push(paths);
+        }
+    }
+    filters
+}
+
+/// Every `scripts/<name>.{sh,mjs,js}` the workflow mentions.
+fn referenced_scripts(workflow: &str) -> Vec<String> {
+    let mut scripts: Vec<String> = Vec::new();
+    for (start, _) in workflow.match_indices("scripts/") {
+        if start > 0 {
+            let before = workflow.as_bytes()[start - 1];
+            if before.is_ascii_alphanumeric() || before == b'_' {
+                continue;
+            }
+        }
+        let rest = &workflow[start + "scripts/".len()..];
+        let name: String = rest
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-'))
+            .collect();
+        let name = name.trim_end_matches('.');
+        if [".sh", ".mjs", ".js"]
+            .iter()
+            .any(|extension| name.ends_with(extension))
+        {
+            let script = format!("scripts/{name}");
+            if !scripts.contains(&script) {
+                scripts.push(script);
+            }
+        }
+    }
+    scripts
+}
+
+#[test]
+fn re_runs_a_path_filtered_workflow_when_a_script_it_runs_changes() {
+    // workflows.yml ran only on `.github/**`, so a broken
+    // scripts/install-actionlint.sh merged without the linter running.
+    for name in list_workflows() {
+        let workflow = read_workflow(&name);
+        let scripts = referenced_scripts(&workflow);
+        for paths in path_filters(&workflow) {
+            for script in &scripts {
+                assert!(
+                    paths.contains(script) || paths.iter().any(|path| path == "scripts/**"),
+                    "{name}: {script} changes do not trigger the workflow"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn opens_release_pull_requests_with_a_token_that_triggers_their_checks() {
+    // A pull request opened with the built-in GITHUB_TOKEN starts no
+    // pull_request workflows, so the changeset PR never ran its checks
+    // (issue #234; template issue #192).
+    for name in list_workflows() {
+        for job in parse_jobs(&read_workflow(&name)) {
+            if !job.body.contains("peter-evans/create-pull-request@") {
+                continue;
+            }
+            assert!(
+                !job.body
+                    .lines()
+                    .any(|line| line == "          token: ${{ secrets.GITHUB_TOKEN }}"),
+                "{name}: {} opens its pull request with GITHUB_TOKEN",
+                job.name
+            );
+            assert!(
+                job.body
+                    .lines()
+                    .any(|line| line == "          token: ${{ secrets.RELEASE_PR_TOKEN }}")
+                    && job.body.contains("::error::RELEASE_PR_TOKEN is required"),
+                "{name}: {} must use RELEASE_PR_TOKEN and fail loudly without it",
+                job.name
+            );
+        }
+    }
+}

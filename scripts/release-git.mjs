@@ -70,6 +70,92 @@ export async function verifyCommitOnRemote(
   return sha;
 }
 
+const RULE_REJECTION =
+  /\bGH0(?:06|13)\b|Repository rule violations|protected branch hook declined/i;
+const NON_FAST_FORWARD =
+  /\[rejected\][^\n]*\((?:non-fast-forward|fetch first)\)|Updates were rejected because the (?:remote contains work|tip of your current branch is behind)/i;
+
+/**
+ * Classify a rejected `git push` from its output.
+ *
+ * A ruleset rejection also prints `[rejected]`, but no rebase can satisfy a
+ * rule, so it is checked first. Anything else (auth, network) is "other":
+ * rebasing would only hide the real error.
+ *
+ * @param {string} output combined stdout and stderr of `git push`
+ * @returns {'rule'|'non-fast-forward'|'other'}
+ */
+export function classifyPushRejection(output) {
+  const text = String(output ?? '');
+  if (RULE_REJECTION.test(text)) {
+    return 'rule';
+  }
+  if (NON_FAST_FORWARD.test(text)) {
+    return 'non-fast-forward';
+  }
+  return 'other';
+}
+
+/**
+ * Push `branch`, rebasing onto the remote and retrying when another writer
+ * landed first. The main-writer concurrency group orders writers but each
+ * one checks out the commit that triggered its run, so a writer queued
+ * behind another one is rejected as non-fast-forward (#234, CI/CD best
+ * practice 10). A rebase that conflicts - another writer bumped the same
+ * version files - fails loudly instead of replaying a stale version. Never
+ * forces.
+ *
+ * @param {Function} $ command-stream `$`
+ * @param {{ remote?: string, branch?: string, maxAttempts?: number, delayMs?: number, sleep?: (ms: number) => Promise<void> }} [options]
+ * @returns {Promise<{ attempt: number }>}
+ */
+export async function pushWithRetry(
+  $,
+  {
+    remote = 'origin',
+    branch = 'main',
+    maxAttempts = 3,
+    delayMs = 5000,
+    sleep = (ms) => new Promise((resolveSleep) => setTimeout(resolveSleep, ms)),
+  } = {}
+) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const result = await $`git push ${remote} ${branch}`.run({
+      capture: true,
+    });
+    if (result.code === 0) {
+      return { attempt };
+    }
+    const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+    const kind = classifyPushRejection(output);
+    debug('pushWithRetry', { attempt, code: result.code, kind });
+    if (kind === 'rule') {
+      throw new Error(
+        `git push ${remote} ${branch} was blocked by a repository rule; fix the rule (or its bypass list), not the workflow:\n${output.trim()}`
+      );
+    }
+    if (kind !== 'non-fast-forward') {
+      throw new Error(
+        `git push ${remote} ${branch} failed with exit code ${result.code}:\n${output.trim()}`
+      );
+    }
+    if (attempt === maxAttempts) {
+      throw new Error(
+        `git push ${remote} ${branch} was still non-fast-forward after ${maxAttempts} attempts`
+      );
+    }
+    console.log(
+      `Push rejected: ${remote}/${branch} moved (attempt ${attempt}/${maxAttempts}); rebasing and retrying in ${delayMs / 1000}s...`
+    );
+    await sleep(delayMs);
+    await checked(
+      $`git pull --rebase ${remote} ${branch}`,
+      `git pull --rebase ${remote} ${branch} (another writer changed the same files; re-run the release)`
+    );
+  }
+  throw new Error('unreachable');
+}
+
 /**
  * Bump a semantic version.
  *

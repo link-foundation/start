@@ -399,6 +399,14 @@ impl ResumeHooks for RecordingHooks {
     }
 }
 
+/// Resource overrides with a snapshot lock inside `temp`. The default lock is
+/// host-wide, so parallel test threads (or a real `start` on the same host)
+/// would otherwise make a snapshot resume fail after its 1s wait (issue #234).
+fn with_test_lock(temp: &TempDir, mut overrides: serde_json::Value) -> serde_json::Value {
+    overrides["snapshotLockPath"] = json!(temp.path().join("snapshot.lock"));
+    overrides
+}
+
 fn store_with(record: &ExecutionRecord) -> (TempDir, ExecutionStore) {
     let temp = TempDir::new().unwrap();
     let store = ExecutionStore::with_options(ExecutionStoreOptions {
@@ -474,14 +482,15 @@ fn resume_execution_starts_a_stopped_container_and_reattaches_the_watcher() {
 #[test]
 fn resume_execution_keeps_the_same_uuid_and_remembers_the_previous_session_name() {
     let record = make_record();
-    let (_temp, store) = store_with(&record);
-    let result = resume_execution_with(
+    let (temp, store) = store_with(&record);
+    let result = resume_execution_with_resources(
         Some(&store),
         "box",
         Some("npm run build"),
         None,
         &ScriptedRunner::new("exited"),
         &RecordingHooks::default(),
+        &with_test_lock(&temp, json!({})),
     );
     assert!(result.success, "{:?}", result.error);
 
@@ -615,7 +624,7 @@ fn changed_labels_force_a_guarded_snapshot_for_the_stored_command() {
     record
         .options
         .insert("labels".into(), json!(["role=old", "team=runtime"]));
-    let (_temp, store) = store_with(&record);
+    let (temp, store) = store_with(&record);
     let runner = ScriptedRunner::new("exited");
     let result = resume_execution_with_resources(
         Some(&store),
@@ -624,7 +633,7 @@ fn changed_labels_force_a_guarded_snapshot_for_the_stored_command() {
         None,
         &runner,
         &RecordingHooks::default(),
-        &json!({"labels":["role=new"]}),
+        &with_test_lock(&temp, json!({"labels":["role=new"]})),
     );
     assert!(result.success, "{:?}", result.error);
     let calls = runner.calls.borrow();
@@ -668,7 +677,7 @@ impl CommandRunner for SafetyRunner {
 #[test]
 fn snapshot_disk_shortage_restores_the_original_without_commit_or_remove() {
     let record = make_record();
-    let (_temp, store) = store_with(&record);
+    let (temp, store) = store_with(&record);
     let runner = SafetyRunner {
         base: ScriptedRunner::new("exited"),
         low_disk: true,
@@ -680,7 +689,7 @@ fn snapshot_disk_shortage_restores_the_original_without_commit_or_remove() {
         None,
         &runner,
         &RecordingHooks::default(),
-        &json!({"removeOriginal":true}),
+        &with_test_lock(&temp, json!({"removeOriginal":true})),
     );
     assert!(!result.success);
     assert!(result.error.unwrap().contains("Insufficient disk"));
@@ -694,7 +703,7 @@ fn snapshot_disk_shortage_restores_the_original_without_commit_or_remove() {
 #[test]
 fn remove_original_is_non_forced_and_runs_only_after_successor_start() {
     let record = make_record();
-    let (_temp, store) = store_with(&record);
+    let (temp, store) = store_with(&record);
     let runner = SafetyRunner {
         base: ScriptedRunner::new("exited"),
         low_disk: false,
@@ -706,7 +715,7 @@ fn remove_original_is_non_forced_and_runs_only_after_successor_start() {
         None,
         &runner,
         &RecordingHooks::default(),
-        &json!({"removeOriginal":true}),
+        &with_test_lock(&temp, json!({"removeOriginal":true})),
     );
     assert!(result.success, "{:?}", result.error);
     let calls = runner.base.calls.borrow();
@@ -725,7 +734,7 @@ fn remove_original_is_non_forced_and_runs_only_after_successor_start() {
 #[test]
 fn repeated_snapshot_successors_retain_original_root_session_attribution() {
     let record = make_record();
-    let (_temp, store) = store_with(&record);
+    let (temp, store) = store_with(&record);
     for role in ["first", "second"] {
         let runner = ScriptedRunner::new("exited");
         let result = resume_execution_with_resources(
@@ -735,7 +744,7 @@ fn repeated_snapshot_successors_retain_original_root_session_attribution() {
             None,
             &runner,
             &RecordingHooks::default(),
-            &json!({"labels":[format!("role={}", role)]}),
+            &with_test_lock(&temp, json!({"labels":[format!("role={}", role)]})),
         );
         assert!(result.success, "{:?}", result.error);
         let calls = runner.calls.borrow();

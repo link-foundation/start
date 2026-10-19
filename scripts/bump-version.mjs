@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Bump version in Cargo.toml
+ * Bump version in Cargo.toml and the matching Cargo.lock entry
  * Usage: node scripts/bump-version.mjs --bump-type <major|minor|patch> [--dry-run]
  *
  * Uses link-foundation libraries:
@@ -10,6 +10,7 @@
  */
 
 import { readFileSync, writeFileSync } from 'fs';
+import { syncCargoLockVersion } from './cargo-lock-version.mjs';
 
 // Load use-m dynamically
 const { use } = eval(
@@ -112,6 +113,10 @@ try {
   } else {
     updateCargoToml(newVersion);
     console.log('Updated Cargo.toml');
+    const name = readFileSync('Cargo.toml', 'utf-8').match(
+      /^name\s*=\s*"([^"]+)"/m
+    )[1];
+    syncCargoLockVersion('Cargo.lock', name, newVersion);
   }
 } catch (error) {
   console.error('Error:', error.message);

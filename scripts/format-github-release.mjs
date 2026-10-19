@@ -19,6 +19,7 @@
 
 import { releaseTag } from './release-name.mjs';
 import { loadCommandStream } from './load-command-stream.mjs';
+import { checked } from './release-git.mjs';
 
 // Load use-m dynamically
 const { use } = eval(
@@ -70,26 +71,29 @@ if (!version || !repository || !commitSha) {
 const tag = releaseTag(version, prefix);
 
 try {
-  // Get the release ID for this version
-  let releaseId = '';
-  try {
-    const result =
-      await $`gh api "repos/${repository}/releases/tags/${tag}" --jq '.id'`.run(
-        { capture: true }
-      );
-    releaseId = result.stdout.trim();
-  } catch {
-    console.log(`\u26A0\uFE0F Could not find release for ${tag}`);
-    process.exit(0);
+  // The release was created by the previous workflow step, so failing to find
+  // it is an error. command-stream resolves on a non-zero exit, which made the
+  // old try/catch here dead code: a failed lookup returned an empty ID and the
+  // step passed without formatting anything (issue #234).
+  const result = await checked(
+    $`gh api repos/${repository}/releases/tags/${tag} --jq .id`.run({
+      capture: true,
+    }),
+    `gh api repos/${repository}/releases/tags/${tag}`
+  );
+  const releaseId = result.stdout.trim();
+  if (!releaseId) {
+    throw new Error(`GitHub returned no release ID for ${tag}`);
   }
 
-  if (releaseId) {
-    console.log(`Formatting release notes for ${tag}...`);
-    // Pass the trigger commit SHA for PR detection
-    // This allows proper PR lookup even if the changelog doesn't have a commit hash
-    await $`node scripts/format-release-notes.mjs --release-id "${releaseId}" --release-version "${tag}" --repository "${repository}" --commit-sha "${commitSha}"`;
-    console.log(`\u2705 Formatted release notes for ${tag}`);
-  }
+  console.log(`Formatting release notes for ${tag}...`);
+  // Pass the trigger commit SHA for PR detection
+  // This allows proper PR lookup even if the changelog doesn't have a commit hash
+  await checked(
+    $`node scripts/format-release-notes.mjs --release-id ${releaseId} --release-version ${tag} --repository ${repository} --commit-sha ${commitSha}`,
+    'node scripts/format-release-notes.mjs'
+  );
+  console.log(`\u2705 Formatted release notes for ${tag}`);
 } catch (error) {
   console.error('Error formatting release:', error.message);
   process.exit(1);

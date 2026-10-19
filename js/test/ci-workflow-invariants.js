@@ -127,6 +127,51 @@ function inRunBlock(workflow, index) {
   return false;
 }
 
+/** The `needs:` of a job, written inline (`[a, b]`) or as a block list. */
+function parseNeeds(body) {
+  const inline = jobKey(body, 'needs');
+  if (inline === null) {
+    return [];
+  }
+  if (inline) {
+    return inline
+      .split(/[,[\]]/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+  const block = body.match(/^ {4}needs:\n((?: {6}- .*\n?)+)/m);
+  return block
+    ? block[1]
+        .split('\n')
+        .map((line) => line.replace(/^ {6}- /, '').trim())
+        .filter(Boolean)
+    : [];
+}
+
+/** Jobs the stage's pipeline-status gate passes to `--required`. */
+function requiredStageJobs(jobs) {
+  const status = jobs.find((job) => job.name === 'pipeline-status');
+  const match = status && status.body.match(/--required ([\w,-]+)/);
+  return match ? match[1].split(',') : [];
+}
+
+/** `workflow_dispatch` inputs as `{ name, body }` blocks. */
+function dispatchInputs(workflow) {
+  const section = workflow.match(
+    /^ {2}workflow_dispatch:\n {4}inputs:\n((?: {6}.*\n| *\n)+)/m
+  );
+  if (!section) {
+    return [];
+  }
+  return section[1]
+    .split(/^(?= {6}[\w-]+:$)/m)
+    .map((block) => {
+      const header = block.match(/^ {6}([\w-]+):$/m);
+      return header ? { name: header[1], body: block } : null;
+    })
+    .filter(Boolean);
+}
+
 const workflows = listWorkflows();
 
 describe('CI workflow invariants', () => {
@@ -449,6 +494,38 @@ describe('CI workflow invariants', () => {
     );
   });
 
+  it('fails a pull request whose Cargo.lock is out of date', () => {
+    // A release bump that rewrote only Cargo.toml left Cargo.lock behind and
+    // every later cargo run silently rewrote it (issue #234).
+    const lint = parseJobs(readWorkflow('rust.yml')).find(
+      (job) => job.name === 'lint'
+    );
+    assert.ok(lint, 'rust.yml has no lint job');
+    assert.match(lint.body, /cargo metadata --locked/);
+  });
+
+  it('reports a failed Rust test as a failed test, not low coverage', () => {
+    // Without pipefail a failing test reached the threshold check as an empty
+    // value: "Coverage % is below the 50% threshold" (issue #234).
+    const coverage = parseJobs(readWorkflow('rust.yml')).find(
+      (job) => job.name === 'coverage'
+    );
+    assert.ok(coverage, 'rust.yml has no coverage job');
+    assert.match(coverage.body, /set -o pipefail/);
+    assert.match(coverage.body, /scripts\/check-rust-coverage\.mjs/);
+    assert.doesNotMatch(
+      coverage.body,
+      /grep -oP/,
+      'parse tarpaulin output through the tested helper'
+    );
+    assert.ok(
+      coverage.body.includes(
+        'cargo-tarpaulin-bin-${{ env.TARPAULIN_VERSION }}'
+      ),
+      'an unversioned tarpaulin cache key never picks up a new release'
+    );
+  });
+
   it('parses coverage through the tested helper, not an inline grep', () => {
     const js = readWorkflow('js.yml');
     assert.doesNotMatch(
@@ -462,5 +539,107 @@ describe('CI workflow invariants', () => {
       /Could not determine coverage, skipping check/,
       'an unparsable coverage report must fail, not skip'
     );
+  });
+  it('releases only after every check its stage requires has passed', () => {
+    // Rust Auto Release needed only [lint, test, build] and started in run
+    // 39257928573 while the tarpaulin test run was failing (issue #234).
+    for (const name of ['js.yml', 'rust.yml']) {
+      const jobs = parseJobs(readWorkflow(name));
+      const required = requiredStageJobs(jobs);
+      assert.ok(required.length > 0, `${name}: no --required list`);
+      const releases = jobs.filter(
+        (job) => WRITER_JOBS.has(job.name) && job.name !== 'changeset-pr'
+      );
+      assert.ok(releases.length > 0, `${name}: no release jobs`);
+      for (const job of releases) {
+        const needs = parseNeeds(job.body);
+        for (const check of required) {
+          assert.ok(
+            needs.includes(check),
+            `${name}: ${job.name} does not wait for ${check}`
+          );
+        }
+        for (const result of ['failure', 'cancelled', 'skipped']) {
+          assert.ok(
+            job.body.includes(`!contains(needs.*.result, '${result}')`),
+            `${name}: ${job.name} may start after a ${result} check`
+          );
+        }
+      }
+    }
+  });
+
+  it('gives every required dispatch input a default', () => {
+    // `gh workflow run` cannot fill a form; a required input without a
+    // default makes the dispatch API answer HTTP 422 (issue #234).
+    for (const name of workflows) {
+      for (const input of dispatchInputs(readWorkflow(name))) {
+        if (/^ {8}required: true$/m.test(input.body)) {
+          assert.match(
+            input.body,
+            /^ {8}default: /m,
+            `${name}: dispatch input "${input.name}" has no default`
+          );
+        }
+      }
+    }
+  });
+  it('opens release pull requests with a token that triggers their checks', () => {
+    // A pull request opened with the built-in GITHUB_TOKEN starts no
+    // pull_request workflows, so the changeset PR never ran its checks
+    // (issue #234; template issue #192).
+    for (const name of workflows) {
+      for (const { name: key, body } of parseJobs(readWorkflow(name))) {
+        if (!body.includes('peter-evans/create-pull-request@')) {
+          continue;
+        }
+        assert.ok(
+          !/^ {10}token: \$\{\{ secrets\.GITHUB_TOKEN \}\}/m.test(body),
+          `${name}: ${key} opens its pull request with GITHUB_TOKEN`
+        );
+        assert.ok(
+          /^ {10}token: \$\{\{ secrets\.RELEASE_PR_TOKEN \}\}/m.test(body) &&
+            body.includes('::error::RELEASE_PR_TOKEN is required'),
+          `${name}: ${key} must use RELEASE_PR_TOKEN and fail loudly without it`
+        );
+      }
+    }
+  });
+
+  it('re-runs a path-filtered workflow when a script it runs changes', () => {
+    // workflows.yml ran only on `.github/**`, so a broken
+    // scripts/install-actionlint.sh merged without the linter running.
+    for (const name of workflows) {
+      const workflow = readWorkflow(name);
+      const filters = [
+        ...workflow.matchAll(/^ {4}paths:\n((?: {6}- .*\n)+)/gm),
+      ].map((match) =>
+        match[1]
+          .split('\n')
+          .map((line) =>
+            line
+              .replace(/^ {6}- /, '')
+              .replace(/'/g, '')
+              .trim()
+          )
+          .filter(Boolean)
+      );
+      if (filters.length === 0) {
+        continue;
+      }
+      const scripts = new Set(
+        [...workflow.matchAll(/\bscripts\/[\w.-]+\.(?:sh|mjs|js)\b/g)].map(
+          (match) => match[0]
+        )
+      );
+      for (const paths of filters) {
+        for (const script of scripts) {
+          assert.ok(
+            paths.includes(script) || paths.includes('scripts/**'),
+            `${name}: ${script} changes do not trigger the workflow`
+          );
+        }
+      }
+    }
   });
 });

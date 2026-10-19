@@ -1,0 +1,25 @@
+npm error You cannot publish over the previously published versions: 9.9.9.
+Publish failed with exit code 1
+Waiting 10s before retry...
+Publish attempt 3 of 3...
+npm error code E403
+npm error You cannot publish over the previously published versions: 9.9.9.
+Publish failed with exit code 1
+129 |     if (attempt < maxRetries) {
+130 |       console.log(`Waiting ${retryDelayMs / 1000}s before retry...`);
+131 |       await sleep(retryDelayMs);
+132 |     }
+133 |   }
+134 |   throw new Error(
+                  ^
+error: Failed to publish start-command@9.9.9 after 3 attempts
+      at publishToNpm (/tmp/gh-issue-solver-1792417136429/scripts/npm-publish.mjs:134:13)
+      at async <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/npm-publish.mjs:127:18)
+(fail) npm-publish > waits instead of republishing when npm says the version exists [110.74ms]
+Checking if version 9.9.9 is already published...
+Version 9.9.9 is already published to npm
+
+ 7 pass
+ 2 fail
+ 13 expect() calls
+Ran 9 tests across 1 file. [690.00ms]

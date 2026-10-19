@@ -1,0 +1,8 @@
+=== Web Archive Fallback Check ===
+
+Reading lychee output from: /tmp/tmp.Vd2ufM07Tx/out.md
+
+No broken URLs found in lychee output.
+all_archived=true
+exit code: 0
+GITHUB_OUTPUT: all_archived=true

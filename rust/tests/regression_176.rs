@@ -17,11 +17,12 @@ use start_command::docker_resource_limits::{
 };
 use start_command::execution_resume::{
     build_launch_options, build_resume_plan_with_limits, keeps_kill_recovery,
+    resume_execution_with_resources,
 };
 use start_command::isolation_metadata::{recovery_metadata, recovery_status_lines};
 use start_command::{
-    parse_args, resume_execution_with, ExecutionRecord, ExecutionStatus, IsolationOptions,
-    IsolationResult, ResumeHooks, ResumeMode, SessionProbe, SessionState,
+    parse_args, ExecutionRecord, ExecutionStatus, IsolationOptions, IsolationResult, ResumeHooks,
+    ResumeMode, SessionProbe, SessionState,
 };
 use std::cell::RefCell;
 use tempfile::TempDir;
@@ -241,13 +242,14 @@ fn inspects_the_old_container_before_the_commit_and_records_the_limits() {
     let runner = FakeRunner::new(updated_host_config());
     let hooks = RecordingHooks::default();
 
-    let result = resume_execution_with(
+    let result = resume_execution_with_resources(
         Some(&store),
         &record.uuid,
         Some("npm run build"),
         Some("json"),
         &runner,
         &hooks,
+        &with_test_lock(temp.path(), json!({})),
     );
     assert!(result.success, "{:?}", result.error);
 

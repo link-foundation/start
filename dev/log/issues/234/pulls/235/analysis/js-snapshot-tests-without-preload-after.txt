@@ -1,0 +1,3 @@
+Holding /tmp/start-command-docker-snapshot.lock as PID 184090
+ 142 pass
+ 0 fail

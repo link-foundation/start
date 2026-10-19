@@ -1,0 +1,5 @@
+(fail) lint gate > fails `bun run lint` on a warning [950.20ms]
+(fail) lint gate > fails `bun run lint:scripts` on a warning [1088.87ms]
+(fail) lint gate > fails the pre-commit hook on a warning [904.22ms]
+ 0 pass
+ 3 fail

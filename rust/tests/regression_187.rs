@@ -5,8 +5,8 @@ use start_command::detached_finalize::{
 };
 use start_command::detached_output::OutputObserver;
 use start_command::execution_attempt::{activity_path, read_attempt_log_tail};
-use start_command::execution_resume::resume_execution_with;
 use start_command::execution_resume::{apply_resume_to_record, build_resume_plan};
+use start_command::execution_resume::{resume_execution_with, resume_execution_with_resources};
 use start_command::status_formatter::{enrich_detached_status, format_record, format_record_list};
 use start_command::{ExecutionRecord, ExecutionStatus, SessionProbe, SessionState};
 use start_command::{ExecutionStore, IsolationOptions, IsolationResult, ResumeHooks};
@@ -107,7 +107,8 @@ impl ResumeHooks for Hooks<'_> {
 }
 
 fn resume(store: &ExecutionStore, record: &ExecutionRecord, command: Option<&str>) {
-    let result = resume_execution_with(
+    let lock_dir = TempDir::new().unwrap();
+    let result = resume_execution_with_resources(
         Some(store),
         &record.uuid,
         command,
@@ -118,6 +119,7 @@ fn resume(store: &ExecutionStore, record: &ExecutionRecord, command: Option<&str
             immediate: false,
             fail: false,
         },
+        &support::with_test_lock(lock_dir.path(), json!({})),
     );
     assert!(result.success, "{:?}", result.error);
 }

@@ -21,6 +21,40 @@ export function checkFeatureChanges(features, changed) {
   }
   return errors;
 }
+/**
+ * A regression test written in both languages guards one feature, so both
+ * halves must share a feature. rust/tests/regression_193.rs sat under
+ * docker-options while js/test/regression-193.js sat under execution-resume,
+ * so a change to the pair read as a one-language change (issue #234).
+ */
+export function checkRegressionPairs(features) {
+  const owners = { javascript: new Map(), rust: new Map() };
+  const pattern = {
+    javascript: /regression-(\d+)\.js$/,
+    rust: /regression_(\d+)\.rs$/,
+  };
+  for (const feature of features) {
+    for (const side of ['javascript', 'rust']) {
+      for (const path of feature[side]?.tests || []) {
+        const issue = path.match(pattern[side])?.[1];
+        if (issue) {
+          const ids = owners[side].get(issue) || new Set();
+          owners[side].set(issue, ids.add(feature.id));
+        }
+      }
+    }
+  }
+  const errors = [];
+  for (const [issue, jsIds] of owners.javascript) {
+    const rustIds = owners.rust.get(issue);
+    if (rustIds && ![...jsIds].some((id) => rustIds.has(id))) {
+      errors.push(
+        `regression #${issue}: JavaScript test is under ${[...jsIds].join(', ')} but Rust test is under ${[...rustIds].join(', ')}`
+      );
+    }
+  }
+  return errors;
+}
 function listSource(directory, extension) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = resolve(directory, entry.name);
@@ -85,6 +119,7 @@ export function validateManifest(manifest) {
       }
     }
   }
+  errors.push(...checkRegressionPairs(manifest.features || []));
   for (const path of [
     ...listSource(resolve(root, 'js/src'), '.js'),
     ...listSource(resolve(root, 'rust/src'), '.rs'),

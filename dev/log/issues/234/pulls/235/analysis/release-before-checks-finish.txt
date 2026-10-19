@@ -1,0 +1,50 @@
+# Rust Auto Release ran before Rust coverage finished (issue #234)
+# gh run view <id> --json jobs: name, conclusion, startedAt, completedAt
+
+== run 39257928573
+head 7a89d034e61837e80d08818c79ac7c1773b6e420
+Rust CI/CD / Cargo Audit	success	2026-10-19T13:19:46Z	2026-10-19T13:19:57Z
+Rust CI/CD / Detect Changes	success	2026-10-19T13:19:46Z	2026-10-19T13:19:52Z
+Rust CI/CD / CodeQL (Rust)	success	2026-10-19T13:19:46Z	2026-10-19T13:23:53Z
+Rust CI/CD / Syntax Pre-Check (.mjs)	success	2026-10-19T13:19:46Z	2026-10-19T13:19:56Z
+Rust CI/CD / Check for Manual Version Changes	skipped	2026-10-19T13:15:56Z	2026-10-19T13:19:44Z
+Rust CI/CD / Lint and Format Check	success	2026-10-19T13:19:54Z	2026-10-19T13:20:22Z
+Rust CI/CD / Feature Parity and Test Count Signal	success	2026-10-19T13:19:54Z	2026-10-19T13:20:01Z
+Rust CI/CD / Code Coverage (Rust, Linux only)	failure	2026-10-19T13:19:54Z	2026-10-19T13:26:16Z
+Rust CI/CD / Test (ubuntu-24.04)	success	2026-10-19T13:19:54Z	2026-10-19T13:21:59Z
+Rust CI/CD / Test (windows-2025)	success	2026-10-19T13:19:54Z	2026-10-19T13:22:32Z
+Rust CI/CD / Test (macos-15)	success	2026-10-19T13:20:01Z	2026-10-19T13:22:25Z
+Rust CI/CD / Changelog Fragment Check	skipped	2026-10-19T13:19:53Z	2026-10-19T13:19:52Z
+Rust CI/CD / Build Package	success	2026-10-19T13:22:34Z	2026-10-19T13:23:40Z
+Rust CI/CD / Auto Release	success	2026-10-19T13:23:45Z	2026-10-19T13:24:11Z
+Rust CI/CD / Manual Release	skipped	2026-10-19T13:23:41Z	2026-10-19T13:23:41Z
+Rust CI/CD / Rust Stage	failure	2026-10-19T13:26:19Z	2026-10-19T13:26:25Z
+
+== run 39256972823
+head 034a45a6c4eedfa06adea0caea87c2c430eacb66
+Rust CI/CD / Check for Manual Version Changes	skipped	2026-10-19T13:09:06Z	2026-10-19T13:14:38Z
+Rust CI/CD / Syntax Pre-Check (.mjs)	success	2026-10-19T13:14:40Z	2026-10-19T13:14:46Z
+Rust CI/CD / CodeQL (Rust)	success	2026-10-19T13:14:40Z	2026-10-19T13:17:34Z
+Rust CI/CD / Detect Changes	success	2026-10-19T13:14:40Z	2026-10-19T13:14:48Z
+Rust CI/CD / Cargo Audit	success	2026-10-19T13:14:40Z	2026-10-19T13:14:49Z
+Rust CI/CD / Lint and Format Check	success	2026-10-19T13:14:50Z	2026-10-19T13:15:18Z
+Rust CI/CD / Feature Parity and Test Count Signal	success	2026-10-19T13:14:50Z	2026-10-19T13:14:56Z
+Rust CI/CD / Test (ubuntu-24.04)	success	2026-10-19T13:14:51Z	2026-10-19T13:16:53Z
+Rust CI/CD / Code Coverage (Rust, Linux only)	success	2026-10-19T13:14:50Z	2026-10-19T13:19:34Z
+Rust CI/CD / Test (windows-2025)	success	2026-10-19T13:14:51Z	2026-10-19T13:18:19Z
+Rust CI/CD / Test (macos-15)	success	2026-10-19T13:14:54Z	2026-10-19T13:16:58Z
+Rust CI/CD / Changelog Fragment Check	skipped	2026-10-19T13:14:48Z	2026-10-19T13:14:48Z
+Rust CI/CD / Build Package	success	2026-10-19T13:18:21Z	2026-10-19T13:19:06Z
+Rust CI/CD / Auto Release	success	2026-10-19T13:19:10Z	2026-10-19T13:19:31Z
+Rust CI/CD / Manual Release	skipped	2026-10-19T13:19:07Z	2026-10-19T13:19:06Z
+Rust CI/CD / Rust Stage	success	2026-10-19T13:19:37Z	2026-10-19T13:19:44Z
+[Rust] 0.27.0	Latest	rust-v0.27.0	2026-10-19T13:11:30Z
+[Rust] 0.26.0		rust-v0.26.0	2026-10-19T13:04:34Z
+[JavaScript] 0.38.0		js-v0.38.0	2026-10-19T12:58:54Z
+[Rust] 0.25.10		rust-v0.25.10	2026-10-19T10:35:54Z
+[Rust] 0.25.9		rust-v0.25.9	2026-10-19T10:29:24Z
+[JavaScript] 0.37.9		js-v0.37.9	2026-10-19T10:23:13Z
+
+# Auto Release of run 39257928573 was allowed to start, but published nothing:
+Rust CI/CD / Auto Release	UNKNOWN STEP	2026-10-19T13:24:08.2762521Z No changelog fragments found
+# The gap is latent: with a fragment present, a crate would have been released from a commit whose tarpaulin test run failed.

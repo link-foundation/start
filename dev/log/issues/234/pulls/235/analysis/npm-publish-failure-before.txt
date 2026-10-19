@@ -1,0 +1,13 @@
+Changing to working directory: /tmp/tmp.JDt5JpWblO/pkg
+Current version to publish: 9.9.9
+Checking if version 9.9.9 is already published...
+npm error code E404
+Version 9.9.9 not found on npm, proceeding with publish...
+Publish attempt 1 of 3...
+npm error code E403
+✅ Published start-command@9.9.9 to npm
+exit code: 0
+publish attempts: 1
+GITHUB_OUTPUT:
+published=true
+published_version=9.9.9

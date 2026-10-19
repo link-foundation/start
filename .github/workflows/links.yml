@@ -8,12 +8,26 @@ on:
       - '**.md'
       - '**.html'
       - '.github/workflows/links.yml'
+      - '.lycheeignore'
+      - 'scripts/check-web-archive.mjs'
+      - 'scripts/recheck-broken-links.mjs'
+      - 'js/test/fixtures/lychee-report.md'
+      - 'js/test/links-workflow.mjs'
+      - 'js/test/recheck-broken-links.mjs'
+      - 'scripts/check-pipeline-status.sh'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - '**.md'
       - '**.html'
       - '.github/workflows/links.yml'
+      - '.lycheeignore'
+      - 'scripts/check-web-archive.mjs'
+      - 'scripts/recheck-broken-links.mjs'
+      - 'js/test/fixtures/lychee-report.md'
+      - 'js/test/links-workflow.mjs'
+      - 'js/test/recheck-broken-links.mjs'
+      - 'scripts/check-pipeline-status.sh'
   workflow_dispatch:
 
 # Least-privilege default; jobs escalate individually when needed.
@@ -44,6 +58,15 @@ jobs:
         with:
           persist-credentials: false
 
+      # `--cache` only writes .lycheecache into the workspace; without this
+      # step every run starts cold and `--max-cache-age 1d` never applies.
+      - name: Restore lychee cache
+        uses: actions/cache@v5
+        with:
+          path: .lycheecache
+          key: cache-lychee-${{ github.sha }}
+          restore-keys: cache-lychee-
+
       - name: Check links with lychee
         id: lychee
         uses: lycheeverse/lychee-action@v2
@@ -52,6 +75,12 @@ jobs:
           # Exclude case-studies directory - these are research documents from
           # external repos with references to files and issues that don't exist
           # in this repository (similar exclusion pattern as eslint.config.js)
+          # Exclude dev/ - archived logs and template snapshots of other
+          # repositories. Exclude js/test/fixtures - the captured lychee
+          # report there contains deliberately broken links used as parser
+          # test input. `.` with --extensions replaces the './**/*.html'
+          # glob, which warned "No files found for this input source" on
+          # every run because this repository has no HTML files.
           args: >-
             --verbose
             --no-progress
@@ -59,10 +88,12 @@ jobs:
             --max-cache-age 1d
             --max-retries 3
             --timeout 30
+            --hidden
+            --extensions md,html
             --exclude-path docs/case-studies
             --exclude-path dev
-            './**/*.md'
-            './**/*.html'
+            --exclude-path js/test/fixtures
+            .
           # Don't fail the workflow immediately - we want to check web archive first
           fail: false
           # Output file for broken links report (used by check-web-archive.mjs)
@@ -72,33 +103,61 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check broken links against Web Archive
+      - name: Re-check transient link failures
+        # Retry transport errors, 429, and 5xx within a shared budget.
+        # GitHub blob/tree pages also use the authenticated contents API.
         if: steps.lychee.outputs.exit_code != 0
+        id: recheck
+        run: node scripts/recheck-broken-links.mjs
+        env:
+          LYCHEE_OUTPUT: lychee/out.md
+          RECOVERED_OUTPUT: lychee/recovered.txt
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check broken links against Web Archive
+        # `!= 'true'`, never `== 'false'`: a skipped re-check leaves the
+        # output empty, and only the != form fails safe.
+        if: >-
+          steps.lychee.outputs.exit_code != 0 &&
+          steps.recheck.outputs.all_recovered != 'true'
         id: webarchive
         run: node scripts/check-web-archive.mjs
         env:
           LYCHEE_OUTPUT: lychee/out.md
+          RECOVERED_URLS: lychee/recovered.txt
 
-      - name: Fail if broken links found and no web archive fallback
-        if: steps.lychee.outputs.exit_code != 0 && steps.webarchive.outputs.all_archived != 'true'
+      - name: Fail if broken links were found
+        if: >-
+          !cancelled() &&
+          steps.lychee.outputs.exit_code != 0 &&
+          steps.recheck.outputs.all_recovered != 'true'
         run: |
-          echo "::error::Broken links were detected with no Web Archive fallback available."
+          echo "::error::Broken live links were detected."
           echo ""
           echo "What happened:"
           echo "  lychee found one or more broken links in the *.md and *.html files of this repository."
-          echo "  The Web Archive (Wayback Machine) check found no archived versions for some of them."
+          echo "  An archive is a suggested replacement; it does not make the live link valid."
           echo ""
           echo "How to fix:"
           echo "  1. Review the 'Check links with lychee' step above for a full list of broken links."
-          echo "  2. For links marked with a '::notice::' annotation above, a Web Archive version exists."
+          echo "  2. For links marked with a '::notice::' annotation above, a Web Archive replacement exists."
           echo "     Replace those broken links with the suggested archive.org URL."
           echo "  3. For links with no archive version, either:"
           echo "     a. Find an updated URL that points to the same or equivalent content."
           echo "     b. Remove the link if the content is no longer relevant."
           echo "     c. Add the URL to .lycheeignore if it is a known false positive."
           echo ""
-          echo "Report location: lychee/out.md (available as a workflow artifact if configured)."
+          echo "Report location: lychee/out.md, uploaded as the lychee-report workflow artifact."
           exit 1
+
+      - name: Upload lychee report
+        if: ${{ !cancelled() && steps.lychee.outputs.exit_code != 0 }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: lychee-report
+          path: lychee/
+          if-no-files-found: ignore
+          retention-days: 14
 
   # === PIPELINE STATUS ===
   pipeline-status:

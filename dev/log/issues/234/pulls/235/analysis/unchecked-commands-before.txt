@@ -1,0 +1,19 @@
+84 |         ).map((offender) => `scripts/${file}:${offender}`)
++   "scripts/instant-version-bump.mjs:74: await $`npm version ${bumpType} --no-git-tag-version`;",
++   "scripts/instant-version-bump.mjs:123: await $`npm install --package-lock-only`;",
++   "scripts/create-manual-changeset.mjs:92: await $`npx prettier --write "${changesetFile}"`;",
++   "scripts/format-release-notes.mjs:86: const result = await $`gh api repos/${repository}/releases/${releaseId}`.run({",
++   "scripts/format-release-notes.mjs:164: await $`gh api "repos/${repository}/commits/${commitShaToLookup}/pulls"`.run(",
++   "scripts/format-release-notes.mjs:217: await $`gh api repos/${repository}/releases/${releaseId} -X PATCH --input -`.run(",
++   "scripts/publish-to-npm.mjs:81: await $`git pull origin main`;",
++   "scripts/publish-to-npm.mjs:117: await $`npm run changeset:publish`;",
++   "scripts/format-github-release.mjs:77: await $`gh api "repos/${repository}/releases/tags/${tag}" --jq '.id'`.run(",
++   "scripts/format-github-release.mjs:90: await $`node scripts/format-release-notes.mjs --release-id "${releaseId}" --release-version "${tag}" --repository "${repository}" --commit-sha "${commitSha}"`;",
++   "scripts/changeset-version.mjs:28: await $`npx changeset version`;",
++   "scripts/changeset-version.mjs:31: await $`npm install --package-lock-only`;",
++   "scripts/setup-npm.mjs:25: const currentResult = await $`npm --version`.run({ capture: true });",
++   "scripts/setup-npm.mjs:30: await $`npm install -g npm@latest`;",
++   "scripts/setup-npm.mjs:33: const updatedResult = await $`npm --version`.run({ capture: true });",
+(fail) command exit codes in release scripts > every command in scripts/*.mjs has its exit code checked [17.81ms]
+ 2 pass
+ 1 fail

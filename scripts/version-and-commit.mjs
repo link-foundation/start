@@ -25,10 +25,12 @@ import {
 } from 'fs';
 import path from 'path';
 import { loadCommandStream } from './load-command-stream.mjs';
+import { syncCargoLockVersion } from './cargo-lock-version.mjs';
 import {
   checked,
   isCrateVersionPublished,
   nextUnpublishedVersion,
+  pushWithRetry,
   verifyCommitOnRemote,
 } from './release-git.mjs';
 
@@ -328,7 +330,8 @@ ${newEntry}
 }
 
 /**
- * Bump Cargo.toml and collect Rust changelog content. The new version skips
+ * Bump Cargo.toml (and the matching Cargo.lock entry, #234) and collect Rust
+ * changelog content. The new version skips
  * every version crates.io already has, so the publish step can never turn
  * into a silent "already published" no-op (#211).
  * @param {string} oldVersion
@@ -347,6 +350,7 @@ async function runRustVersionBump(oldVersion) {
     cargoToml.replace(/^version\s*=\s*"[^"]+"/m, `version = "${newVersion}"`),
     'utf8'
   );
+  syncCargoLockVersion('Cargo.lock', crateName, newVersion);
 
   const fragments = readRustFragments();
   const changelogParts = [];
@@ -376,7 +380,7 @@ async function runRustVersionBump(oldVersion) {
 async function stageReleaseFiles() {
   const pathspecs =
     packageKind === 'rust'
-      ? ['Cargo.toml', 'CHANGELOG.md', 'changelog.d']
+      ? ['Cargo.toml', 'Cargo.lock', 'CHANGELOG.md', 'changelog.d']
       : ['package.json', 'package-lock.json', 'CHANGELOG.md', '.changeset'];
 
   for (const pathspec of pathspecs) {
@@ -495,7 +499,8 @@ async function main() {
       // Push directly to main. A rejected push (such as a ruleset violation,
       // #211) must fail here instead of reporting a release that never
       // reached main; the ancestry check catches anything the exit code hides.
-      await checked($`git push origin main`, 'git push origin main');
+      // A writer that landed first is rebased onto and retried (#234).
+      await pushWithRetry($);
       const pushedCommit = await verifyCommitOnRemote($);
       console.log(`Verified ${pushedCommit} is on origin/main`);
 

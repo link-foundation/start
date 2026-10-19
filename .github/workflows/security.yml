@@ -148,7 +148,7 @@ jobs:
           persist-credentials: false
 
       - name: Run secretlint
-        run: npx --yes -p secretlint -p @secretlint/secretlint-rule-preset-recommend secretlint --secretlintignore .gitignore "**/*"
+        run: npx --yes -p secretlint@13.0.7 -p @secretlint/secretlint-rule-preset-recommend@13.0.7 secretlint --secretlintignore .gitignore "**/*"
 
   # === PIPELINE STATUS ===
   pipeline-status:

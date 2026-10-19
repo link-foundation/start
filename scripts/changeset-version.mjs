@@ -14,6 +14,7 @@
  */
 
 import { loadCommandStream } from './load-command-stream.mjs';
+import { checked } from './release-git.mjs';
 
 // Load use-m dynamically
 const { use } = eval(
@@ -25,10 +26,14 @@ const { $ } = await loadCommandStream(use);
 
 try {
   console.log('Running changeset version...');
-  await $`npx changeset version`;
+  // checked(): command-stream resolves on a non-zero exit (#234).
+  await checked($`npx changeset version`, 'npx changeset version');
 
   console.log('\nSynchronizing package-lock.json...');
-  await $`npm install --package-lock-only`;
+  await checked(
+    $`npm install --package-lock-only`,
+    'npm install --package-lock-only'
+  );
 
   console.log('\n✅ Version bump complete with synchronized package-lock.json');
 } catch (error) {

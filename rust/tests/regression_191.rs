@@ -56,7 +56,7 @@ fn manual_memory_override_is_updated_before_start_and_persisted() {
         Some("json"),
         &runner,
         &Hooks,
-        &json!({"memory":"128m"}),
+        &with_test_lock(dir.path(), json!({"memory":"128m"})),
     );
     assert!(result.success, "{:?}", result.error);
     let update = runner.0.call("update").unwrap();
@@ -83,7 +83,7 @@ fn snapshot_override_is_applied_at_creation() {
         None,
         &runner,
         &Hooks,
-        &json!({"memory":"128m"}),
+        &with_test_lock(dir.path(), json!({"memory":"128m"})),
     );
     assert!(result.success, "{:?}", result.error);
     assert!(runner
@@ -173,7 +173,7 @@ fn failed_update_never_releases_the_command() {
         None,
         &runner,
         &Hooks,
-        &json!({"memory":"128m"}),
+        &with_test_lock(dir.path(), json!({"memory":"128m"})),
     );
     assert!(!result.success);
     assert!(runner.0.call("start").is_none());

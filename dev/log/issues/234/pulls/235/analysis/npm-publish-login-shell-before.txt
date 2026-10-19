@@ -1,0 +1,10 @@
+login profile: PATH="/home/box/.nvm/versions/node/v26.12.0/bin:$PATH"; export PATH
+PATH seen by /bin/sh -l: /home/box/.nvm/versions/node/v26.12.0/bin:/fake-first:/home/box/.local/bin:/home...
+(fail) npm-publish > fails when every publish attempt exits non-zero (issue #234) [7851.57ms]
+(fail) npm-publish > publishes and confirms the version on the registry [5011.49ms]
+(fail) npm-publish > retries a failed attempt [5005.10ms]
+(fail) npm-publish > accepts an attempt that failed client-side after the version landed [5004.69ms]
+(fail) npm-publish > skips publishing a version that is already on npm [5001.29ms]
+(fail) npm-publish > treats only E404 as "not published" and fails closed otherwise [3313.70ms]
+ 1 pass
+ 6 fail

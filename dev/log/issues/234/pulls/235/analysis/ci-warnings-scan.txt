@@ -1,0 +1,36 @@
+== run-37995995760-success.log
+      1 ^[[1m^[[33mwarning^[[0m: `cargo publish --token` is deprecated in favor of using `cargo login` and environment variables
+== run-38463617977-success.log
+== run-39237723744-failed.log
+      1 (pass) output-blocks module > createSpineLine (deprecated alias) > should work as alias for createTimelineLine [0.02ms]
+      1 (pass) output-blocks module > createEmptySpineLine (deprecated alias) > should work as alias for createEmptyTimelineLine [0.02ms]
+== run-39250359503-failed.log
+== run-39256972823-success.log
+      3 (pass) output-blocks module > createEmptySpineLine (deprecated alias) > should work as alias for createEmptyTimelineLine [0.02ms]
+      2             "title" : "DEPRECATED - Whether to use buildless (standalone) extraction.",
+      2             "description" : "DEPRECATED: Use `--build-mode none` instead.\nA value indicating, which type of extraction the autobuilder should perform. If 'true', then the standalone extractor will be used, otherwise tracing extraction will be performed. The default is 'false'. Note that buildless extraction will generally yield less accurate analysis results, and should only be used in cases where it is not possible to build the code (for example if it uses inaccessible dependencies).\n",
+      1 (pass) output-blocks module > createSpineLine (deprecated alias) > should work as alias for createTimelineLine [0.04ms]
+      1 (pass) output-blocks module > createSpineLine (deprecated alias) > should work as alias for createTimelineLine [0.03ms]
+      1 (pass) output-blocks module > createSpineLine (deprecated alias) > should work as alias for createTimelineLine [0.02ms]
+      1 (pass) output-blocks module > createSpineLine (deprecated alias) > should work as alias for createTimelineLine
+      1 (pass) output-blocks module > createEmptySpineLine (deprecated alias) > should work as alias for createEmptyTimelineLine
+== run-39257928550-success.log
+      5             "title" : "DEPRECATED - Whether to use buildless (standalone) extraction.",
+      5             "description" : "DEPRECATED: Use `--build-mode none` instead.\nA value indicating, which type of extraction the autobuilder should perform. If 'true', then the standalone extractor will be used, otherwise tracing extraction will be performed. The default is 'false'. Note that buildless extraction will generally yield less accurate analysis results, and should only be used in cases where it is not possible to build the code (for example if it uses inaccessible dependencies).\n",
+== run-39257928573-failed.log
+== run-39257928608-success.log
+== run-39269658765-failed.log
+      1 (pass) output-blocks module > createSpineLine (deprecated alias) > should work as alias for createTimelineLine [0.02ms]
+      1 (pass) output-blocks module > createEmptySpineLine (deprecated alias) > should work as alias for createEmptyTimelineLine
+
+## Triage (issue #234)
+- `cargo publish --token` deprecated (run 37995995760, 2026-10-09): already fixed;
+  scripts/publish-to-crates.mjs passes CARGO_REGISTRY_TOKEN instead of --token.
+- "Warning: Could not create log directory: Not a directory (os error 20)" (Rust
+  coverage/test jobs): expected stderr of the Rust test
+  write_log_file_tests::should_return_false_for_invalid_path, which writes to an
+  invalid path on purpose. Not a CI defect.
+- CodeQL "DEPRECATED ... buildless" lines: a JSON schema dump of CodeQL's own
+  options, not a warning about this repository's configuration.
+- "(deprecated alias)" lines: test names of passing tests for createSpineLine
+  aliases, not warnings.

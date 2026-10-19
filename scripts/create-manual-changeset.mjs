@@ -15,6 +15,7 @@
 import { writeFileSync } from 'fs';
 import { randomBytes } from 'crypto';
 import { loadCommandStream } from './load-command-stream.mjs';
+import { checked } from './release-git.mjs';
 
 // TODO: Update this to match your package name in package.json
 const PACKAGE_NAME = 'start-command';
@@ -89,7 +90,12 @@ ${description}
 
   // Format with Prettier
   console.log('\nFormatting with Prettier...');
-  await $`npx prettier --write "${changesetFile}"`;
+  // checked(): command-stream resolves on a non-zero exit (#234); it also
+  // quotes interpolated values itself.
+  await checked(
+    $`npx prettier --write ${changesetFile}`,
+    `npx prettier --write ${changesetFile}`
+  );
 
   console.log('\n✅ Changeset created and formatted successfully');
 } catch (error) {

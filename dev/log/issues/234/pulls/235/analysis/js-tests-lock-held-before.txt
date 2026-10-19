@@ -1,0 +1,722 @@
+Holding /tmp/start-command-docker-snapshot.lock as PID 70603
+bun test v1.4.3 (c6da4a4d3)
+
+test/cargo-lock-version.mjs:
+Updated /tmp/lock-cbhYpa/l: start-command 0.2.0
+/tmp/lock-cbhYpa/l already at start-command 0.2.0
+No /tmp/lock-DyCOwq/none; skipping lock file version sync
+✗ Found files exceeding the line limit:
+
+  scripts/huge.mjs: 1501 lines (exceeds 1000)
+
+Please refactor these files to be under 1000 lines
+
+✗ Found files exceeding the line limit:
+
+  scripts/nested/huge.mjs: 1501 lines (exceeds 1000)
+
+Please refactor these files to be under 1000 lines
+
+✗ Found files exceeding the line limit:
+
+  rust/src/huge.rs: 1501 lines (exceeds 1000)
+
+Please refactor these files to be under 1000 lines
+
+
+test/cli.js:
+  Skipping: tmux not installed
+
+test/docker-autoremove.js:
+$ echo "test" && sleep 0.5
+
+  ✓ Docker container auto-removed after exit (filesystem not preserved)
+$ echo "test" && sleep 0.1
+
+$ echo "test" && sleep 0.1
+
+$ echo "test" && exit 7
+
+$ printf "attached-log-line\n"
+
+attached-log-line
+
+test/docker-network-integration.js:
+$ ping -c 1 formal-ai && ping -c 1 formal-db && ip route | grep -q '^default '
+
+$ ping -c 1 formal-ai
+
+ping: bad address 'formal-ai'
+$ echo should-not-run
+
+$ echo should-not-run
+
+$ echo should-not-run
+
+docker: Error response from daemon: failed to set up container networking: network start-network-de466cf5-absent not found
+
+Run 'docker run --help' for more information
+$ echo should-not-run
+
+
+test/echo-integration.js:
+=== Echo Integration Tests - Issue #55 ===
+Testing that "echo hi" works correctly across all isolation modes
+Coverage: No isolation, Screen (attached/detached), Tmux (attached/detached), Docker (attached/detached)
+
+  ✓ No isolation mode: echo hi works correctly
+  ✓ No isolation mode: echo with single quotes works
+  ✓ No isolation mode: echo with double quotes works
+  ✓ Empty line formatting is consistent
+  ✓ Screen isolation (attached): echo hi works correctly
+  ✓ Screen isolation (attached): echo with quotes works
+  ✓ Screen isolation (attached): finish block displays correctly
+  ✓ Screen isolation (detached): echo hi starts correctly
+  ✓ Screen isolation (detached): session name displayed for reattaching
+  ⚠ tmux not installed, skipping tmux tests
+  ⚠ no TTY available, skipping attached docker tests
+  ✓ Docker isolation (detached): echo hi starts correctly
+  ✓ Docker isolation (detached): session/container name displayed for reattaching
+  ✓ Docker isolation (detached): echo with quotes works
+  ✓ Log paths are not truncated
+  ✓ Session IDs are complete UUIDs in both blocks
+  ✓ Exit code formatting is consistent
+  ✓ Timing information is present in finish block
+
+test/execution-resume.js:
+297 |         stderr: '',
+298 |         status: 0,
+299 |       }),
+300 |       startWatcher: () => {},
+301 |     });
+302 |     assert.strictEqual(result.success, true, result.error);
+                 ^
+AssertionError: Failed to resume docker session "box": A Docker snapshot resume of another-box is in progress on this host. Retry after it finishes, or wait for it with --snapshot-wait <seconds>.
+
+false !== true
+
+ generatedMessage: false,
+     actual: false,
+   expected: true,
+   operator: "strictEqual",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1792417136429/js/test/execution-resume.js:302:12
+      at node:test:1445:26
+      at executeTestNode (node:test:1448:63)
+(fail) resumeExecution > keeps the same UUID and remembers the previous session name [1059.97ms]
+
+test/execution-store.js:
+=== Execution Store Unit Tests ===
+
+test/failure-handler.js:
+
+
+Auto-issue creation disabled via START_DISABLE_AUTO_ISSUE
+
+test/isolation-cleanup.js:
+  ✓ Screen session auto-exited (no sessions found in screen -ls)
+  ✓ Screen session kept alive as expected with --keep-alive
+  Skipping: tmux not installed
+  Skipping: tmux not installed
+$ echo "test" && sleep 0.1
+
+  ✓ Docker container auto-exited and stopped (resources released, filesystem preserved)
+$ echo "test"
+
+  ✓ Docker container kept running as expected with --keep-alive
+
+test/isolation.js:
+  hasTTY: false
+  screen available: true
+  tmux available: false
+  docker available: true
+  ssh available: true
+  Detected screen version: 4.9.1
+  supportsLogfileOption: true
+  Version 4.9.1: -Logfile supported = true
+  Skipping: screen is installed
+  Skipping: docker is installed
+  Skipping: ssh is installed
+  Skipping: tmux not installed
+  Skipping: tmux not installed
+$ echo test
+
+$ echo test
+
+  Skipping: tmux not installed
+$ echo test
+
+test
+  Detected shell in alpine:latest: /bin/sh
+$ echo test
+
+  runInDocker with --shell sh result: true
+
+test/merge-changesets.mjs:
+Working directory: /tmp/merge-changesets-7ckbz1
+Changeset directory: /tmp/merge-changesets-7ckbz1/.changeset
+Package name: start-command
+Found 0 changeset file(s)
+No merging needed (0 or 1 changeset found)
+Working directory: /tmp/merge-changesets-a3O7k9
+Changeset directory: /tmp/merge-changesets-a3O7k9/.changeset
+Package name: start-command
+Found 1 changeset file(s)
+No merging needed (0 or 1 changeset found)
+Working directory: /tmp/merge-changesets-AOylMQ
+Changeset directory: /tmp/merge-changesets-AOylMQ/.changeset
+Package name: start-command
+Found 2 changeset file(s)
+Multiple changesets found, merging...
+  - a.md
+  - b.md
+
+Merge summary:
+  Bump types found: patch, minor
+  Using highest: minor
+  Descriptions to merge: 2
+
+Created merged changeset: merged-wise-rain.md
+
+Removing original changeset files:
+  Removed: a.md
+  Removed: b.md
+
+Changeset merge completed successfully
+
+Merged changeset content:
+---
+'start-command': minor
+---
+
+Fix A
+
+Feature B
+
+Working directory: /tmp/merge-changesets-QRKUMK
+Changeset directory: /tmp/merge-changesets-QRKUMK/.changeset
+Package name: start-command
+Found 3 changeset file(s)
+Multiple changesets found, merging...
+  - c.md
+  - a.md
+  - b.md
+
+Merge summary:
+  Bump types found: minor, patch, major
+  Using highest: major
+  Descriptions to merge: 3
+
+Created merged changeset: merged-quick-apple.md
+
+Removing original changeset files:
+  Removed: c.md
+  Removed: a.md
+  Removed: b.md
+
+Changeset merge completed successfully
+
+Merged changeset content:
+---
+'start-command': major
+---
+
+Feat
+
+Fix
+
+Breaking
+
+Working directory: /tmp/merge-changesets-other-x4zPMo
+Changeset directory: /tmp/merge-changesets-other-x4zPMo/.changeset
+Package name: some-other-pkg
+Found 2 changeset file(s)
+Multiple changesets found, merging...
+  - a.md
+  - b.md
+
+Merge summary:
+  Bump types found: minor, patch
+  Using highest: minor
+  Descriptions to merge: 2
+
+Created merged changeset: merged-rich-wave.md
+
+Removing original changeset files:
+  Removed: a.md
+  Removed: b.md
+
+Changeset merge completed successfully
+
+Merged changeset content:
+---
+'some-other-pkg': minor
+---
+
+A
+
+B
+
+
+test/output-blocks.js:
+=== Output Blocks Unit Tests ===
+invalid reference format
+latest: Pulling from library/hello-world
+4f55086f7dd0: Pulling fs layer
+4f55086f7dd0: Download complete
+4f55086f7dd0: Pull complete
+Digest: sha256:11a3eb1597e864c51b3f56733cb2e8a90bf0c284bfc05f9444d81c558bc848aa
+Status: Downloaded newer image for hello-world:latest
+docker.io/library/hello-world:latest
+invalid reference format
+
+test/regression-176.js:
+307 |       probe: stoppedProbe,
+308 |       runner,
+309 |       snapshotOptions: { freeBytes: () => 100 * 1024 ** 3 },
+310 |       startWatcher: (...args) => watchers.push(args),
+311 |     });
+312 |     expect(result.success).toBe(true);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/regression-176.js:312:28)
+(fail) issue #176: snapshot resume keeps the resource limits > inspects the old container before the commit and records the limits [1044.85ms]
+880 | 
+881 |       const result = await resumeExecution(store, record.uuid, {
+882 |         command: 'sleep 30',
+883 |         startWatcher: () => {},
+884 |       });
+885 |       expect(result.success).toBe(true);
+                                   ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/regression-176.js:885:30)
+(fail) issue #176: real docker snapshot resume > re-applies docker update limits to the -resume-1 container [5474.93ms]
+
+test/regression-187.js:
+115 |         }),
+116 |         startWatcher: (_name, _policy, _log, _uuid, watcherOptions) => {
+117 |           options = watcherOptions;
+118 |         },
+119 |       });
+120 |       expect(options.attemptNumber).toBe(2);
+                   ^
+TypeError: undefined is not an object (evaluating 'options.attemptNumber')
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/regression-187.js:120:14)
+(fail) issue #187: explicit resume attempts > reattaches the current attempt without enabling kill recovery for snapshot commands [1164.32ms]
+355 |       command: 'replacement',
+356 |       probe: stopped,
+357 |       runner: accepted,
+358 |       startWatcher: () => {},
+359 |     });
+360 |     expect(result.success).toBe(true);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/regression-187.js:360:28)
+(fail) issue #187: explicit resume attempts > records previous and new container names for a snapshot resume [1082.36ms]
+
+test/regression-191.js:
+89 |       resourceOptions: { memory: '128m' },
+90 |       runner: f.runner,
+91 |       probe: () => ({ alive: false, state: SessionState.STOPPED }),
+92 |       startWatcher: () => true,
+93 |     });
+94 |     expect(result.success).toBe(true);
+                                ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/regression-191.js:94:28)
+(fail) manual snapshot override applies limits to the new container at creation [1091.62ms]
+
+test/regression-193.js:
+82 |                 : 'id',
+83 |         };
+84 |       },
+85 |       startWatcher: () => true,
+86 |     });
+87 |     expect(result.success).toBe(true);
+                                ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/regression-193.js:87:28)
+(fail) issue #193: durable store locks and resume > reserves the replacement session before Docker side effects [1062.66ms]
+
+test/regression-198.js:
+112 |     removeOriginal: true,
+113 |     runner: mockDocker(calls),
+114 |     snapshotOptions: { freeBytes: () => 100 * 1024 ** 3 },
+115 |     startWatcher: () => true,
+116 |   });
+117 |   assert.equal(result.success, true, result.error);
+               ^
+AssertionError: Failed to resume docker session "box": A Docker snapshot resume of another-box is in progress on this host. Retry after it finishes, or wait for it with --snapshot-wait <seconds>.
+
+false !== true
+
+ generatedMessage: false,
+     actual: false,
+   expected: true,
+   operator: "strictEqual",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1792417136429/js/test/regression-198.js:117:10
+      at node:test:1445:26
+      at executeTestNode (node:test:1448:63)
+(fail) legacy snapshots preflight before commit and remove originals only with non-forced rm after start [1049.85ms]
+142 |     runner: mockDocker(calls),
+143 |     snapshotOptions: { freeBytes: () => 0 },
+144 |     startWatcher: () => true,
+145 |   });
+146 |   assert.equal(result.success, false);
+147 |   assert.match(result.error, /Insufficient disk/);
+               ^
+AssertionError: The input did not match the regular expression /Insufficient disk/. Input:
+
+'Failed to resume docker session "box": A Docker snapshot resume of another-box is in progress on this host. Retry after it finishes, or wait for it with --snapshot-wait <seconds>.'
+
+ generatedMessage: true,
+     actual: "Failed to resume docker session \"box\": A Docker snapshot resume of another-box is in progress on this host. Retry after it finishes, or wait for it with --snapshot-wait <seconds>.",
+   expected: /Insufficient disk/,
+   operator: "match",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1792417136429/js/test/regression-198.js:147:10
+      at node:test:1445:26
+      at executeTestNode (node:test:1448:63)
+(fail) disk shortage rolls back the reservation without committing or removing the original [1054.97ms]
+163 |         : base(bin, args),
+164 |     snapshotOptions: { freeBytes: () => 100 * 1024 ** 3 },
+165 |     startWatcher: () => true,
+166 |   });
+167 |   assert.equal(result.success, false);
+168 |   assert.ok(
+               ^
+AssertionError: false == true
+ generatedMessage: true,
+     actual: false,
+   expected: true,
+   operator: "==",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1792417136429/js/test/regression-198.js:168:10
+      at node:test:1445:26
+      at executeTestNode (node:test:1448:63)
+(fail) snapshot failure removes a completed image and restores the original execution [1047.68ms]
+224 |     resourceOptions: { labels: ['role=new'] },
+225 |     runner: mockDocker(calls),
+226 |     snapshotOptions: { freeBytes: () => 100 * 1024 ** 3 },
+227 |     startWatcher: () => true,
+228 |   });
+229 |   assert.equal(result.success, true, result.error);
+               ^
+AssertionError: Failed to resume docker session "box": A Docker snapshot resume of another-box is in progress on this host. Retry after it finishes, or wait for it with --snapshot-wait <seconds>.
+
+false !== true
+
+ generatedMessage: false,
+     actual: false,
+   expected: true,
+   operator: "strictEqual",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1792417136429/js/test/regression-198.js:229:10
+      at node:test:1445:26
+      at executeTestNode (node:test:1448:63)
+(fail) changed caller labels use a guarded snapshot and reapply merged labels [1062.90ms]
+250 |           ? { success: true, stdout: 'false' }
+251 |           : base(bin, args),
+252 |       snapshotOptions: { freeBytes: () => 100 * 1024 ** 3 },
+253 |       startWatcher: () => true,
+254 |     });
+255 |     assert.equal(result.success, true, result.error);
+                 ^
+AssertionError: Failed to resume docker session "box": A Docker snapshot resume of another-box is in progress on this host. Retry after it finishes, or wait for it with --snapshot-wait <seconds>.
+
+false !== true
+
+ generatedMessage: false,
+     actual: false,
+   expected: true,
+   operator: "strictEqual",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1792417136429/js/test/regression-198.js:255:12
+      at node:test:1445:26
+      at executeTestNode (node:test:1448:63)
+(fail) original retained by default and when a successor has already stopped [1169.89ms]
+267 |       resourceOptions: { labels: [`role=${role}`] },
+268 |       runner: mockDocker(calls),
+269 |       snapshotOptions: { freeBytes: () => 100 * 1024 ** 3 },
+270 |       startWatcher: () => true,
+271 |     });
+272 |     assert.equal(result.success, true, result.error);
+                 ^
+AssertionError: Failed to resume docker session "box": A Docker snapshot resume of another-box is in progress on this host. Retry after it finishes, or wait for it with --snapshot-wait <seconds>.
+
+false !== true
+
+ generatedMessage: false,
+     actual: false,
+   expected: true,
+   operator: "strictEqual",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1792417136429/js/test/regression-198.js:272:12
+      at node:test:1445:26
+      at executeTestNode (node:test:1448:63)
+(fail) repeated snapshot successors retain the original root-session attribution [1109.68ms]
+
+test/regression-224.js:
+439 |       startWatcher: () => {
+440 |         events.push('watcher');
+441 |         return true;
+442 |       },
+443 |     });
+444 |     expect(result.success).toBe(true);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/regression-224.js:444:28)
+(fail) issue #224 item 3: --remove-original-after > removes the original only after the window, once the watcher is attached [1059.93ms]
+468 |       snapshotOptions: plentyOfDisk,
+469 |       notify: () => {},
+470 |       sleep: async () => {},
+471 |       startWatcher: () => true,
+472 |     });
+473 |     expect(result.success).toBe(true);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/regression-224.js:473:28)
+(fail) issue #224 item 3: --remove-original-after > keeps the original when the replacement died within the window [1051.75ms]
+711 |       runner: fakeDocker([]),
+712 |       snapshotOptions: plentyOfDisk,
+713 |       notify: () => {},
+714 |       startWatcher: () => true,
+715 |     });
+716 |     expect(result.success).toBe(true);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/regression-224.js:716:28)
+(fail) issue #224 item 5: progress during docker commit > logs the commit of a real resume [1058.49ms]
+745 |       runner: fakeDocker(calls),
+746 |       snapshotOptions: { ...plentyOfDisk, prepare: 'rm -rf /tmp/cache' },
+747 |       notify: () => {},
+748 |       startWatcher: () => true,
+749 |     });
+750 |     expect(result.success).toBe(true);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/regression-224.js:750:28)
+(fail) issue #224 item 7: --snapshot-prepare > starts, execs, kills and waits the original before the preflight and commit [1048.72ms]
+780 |       }),
+781 |       snapshotOptions: { ...plentyOfDisk, prepare: 'rm -rf /busy' },
+782 |       notify: () => {},
+783 |       startWatcher: () => true,
+784 |     });
+785 |     expect(result.success).toBe(true);
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/regression-224.js:785:28)
+(fail) issue #224 item 7: --snapshot-prepare > still kills the original and snapshots when the command fails [1046.61ms]
+From /tmp/release-git-ecgFYK/remote
+ * branch            main       -> FETCH_HEAD
+From /tmp/release-git-0cyhDY/remote
+ * branch            main       -> FETCH_HEAD
+
+test/release-git.mjs:
+0.24.0 is already published; bumping again
+hello
+
+test/screen-integration.js:
+  Captured output: "hello"
+line1
+line2
+line3
+  Captured multi-line output: "line1\nline2\nline3"
+hello
+  Captured quoted output: "hello"
+hello from attached mode
+  Captured complex quote output: "hello from attached mode"
+quick command output
+  Verified output capture: "quick command output"
+v26.12.0
+  Captured version output: "v26.12.0"
+/bin/bash: line 1: nonexistent_command_12345: command not found
+  Captured exit code: 127
+stderr-test
+  Captured stderr output: "stderr-test"
+line1
+line2
+line3
+  Multi-line output with exit code 0: verified
+
+test/session-name-status.js:
+=== Session Name Status Tests (Issue #101) ===
+
+test/ssh-integration.js:
+  SSH to localhost not available, integration tests will be skipped
+  Skipping: SSH to localhost not available
+  Skipping: SSH to localhost not available
+  Skipping: SSH to localhost not available
+  Skipping: SSH to localhost not available
+  Skipping: SSH to localhost not available
+  Skipping: SSH to localhost not available
+  Skipping: SSH to localhost not available
+  Skipping: SSH to localhost not available
+  Note: SSH connection error handling is tested via unit tests
+  Skipping: SSH to localhost not available
+
+test/status-query.js:
+=== Status Query Integration Tests ===
+
+test/substitution.js:
+=== Substitution Engine Unit Tests ===
+
+✓ Loaded 48 substitution rules
+
+✓ Test: loadDefaultSubstitutions() returns array of rules
+✓ Test: Rules have correct structure (pattern, replacement, regex)
+
+=== Pattern Matching Tests ===
+
+✓ PASS: Basic npm install
+  Input:  "install gh-upload-log npm package"
+  Output: "npm install gh-upload-log"
+
+✓ PASS: npm install with version
+  Input:  "install 0.0.1 version of gh-upload-log npm package"
+  Output: "npm install gh-upload-log@0.0.1"
+
+✓ PASS: Global npm install
+  Input:  "install lodash npm package globally"
+  Output: "npm install -g lodash"
+
+✓ PASS: Global npm install with version
+  Input:  "install 4.17.21 version of lodash npm package globally"
+  Output: "npm install -g lodash@4.17.21"
+
+✓ PASS: npm uninstall
+  Input:  "uninstall lodash npm package"
+  Output: "npm uninstall lodash"
+
+✓ PASS: Git clone with URL
+  Input:  "clone https://github.com/user/repo repository"
+  Output: "git clone https://github.com/user/repo"
+
+✓ PASS: Git clone with SSH URL
+  Input:  "clone git@github.com:user/repo.git repository"
+  Output: "git clone git@github.com:user/repo.git"
+
+✓ PASS: Git checkout branch
+  Input:  "checkout main branch"
+  Output: "git checkout main"
+
+✓ PASS: Git create branch
+  Input:  "create feature-x branch"
+  Output: "git checkout -b feature-x"
+
+✓ PASS: List files
+  Input:  "list files"
+  Output: "ls -la"
+
+✓ PASS: Show working directory
+  Input:  "show current directory"
+  Output: "pwd"
+
+✓ PASS: Create directory
+  Input:  "create my-project directory"
+  Output: "mkdir -p my-project"
+
+✓ PASS: pip install
+  Input:  "install requests python package"
+  Output: "pip install requests"
+
+✓ PASS: Non-matching command (pass through)
+  Input:  "echo hello world"
+  Output: "echo hello world"
+
+✓ PASS: Regular npm command (pass through)
+  Input:  "npm test"
+  Output: "npm test"
+
+=== Pattern Specificity Tests ===
+
+✓ Test: Pattern specificity works correctly
+  Input:  "install 1.0.0 version of express npm package globally"
+  Output: "npm install -g express@1.0.0"
+
+=== Variable Extraction Tests ===
+
+✓ Test: Variable extraction and substitution works correctly
+  Pattern matched: "install $packageName npm package"
+  Variables in pattern: [packageName]
+  Result command: "npm install my-package"
+
+=== processCommand Integration Tests ===
+
+✓ Test: processCommand applies substitutions
+  Input:  "list files"
+  Output: "ls -la"
+  Matched: true
+
+✓ Test: processCommand passes through non-matching commands
+  Input:  "echo test"
+  Output: "echo test"
+  Matched: false
+
+=== Test Summary ===
+Pattern Matching: 15/15 tests passed
+Total Tests: 22/22 passed
+
+✓ All tests passed!
+
+
+ 1333 pass
+ 1 skip
+ 18 fail
+ 2285 expect() calls
+Ran 1352 tests across 88 files. [172.83s]

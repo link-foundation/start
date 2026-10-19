@@ -32,6 +32,8 @@ fn monitor_restores_external_limits_and_recovers_dead_owners() {
         "reused",
         "supervise",
         "publish-fault",
+        // publish-fault with the monitor's republish window forced open (#234).
+        "publish-race",
         "graceful",
         "override",
     ] {
@@ -63,9 +65,16 @@ fn monitor_restores_external_limits_and_recovers_dead_owners() {
                 env!("CARGO_MANIFEST_DIR"),
                 "/../experiments/issue-207-monitor.py"
             ),
-            mode,
+            if mode == "publish-race" {
+                "publish-fault"
+            } else {
+                mode
+            },
             &record.log_path,
         ]);
+        if mode == "publish-race" {
+            command.env("START_FIXTURE_UNLINK_DELAY", "1.2");
+        }
         if mode == "supervise" {
             let options = start_command::IsolationOptions {
                 log_path: Some(record.log_path.clone().into()),

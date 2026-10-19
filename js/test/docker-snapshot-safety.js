@@ -1,3 +1,5 @@
+// Own snapshot lock even without the bunfig.toml preload (issue #234).
+require('./setup/private-snapshot-lock');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -103,4 +105,41 @@ test('snapshot lock is separate from store locks and excludes concurrent process
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('tests never share the host-wide snapshot lock (issue #234)', () => {
+  // bunfig.toml preloads test/setup/private-snapshot-lock.js. Without it a
+  // real `start --resume` holding the default lock failed every resume test.
+  const lockPath = process.env.START_SNAPSHOT_LOCK;
+  assert.ok(lockPath, 'START_SNAPSHOT_LOCK is not set by the test preload');
+  assert.notEqual(
+    lockPath,
+    path.join(
+      process.platform === 'win32' ? os.tmpdir() : '/tmp',
+      'start-command-docker-snapshot.lock'
+    )
+  );
+  const lock = acquireSnapshotLock({ holder: 'issue-234' });
+  try {
+    assert.ok(fs.existsSync(lockPath));
+  } finally {
+    lock.release();
+  }
+});
+
+test('every snapshot test requires its private lock itself (issue #234)', () => {
+  // `bun test ./js/test/x.js` from the repository root skips js/bunfig.toml,
+  // so the preload alone left 18 tests on the host-wide lock.
+  const dir = __dirname;
+  const offenders = fs
+    .readdirSync(dir)
+    .filter((name) => name.endsWith('.js'))
+    .filter((name) => {
+      const source = fs.readFileSync(path.join(dir, name), 'utf8');
+      return (
+        /\b(resumeExecution|acquireSnapshotLock)\(/.test(source) &&
+        !source.includes("require('./setup/private-snapshot-lock')")
+      );
+    });
+  assert.deepEqual(offenders, []);
 });

@@ -11,10 +11,14 @@ on:
     branches: [main]
     paths:
       - '.github/**'
+      - 'scripts/install-actionlint.sh'
+      - 'scripts/check-pipeline-status.sh'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - '.github/**'
+      - 'scripts/install-actionlint.sh'
+      - 'scripts/check-pipeline-status.sh'
   workflow_dispatch:
 
 # Least-privilege default; these jobs only need to read the checked-out tree.
@@ -72,7 +76,7 @@ jobs:
 
       # Annotations instead of SARIF: code scanning is not guaranteed to be
       # enabled on forks, and the job should fail loudly either way.
-      - uses: zizmorcore/zizmor-action@v0.6.2
+      - uses: zizmorcore/zizmor-action@v0.6.4
         with:
           advanced-security: false
           annotations: true

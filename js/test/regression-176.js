@@ -11,6 +11,8 @@
  *      container, under the same execution UUID and log, up to N times.
  */
 
+// Own snapshot lock even without the bunfig.toml preload (issue #234).
+require('./setup/private-snapshot-lock');
 const { describe, it, expect, afterEach } = require('bun:test');
 const { spawnSync } = require('child_process');
 const fs = require('fs');

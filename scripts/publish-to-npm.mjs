@@ -15,6 +15,8 @@
 
 import { readFileSync, appendFileSync } from 'fs';
 import { loadCommandStream } from './load-command-stream.mjs';
+import { publishToNpm } from './npm-publish.mjs';
+import { checked } from './release-git.mjs';
 
 // TODO: Update this to match your package name in package.json
 const PACKAGE_NAME = 'start-command';
@@ -51,8 +53,6 @@ if (workingDir && workingDir !== '.') {
   console.log(`Changing to working directory: ${workingDir}`);
   process.chdir(workingDir);
 }
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 10000; // 10 seconds
 
 /**
  * Sleep for specified milliseconds
@@ -78,7 +78,7 @@ async function main() {
   try {
     if (shouldPull) {
       // Pull the latest changes we just pushed
-      await $`git pull origin main`;
+      await checked($`git pull origin main`, 'git pull origin main');
     }
 
     // Get current version
@@ -86,55 +86,22 @@ async function main() {
     const currentVersion = packageJson.version;
     console.log(`Current version to publish: ${currentVersion}`);
 
-    // Check if this version is already published on npm
-    console.log(
-      `Checking if version ${currentVersion} is already published...`
-    );
-    const checkResult =
-      await $`npm view "${PACKAGE_NAME}@${currentVersion}" version`.run({
-        capture: true,
-      });
-
-    // command-stream returns { code: 0 } on success, { code: 1 } on failure (e.g., E404)
-    // Exit code 0 means version exists, non-zero means version not found
-    if (checkResult.code === 0) {
-      console.log(`Version ${currentVersion} is already published to npm`);
-      setOutput('published', 'true');
-      setOutput('published_version', currentVersion);
+    // `published` is set only after the registry confirms the version, so a
+    // failed publish can no longer create a GitHub release (issue #234).
+    const { alreadyPublished } = await publishToNpm($, {
+      name: PACKAGE_NAME,
+      version: currentVersion,
+      sleep,
+    });
+    setOutput('published', 'true');
+    setOutput('published_version', currentVersion);
+    if (alreadyPublished) {
       setOutput('already_published', 'true');
-      return;
     } else {
-      // Version not found on npm (E404), proceed with publish
-      console.log(
-        `Version ${currentVersion} not found on npm, proceeding with publish...`
-      );
+      console.log(`\u2705 Published ${PACKAGE_NAME}@${currentVersion} to npm`);
     }
-
-    // Publish to npm using OIDC trusted publishing with retry logic
-    for (let i = 1; i <= MAX_RETRIES; i++) {
-      console.log(`Publish attempt ${i} of ${MAX_RETRIES}...`);
-      try {
-        await $`npm run changeset:publish`;
-        setOutput('published', 'true');
-        setOutput('published_version', currentVersion);
-        console.log(
-          `\u2705 Published ${PACKAGE_NAME}@${currentVersion} to npm`
-        );
-        return;
-      } catch (error) {
-        if (i < MAX_RETRIES) {
-          console.log(
-            `Publish failed: ${error.message}, waiting ${RETRY_DELAY / 1000}s before retry...`
-          );
-          await sleep(RETRY_DELAY);
-        }
-      }
-    }
-
-    console.error(`\u274C Failed to publish after ${MAX_RETRIES} attempts`);
-    process.exit(1);
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('\u274C Error:', error.message);
     process.exit(1);
   }
 }

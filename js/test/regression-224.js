@@ -7,6 +7,8 @@
  * `docker inspect --size`, and had no hook to shrink the layer first.
  */
 
+// Own snapshot lock even without the bunfig.toml preload (issue #234).
+require('./setup/private-snapshot-lock');
 const { describe, it, expect, afterEach } = require('bun:test');
 const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
