@@ -1,0 +1,5 @@
+---
+'start-command': minor
+---
+
+Executions now carry a stable identity a supervisor can rely on. A launch with an explicit `--session-id` that already exists is refused with exit 1 (`execution <uuid> already exists; use $ --resume <uuid> -- <command> to continue it, or pass --append-attempt`) instead of replacing the record and truncating its log; `--append-attempt` keeps the record, archives the previous attempt in `attemptHistory` and appends the new attempt to the same log (#229). Every backend (direct, `--isolated-user`, screen, tmux, docker, ssh, and docker resumes of stopped containers) exports `START_EXECUTION_ID`, `START_SESSION_NAME` and `START_ATTEMPT` to the command it runs (#230). `$ --alias <id> <name>` adds a name and `$ --rename <id> <name>` sets the display name of an execution, `--continues <id>` records the execution a fresh launch continues, `--status` reports `aliases` and the continuation `chain`, and `--upload-log` uploads the logs of the whole chain, oldest first (#231).

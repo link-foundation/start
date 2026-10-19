@@ -26,6 +26,9 @@ $ --upload-log <id>
 $ --attach <id>
 $ --resume <id> -- <command>
 $ --resume-all
+$ --session-id <uuid> --append-attempt -- <command>
+$ --continues <id> -- <command>
+$ --rename <id> <name>
 ```
 
 Use `--status <id>` to inspect one stored execution, or `--list` to see all
@@ -92,6 +95,15 @@ current run in the shared log. `attempt.launchAcceptedAt` and
 `attempt.watcherAttachedAt` report launch and observation setup separately;
 `attempt.lastOutputAt` remains `null` until the resumed Docker command emits
 output. Previous exit and memory evidence stays in `attemptHistory`.
+
+A launch with an existing explicit `--session-id` is refused with exit 1;
+add `--append-attempt` to run it as the next attempt of that execution in the
+same log. Commands see `START_EXECUTION_ID`, `START_SESSION_NAME` (empty for
+direct runs) and `START_ATTEMPT`. `$ --alias <id> <name>` and
+`$ --rename <id> <name>` name an execution, `--continues <id>` links a fresh
+launch to an earlier one, `--status` shows `aliases` and the `chain`, and
+`--upload-log` uploads the whole chain's log. See
+[Execution identity](../README.md#execution-identity-attempts-and-chains).
 
 For examples checked against the real JavaScript and Rust command output, see
 [EXAMPLES.md](EXAMPLES.md).
