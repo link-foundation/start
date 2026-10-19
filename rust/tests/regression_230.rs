@@ -37,11 +37,16 @@ fn sh(script: &str) -> String {
 }
 
 fn run(args: &[&str]) -> Output {
-    let root = tempfile::tempdir().unwrap();
+    run_in(tempfile::tempdir().unwrap().path(), args)
+}
+
+/// Like `run`, with the store and logs under `root`, so a detached session
+/// can keep writing after the launch returns.
+fn run_in(root: &std::path::Path, args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_start"))
         .args(args)
-        .env("START_APP_FOLDER", root.path().join("app"))
-        .env("START_LOG_DIR", root.path().join("logs"))
+        .env("START_APP_FOLDER", root.join("app"))
+        .env("START_LOG_DIR", root.join("logs"))
         .env("START_DISABLE_AUTO_ISSUE", "1")
         .env("START_DISABLE_LOG_UPLOAD", "1")
         .env_remove("START_EXECUTION_ID")
@@ -264,27 +269,50 @@ fn screen_exports_them_with_the_session_name() {
     );
 }
 
+/// Attached tmux needs a terminal, which CI and test runners do not have, so
+/// this runs detached and reads the command output from the log.
 #[test]
 fn tmux_exports_them_with_the_session_name() {
     if !has_command("tmux") {
         return;
     }
     let session = format!("start-230-rs-tmux-{}", std::process::id());
-    let result = run(&[
-        "-i",
-        "tmux",
-        "--session",
-        &session,
-        "--session-id",
-        UUID,
-        "--",
-        "sh",
-        "-c",
-        PRINT,
-    ]);
-    assert!(
-        stdout(&result).contains(&format!("ID={} S={} A=1", UUID, session)),
-        "{}",
-        stdout(&result)
+    let root = tempfile::tempdir().unwrap();
+    let result = run_in(
+        root.path(),
+        &[
+            "-i",
+            "tmux",
+            "--detached",
+            "--session",
+            &session,
+            "--session-id",
+            UUID,
+            "--",
+            "sh",
+            "-c",
+            PRINT,
+        ],
     );
+    let out = stdout(&result);
+    assert_eq!(result.status.code(), Some(0), "{}", out);
+    let log_path = out
+        .lines()
+        .find_map(|line| line.strip_prefix("│ log"))
+        .unwrap_or_else(|| panic!("no log line in {}", out))
+        .trim()
+        .to_string();
+    let expected = format!("ID={} S={} A=1", UUID, session);
+    let mut log = String::new();
+    for _ in 0..100 {
+        log = fs::read_to_string(&log_path).unwrap_or_default();
+        if log.contains(&expected) {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    let _ = Command::new("tmux")
+        .args(["kill-session", "-t", &session])
+        .output();
+    assert!(log.contains(&expected), "{}", log);
 }

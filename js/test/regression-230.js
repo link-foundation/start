@@ -199,6 +199,8 @@ describe('issue #230: START_* execution identity variables', () => {
     30000
   );
 
+  // Attached tmux needs a terminal, which CI and test runners do not have,
+  // so this runs detached and reads the command output from the log.
   it.skipIf(!hasCommand('tmux'))(
     'tmux exports them with the session name',
     () => {
@@ -206,6 +208,7 @@ describe('issue #230: START_* execution identity variables', () => {
       const result = run([
         '-i',
         'tmux',
+        '--detached',
         '--session',
         session,
         '--session-id',
@@ -215,7 +218,16 @@ describe('issue #230: START_* execution identity variables', () => {
         '-c',
         PRINT,
       ]);
-      expect(result.stdout).toContain(`ID=${UUID} S=${session} A=1`);
+      expect(result.status).toBe(0);
+      const logPath = result.stdout.match(/^│ log\s+(.+)$/m)[1].trim();
+      const expected = `ID=${UUID} S=${session} A=1`;
+      let log = '';
+      for (let i = 0; i < 100 && !log.includes(expected); i++) {
+        spawnSync('sleep', ['0.1']);
+        log = fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8') : '';
+      }
+      spawnSync('tmux', ['kill-session', '-t', session]);
+      expect(log).toContain(expected);
     },
     30000
   );
