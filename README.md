@@ -323,6 +323,62 @@ session/container name. `--stop` asks the backend to stop gracefully (CTRL+C for
 screen/tmux, `docker stop` for Docker). `--terminate` uses the backend's
 immediate termination command.
 
+#### Execution identity, attempts and chains
+
+An execution UUID names one logical execution. Launching again with an explicit
+`--session-id` that is already stored (or whose log file already exists) is
+refused with exit 1 before anything runs, so the first record and its log are
+never replaced:
+
+```
+Error: execution <uuid> already exists; use $ --resume <uuid> -- <command> to continue it, or pass --append-attempt
+```
+
+`--session-id <uuid> --append-attempt` runs the command as the next attempt of
+that execution instead: the record keeps its `startTime`, names and
+continuation, the previous attempt moves to `attemptHistory`, and the new
+attempt (`mode` `append-attempt`) is appended to the same log after an
+`attempt-appended` lifecycle line, with its byte offset in `attempt.logOffset`.
+It is refused while the execution is still running (stop it first) and when the
+UUID is already a name of another execution. Generated UUIDs are never checked.
+
+Every backend exports the execution's identity to the command it runs, so a
+supervisor can recognise its own executions from inside them:
+
+| Variable             | Value                                                                      |
+| -------------------- | -------------------------------------------------------------------------- |
+| `START_EXECUTION_ID` | The execution UUID (`--session-id` or the generated one).                  |
+| `START_SESSION_NAME` | The screen/tmux/docker/ssh session name; empty for direct runs.            |
+| `START_ATTEMPT`      | `1` for the first run, then one more per resume, recovery or appended run. |
+
+Docker passes them with `-e` after the caller's `--env` values, so they cannot
+be overridden; screen, tmux, ssh and `--isolated-user` runs export them in the
+launched shell; a resume of a stopped container reads them from a small
+`.env` handoff file. A nested `$ --session-id "$START_EXECUTION_ID" ...` inside
+an isolation is the next level of the same execution, not a reuse.
+
+`$ --alias <id> <name>` adds a name the execution can be addressed by, and
+`$ --rename <id> <name>` sets its display name (the earlier display name stays
+an alias). A name must not be empty, start with `-`, or already refer to another
+execution. A fresh launch can record the execution it continues with
+`--continues <id>`. `--status` then reports `aliases` (UUID, session names and
+names) and the `chain` of continued executions, oldest first, and
+`--upload-log <id>` uploads the logs of the whole chain as one file, each log
+preceded by a `[Start Command Lifecycle]` `continuation` line:
+
+```bash
+$ --session-id 23200000-0000-4000-8000-00000000000a -- npm test
+$ --rename 23200000-0000-4000-8000-00000000000a nightly
+$ --continues nightly -- npm test
+$ --status nightly
+```
+
+Names are kept in `options.aliases` and `options.name`, separate from
+`sessionNameHistory`, because session names also drive `--resume` and
+`--cleanup` of real containers and sessions. Containers created before this
+release do not read the `.env` handoff, so their resumes do not see the new
+variables.
+
 #### Re-entering, continuing and repairing sessions
 
 `--attach`, `--resume` and `--resume-all` accept the same identifiers as

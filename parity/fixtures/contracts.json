@@ -195,6 +195,26 @@
         "--memory=256m",
         "--cpus=1.5"
       ]
+    },
+    {
+      "name": "execution identity after the user env (issue #230)",
+      "options": {
+        "env": [
+          "START_EXECUTION_ID=spoofed"
+        ],
+        "executionId": "23000000-0000-4000-8000-000000000230",
+        "attemptNumber": 3
+      },
+      "argv": [
+        "-e",
+        "START_EXECUTION_ID=spoofed",
+        "-e",
+        "START_EXECUTION_ID=23000000-0000-4000-8000-000000000230",
+        "-e",
+        "START_SESSION_NAME=",
+        "-e",
+        "START_ATTEMPT=3"
+      ]
     }
   ],
   "status-output": {
@@ -296,6 +316,81 @@
       "  ports: [\"8080:80\"]",
       "  resolvedLimits: {\"cpus\":2,\"memory\":\"4g\"}",
       "  resourceLimitSpecs: {\"memory\":{\"source\":\"flag\",\"value\":\"4g\"}}"
+    ]
+  },
+  "status-identity": {
+    "records": [
+      {
+        "uuid": "23100000-0000-4000-8000-00000000000a",
+        "pid": 12345,
+        "status": "executed",
+        "exitCode": 0,
+        "command": "echo a",
+        "logPath": "/tmp/start-golden.log",
+        "startTime": "2026-01-01T00:00:00.000Z",
+        "endTime": "2026-10-10T00:00:01Z",
+        "workingDirectory": "/workspace",
+        "shell": "/bin/sh",
+        "platform": "linux",
+        "options": {}
+      },
+      {
+        "uuid": "23100000-0000-4000-8000-00000000000b",
+        "pid": 12345,
+        "status": "executed",
+        "exitCode": 0,
+        "command": "echo b",
+        "logPath": "/tmp/start-golden.log",
+        "startTime": "2026-01-02T00:00:00.000Z",
+        "endTime": "2026-10-10T00:00:01Z",
+        "workingDirectory": "/workspace",
+        "shell": "/bin/sh",
+        "platform": "linux",
+        "options": {
+          "sessionName": "screen-b",
+          "sessionNameHistory": [
+            "screen-b-0"
+          ],
+          "aliases": [
+            "task"
+          ],
+          "name": "nightly"
+        },
+        "continues": "23100000-0000-4000-8000-00000000000a"
+      },
+      {
+        "uuid": "23100000-0000-4000-8000-00000000000c",
+        "pid": 12345,
+        "status": "executed",
+        "exitCode": 0,
+        "command": "echo c",
+        "logPath": "/tmp/start-golden.log",
+        "startTime": "2026-01-03T00:00:00.000Z",
+        "endTime": "2026-10-10T00:00:01Z",
+        "workingDirectory": "/workspace",
+        "shell": "/bin/sh",
+        "platform": "linux",
+        "options": {},
+        "continues": "23100000-0000-4000-8000-00000000000b"
+      }
+    ],
+    "uuid": "23100000-0000-4000-8000-00000000000b",
+    "aliases": [
+      "23100000-0000-4000-8000-00000000000b",
+      "screen-b-0",
+      "screen-b",
+      "task",
+      "nightly"
+    ],
+    "chain": [
+      "23100000-0000-4000-8000-00000000000a",
+      "23100000-0000-4000-8000-00000000000b",
+      "23100000-0000-4000-8000-00000000000c"
+    ],
+    "text": [
+      "Aliases:           23100000-0000-4000-8000-00000000000b, screen-b-0, screen-b, task, nightly",
+      "Continues:         23100000-0000-4000-8000-00000000000a",
+      "Chain:             23100000-0000-4000-8000-00000000000a -> 23100000-0000-4000-8000-00000000000b -> 23100000-0000-4000-8000-00000000000c"
     ]
   },
   "execution-record-format": [

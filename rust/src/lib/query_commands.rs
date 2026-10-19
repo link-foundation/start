@@ -3,9 +3,9 @@
 //! Every option in this module addresses an execution that already exists in
 //! the tracking store instead of launching a new one: `--status`, `--list`,
 //! `--upload-log`, `--stop`, `--terminate`, `--attach`, `--resume`,
-//! `--resume-all` and `--cleanup`. `dispatch_query_command` is the single entry
-//! point the CLI calls before it starts interpreting the command line as a
-//! command to run (issue #162).
+//! `--resume-all` and `--cleanup`, plus `--alias` and `--rename` (issue #231).
+//! `dispatch_query_command` is the single entry point the CLI calls before it
+//! starts interpreting the command line as a command to run (issue #162).
 
 use crate::args_parser::WrapperOptions;
 use crate::execution_attach::{attach_execution, ExecutionAttachResult};
@@ -257,6 +257,26 @@ pub fn dispatch_query_command(
             options.cleanup_dry_run,
             options.cleanup_target.as_deref(),
         ));
+    }
+    let naming = options
+        .rename
+        .as_deref()
+        .map(|id| (id, true))
+        .or_else(|| options.alias.as_deref().map(|id| (id, false)));
+    if let Some((identifier, rename)) = naming {
+        let name = options.new_name.as_deref().unwrap_or("");
+        let result = crate::execution_identity::name_execution(store, identifier, name, rename);
+        let success = result.is_ok();
+        let (output, error) = match result {
+            Ok(output) => (Some(output), None),
+            Err(error) => (None, Some(error)),
+        };
+        return Some(report_result(QueryOutcome {
+            success,
+            output,
+            error,
+            exit_code: None,
+        }));
     }
 
     None

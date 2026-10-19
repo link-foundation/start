@@ -29,6 +29,9 @@ $ -i docker -d --label task.tool=codex -- my-task
 $ --attach <id>
 $ --resume <id> -- <command>
 $ --resume-all
+$ --session-id <uuid> --append-attempt -- <command>
+$ --continues <id> -- <command>
+$ --rename <id> <name>
 ```
 
 See the project-wide [README](../README.md), [docs/USAGE.md](../docs/USAGE.md),

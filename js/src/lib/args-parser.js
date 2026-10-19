@@ -39,6 +39,7 @@
  * --resume-all                     Re-attach or reconcile every execution still marked running
  * --cleanup [<uuid-or-session>]    Clean up stale "executing" records, or one execution's containers and snapshot images
  * --cleanup-dry-run                Show stale records that would be cleaned up (without actually cleaning)
+ * --alias <id> <name>, --rename <id> <name>, --append-attempt, --continues <id>: see args-parser-queries.js, launch-identity-options.js
  */
 
 const { getDefaultDockerImage } = require('./docker-utils');
@@ -47,6 +48,7 @@ const dockerRecoveryOptions = require('./docker-recovery-options');
 const cpuPenalty = require('./cpu-penalty');
 const dockerResourceOptions = require('./docker-resource-options');
 const snapshotResumeOptions = require('./snapshot-resume-options');
+const launchIdentityOptions = require('./launch-identity-options');
 const { parseSequence, isSequence } = require('./sequence-parser');
 const { buildCommandString } = require('./shell-utils');
 const {
@@ -217,6 +219,7 @@ function parseArgs(args) {
     useCommandStream: false, // Use command-stream library for command execution
     ...createQueryOptionDefaults(),
     ...snapshotResumeOptions.createSnapshotOptionDefaults(),
+    ...launchIdentityOptions.createLaunchIdentityOptionDefaults(),
   };
 
   let commandArgs = [];
@@ -580,6 +583,12 @@ function parseOption(args, index, options) {
     return queryConsumed;
   }
 
+  // --append-attempt, --continues <id> (issues #229, #231)
+  const identityConsumed = launchIdentityOptions.parse(args, index, options);
+  if (identityConsumed > 0) {
+    return identityConsumed;
+  }
+
   // Not a recognized wrapper option
   return 0;
 }
@@ -830,6 +839,7 @@ function validateOptions(options) {
 
   snapshotResumeOptions.validate(options);
   validateQueryOptions(options);
+  launchIdentityOptions.validate(options);
 
   // Validate shell option
   if (options.shell !== null && options.shell !== undefined) {

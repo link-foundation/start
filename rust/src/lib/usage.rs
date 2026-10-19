@@ -11,6 +11,8 @@ pub fn print_usage() {
        start --attach <uuid-or-session-name> [--read-only]
        start --resume <uuid-or-session-name> [-- <command>]
        start --resume-all [--output-format <format>]
+       start --alias <uuid-or-session-name> <name>
+       start --rename <uuid-or-session-name> <name>
 
 Options:
   --help, -h           Show this usage and exit successfully
@@ -20,6 +22,8 @@ Options:
   --session, -s <name>  Session name for isolation
   --session-id <uuid>   Session UUID for tracking (auto-generated if not provided)
   --session-name <uuid> Alias for --session-id
+  --append-attempt      Run as the next attempt of the existing --session-id execution
+  --continues <id>      Record that this execution continues an earlier one
   --image <image>       Docker image (optional, defaults to OS-matched image)
   --volume, -v <spec>   Docker bind mount/volume host:container[:mode] (repeatable, docker only)
   --mount <spec>        Docker --mount spec (repeatable, docker only)
@@ -74,6 +78,8 @@ Options:
   --cleanup-dry-run     Show stale records that would be cleaned up (without cleaning)
   --cleanup <id>        Remove a Docker execution's containers and snapshot images (never forced)
   --cleanup-dry-run <id>  Show the containers and images --cleanup <id> would remove
+  --alias <id> <name>   Add a name the execution can be addressed by
+  --rename <id> <name>  Rename the execution, keeping its previous name as an alias
   --version, -v         Show version information
 
 Examples:
@@ -102,6 +108,9 @@ Examples:
   start --resume my-docker-session
   start --resume my-docker-session -- bash
   start --resume-all
+  start --session-id <uuid> --append-attempt -- npm test
+  start --continues <uuid> -- npm test
+  start --rename <uuid> nightly-build
   start -i docker -d --on-kill-resume 3 --recovery-command 'solve --resume' -- solve
   start -i docker -d --on-kill-resume 3 --on-kill-resume-delay 30-90 -- cargo test
   start --cleanup-dry-run

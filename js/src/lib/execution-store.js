@@ -77,6 +77,8 @@ class ExecutionRecord {
     this.endTime = options.endTime || null;
     this.attempt = options.attempt;
     this.attemptHistory = options.attemptHistory;
+    // UUID of the execution this one continues (`--continues`, issue #231).
+    this.continues = options.continues || undefined;
     // Provenance of `endTime` (issue #170.2). `--status` used to fabricate a
     // finish time with `new Date()` whenever the record had none, which made an
     // observation indistinguishable from a real finish time. One of
@@ -171,6 +173,9 @@ class ExecutionRecord {
     }
     if (this.attemptHistory) {
       obj.attemptHistory = this.attemptHistory;
+    }
+    if (this.continues) {
+      obj.continues = this.continues;
     }
     if (this.endTimeSource !== undefined && this.endTimeSource !== null) {
       obj.endTimeSource = this.endTimeSource;
@@ -544,33 +549,17 @@ class ExecutionStore {
   /**
    * Get an execution record by UUID or session name
    * First tries exact UUID match, then the current session name, then any
-   * session name the execution used before it was resumed
+   * session name the execution used before it was resumed, then the display
+   * name and aliases
    * @param {string} identifier - UUID or session name
    * @returns {ExecutionRecord|null}
    */
   get(identifier) {
-    const records = this.readLinoRecords();
-    // First try exact UUID match
-    const byUuid = records.find((r) => r.uuid === identifier);
-    if (byUuid) {
-      return byUuid;
-    }
-    // Fall back to session name lookup (stored in options.sessionName)
-    const bySessionName = records.find(
-      (r) => r.options && r.options.sessionName === identifier
+    // Names, display names and aliases resolve too (issues #162, #231).
+    return require('./execution-identity').findRecord(
+      this.readLinoRecords(),
+      identifier
     );
-    if (bySessionName) {
-      return bySessionName;
-    }
-    // Finally, honor session names this record used before it was resumed, so
-    // one logical session stays addressable across restarts (issue #162).
-    const byPreviousSessionName = records.find(
-      (r) =>
-        r.options &&
-        Array.isArray(r.options.sessionNameHistory) &&
-        r.options.sessionNameHistory.includes(identifier)
-    );
-    return byPreviousSessionName || null;
   }
 
   /**

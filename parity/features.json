@@ -451,7 +451,8 @@
         ],
         "tests": [
           "js/test/docker-runtime-options.js",
-          "js/test/regression-199.js"
+          "js/test/regression-199.js",
+          "js/test/regression-230.js"
         ]
       },
       "rust": {
@@ -462,7 +463,8 @@
         ],
         "tests": [
           "rust/tests/regression_193.rs",
-          "rust/tests/regression_199.rs"
+          "rust/tests/regression_199.rs",
+          "rust/tests/regression_230.rs"
         ]
       },
       "manualRust": [
@@ -568,7 +570,8 @@
         ],
         "tests": [
           "js/test/docker-autoremove.js",
-          "js/test/command-builder-docker-cleanup.js"
+          "js/test/command-builder-docker-cleanup.js",
+          "js/test/regression-230.js"
         ]
       },
       "rust": {
@@ -577,7 +580,8 @@
           "rust/src/lib/docker_cleanup_cases.rs"
         ],
         "tests": [
-          "rust/tests/cleanup.rs"
+          "rust/tests/cleanup.rs",
+          "rust/tests/regression_230.rs"
         ]
       },
       "manualRust": [
@@ -1682,6 +1686,150 @@
           "construct": "try/catch, switch, destructuring",
           "source": "js/src/lib/execution-recovery.js",
           "line": 167,
+          "issue": "https://github.com/link-foundation/meta-language/issues/212"
+        }
+      ]
+    },
+    {
+      "id": "execution-identity",
+      "javascript": {
+        "implementation": [
+          "js/src/lib/execution-env.js",
+          "js/src/lib/execution-identity.js",
+          "js/src/lib/execution-chain.js",
+          "js/src/lib/launch-identity.js",
+          "js/src/lib/launch-identity-options.js"
+        ],
+        "tests": [
+          "js/test/regression-229.js",
+          "js/test/regression-230.js",
+          "js/test/regression-231.js"
+        ]
+      },
+      "rust": {
+        "implementation": [
+          "rust/src/lib/execution_env.rs",
+          "rust/src/lib/execution_identity.rs",
+          "rust/src/lib/execution_chain.rs",
+          "rust/src/lib/launch_identity.rs",
+          "rust/src/lib/launch_identity_options.rs"
+        ],
+        "tests": [
+          "rust/tests/regression_229.rs",
+          "rust/tests/regression_230.rs",
+          "rust/tests/regression_231.rs"
+        ]
+      },
+      "manualRust": [
+        {
+          "path": "rust/src/lib/execution_env.rs",
+          "reason": "Typed native representation of the START_* execution identity variables for execution-identity; its JavaScript contract uses CommonJS and native Node/Bun adapters, dynamic object/JSON records, array/list operations, string operations. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209"
+          ]
+        },
+        {
+          "path": "rust/src/lib/execution_identity.rs",
+          "reason": "Native store adapter for execution names (--alias/--rename) in execution-identity; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/210"
+          ]
+        },
+        {
+          "path": "rust/src/lib/execution_chain.rs",
+          "reason": "Native filesystem adapter for continuation chains (--continues, chain --upload-log) in execution-identity; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/210",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/launch_identity.rs",
+          "reason": "Native filesystem/process adapter for --session-id reuse checks and --append-attempt in execution-identity; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/210",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/launch_identity_options.rs",
+          "reason": "Typed native representation and control flow for --append-attempt/--continues parsing in execution-identity; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, array/list operations, string operations. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209"
+          ]
+        }
+      ],
+      "translationBlockers": [
+        {
+          "construct": "CommonJS and native Node/Bun adapters",
+          "source": "js/src/lib/launch-identity.js",
+          "line": 16,
+          "issue": "https://github.com/link-foundation/meta-language/issues/222"
+        },
+        {
+          "construct": "optional/nullish fields",
+          "source": "js/src/lib/launch-identity.js",
+          "line": 212,
+          "issue": "https://github.com/link-foundation/meta-language/issues/204"
+        },
+        {
+          "construct": "dynamic object/JSON records",
+          "source": "js/src/lib/launch-identity.js",
+          "line": 161,
+          "issue": "https://github.com/link-foundation/meta-language/issues/206"
+        },
+        {
+          "construct": "callbacks and closures",
+          "source": "js/src/lib/launch-identity.js",
+          "line": 205,
+          "issue": "https://github.com/link-foundation/meta-language/issues/207"
+        },
+        {
+          "construct": "array/list operations",
+          "source": "js/src/lib/execution-identity.js",
+          "line": 33,
+          "issue": "https://github.com/link-foundation/meta-language/issues/208"
+        },
+        {
+          "construct": "string operations",
+          "source": "js/src/lib/execution-env.js",
+          "line": 56,
+          "issue": "https://github.com/link-foundation/meta-language/issues/209"
+        },
+        {
+          "construct": "classes, Map/Set",
+          "source": "js/src/lib/execution-chain.js",
+          "line": 22,
+          "issue": "https://github.com/link-foundation/meta-language/issues/210"
+        },
+        {
+          "construct": "try/catch, switch, destructuring",
+          "source": "js/src/lib/launch-identity.js",
+          "line": 32,
           "issue": "https://github.com/link-foundation/meta-language/issues/212"
         }
       ]

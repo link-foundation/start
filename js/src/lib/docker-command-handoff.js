@@ -12,7 +12,9 @@ function buildCommandHandoffArgs(mainArgs, markerPath) {
   return [
     'sh',
     '-c',
-    'p=$1; shift; if [ -f "$p" ]; then exec sh "$p"; fi; exec "$@"',
+    // `$p.env` refreshes the START_* variables a `docker start` cannot
+    // change (issue #230) before either command runs.
+    'p=$1; shift; if [ -f "$p.env" ]; then . "$p.env"; fi; if [ -f "$p" ]; then exec sh "$p"; fi; exec "$@"',
     'start-command-handoff',
     markerPath,
     ...mainArgs,
@@ -49,22 +51,47 @@ function buildCommandHandoffScript(command, options = {}) {
   return `exec ${shellQuote(shell)}${interactive} -c ${shellQuote(effective)}\n`;
 }
 
-function writeCommandHandoff(containerName, command, runner, options = {}) {
+function copyIntoContainer(containerName, target, content, runner) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'start-handoff-'));
   const file = path.join(dir, 'command');
   try {
-    fs.writeFileSync(file, buildCommandHandoffScript(command, options), {
-      mode: 0o644,
-    });
+    fs.writeFileSync(file, content, { mode: 0o644 });
     fs.chmodSync(file, 0o644);
     return runner(require('./docker-cleanup').getDockerCommand(), [
       'cp',
       file,
-      `${containerName}:${commandHandoffPath(containerName)}`,
+      `${containerName}:${target}`,
     ]);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+}
+
+function writeCommandHandoff(containerName, command, runner, options = {}) {
+  return copyIntoContainer(
+    containerName,
+    commandHandoffPath(containerName),
+    buildCommandHandoffScript(command, options),
+    runner
+  );
+}
+
+/**
+ * Copy the START_* variables of the next attempt into a stopped container
+ * that was created with the handoff selector (issue #230).
+ * @param {string} containerName - Container name
+ * @param {object} env - Variables from `buildExecutionEnv`
+ * @param {Function} runner - Command runner
+ * @returns {object} Runner result
+ */
+function writeExecutionEnvHandoff(containerName, env, runner) {
+  const statement = require('./execution-env').buildExecutionEnvExport(env);
+  return copyIntoContainer(
+    containerName,
+    `${commandHandoffPath(containerName)}.env`,
+    statement ? `${statement}\n` : '',
+    runner
+  );
 }
 
 module.exports = {
@@ -72,4 +99,5 @@ module.exports = {
   buildCommandHandoffArgs,
   buildCommandHandoffScript,
   writeCommandHandoff,
+  writeExecutionEnvHandoff,
 };

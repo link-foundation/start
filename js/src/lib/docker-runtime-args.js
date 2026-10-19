@@ -42,6 +42,13 @@ function buildDockerRuntimeArgs(options = {}) {
   for (const envVar of options.env || []) {
     args.push('-e', envVar);
   }
+  // Execution identity (issue #230); last, so a user `--env` cannot spoof it.
+  const executionEnv = require('./execution-env');
+  for (const envVar of executionEnv.executionEnvAssignments(
+    executionEnv.executionEnvFromOptions(options)
+  )) {
+    args.push('-e', envVar);
+  }
   for (const label of require('./docker-labels').dockerLabels(options)) {
     args.push('--label', label);
   }
