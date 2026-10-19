@@ -1,0 +1,4 @@
+login profile: PATH="/home/box/.nvm/versions/node/v26.12.0/bin:$PATH"; export PATH
+PATH seen by /bin/sh -l: /home/box/.nvm/versions/node/v26.12.0/bin:/fake-first:/home/box/.local/bin:/home...
+ 7 pass
+ 0 fail

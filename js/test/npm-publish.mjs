@@ -8,7 +8,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter, join } from 'node:path';
+import { join } from 'node:path';
 
 import { $ } from 'command-stream';
 
@@ -25,24 +25,30 @@ let dir;
 let $npm;
 
 /**
- * Put fixtures/fake-npm.sh first on PATH as `npm`. The env goes to `$`
+ * Run fixtures/fake-npm.sh wherever the script under test runs `npm`. It is
+ * called by absolute path, not found through PATH: command-stream runs
+ * commands in a login shell (`sh -l -c`), and on macOS /etc/profile puts the
+ * system directories, which hold the real npm, before ours (issue #234;
+ * experiments/issue-234/login-shell-path-reorder.sh). The env goes to `$`
  * explicitly: Bun hands spawned children its startup environment, not
  * later `process.env` writes.
  */
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'npm-publish-'));
-  copyFileSync(
-    join(import.meta.dir, 'fixtures', 'fake-npm.sh'),
-    join(dir, 'npm')
-  );
-  $npm = $({
+  const fakeNpm = join(dir, 'npm');
+  copyFileSync(join(import.meta.dir, 'fixtures', 'fake-npm.sh'), fakeNpm);
+  const $env = $({
     env: {
       ...process.env,
-      PATH: `${dir}${delimiter}${process.env.PATH}`,
       FAKE_NPM_STATE: dir,
       FAKE_NPM_VERSION: VERSION,
     },
   });
+  $npm = (strings, ...values) =>
+    $env(
+      [strings[0].replace(/^npm(?= )/, `'${fakeNpm}'`), ...strings.slice(1)],
+      ...values
+    );
 });
 
 afterEach(() => {
