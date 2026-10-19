@@ -1,3 +1,5 @@
+// Own snapshot lock even without the bunfig.toml preload (issue #234).
+require('./setup/private-snapshot-lock');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -123,4 +125,21 @@ test('tests never share the host-wide snapshot lock (issue #234)', () => {
   } finally {
     lock.release();
   }
+});
+
+test('every snapshot test requires its private lock itself (issue #234)', () => {
+  // `bun test ./js/test/x.js` from the repository root skips js/bunfig.toml,
+  // so the preload alone left 18 tests on the host-wide lock.
+  const dir = __dirname;
+  const offenders = fs
+    .readdirSync(dir)
+    .filter((name) => name.endsWith('.js'))
+    .filter((name) => {
+      const source = fs.readFileSync(path.join(dir, name), 'utf8');
+      return (
+        /\b(resumeExecution|acquireSnapshotLock)\(/.test(source) &&
+        !source.includes("require('./setup/private-snapshot-lock')")
+      );
+    });
+  assert.deepEqual(offenders, []);
 });

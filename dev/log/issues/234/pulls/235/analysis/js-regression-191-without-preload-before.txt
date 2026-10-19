@@ -1,0 +1,16 @@
+Holding /tmp/start-command-docker-snapshot.lock as PID 180551
+90 |       runner: f.runner,
+91 |       probe: () => ({ alive: false, state: SessionState.STOPPED }),
+92 |       startWatcher: () => true,
+93 |     });
+94 |     expect(result.success).toBe(true);
+                                ^
+error: expect(received).toBe(expected)
+Expected: true
+Received: false
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/regression-191.js:94:28)
+(fail) manual snapshot override applies limits to the new container at creation [1111.09ms]
+ 8 pass
+ 1 fail
+ 24 expect() calls
+Ran 9 tests across 1 file. [1.71s]

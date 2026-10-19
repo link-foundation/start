@@ -2,6 +2,8 @@
  * Tests for --resume and --resume-all (issue #162)
  */
 
+// Own snapshot lock even without the bunfig.toml preload (issue #234).
+require('./setup/private-snapshot-lock');
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
 const {

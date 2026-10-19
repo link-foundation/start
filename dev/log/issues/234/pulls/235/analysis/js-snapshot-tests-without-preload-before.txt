@@ -1,0 +1,21 @@
+Holding /tmp/start-command-docker-snapshot.lock as PID 180958
+(fail) resumeExecution > keeps the same UUID and remembers the previous session name [1092.24ms]
+(fail) manual snapshot override applies limits to the new container at creation [1107.74ms]
+(fail) legacy snapshots preflight before commit and remove originals only with non-forced rm after start [1072.06ms]
+(fail) disk shortage rolls back the reservation without committing or removing the original [1051.47ms]
+(fail) snapshot failure removes a completed image and restores the original execution [1049.01ms]
+(fail) changed caller labels use a guarded snapshot and reapply merged labels [1072.62ms]
+(fail) original retained by default and when a successor has already stopped [1054.22ms]
+(fail) repeated snapshot successors retain the original root-session attribution [1070.08ms]
+(fail) issue #176: snapshot resume keeps the resource limits > inspects the old container before the commit and records the limits [1012.97ms]
+(fail) issue #176: real docker snapshot resume > re-applies docker update limits to the -resume-1 container [3600.86ms]
+(fail) issue #187: explicit resume attempts > reattaches the current attempt without enabling kill recovery for snapshot commands [1177.29ms]
+(fail) issue #187: explicit resume attempts > records previous and new container names for a snapshot resume [1115.97ms]
+(fail) issue #193: durable store locks and resume > reserves the replacement session before Docker side effects [1025.33ms]
+(fail) issue #224 item 3: --remove-original-after > removes the original only after the window, once the watcher is attached [1071.56ms]
+(fail) issue #224 item 3: --remove-original-after > keeps the original when the replacement died within the window [1020.49ms]
+(fail) issue #224 item 5: progress during docker commit > logs the commit of a real resume [1089.99ms]
+(fail) issue #224 item 7: --snapshot-prepare > starts, execs, kills and waits the original before the preflight and commit [1100.96ms]
+(fail) issue #224 item 7: --snapshot-prepare > still kills the original and snapshots when the command fails [1068.98ms]
+ 128 pass
+ 18 fail

@@ -1,3 +1,5 @@
+// Own snapshot lock even without the bunfig.toml preload (issue #234).
+require('./setup/private-snapshot-lock');
 const { describe, it, expect } = require('bun:test');
 const fs = require('fs');
 const os = require('os');
