@@ -8,6 +8,30 @@ const GiB = 1024 ** 3;
 const SNAPSHOT_RESERVE_BYTES = 10 * GiB;
 const SNAPSHOT_IMAGE_LABEL = 'start-command.snapshot-image';
 
+/** sysexits.h EX_TEMPFAIL: the resume can succeed when retried later. */
+const EX_TEMPFAIL = 75;
+
+function tempfail(message) {
+  const error = new Error(message);
+  error.exitCode = EX_TEMPFAIL;
+  return error;
+}
+
+function formatSeconds(seconds) {
+  return `${Number(seconds.toFixed(3))}s`;
+}
+
+function notifier(options) {
+  return options.notify || ((line) => process.stderr.write(`${line}\n`));
+}
+
+/**
+ * Take the host-wide snapshot lock. With `waitSeconds` above 0 a busy lock is
+ * waited for (issue #224); the wait is announced once with the holder's name.
+ * @param {object} [options] - {lockPath, holder, waitSeconds, notify}
+ * @returns {LockManager} The held lock
+ * @throws {Error} With `exitCode` 75 when the lock stays busy
+ */
 function acquireSnapshotLock(options = {}) {
   const lockPath =
     options.lockPath ||
@@ -17,6 +41,9 @@ function acquireSnapshotLock(options = {}) {
       'start-command-docker-snapshot.lock'
     );
   const lock = new LockManager(lockPath);
+  if (options.holder) {
+    lock.metadata = { holder: options.holder };
+  }
   // The ordinary store lock is held only for a brief write. A snapshot can
   // legitimately take hours, so never reclaim this lock merely for its age.
   lock.isLockStale = (data) => {
@@ -35,12 +62,28 @@ function acquireSnapshotLock(options = {}) {
       return error.code === 'ESRCH';
     }
   };
-  if (!lock.acquire(1000)) {
-    throw new Error(
-      'A Docker snapshot resume is in progress on this host. Retry after it finishes.'
+  const waitMs = Math.max(0, (options.waitSeconds || 0) * 1000);
+  if (lock.acquire(Math.min(1000, waitMs || 1000))) {
+    return lock;
+  }
+  const holder = lock.readLockFile()?.holder;
+  const busy = holder
+    ? `A Docker snapshot resume of ${holder} is in progress on this host.`
+    : 'A Docker snapshot resume is in progress on this host.';
+  if (waitMs <= 1000) {
+    throw tempfail(
+      `${busy} Retry after it finishes, or wait for it with --snapshot-wait <seconds>.`
     );
   }
-  return lock;
+  notifier(options)(
+    `[Resume] Waiting up to ${formatSeconds(waitMs / 1000)} for the snapshot of ${holder || 'another container'} to finish before snapshotting ${options.holder || 'this container'}.`
+  );
+  if (lock.acquire(waitMs - 1000)) {
+    return lock;
+  }
+  throw tempfail(
+    `${busy} Still busy after waiting ${formatSeconds(waitMs / 1000)}; retry after it finishes.`
+  );
 }
 
 function containerdRoot(config = '') {
@@ -73,8 +116,10 @@ function readFreeBytes(root) {
   return Number(stats.bavail * stats.bsize);
 }
 
-function preflightSnapshot(containerName, runner, options = {}) {
-  const docker = require('./docker-cleanup').getDockerCommand();
+function measureWritableLayer(containerName, runner, docker, options) {
+  if (options.sizeHint !== null && options.sizeHint !== undefined) {
+    return { size: options.sizeHint, source: 'size hint' };
+  }
   const sizeResult = runner(docker, [
     'inspect',
     '--size',
@@ -93,6 +138,10 @@ function preflightSnapshot(containerName, runner, options = {}) {
       'Cannot determine the writable layer size; refusing Docker snapshot resume.'
     );
   }
+  return { size, source: null };
+}
+
+function imageStoreRoots(runner, docker, options) {
   const infoResult = runner(docker, ['info', '--format', '{{json .}}']);
   let info;
   try {
@@ -113,9 +162,12 @@ function preflightSnapshot(containerName, runner, options = {}) {
   ) {
     roots.push(options.containerdRoot || defaultContainerdRoot());
   }
-  const required = 2 * size + (options.reserveBytes ?? SNAPSHOT_RESERVE_BYTES);
-  const free = options.freeBytes || readFreeBytes;
-  for (const root of [...new Set(roots)]) {
+  return [...new Set(roots)];
+}
+
+/** @returns {?object} The first root without enough space, or null */
+function findShortRoot(roots, required, free) {
+  for (const root of roots) {
     let available;
     try {
       available = free(root);
@@ -126,16 +178,75 @@ function preflightSnapshot(containerName, runner, options = {}) {
       );
     }
     if (!Number.isFinite(available) || available < required) {
-      throw new Error(
-        `Insufficient disk at ${root}: need ${(required / GiB).toFixed(2)} GiB (2 × writable layer plus reserve), available ${(available / GiB).toFixed(2)} GiB. Docker snapshot resume refused.`
-      );
+      return { root, available };
     }
   }
+  return null;
+}
+
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/**
+ * Refuse a snapshot that could fill the disk. The writable layer is measured
+ * once (or taken from `sizeHint`); with `diskWaitSeconds` the free space is
+ * re-checked every `diskPollSeconds` until it suffices (issue #224).
+ * @param {object} [options] - {sizeHint, diskWaitSeconds, diskPollSeconds,
+ *   reserveBytes, freeBytes, containerdRoot, notify, sleep, now}
+ * @throws {Error} With `exitCode` 75 when the disk stays short
+ */
+function preflightSnapshot(containerName, runner, options = {}) {
+  const docker = require('./docker-cleanup').getDockerCommand();
+  const { size, source } = measureWritableLayer(
+    containerName,
+    runner,
+    docker,
+    options
+  );
+  const roots = imageStoreRoots(runner, docker, options);
+  const required = 2 * size + (options.reserveBytes ?? SNAPSHOT_RESERVE_BYTES);
+  const free = options.freeBytes || readFreeBytes;
+  const waitMs = Math.max(0, (options.diskWaitSeconds || 0) * 1000);
+  const pollMs = Math.max(
+    1,
+    (options.diskPollSeconds ??
+      Number(process.env.START_SNAPSHOT_DISK_POLL || 10)) * 1000
+  );
+  const now = options.now || Date.now;
+  const sleep = options.sleep || sleepSync;
+  const started = now();
+  let waited = false;
+  for (;;) {
+    const short = findShortRoot(roots, required, free);
+    if (!short) {
+      break;
+    }
+    const detail = `Insufficient disk at ${short.root}: need ${(required / GiB).toFixed(2)} GiB (2 × writable layer plus reserve), available ${(short.available / GiB).toFixed(2)} GiB.`;
+    const left = waitMs - (now() - started);
+    if (left <= 0) {
+      throw tempfail(
+        waited
+          ? `${detail} Still short after waiting ${formatSeconds(waitMs / 1000)}; Docker snapshot resume refused.`
+          : `${detail} Docker snapshot resume refused.`
+      );
+    }
+    if (!waited) {
+      notifier(options)(
+        `[Resume] Waiting up to ${formatSeconds(waitMs / 1000)} for disk: ${detail}`
+      );
+      waited = true;
+    }
+    sleep(Math.min(pollMs, left));
+  }
+  const measured = source
+    ? `${(size / GiB).toFixed(2)} GiB (${source})`
+    : `${(size / GiB).toFixed(2)} GiB`;
   return {
     size,
     required,
     roots,
-    message: `[Resume] snapshotting ${(size / GiB).toFixed(2)} GiB; disk preflight passed (${(required / GiB).toFixed(2)} GiB required).`,
+    message: `[Resume] snapshotting ${measured}; disk preflight passed (${(required / GiB).toFixed(2)} GiB required).`,
   };
 }
 
@@ -155,6 +266,7 @@ function snapshotImageCleanupSnippet(
 }
 
 module.exports = {
+  EX_TEMPFAIL,
   acquireSnapshotLock,
   containerdRoot,
   preflightSnapshot,

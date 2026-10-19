@@ -7,7 +7,8 @@
  *
  * Query modes:   --status, --list [--running]
  * Control modes: --upload-log, --stop, --terminate, --attach [--read-only],
- *                --resume [-- <command>], --resume-all, --cleanup
+ *                --resume [-- <command>], --resume-all,
+ *                --cleanup [<uuid-or-session-name>]
  */
 
 /**
@@ -37,6 +38,7 @@ function createQueryOptionDefaults() {
     resumeAll: false, // Re-attach/resume every execution still marked running
     cleanup: false, // Clean up stale "executing" records
     cleanupDryRun: false, // Show what would be cleaned without cleaning
+    cleanupTarget: null, // UUID/session name whose containers and images --cleanup removes
   };
 }
 
@@ -75,14 +77,44 @@ const FLAG_OPTIONS = {
   '--resume-all': (options) => {
     options.resumeAll = true;
   },
-  '--cleanup': (options) => {
-    options.cleanup = true;
-  },
-  '--cleanup-dry-run': (options) => {
-    options.cleanup = true;
-    options.cleanupDryRun = true;
-  },
 };
+
+/**
+ * `--cleanup` and `--cleanup-dry-run` take an optional execution: without one
+ * they clean up stale records, with one they remove that execution's Docker
+ * containers and snapshot images (issue #224).
+ */
+const CLEANUP_OPTIONS = {
+  '--cleanup': false,
+  '--cleanup-dry-run': true,
+};
+
+function parseCleanupOption(args, index, options) {
+  const arg = args[index];
+  const equals = arg.indexOf('=');
+  const name = equals === -1 ? arg : arg.slice(0, equals);
+  if (!(name in CLEANUP_OPTIONS)) {
+    return 0;
+  }
+  options.cleanup = true;
+  options.cleanupDryRun = options.cleanupDryRun || CLEANUP_OPTIONS[name];
+  if (equals !== -1) {
+    const value = arg.slice(equals + 1);
+    if (!value) {
+      throw new Error(
+        `Option ${name} requires a UUID or session name argument`
+      );
+    }
+    options.cleanupTarget = value;
+    return 1;
+  }
+  const next = args[index + 1];
+  if (next !== undefined && !next.startsWith('-')) {
+    options.cleanupTarget = next;
+    return 2;
+  }
+  return 1;
+}
 
 function hasValue(value) {
   return value !== null && value !== undefined;
@@ -97,6 +129,11 @@ function hasValue(value) {
  */
 function parseQueryOption(args, index, options) {
   const arg = args[index];
+
+  const cleanupConsumed = parseCleanupOption(args, index, options);
+  if (cleanupConsumed > 0) {
+    return cleanupConsumed;
+  }
 
   const flag = FLAG_OPTIONS[arg];
   if (flag) {

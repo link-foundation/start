@@ -14,6 +14,8 @@ class LockManager {
     this.identity = null;
     this.token = null;
     this.monitorOwner = monitorOwner;
+    // Extra fields published in the lock file, for example who holds it.
+    this.metadata = {};
   }
 
   acquire(timeout = LOCK_TIMEOUT_MS) {
@@ -44,6 +46,7 @@ class LockManager {
         this.fs.writeFileSync(
           temp,
           JSON.stringify({
+            ...this.metadata,
             pid: process.pid,
             timestamp: Date.now(),
             hostname: os.hostname(),

@@ -54,6 +54,7 @@ const {
   preflightSnapshot,
   SNAPSHOT_IMAGE_LABEL,
 } = require('./docker-snapshot-safety');
+const snapshotResume = require('./docker-snapshot-resume');
 const {
   ResumeAllAction,
   resumeAllExecutions,
@@ -441,8 +442,10 @@ function activeSessionName(plan) {
  * Resume a tracked execution by UUID or session name.
  * @param {?object} store - Execution store
  * @param {string} identifier - UUID or session name
- * @param {object} deps - {command, outputFormat, probe, runner, startWatcher, runIsolated}
- * @returns {Promise<{success: boolean, output?: string, error?: string}>}
+ * @param {object} deps - {command, outputFormat, probe, runner, runAsync,
+ *   startWatcher, runIsolated, removeOriginal, removeOriginalAfter,
+ *   snapshotOptions, notify}
+ * @returns {Promise<{success: boolean, output?: string, error?: string, exitCode?: number}>}
  */
 async function resumeExecution(store, identifier, deps = {}) {
   if (!store) {
@@ -605,16 +608,34 @@ async function resumeExecution(store, identifier, deps = {}) {
     }
     containerId = launchResult.containerId || null;
   } else {
+    const notify = deps.notify || ((line) => process.stderr.write(`${line}\n`));
+    const snapshotOptions = { notify, ...deps.snapshotOptions };
+    const progress = {
+      sessionName: plan.sessionName,
+      logPath: record.logPath,
+      notify,
+    };
     let snapshotLock;
     let snapshotCreated = false;
     let derivedCreated = false;
     try {
       if (plan.mode === ResumeMode.DOCKER_SNAPSHOT) {
-        snapshotLock = acquireSnapshotLock(deps.snapshotOptions);
+        snapshotLock = acquireSnapshotLock({
+          ...snapshotOptions,
+          holder: plan.sessionName,
+        });
+        if (snapshotOptions.prepare) {
+          snapshotResume.runSnapshotPrepare(
+            plan.sessionName,
+            snapshotOptions.prepare,
+            runner,
+            progress
+          );
+        }
         const preflight = preflightSnapshot(
           plan.sessionName,
           runner,
-          deps.snapshotOptions
+          snapshotOptions
         );
         plan.message += `\n${preflight.message}`;
         if (record.logPath) {
@@ -639,7 +660,18 @@ async function resumeExecution(store, identifier, deps = {}) {
       for (const step of plan.steps) {
         let result;
         try {
-          result = runner(step.command, step.args);
+          result =
+            step.args[0] === 'commit'
+              ? await snapshotResume.commitWithProgress(step, {
+                  ...progress,
+                  runAsync:
+                    deps.runAsync ||
+                    (deps.runner
+                      ? (command, args) =>
+                          Promise.resolve().then(() => runner(command, args))
+                      : snapshotResume.runCommandAsync),
+                })
+              : runner(step.command, step.args);
         } catch (error) {
           result = { success: false, error: error.message };
         }
@@ -661,7 +693,11 @@ async function resumeExecution(store, identifier, deps = {}) {
           containerId = (result.stdout || '').trim() || containerId;
         }
       }
-      if (plan.mode === ResumeMode.DOCKER_SNAPSHOT && deps.removeOriginal) {
+      if (
+        plan.mode === ResumeMode.DOCKER_SNAPSHOT &&
+        deps.removeOriginal &&
+        !(deps.removeOriginalAfter > 0)
+      ) {
         const running = runner(getDockerCommand(), [
           'inspect',
           '-f',
@@ -704,6 +740,7 @@ async function resumeExecution(store, identifier, deps = {}) {
       return {
         success: false,
         error: `Failed to resume ${plan.backend} session "${plan.sessionName}": ${error.message}`,
+        ...(error.exitCode ? { exitCode: error.exitCode } : {}),
       };
     } finally {
       snapshotLock?.release();
@@ -791,6 +828,23 @@ async function resumeExecution(store, identifier, deps = {}) {
       success: false,
       error: failLaunchedPersistence(store, updated, runner, persistenceError),
     };
+  }
+
+  if (
+    plan.mode === ResumeMode.DOCKER_SNAPSHOT &&
+    deps.removeOriginal &&
+    deps.removeOriginalAfter > 0
+  ) {
+    plan.message += `\n${await snapshotResume.removeOriginalAfter(
+      plan,
+      deps.removeOriginalAfter,
+      runner,
+      {
+        logPath: record.logPath,
+        notify: deps.notify || ((line) => process.stderr.write(`${line}\n`)),
+        sleep: deps.sleep,
+      }
+    )}`;
   }
 
   return {

@@ -37,7 +37,7 @@
  * --read-only                      Follow --attach output without forwarding stdin
  * --resume <uuid-or-session> [-- cmd] Resume a stored execution (optionally with a new command)
  * --resume-all                     Re-attach or reconcile every execution still marked running
- * --cleanup                        Clean up stale "executing" records (processes that crashed or were killed)
+ * --cleanup [<uuid-or-session>]    Clean up stale "executing" records, or one execution's containers and snapshot images
  * --cleanup-dry-run                Show stale records that would be cleaned up (without actually cleaning)
  */
 
@@ -46,6 +46,7 @@ const dockerNetworkOptions = require('./docker-network-options');
 const dockerRecoveryOptions = require('./docker-recovery-options');
 const cpuPenalty = require('./cpu-penalty');
 const dockerResourceOptions = require('./docker-resource-options');
+const snapshotResumeOptions = require('./snapshot-resume-options');
 const { parseSequence, isSequence } = require('./sequence-parser');
 const { buildCommandString } = require('./shell-utils');
 const {
@@ -215,6 +216,7 @@ function parseArgs(args) {
     shell: 'auto', // Shell to use in isolation environments: auto, bash, zsh, sh
     useCommandStream: false, // Use command-stream library for command execution
     ...createQueryOptionDefaults(),
+    ...snapshotResumeOptions.createSnapshotOptionDefaults(),
   };
 
   let commandArgs = [];
@@ -566,6 +568,12 @@ function parseOption(args, index, options) {
     return 1;
   }
 
+  // Snapshot resume options (--snapshot-wait, --remove-original-after, ...)
+  const snapshotConsumed = snapshotResumeOptions.parse(args, index, options);
+  if (snapshotConsumed > 0) {
+    return snapshotConsumed;
+  }
+
   // Query/control options (--status, --list, --attach, --resume, ...)
   const queryConsumed = parseQueryOption(args, index, options);
   if (queryConsumed > 0) {
@@ -820,6 +828,7 @@ function validateOptions(options) {
     throw new Error('--keep-user option is only valid with --isolated-user');
   }
 
+  snapshotResumeOptions.validate(options);
   validateQueryOptions(options);
 
   // Validate shell option

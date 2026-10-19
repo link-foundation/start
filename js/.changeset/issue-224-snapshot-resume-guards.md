@@ -1,0 +1,5 @@
+---
+'start-command': patch
+---
+
+A Docker snapshot resume can now be supervised safely. `--snapshot-wait <seconds>` (or `START_SNAPSHOT_LOCK_WAIT`) waits for another resume's snapshot on the host and says once which container it is waiting for. `--snapshot-disk-wait <seconds>` (or `START_SNAPSHOT_DISK_WAIT`) re-checks free disk instead of refusing at once. A busy lock and disk that is still short now exit 75 (`EX_TEMPFAIL`), so a caller can tell "retry later" from a real failure. `--remove-original-after <seconds>` removes the original only if the replacement is still running after the delay. `--snapshot-size-hint <bytes>` skips the `docker inspect --size` walk, and `--snapshot-prepare <command>` runs a cleanup command in the started original before the commit. A long `docker commit` writes its elapsed time to the log every minute. The `start-command.snapshot-image` label is documented as a stable interface, and `$ --cleanup <uuid-or-session-name>` removes an execution's containers and then their snapshot images, never forcing a removal (#224).
