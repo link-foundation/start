@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.27.0] - 2026-10-19
+
+Manual minor release.
+
 ## [0.26.0] - 2026-10-19
 
 Mirror the JavaScript execution identity work: an existing explicit `--session-id` is refused unless `--append-attempt` appends a new attempt to the same record and log (#229); every backend exports `START_EXECUTION_ID`, `START_SESSION_NAME` and `START_ATTEMPT` (#230); `--alias`, `--rename` and `--continues` name executions and link them into chains that `--status` reports and `--upload-log` uploads as one log (#231).
