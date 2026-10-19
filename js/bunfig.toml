@@ -1,3 +1,7 @@
 # Bun configuration
 # Tests use repository naming without conventional suffixes, so package scripts pass
 # the test files explicitly instead of relying on Bun's default discovery.
+
+[test]
+# Every test process gets a private Docker snapshot lock (issue #234).
+preload = ["./test/setup/private-snapshot-lock.js"]

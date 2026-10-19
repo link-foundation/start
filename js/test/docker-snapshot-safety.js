@@ -104,3 +104,23 @@ test('snapshot lock is separate from store locks and excludes concurrent process
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('tests never share the host-wide snapshot lock (issue #234)', () => {
+  // bunfig.toml preloads test/setup/private-snapshot-lock.js. Without it a
+  // real `start --resume` holding the default lock failed every resume test.
+  const lockPath = process.env.START_SNAPSHOT_LOCK;
+  assert.ok(lockPath, 'START_SNAPSHOT_LOCK is not set by the test preload');
+  assert.notEqual(
+    lockPath,
+    path.join(
+      process.platform === 'win32' ? os.tmpdir() : '/tmp',
+      'start-command-docker-snapshot.lock'
+    )
+  );
+  const lock = acquireSnapshotLock({ holder: 'issue-234' });
+  try {
+    assert.ok(fs.existsSync(lockPath));
+  } finally {
+    lock.release();
+  }
+});

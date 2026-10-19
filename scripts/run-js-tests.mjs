@@ -31,7 +31,8 @@ function collectTests(dir) {
     .flatMap((entry) => {
       const absolute = join(dir, entry.name);
       if (entry.isDirectory()) {
-        return collectTests(absolute);
+        // test/setup holds bunfig.toml preloads, not test files.
+        return entry.name === 'setup' ? [] : collectTests(absolute);
       }
       if (!entry.isFile() || !/\.(js|mjs)$/.test(entry.name)) {
         return [];
