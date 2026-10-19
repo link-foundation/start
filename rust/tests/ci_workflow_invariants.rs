@@ -693,3 +693,25 @@ fn fails_a_pull_request_whose_cargo_lock_is_out_of_date() {
         .expect("rust.yml has no lint job");
     assert!(lint.body.contains("cargo metadata --locked"));
 }
+
+#[test]
+fn rust_coverage_reports_a_failed_test_as_a_failed_test() {
+    // Without pipefail a failing test reached the threshold check as an empty
+    // value: "Coverage % is below the 50% threshold" (issue #234).
+    let coverage = parse_jobs(&read_workflow("rust.yml"))
+        .into_iter()
+        .find(|job| job.name == "coverage")
+        .expect("rust.yml has no coverage job");
+    assert!(coverage.body.contains("set -o pipefail"));
+    assert!(coverage.body.contains("scripts/check-rust-coverage.mjs"));
+    assert!(
+        !coverage.body.contains("grep -oP"),
+        "parse tarpaulin output through the tested helper"
+    );
+    assert!(
+        coverage
+            .body
+            .contains("cargo-tarpaulin-bin-${{ env.TARPAULIN_VERSION }}"),
+        "an unversioned tarpaulin cache key never picks up a new release"
+    );
+}

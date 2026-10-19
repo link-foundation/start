@@ -459,6 +459,28 @@ describe('CI workflow invariants', () => {
     assert.match(lint.body, /cargo metadata --locked/);
   });
 
+  it('reports a failed Rust test as a failed test, not low coverage', () => {
+    // Without pipefail a failing test reached the threshold check as an empty
+    // value: "Coverage % is below the 50% threshold" (issue #234).
+    const coverage = parseJobs(readWorkflow('rust.yml')).find(
+      (job) => job.name === 'coverage'
+    );
+    assert.ok(coverage, 'rust.yml has no coverage job');
+    assert.match(coverage.body, /set -o pipefail/);
+    assert.match(coverage.body, /scripts\/check-rust-coverage\.mjs/);
+    assert.doesNotMatch(
+      coverage.body,
+      /grep -oP/,
+      'parse tarpaulin output through the tested helper'
+    );
+    assert.ok(
+      coverage.body.includes(
+        'cargo-tarpaulin-bin-${{ env.TARPAULIN_VERSION }}'
+      ),
+      'an unversioned tarpaulin cache key never picks up a new release'
+    );
+  });
+
   it('parses coverage through the tested helper, not an inline grep', () => {
     const js = readWorkflow('js.yml');
     assert.doesNotMatch(

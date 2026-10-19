@@ -376,6 +376,8 @@ jobs:
     name: Code Coverage (Rust, Linux only)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      TARPAULIN_VERSION: 0.37.5
     needs: [detect-changes, changelog]
     if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success' || needs.changelog.result == 'skipped') }}
     steps:
@@ -396,16 +398,18 @@ jobs:
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('rust/Cargo.lock', 'rust/Cargo.toml') }}
 
+      # The version is in the key: an unversioned key kept one binary forever
+      # and an uncached install picked whatever release was latest (issue #234).
       - name: Cache cargo-tarpaulin binary
         uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/cargo-tarpaulin
-          key: ${{ runner.os }}-cargo-tarpaulin-bin
+          key: ${{ runner.os }}-cargo-tarpaulin-bin-${{ env.TARPAULIN_VERSION }}
 
       - name: Install cargo-tarpaulin (if not cached)
         run: |
           if ! command -v cargo-tarpaulin >/dev/null 2>&1; then
-            cargo install cargo-tarpaulin
+            cargo install cargo-tarpaulin --version "${TARPAULIN_VERSION}" --locked
           else
             echo "Using cached cargo-tarpaulin: $(cargo tarpaulin --version)"
           fi
@@ -415,23 +419,27 @@ jobs:
           python3 experiments/issue-195-ci-image-preparation.py
           bash scripts/prepare-docker-test-images.sh
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+
       - name: Run coverage
+        id: coverage
         working-directory: rust
+        # `set -o pipefail` makes a failing test fail this step instead of
+        # surfacing later as "Coverage % is below the 50% threshold" (issue #234).
         run: |
+          set -o pipefail
           # tarpaulin.toml excludes src/bin/main.rs (CLI entry point, not library logic)
           mkdir -p coverage
           cargo tarpaulin --all-features --timeout 120 --out Xml --output-dir coverage/ 2>&1 | tee coverage/tarpaulin.log
-          # tarpaulin outputs: "50.73% coverage, 908/1790 lines covered"
-          COVERAGE=$(grep -oP '^\d+\.\d+(?=% coverage)' coverage/tarpaulin.log | tail -1)
-          echo "Coverage: ${COVERAGE}%"
-          echo "coverage=${COVERAGE}" >> "$GITHUB_OUTPUT"
-          # Fail if coverage is below 50% (lib code only; main.rs excluded via tarpaulin.toml)
-          if python3 -c "import sys; c=float('${COVERAGE}') if '${COVERAGE}' else 0; sys.exit(0 if c >= 50.0 else 1)"; then
-            echo "✅ Coverage ${COVERAGE}% meets the 50% threshold"
-          else
-            echo "❌ Coverage ${COVERAGE}% is below the 50% threshold"
-            exit 1
-          fi
+
+      - name: Enforce coverage threshold
+        # Runs even when tests failed above, so the log is still explained.
+        if: ${{ !cancelled() && steps.coverage.outcome != 'skipped' }}
+        working-directory: rust
+        run: node ../scripts/check-rust-coverage.mjs coverage/tarpaulin.log --threshold 50
 
   # === BUILD ===
   # Only build on push to main, not on PRs (tests already verify the code builds)
