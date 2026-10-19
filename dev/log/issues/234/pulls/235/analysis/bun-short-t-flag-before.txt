@@ -1,0 +1,9 @@
+1.4.3
+--- bun test -t slow (bun default timeout):
+(fail) slow six seconds [5003.15ms]
+  ^ this test timed out after 5000ms.
+ 0 pass
+ 1 filtered out
+ 1 fail
+--- node run-js-tests applyDefaultTimeout(['-t','slow']):
+["-t","slow"]

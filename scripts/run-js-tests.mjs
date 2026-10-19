@@ -99,12 +99,14 @@ function normalizeUserArgs(args) {
   return normalized;
 }
 
+// Bun has no short timeout flag: `-t` is `--test-name-pattern`. Counting it
+// as a timeout dropped the 30s default for `-t <pattern>` runs (#234).
 export function hasExplicitTimeout(args) {
   for (const arg of args) {
     if (arg === '--') {
       return false;
     }
-    if (arg === '--timeout' || arg === '-t' || arg.startsWith('--timeout=')) {
+    if (arg === '--timeout' || arg.startsWith('--timeout=')) {
       return true;
     }
   }
