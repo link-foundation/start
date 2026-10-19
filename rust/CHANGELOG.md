@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.25.9] - 2026-10-19
+
+`start --status` renders nested option values (`launchOwner`, `exitEvidence`, `resolvedLimits`, `resourceLimitSpecs`) as nested links notation instead of quoted JSON strings, matching the JavaScript edition byte for byte (#226).
+
+`start --status` reports `containerState removed` and `containerRemovedObservedAt` for a finished detached docker execution whose container was removed, by the cleanup policy or later by hand, as in the JavaScript edition (#225).
+
+Docker snapshot resumes can now be supervised: `--snapshot-wait <seconds>` (or `START_SNAPSHOT_LOCK_WAIT`) waits for the host snapshot lock and names its holder, `--snapshot-disk-wait <seconds>` (or `START_SNAPSHOT_DISK_WAIT`) re-checks free disk, and a busy lock or short disk now exits 75 (EX_TEMPFAIL) so callers can retry. `--remove-original-after <seconds>` removes the stopped original only when the replacement still runs after the delay, `--snapshot-size-hint <bytes>` skips the `docker inspect --size` walk, `--snapshot-prepare <command>` runs a command in the original before `docker commit`, the commit writes elapsed-time progress lines to the log, and `$ --cleanup <uuid-or-session-name>` removes one execution's containers and their `start-command.snapshot-image` images without forcing anything (#224).
+
 ## [0.25.8] - 2026-10-14
 
 Manual patch release.
