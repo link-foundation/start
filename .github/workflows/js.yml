@@ -572,26 +572,29 @@ jobs:
       - name: Create GitHub Release
         if: steps.publish.outputs.published == 'true'
         env:
+          RELEASE_VERSION: ${{ steps.publish.outputs.published_version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --prefix "js-" --changelog-file "js/CHANGELOG.md" --badge-type "npm" --package-name "start-command"
+        run: node scripts/create-github-release.mjs --release-version "${RELEASE_VERSION}" --repository "${{ github.repository }}" --prefix "js-" --changelog-file "js/CHANGELOG.md" --badge-type "npm" --package-name "start-command"
 
       - name: Verify release contains the npm badge (false-positive guard)
         if: steps.publish.outputs.published == 'true'
         env:
+          RELEASE_VERSION: ${{ steps.publish.outputs.published_version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           node scripts/verify-release-badge.mjs \
             --repository "${{ github.repository }}" \
-            --tag "js-v${{ steps.publish.outputs.published_version }}" \
+            --tag "js-v${RELEASE_VERSION}" \
             --badge-type npm \
             --package-name start-command \
-            --release-version "${{ steps.publish.outputs.published_version }}"
+            --release-version "${RELEASE_VERSION}"
 
       - name: Format GitHub release notes
         if: steps.publish.outputs.published == 'true'
         env:
+          RELEASE_VERSION: ${{ steps.publish.outputs.published_version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --prefix "js-"
+        run: node scripts/format-github-release.mjs --release-version "${RELEASE_VERSION}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --prefix "js-"
 
   # === MANUAL INSTANT RELEASE ===
   instant-release:
@@ -668,26 +671,29 @@ jobs:
       - name: Create GitHub Release
         if: steps.publish.outputs.published == 'true'
         env:
+          RELEASE_VERSION: ${{ steps.publish.outputs.published_version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/create-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --prefix "js-" --changelog-file "js/CHANGELOG.md" --badge-type "npm" --package-name "start-command"
+        run: node scripts/create-github-release.mjs --release-version "${RELEASE_VERSION}" --repository "${{ github.repository }}" --prefix "js-" --changelog-file "js/CHANGELOG.md" --badge-type "npm" --package-name "start-command"
 
       - name: Verify release contains the npm badge (false-positive guard)
         if: steps.publish.outputs.published == 'true'
         env:
+          RELEASE_VERSION: ${{ steps.publish.outputs.published_version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           node scripts/verify-release-badge.mjs \
             --repository "${{ github.repository }}" \
-            --tag "js-v${{ steps.publish.outputs.published_version }}" \
+            --tag "js-v${RELEASE_VERSION}" \
             --badge-type npm \
             --package-name start-command \
-            --release-version "${{ steps.publish.outputs.published_version }}"
+            --release-version "${RELEASE_VERSION}"
 
       - name: Format GitHub release notes
         if: steps.publish.outputs.published == 'true'
         env:
+          RELEASE_VERSION: ${{ steps.publish.outputs.published_version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/format-github-release.mjs --release-version "${{ steps.publish.outputs.published_version }}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --prefix "js-"
+        run: node scripts/format-github-release.mjs --release-version "${RELEASE_VERSION}" --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --prefix "js-"
 
   # === MANUAL CHANGESET PR ===
   changeset-pr:

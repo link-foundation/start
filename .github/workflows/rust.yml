@@ -564,9 +564,11 @@ jobs:
       - name: Collect changelog and bump version
         id: version
         if: steps.check.outputs.should_release == 'true' && steps.check.outputs.skip_bump != 'true'
+        env:
+          BUMP_TYPE: ${{ steps.bump_type.outputs.bump_type }}
         run: |
           node scripts/version-and-commit.mjs \
-            --bump-type "${{ steps.bump_type.outputs.bump_type }}" \
+            --bump-type "${BUMP_TYPE}" \
             --working-dir rust \
             --mode changelog
 
@@ -615,10 +617,11 @@ jobs:
       - name: Create GitHub Release
         if: steps.publish_start_command.outputs.published == 'true'
         env:
+          RELEASE_VERSION: ${{ steps.current_version.outputs.version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           node scripts/create-github-release.mjs \
-            --release-version "${{ steps.current_version.outputs.version }}" \
+            --release-version "${RELEASE_VERSION}" \
             --repository "${{ github.repository }}" \
             --prefix "rust-" \
             --changelog-file "rust/CHANGELOG.md" \
@@ -628,14 +631,15 @@ jobs:
       - name: Verify release contains the crates badge (false-positive guard)
         if: steps.publish_start_command.outputs.published == 'true'
         env:
+          RELEASE_VERSION: ${{ steps.current_version.outputs.version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           node scripts/verify-release-badge.mjs \
             --repository "${{ github.repository }}" \
-            --tag "rust-v${{ steps.current_version.outputs.version }}" \
+            --tag "rust-v${RELEASE_VERSION}" \
             --badge-type crates \
             --package-name start-command \
-            --release-version "${{ steps.current_version.outputs.version }}"
+            --release-version "${RELEASE_VERSION}"
 
   # === MANUAL RELEASE ===
   # Same `!cancelled()` guard as `auto-release` — without it the job is
@@ -757,10 +761,11 @@ jobs:
       - name: Create GitHub Release
         if: steps.publish_start_command.outputs.published == 'true'
         env:
+          RELEASE_VERSION: ${{ steps.version.outputs.new_version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           node scripts/create-github-release.mjs \
-            --release-version "${{ steps.version.outputs.new_version }}" \
+            --release-version "${RELEASE_VERSION}" \
             --repository "${{ github.repository }}" \
             --prefix "rust-" \
             --changelog-file "rust/CHANGELOG.md" \
@@ -770,14 +775,15 @@ jobs:
       - name: Verify release contains the crates badge (false-positive guard)
         if: steps.publish_start_command.outputs.published == 'true'
         env:
+          RELEASE_VERSION: ${{ steps.version.outputs.new_version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           node scripts/verify-release-badge.mjs \
             --repository "${{ github.repository }}" \
-            --tag "rust-v${{ steps.version.outputs.new_version }}" \
+            --tag "rust-v${RELEASE_VERSION}" \
             --badge-type crates \
             --package-name start-command \
-            --release-version "${{ steps.version.outputs.new_version }}"
+            --release-version "${RELEASE_VERSION}"
 
   cargo-audit:
     name: Cargo Audit
