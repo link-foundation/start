@@ -1,0 +1,103 @@
+bun test v1.4.3 (c6da4a4d3)
+
+test/check-web-archive.mjs:
+
+# Unhandled error between tests
+-------------------------------
+SyntaxError: Export named 'extractBrokenLinks' not found in module '/tmp/gh-issue-solver-1792417136429/scripts/check-web-archive.mjs'.
+-------------------------------
+
+
+test/links-workflow.mjs:
+30 | 
+31 | describe('broken link workflow', () => {
+32 |   it('fails for every nonzero Lychee exit even when an archive exists', () => {
+33 |     const failureStep = getStepBlock('Fail if broken links were found');
+34 | 
+35 |     expect(failureStep).toContain('!cancelled()');
+                             ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "!cancelled()"
+Received: ""
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/links-workflow.mjs:35:25)
+(fail) broken link workflow > fails for every nonzero Lychee exit even when an archive exists [1.49ms]
+41 |   });
+42 | 
+43 |   it('re-asks the links that never got an answer before giving up', () => {
+44 |     const recheckStep = getStepBlock('Re-check transient link failures');
+45 | 
+46 |     expect(recheckStep).toContain('id: recheck');
+                             ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "id: recheck"
+Received: ""
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/links-workflow.mjs:46:25)
+(fail) broken link workflow > re-asks the links that never got an answer before giving up [0.24ms]
+59 |       'Check broken links against Web Archive'
+60 |     );
+61 |     const failureStep = getStepBlock('Fail if broken links were found');
+62 | 
+63 |     for (const step of [webarchiveStep, failureStep]) {
+64 |       expect(step).toContain("steps.recheck.outputs.all_recovered != 'true'");
+                        ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "steps.recheck.outputs.all_recovered != 'true'"
+Received: "      - name: Check broken links against Web Archive\n        if: steps.lychee.outputs.exit_code != 0\n        id: webarchive\n        run: node scripts/check-web-archive.mjs\n        env:\n          LYCHEE_OUTPUT: lychee/out.md\n"
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/links-workflow.mjs:64:20)
+(fail) broken link workflow > downgrades a failure only when every unanswered link recovered [0.85ms]
+69 |   it('feeds the recovered list to the Web Archive check', () => {
+70 |     const webarchiveStep = getStepBlock(
+71 |       'Check broken links against Web Archive'
+72 |     );
+73 | 
+74 |     expect(webarchiveStep).toContain('RECOVERED_URLS: lychee/recovered.txt');
+                                ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "RECOVERED_URLS: lychee/recovered.txt"
+Received: "      - name: Check broken links against Web Archive\n        if: steps.lychee.outputs.exit_code != 0\n        id: webarchive\n        run: node scripts/check-web-archive.mjs\n        env:\n          LYCHEE_OUTPUT: lychee/out.md\n"
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/links-workflow.mjs:74:28)
+(fail) broken link workflow > feeds the recovered list to the Web Archive check [3.49ms]
+ 96 |       );
+ 97 | 
+ 98 |       expect(Boolean(triggerBlock)).toBe(true);
+ 99 | 
+100 |       for (const path of expected) {
+101 |         expect(triggerBlock[1]).toContain(`- '${path}'`);
+                                      ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "- 'scripts/recheck-broken-links.mjs'"
+Received: "      - '**.md'\n      - '**.html'\n      - '.github/workflows/links.yml'\n      - '.lycheeignore'\n      - 'scripts/check-web-archive.mjs'\n      - 'scripts/check-pipeline-status.sh'\n"
+
+      at <anonymous> (/tmp/gh-issue-solver-1792417136429/js/test/links-workflow.mjs:101:33)
+(fail) broken link workflow > triggers on changes to every file the check depends on [0.78ms]
+
+test/recheck-broken-links.mjs:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module '../../scripts/recheck-broken-links.mjs' from '/tmp/gh-issue-solver-1792417136429/js/test/recheck-broken-links.mjs'
+-------------------------------
+
+
+test/transient-links.mjs:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module '../../scripts/recheck-broken-links.mjs' from '/tmp/gh-issue-solver-1792417136429/js/test/transient-links.mjs'
+-------------------------------
+
+
+ 0 pass
+ 8 fail
+ 3 errors
+ 8 expect() calls
+Ran 8 tests across 4 files. [99.00ms]

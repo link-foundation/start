@@ -1,0 +1,79 @@
+## lychee lychee 0.24.2
+## old args: './**/*.md' './**/*.html'
+
+[js/test/fixtures/lychee-report.md]:
+[ERROR] file:///home/runner/work/repo/repo/csharp/docs/api/Foundation.Data.Doublets.Cli.yml (at 18:12) | File not found. Check if file exists and path is correct
+
+🔍 3755 Total (in 530ms) 🔗 2354 Unique ✅ 487 OK 🚫 67 Errors 👻 3201 Excluded
+
+## new args: --hidden --extensions md,html ... .
+🔍 100 Total (in 50ms) 🔗 59 Unique ✅ 57 OK 🚫 0 Errors 👻 43 Excluded
+
+
+## inputs, old args (excluding untracked js/node_modules):
+AGENTS.md
+ARCHITECTURE.md
+CHANGELOG.md
+CLAUDE.md
+CONTRIBUTING.md
+README.md
+REQUIREMENTS.md
+docs/EXAMPLES.md
+docs/PIPES.md
+docs/USAGE.md
+examples/oom-recovery.md
+experiments/isolation-design.md
+experiments/user-isolation-research.md
+js/CHANGELOG.md
+js/README.md
+js/test/fixtures/lychee-report.md
+rust/CHANGELOG.md
+rust/README.md
+rust/changelog.d/20261019_150000_ci_false_results.md
+rust/changelog.d/README.md
+
+## inputs, new args:
+./README.md
+./js/README.md
+./js/.changeset/README.md
+./js/.changeset/issue-234-ci-false-results.md
+./js/CHANGELOG.md
+./examples/oom-recovery.md
+./experiments/user-isolation-research.md
+./experiments/isolation-design.md
+./rust/changelog.d/README.md
+./rust/changelog.d/20261019_150000_ci_false_results.md
+./rust/README.md
+./rust/CHANGELOG.md
+./docs/EXAMPLES.md
+./docs/PIPES.md
+./docs/USAGE.md
+./CLAUDE.md
+./CONTRIBUTING.md
+./REQUIREMENTS.md
+./AGENTS.md
+./ARCHITECTURE.md
+./CHANGELOG.md
+
+## tracked md/html outside dev/ and docs/case-studies:
+AGENTS.md
+ARCHITECTURE.md
+CHANGELOG.md
+CLAUDE.md
+CONTRIBUTING.md
+README.md
+REQUIREMENTS.md
+docs/EXAMPLES.md
+docs/PIPES.md
+docs/USAGE.md
+examples/oom-recovery.md
+experiments/isolation-design.md
+experiments/user-isolation-research.md
+js/.changeset/README.md
+js/.changeset/issue-234-ci-false-results.md
+js/CHANGELOG.md
+js/README.md
+rust/CHANGELOG.md
+rust/README.md
+rust/changelog.d/20261019_150000_ci_false_results.md
+rust/changelog.d/README.md

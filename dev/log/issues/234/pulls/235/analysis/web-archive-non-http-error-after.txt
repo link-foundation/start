@@ -1,0 +1,16 @@
+=== Web Archive Fallback Check ===
+
+Reading lychee output from: /tmp/tmp.tEyIYIbmnZ/out.md
+
+✗ 1 broken link(s) cannot be checked against the Web Archive:
+  file:///repo/docs/missing.md
+::error title=Broken link - not recoverable from the Web Archive::Broken link detected: file:///repo/docs/missing.md
+It is not an http(s) URL (missing file, unresolvable relative link, ...),
+so the Wayback Machine cannot provide a fallback.
+How to fix: correct the path, restore the missing file, or pass --root-dir
+to lychee so root-relative links resolve.
+
+No broken URLs found in lychee output.
+all_archived=false
+exit code: 1
+GITHUB_OUTPUT: all_archived=false

@@ -14,16 +14,23 @@
  *
  * Environment variables:
  *   - LYCHEE_OUTPUT: Path to lychee markdown output file (default: lychee/out.md)
+ *   - RECOVERED_URLS: Path to a file listing URLs the re-check
+ *     (scripts/recheck-broken-links.mjs) found healthy after lychee got no
+ *     answer (default: lychee/recovered.txt). Listed URLs are skipped; a
+ *     missing file skips nothing.
  *
  * GitHub Actions outputs:
  *   - all_archived: 'true' if all broken links have a web archive version
  *
  * Exit codes:
  *   - 0: All broken links have web archive versions (or no broken links)
- *   - 1: Some broken links have no web archive version
+ *   - 1: Some broken links have no web archive version, or lychee reported an
+ *        error that has no http(s) URL to look up (missing local file, ...)
  */
 
-import { readFileSync, appendFileSync, existsSync } from 'fs';
+import { readFileSync, appendFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 const WAYBACK_API = 'https://archive.org/wayback/available?url=';
 
@@ -41,42 +48,104 @@ function setOutput(name, value) {
 }
 
 /**
- * Extract broken URLs from lychee markdown output
+ * Extract the "Errors per input" section of a lychee markdown report.
+ *
+ * Everything after it - most importantly "## Redirects per input" - describes
+ * links that resolved successfully, so scanning the whole report would make
+ * every redirected link look broken. Reports without that heading (older
+ * lychee versions, hand-written fixtures) are parsed in full.
+ *
+ * @param {string} content - The markdown content from lychee
+ * @returns {string} The errors section, or the whole document when there is none
+ */
+export function extractErrorsSection(content) {
+  const lines = content.split('\n');
+  const start = lines.findIndex((line) =>
+    /^#+\s+Errors per input\s*$/.test(line)
+  );
+  if (start === -1) {
+    return content;
+  }
+  const heading = /^(#+)\s/.exec(lines[start])[1].length;
+  const section = [];
+  for (const line of lines.slice(start + 1)) {
+    const next = /^(#+)\s/.exec(line);
+    if (next && next[1].length <= heading) {
+      break; // a sibling or parent heading ends the errors section
+    }
+    section.push(line);
+  }
+  return section.join('\n');
+}
+
+/**
+ * Extract broken links from lychee markdown output.
  * Lychee markdown format includes lines like:
  *   * [404] https://example.com/broken-link
- *   * [ERROR] https://another-broken.com
+ *   * [ERROR] <file:///repo/missing.yml> | File not found
+ * @param {string} content - The markdown content from lychee
+ * @returns {{urls: string[], others: string[]}} Broken http(s) URLs, and broken
+ *   links that cannot be looked up in the Wayback Machine (local files,
+ *   unresolvable root-relative links, ...)
+ */
+export function extractBrokenLinks(content) {
+  const section = extractErrorsSection(content);
+  const urls = [];
+  const others = [];
+
+  // One bullet per broken link; the status marker is always present, so it
+  // anchors the match. Any link shape then qualifies, including the non-HTTP
+  // failures (a missing local file, an unresolvable root-relative link) that
+  // the Wayback Machine cannot answer.
+  const entryPattern =
+    /^\s*(?:\*|-)\s+\[(?:4\d\d|5\d\d|ERROR|TIMEOUT|UNKNOWN)\]\s+<?([^\s>|)]+)>?/gim;
+  let match;
+  while ((match = entryPattern.exec(section)) !== null) {
+    const link = match[1].trim().replace(/[.,;!?]+$/, '');
+    if (!link) {
+      continue;
+    }
+    if (/^https?:\/\//i.test(link)) {
+      if (!urls.includes(link)) {
+        urls.push(link);
+      }
+    } else if (!others.includes(link)) {
+      others.push(link);
+    }
+  }
+
+  return { urls, others };
+}
+
+/**
+ * Extract broken http(s) URLs from lychee markdown output.
  * @param {string} content - The markdown content from lychee
  * @returns {string[]} Array of broken URLs
  */
-function extractBrokenUrls(content) {
-  const urls = [];
+export function extractBrokenUrls(content) {
+  return extractBrokenLinks(content).urls;
+}
 
-  // Match lines with error status codes or ERROR markers followed by URLs
-  // Lychee output format: [STATUS_CODE] URL or bullet points with links
-  const urlPattern =
-    /\[(?:4\d\d|5\d\d|ERROR|TIMEOUT|UNKNOWN)\]\s+(https?:\/\/[^\s)]+)/gi;
-  let match;
+/**
+ * Drop URLs the re-check found healthy. A URL that never answered lychee but
+ * answers the re-check is not a broken link; keeping it in this report would
+ * send a healthy URL to the Wayback Machine and fail the job on it.
+ * @param {string[]} urls - Broken http(s) URLs extracted from the lychee report
+ * @param {string} recoveredText - Contents of the recheck output file, one URL per line
+ * @returns {{remaining: string[], recovered: string[]}}
+ */
+export function splitRecoveredUrls(urls, recoveredText) {
+  const recoveredSet = new Set(
+    (recoveredText || '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+  );
 
-  while ((match = urlPattern.exec(content)) !== null) {
-    const url = match[1].trim();
-    if (url && !urls.includes(url)) {
-      urls.push(url);
-    }
-  }
-
-  // Also match plain URL lines in broken sections
-  // Lychee sometimes outputs: `[ERROR] url | description`
-  const linePattern = /^\s*(?:\*|-)\s+.*?(https?:\/\/[^\s|)>\]]+)/gm;
-  let lineMatch;
-
-  while ((lineMatch = linePattern.exec(content)) !== null) {
-    const url = lineMatch[1].trim().replace(/[.,;!?]+$/, '');
-    if (url && !urls.includes(url) && url.startsWith('http')) {
-      urls.push(url);
-    }
-  }
-
-  return urls;
+  return {
+    remaining: urls.filter((url) => !recoveredSet.has(url)),
+    recovered: urls.filter((url) => recoveredSet.has(url)),
+  };
 }
 
 /**
@@ -129,9 +198,9 @@ async function checkWaybackMachine(url) {
 }
 
 /**
- * Format a timestamp from Wayback Machine (YYYYMMDDHHmmss) to readable date
+ * Render a Wayback Machine timestamp (YYYYMMDDHHmmss) as a readable date
  * @param {string} timestamp - e.g. "20231015143022"
- * @returns {string} - e.g. "2023-10-15"
+ * @returns {string} Date formatted as YYYY-MM-DD
  */
 function formatTimestamp(timestamp) {
   if (!timestamp || timestamp.length < 8) {
@@ -141,6 +210,95 @@ function formatTimestamp(timestamp) {
   const month = timestamp.slice(4, 6);
   const day = timestamp.slice(6, 8);
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Report lychee errors that have no http(s) URL to look up in the Wayback
+ * Machine. Local files and unresolvable root-relative links have no archived
+ * equivalent, so they can never be `all_archived` and always fail the check.
+ * @param {string[]} unarchivableLinks - Broken links that are not http(s) URLs
+ */
+function reportUnarchivableLinks(unarchivableLinks) {
+  if (unarchivableLinks.length === 0) {
+    return;
+  }
+
+  console.log(
+    `✗ ${unarchivableLinks.length} broken link(s) cannot be checked against the Web Archive:`
+  );
+  for (const link of unarchivableLinks) {
+    console.log(`  ${link}`);
+    console.log(
+      '::error title=Broken link - not recoverable from the Web Archive::' +
+        `Broken link detected: ${link}\n` +
+        'It is not an http(s) URL (missing file, unresolvable relative link, ...),\n' +
+        'so the Wayback Machine cannot provide a fallback.\n' +
+        'How to fix: correct the path, restore the missing file, or pass --root-dir\n' +
+        'to lychee so root-relative links resolve.'
+    );
+  }
+  console.log('');
+}
+
+/**
+ * Report broken links that have a Wayback Machine snapshot as suggestions
+ * @param {Array<{url: string, archiveUrl: string, date: string}>} withArchive - Archived links
+ */
+function reportArchivedLinks(withArchive) {
+  if (withArchive.length === 0) {
+    return;
+  }
+
+  console.log(
+    `✓ ${withArchive.length} broken link(s) have Web Archive versions - consider replacing:`
+  );
+  for (const { url, archiveUrl, date } of withArchive) {
+    console.log(`  Original: ${url}`);
+    console.log(`  Archive (${date}): ${archiveUrl}`);
+    console.log('');
+  }
+
+  // Print GitHub Actions annotations as suggestions (one per link)
+  for (const { url, archiveUrl, date } of withArchive) {
+    console.log(
+      `::notice title=Broken link - Web Archive available (${date})::` +
+        `Broken link detected: ${url}\n` +
+        `A Web Archive snapshot from ${date} is available.\n` +
+        `Suggested fix: replace the broken link with the archived version:\n` +
+        `  ${archiveUrl}`
+    );
+  }
+}
+
+/**
+ * Report broken links that have no Wayback Machine snapshot as errors
+ * @param {string[]} withoutArchive - Broken URLs with no archived version
+ */
+function reportUnarchivedUrls(withoutArchive) {
+  if (withoutArchive.length === 0) {
+    return;
+  }
+
+  console.log(
+    `✗ ${withoutArchive.length} broken link(s) have NO Web Archive version:`
+  );
+  for (const url of withoutArchive) {
+    console.log(`  ${url}`);
+  }
+  console.log('');
+
+  // Print GitHub Actions annotations as errors (one per link)
+  for (const url of withoutArchive) {
+    console.log(
+      `::error title=Broken link - No Web Archive fallback::` +
+        `Broken link detected: ${url}\n` +
+        `No archived version was found in the Wayback Machine.\n` +
+        `How to fix:\n` +
+        `  1. Find an updated URL for the same or equivalent content and replace the link.\n` +
+        `  2. Remove the link if the content is no longer relevant.\n` +
+        `  3. Add the URL to .lycheeignore if it is a known false positive (e.g. localhost, example.com).`
+    );
+  }
 }
 
 /**
@@ -159,12 +317,29 @@ async function main() {
   }
 
   const content = readFileSync(lycheeOutput, 'utf-8');
-  const brokenUrls = extractBrokenUrls(content);
+  const { urls: extractedUrls, others: unarchivableLinks } =
+    extractBrokenLinks(content);
+
+  const recoveredFile = process.env.RECOVERED_URLS || 'lychee/recovered.txt';
+  const recoveredText = existsSync(recoveredFile)
+    ? readFileSync(recoveredFile, 'utf-8')
+    : '';
+  const { remaining: brokenUrls, recovered: recheckedHealthy } =
+    splitRecoveredUrls(extractedUrls, recoveredText);
+
+  for (const url of recheckedHealthy) {
+    console.log(
+      `✓ ${url} never answered lychee but answers the re-check -- not broken`
+    );
+  }
+
+  reportUnarchivableLinks(unarchivableLinks);
 
   if (brokenUrls.length === 0) {
     console.log('No broken URLs found in lychee output.');
-    setOutput('all_archived', 'true');
-    process.exit(0);
+    const clean = unarchivableLinks.length === 0;
+    setOutput('all_archived', clean ? 'true' : 'false');
+    process.exit(clean ? 0 : 1);
   }
 
   console.log(
@@ -193,52 +368,11 @@ async function main() {
 
   console.log('\n=== Web Archive Check Summary ===\n');
 
-  if (withArchive.length > 0) {
-    console.log(
-      `✓ ${withArchive.length} broken link(s) have Web Archive versions - consider replacing:`
-    );
-    for (const { url, archiveUrl, date } of withArchive) {
-      console.log(`  Original: ${url}`);
-      console.log(`  Archive (${date}): ${archiveUrl}`);
-      console.log('');
-    }
+  reportArchivedLinks(withArchive);
+  reportUnarchivedUrls(withoutArchive);
 
-    // Print GitHub Actions annotations as suggestions (one per link)
-    for (const { url, archiveUrl, date } of withArchive) {
-      console.log(
-        `::notice title=Broken link - Web Archive available (${date})::` +
-          `Broken link detected: ${url}\n` +
-          `A Web Archive snapshot from ${date} is available.\n` +
-          `Suggested fix: replace the broken link with the archived version:\n` +
-          `  ${archiveUrl}`
-      );
-    }
-  }
-
-  if (withoutArchive.length > 0) {
-    console.log(
-      `✗ ${withoutArchive.length} broken link(s) have NO Web Archive version:`
-    );
-    for (const url of withoutArchive) {
-      console.log(`  ${url}`);
-    }
-    console.log('');
-
-    // Print GitHub Actions annotations as errors (one per link)
-    for (const url of withoutArchive) {
-      console.log(
-        `::error title=Broken link - No Web Archive fallback::` +
-          `Broken link detected: ${url}\n` +
-          `No archived version was found in the Wayback Machine.\n` +
-          `How to fix:\n` +
-          `  1. Find an updated URL for the same or equivalent content and replace the link.\n` +
-          `  2. Remove the link if the content is no longer relevant.\n` +
-          `  3. Add the URL to .lycheeignore if it is a known false positive (e.g. localhost, example.com).`
-      );
-    }
-  }
-
-  const allArchived = withoutArchive.length === 0;
+  const allArchived =
+    withoutArchive.length === 0 && unarchivableLinks.length === 0;
   setOutput('all_archived', allArchived ? 'true' : 'false');
 
   if (!allArchived) {
@@ -257,7 +391,13 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('Unexpected error:', error);
-  process.exit(1);
-});
+const isDirectExecution =
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+
+if (isDirectExecution) {
+  main().catch((error) => {
+    console.error('Unexpected error:', error);
+    process.exit(1);
+  });
+}
