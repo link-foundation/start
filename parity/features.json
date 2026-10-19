@@ -462,7 +462,6 @@
           "rust/src/lib/isolation_metadata_cases.rs"
         ],
         "tests": [
-          "rust/tests/regression_193.rs",
           "rust/tests/regression_199.rs",
           "rust/tests/regression_230.rs"
         ]
@@ -1372,6 +1371,7 @@
         ],
         "tests": [
           "rust/tests/regression_176.rs",
+          "rust/tests/regression_193.rs",
           "rust/tests/regression_224.rs",
           "rust/tests/regression_224_resume.rs"
         ]

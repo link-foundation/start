@@ -9,6 +9,7 @@ const {
 } = require('../../scripts/check-javascript-first.mjs');
 const {
   checkFeatureChanges,
+  checkRegressionPairs,
 } = require('../../scripts/check-feature-parity.mjs');
 
 const root = resolve(__dirname, '../..');
@@ -192,6 +193,36 @@ describe('JavaScript first CI gate', () => {
       checkFeatureChanges(features, ['js/source.js', 'rust/test.rs']),
       []
     );
+  });
+
+  it('keeps both halves of a regression test under one feature', () => {
+    const feature = (id, js, rust) => ({
+      id,
+      javascript: { implementation: [], tests: js },
+      rust: { implementation: [], tests: rust },
+    });
+    assert.equal(
+      checkRegressionPairs([
+        feature('a', ['js/test/regression-193.js'], []),
+        feature('b', [], ['rust/tests/regression_193.rs']),
+      ]).length,
+      1
+    );
+    assert.deepEqual(
+      checkRegressionPairs([
+        feature(
+          'a',
+          ['js/test/regression-201.js'],
+          ['rust/tests/regression_201.rs']
+        ),
+        feature('b', [], ['rust/tests/regression_201.rs']),
+      ]),
+      []
+    );
+    const manifest = JSON.parse(
+      readFileSync(resolve(root, 'parity/features.json'), 'utf8')
+    );
+    assert.deepEqual(checkRegressionPairs(manifest.features), []);
   });
 
   it('makes Rust callable only after the complete JavaScript stage', () => {
