@@ -21,6 +21,7 @@ const {
   writeExecutionEnvHandoff,
 } = require('../src/lib/docker-command-handoff');
 const { nextAttemptNumber } = require('../src/lib/execution-attempt');
+const { isolatedUserCommand } = require('../src/lib/launch-identity');
 
 const CLI = path.join(__dirname, '../src/bin/cli.js');
 const UUID = '23000000-0000-4000-8000-000000000230';
@@ -136,6 +137,13 @@ describe('issue #230: START_* execution identity variables', () => {
   if (process.platform === 'win32') {
     return;
   }
+
+  it('an --isolated-user run exports them with an empty session name', () => {
+    const command = isolatedUserCommand(PRINT, UUID, { attemptNumber: 2 });
+    expect(command).toStartWith('export START_EXECUTION_ID=');
+    const result = spawnSync('sh', ['-c', command], { encoding: 'utf8' });
+    expect(result.stdout.trim()).toBe(`ID=${UUID} S= A=2`);
+  });
 
   it("$ --session-id X -- sh -c 'echo $START_EXECUTION_ID' prints X", () => {
     const result = run([

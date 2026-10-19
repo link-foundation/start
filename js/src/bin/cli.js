@@ -540,7 +540,10 @@ async function runWithIsolation(
     });
   } else if (createdUser) {
     // Run directly as the created user (no isolation environment)
-    result = await runAsIsolatedUser(cmd, createdUser);
+    result = await runAsIsolatedUser(
+      launchIdentity.isolatedUserCommand(cmd, sessionId, launch),
+      createdUser
+    );
   } else {
     // This shouldn't happen in isolation mode, but handle gracefully
     result = { success: false, message: 'No isolation configuration provided' };

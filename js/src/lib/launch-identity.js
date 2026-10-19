@@ -352,19 +352,44 @@ function applyLaunch(record, launch) {
 }
 
 /**
- * START_* variables of a direct run (no session name).
+ * START_* variables of a run without a backend session (direct, or
+ * `--isolated-user` alone): the session name is empty.
+ * @param {string} sessionId - Execution UUID
+ * @param {object} launch - prepareLaunch() result
+ * @returns {object} Variables
+ */
+function directExecutionEnv(sessionId, launch) {
+  return require('./execution-env').buildExecutionEnv({
+    executionId: sessionId,
+    sessionName: '',
+    attempt: launch.attemptNumber,
+  });
+}
+
+/**
+ * Child environment of a direct run.
  * @param {string} sessionId - Execution UUID
  * @param {object} launch - prepareLaunch() result
  * @returns {object} Child environment
  */
 function directLaunchEnv(sessionId, launch) {
-  const env = require('./execution-env');
-  return env.withExecutionEnv(
-    env.buildExecutionEnv({
-      executionId: sessionId,
-      sessionName: '',
-      attempt: launch.attemptNumber,
-    })
+  return require('./execution-env').withExecutionEnv(
+    directExecutionEnv(sessionId, launch)
+  );
+}
+
+/**
+ * Command of an `--isolated-user` run without a backend: `sudo` resets the
+ * environment, so the variables are exported by the command itself.
+ * @param {string} cmd - Shell command
+ * @param {string} sessionId - Execution UUID
+ * @param {object} launch - prepareLaunch() result
+ * @returns {string} Prefixed command
+ */
+function isolatedUserCommand(cmd, sessionId, launch) {
+  return require('./execution-env').prefixWithExecutionEnv(
+    cmd,
+    directExecutionEnv(sessionId, launch)
   );
 }
 
@@ -374,7 +399,9 @@ module.exports = {
   applyLaunch,
   claimDirectLaunch,
   claimLaunch,
+  directExecutionEnv,
   directLaunchEnv,
+  isolatedUserCommand,
   isExecutionLive,
   launchLogContent,
   mergeAppendedAttempt,
