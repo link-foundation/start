@@ -11,6 +11,7 @@
  */
 
 import { loadCommandStream } from './load-command-stream.mjs';
+import { checked } from './release-git.mjs';
 
 // Load use-m dynamically
 const { use } = eval(
@@ -22,15 +23,22 @@ const { $ } = await loadCommandStream(use);
 
 try {
   // Get current npm version
-  const currentResult = await $`npm --version`.run({ capture: true });
+  // checked(): command-stream resolves on a non-zero exit (#234).
+  const currentResult = await checked(
+    $`npm --version`.run({ capture: true }),
+    'npm --version'
+  );
   const currentVersion = currentResult.stdout.trim();
   console.log(`Current npm version: ${currentVersion}`);
 
   // Update npm to latest
-  await $`npm install -g npm@latest`;
+  await checked($`npm install -g npm@latest`, 'npm install -g npm@latest');
 
   // Get updated npm version
-  const updatedResult = await $`npm --version`.run({ capture: true });
+  const updatedResult = await checked(
+    $`npm --version`.run({ capture: true }),
+    'npm --version'
+  );
   const updatedVersion = updatedResult.stdout.trim();
   console.log(`Updated npm version: ${updatedVersion}`);
 } catch (error) {

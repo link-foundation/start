@@ -14,6 +14,7 @@
 
 import { readFileSync, writeFileSync } from 'fs';
 import { loadCommandStream } from './load-command-stream.mjs';
+import { checked } from './release-git.mjs';
 
 // Load use-m dynamically
 const { use } = eval(
@@ -71,7 +72,11 @@ try {
   console.log(`Current version: ${oldVersion}`);
 
   // Bump version using npm version (doesn't create git tag)
-  await $`npm version ${bumpType} --no-git-tag-version`;
+  // checked(): command-stream resolves on a non-zero exit (#234).
+  await checked(
+    $`npm version ${bumpType} --no-git-tag-version`,
+    `npm version ${bumpType}`
+  );
 
   // Get new version
   const updatedPackageJson = JSON.parse(readFileSync('package.json', 'utf-8'));
@@ -120,7 +125,10 @@ try {
 
   // Synchronize package-lock.json
   console.log('\nSynchronizing package-lock.json...');
-  await $`npm install --package-lock-only`;
+  await checked(
+    $`npm install --package-lock-only`,
+    'npm install --package-lock-only'
+  );
 
   console.log('\n✅ Instant version bump complete');
   console.log(`Version: ${oldVersion} → ${newVersion}`);

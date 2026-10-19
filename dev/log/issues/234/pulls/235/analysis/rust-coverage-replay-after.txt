@@ -1,0 +1,9 @@
+== run-39257928573-failed
+❌ Coverage not measured: a test failed during the tarpaulin run (see the failing test above)
+exit 1
+== run-39250359503-failed
+❌ Coverage not measured: a test failed during the tarpaulin run (see the failing test above)
+exit 1
+== run-39256972823-success
+✅ Coverage 73.81% meets the 50% threshold
+exit 0

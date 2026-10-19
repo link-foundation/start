@@ -29,6 +29,7 @@ import {
   packageVersionBadge,
 } from './release-name.mjs';
 import { loadCommandStream } from './load-command-stream.mjs';
+import { checked } from './release-git.mjs';
 
 // TODO: Update this to match your package name in package.json
 const PACKAGE_NAME = 'start-command';
@@ -83,9 +84,11 @@ if (!releaseId || !version || !repository) {
 
 try {
   // Get current release body
-  const result = await $`gh api repos/${repository}/releases/${releaseId}`.run({
-    capture: true,
-  });
+  // checked(): command-stream resolves on a non-zero exit (#234).
+  const result = await checked(
+    $`gh api repos/${repository}/releases/${releaseId}`.run({ capture: true }),
+    `gh api repos/${repository}/releases/${releaseId}`
+  );
   const releaseData = JSON.parse(result.stdout);
 
   const currentBody = releaseData.body || '';
@@ -160,10 +163,12 @@ try {
     );
 
     try {
-      const prResult =
-        await $`gh api "repos/${repository}/commits/${commitShaToLookup}/pulls"`.run(
-          { capture: true }
-        );
+      const prResult = await checked(
+        $`gh api repos/${repository}/commits/${commitShaToLookup}/pulls`.run({
+          capture: true,
+        }),
+        `gh api repos/${repository}/commits/${commitShaToLookup}/pulls`
+      );
       const prsData = JSON.parse(prResult.stdout);
 
       // Find the PR that's not the version bump PR (not "chore: version packages")
@@ -214,8 +219,11 @@ try {
 
   // Update the release using JSON input to properly handle special characters
   const updatePayload = JSON.stringify({ body: formattedBody });
-  await $`gh api repos/${repository}/releases/${releaseId} -X PATCH --input -`.run(
-    { stdin: updatePayload }
+  await checked(
+    $`gh api repos/${repository}/releases/${releaseId} -X PATCH --input -`.run({
+      stdin: updatePayload,
+    }),
+    `gh api repos/${repository}/releases/${releaseId} -X PATCH`
   );
 
   console.log(`✅ Formatted release notes for v${versionWithoutV}`);
