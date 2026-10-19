@@ -12,12 +12,12 @@
   },
   "scripts": {
     "test": "bun ../scripts/run-js-tests.mjs",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check:file-size": "bun ../scripts/check-file-size.mjs",
-    "lint:scripts": "cd .. && eslint .",
+    "lint:scripts": "cd .. && eslint . --max-warnings 0",
     "format:check:scripts": "cd .. && prettier --check \"scripts/**/*.{js,mjs,cjs}\"",
     "check": "bun run lint && bun run lint:scripts && bun run format:check && bun run format:check:scripts && bun run check:file-size",
     "prepare": "cd .. && husky .husky || true",
@@ -58,7 +58,7 @@
   },
   "lint-staged": {
     "*.{js,mjs,cjs}": [
-      "eslint --fix --max-warnings 6",
+      "eslint --fix --max-warnings 0 --no-warn-ignored",
       "prettier --write",
       "prettier --check"
     ],
