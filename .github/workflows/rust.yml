@@ -521,7 +521,7 @@ jobs:
       # Writer job: the checkout credentials are what pushes the version
       # commit/tag back to main, so `persist-credentials: false` (applied to
       # every read-only checkout in this file) must not be set here.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6 # zizmor: ignore[artipacked] -- writer job: pushes with these credentials
         with:
           fetch-depth: 0
           ssh-key: ${{ secrets.START_RELEASE_SSH_KEY }}
@@ -682,7 +682,7 @@ jobs:
       # Writer job: the checkout credentials are what pushes the version
       # commit/tag back to main, so `persist-credentials: false` (applied to
       # every read-only checkout in this file) must not be set here.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6 # zizmor: ignore[artipacked] -- writer job: pushes with these credentials
         with:
           fetch-depth: 0
           ssh-key: ${{ secrets.START_RELEASE_SSH_KEY }}
