@@ -28,7 +28,9 @@ function buildExecutionEnv({ executionId, sessionName, attempt } = {}) {
   return {
     [EXECUTION_ID_ENV]: String(executionId),
     [SESSION_NAME_ENV]: sessionName ? String(sessionName) : '',
-    [ATTEMPT_ENV]: String(Number.isSafeInteger(number) && number > 0 ? number : 1),
+    [ATTEMPT_ENV]: String(
+      Number.isSafeInteger(number) && number > 0 ? number : 1
+    ),
   };
 }
 

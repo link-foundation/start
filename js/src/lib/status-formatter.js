@@ -729,6 +729,7 @@ function formatRecordAsText(record) {
     `UUID:              ${obj.uuid}`,
     `Status:            ${obj.status}`,
     `Command:           ${obj.command}`,
+    ...require('./execution-chain').identityTextLines(obj),
     `Exit Code:         ${obj.exitCode !== null ? describeExitCode(obj.exitCode).text : 'N/A'}`,
     ...(obj.oomKilled !== undefined
       ? [`OOM Killed:        ${obj.oomKilled}`]
@@ -924,7 +925,10 @@ function queryStatus(store, identifier, outputFormat) {
     persistContainerRemoval(store, record, enrichedRecord);
     const withProcessIds = attachProcessIds(enrichedRecord);
     // Attach currentTime so callers can see how long an executing command has been running
-    const withCurrentTime = attachCurrentTime(withProcessIds);
+    const withCurrentTime = require('./execution-chain').attachIdentity(
+      attachCurrentTime(withProcessIds),
+      store
+    );
     return {
       success: true,
       output: formatRecord(withCurrentTime, outputFormat || 'links-notation'),

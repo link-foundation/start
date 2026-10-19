@@ -4,8 +4,9 @@
  * Every option in this module addresses an execution that already exists in
  * the tracking store instead of launching a new one: --status, --list,
  * --upload-log, --stop, --terminate, --attach, --resume, --resume-all and
- * --cleanup. `dispatchQueryCommand` is the single entry point the CLI calls
- * before it starts interpreting the command line as a command to run.
+ * --cleanup, plus --alias and --rename. `dispatchQueryCommand` is the single
+ * entry point the CLI calls before it starts interpreting the command line as
+ * a command to run.
  */
 
 const { queryStatus, listExecutions } = require('./status-formatter');
@@ -157,7 +158,9 @@ function hasQueryMode(options) {
     hasValue(options.attach) ||
     hasValue(options.resume) ||
     options.resumeAll === true ||
-    options.cleanup === true
+    options.cleanup === true ||
+    hasValue(options.alias) ||
+    hasValue(options.rename)
   );
 }
 
@@ -207,6 +210,18 @@ async function dispatchQueryCommand(options, context = {}) {
   }
   if (options.cleanup) {
     return handleCleanup(store, options.cleanupDryRun, options.cleanupTarget);
+  }
+  if (hasValue(options.alias) || hasValue(options.rename)) {
+    const { nameExecution } = require('./execution-identity');
+    const rename = hasValue(options.rename);
+    return reportResult(
+      nameExecution(
+        store,
+        rename ? options.rename : options.alias,
+        options.newName,
+        { rename }
+      )
+    );
   }
 
   return null;

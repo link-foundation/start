@@ -142,7 +142,7 @@ describe('query mode exclusivity', () => {
     test(`rejects ${args.join(' ')}`, () => {
       assert.throws(() => {
         parse(args);
-      }, /Cannot combine --status, --list, --upload-log, --stop, --terminate, --attach, --resume, --resume-all, or --cleanup/);
+      }, /Cannot combine --status, --list, --upload-log, --stop, --terminate, --attach, --resume, --resume-all, --cleanup, --alias, or --rename/);
     });
   }
 });

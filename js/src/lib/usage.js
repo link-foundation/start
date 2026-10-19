@@ -1,6 +1,6 @@
 /** Print usage information */
 function printUsage() {
-  console.log(`Usage: $ [options] [--] <command> | $ --status <uuid> [--output-format <fmt>] | $ --list [--running] [--output-format <fmt>] | $ --upload-log <id> | $ --stop <id> | $ --terminate <id> | $ --attach <id> [--read-only] | $ --resume <id> [-- <command>] | $ --resume-all
+  console.log(`Usage: $ [options] [--] <command> | $ --status <uuid> [--output-format <fmt>] | $ --list [--running] [--output-format <fmt>] | $ --upload-log <id> | $ --stop <id> | $ --terminate <id> | $ --attach <id> [--read-only] | $ --resume <id> [-- <command>] | $ --resume-all | $ --alias <id> <name> | $ --rename <id> <name>
 
 Options:
   --help, -h           Show this usage and exit successfully
@@ -10,6 +10,8 @@ Options:
   --session, -s <name>  Session name for isolation
   --session-id <uuid>   Session UUID for tracking (auto-generated if not provided)
   --session-name <uuid> Alias for --session-id
+  --append-attempt      Run as the next attempt of the existing --session-id execution
+  --continues <id>      Record that this execution continues an earlier one
   --image <image>       Docker image (optional, defaults to OS-matched image)
   --volume, -v <spec>   Docker bind mount/volume host:container[:mode] (repeatable, docker only)
   --mount <spec>        Docker --mount spec (repeatable, docker only)
@@ -64,6 +66,8 @@ Options:
   --cleanup-dry-run     Show stale records that would be cleaned up (without cleaning)
   --cleanup <id>        Remove a Docker execution's containers and snapshot images (never forced)
   --cleanup-dry-run <id>  Show the containers and images --cleanup <id> would remove
+  --alias <id> <name>   Add a name the execution can be addressed by
+  --rename <id> <name>  Rename the execution, keeping its previous name as an alias
   --version, -v         Show version information
 
 Examples:
@@ -91,6 +95,9 @@ Examples:
   $ --resume my-docker-session             # Restart the stored command in the same container
   $ --resume my-docker-session -- bash     # Run a different command in the same container
   $ --resume-all                           # Re-attach every still-running execution
+  $ --session-id <uuid> --append-attempt -- npm test  # Next attempt, same log
+  $ --continues <uuid> -- npm test         # Fresh execution chained to <uuid>
+  $ --rename <uuid> nightly-build          # Address it as nightly-build from now on
   $ -i docker -d --on-kill-resume 3 --recovery-command 'solve --resume' -- solve
   $ -i docker -d --on-kill-resume 3 --on-kill-resume-delay 30-90 -- cargo test
   $ --use-command-stream echo "Hello"      # Use command-stream library`);

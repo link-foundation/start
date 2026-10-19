@@ -916,7 +916,8 @@ function runIsolated(backend, command, options = {}) {
   // START_* identity (issue #230): docker passes it with `-e`; a bare screen
   // shell inherits the spawn env; everything else gets an `export` prefix.
   const identity = require('./execution-env');
-  currentOptions.executionEnv = identity.executionEnvFromOptions(currentOptions);
+  currentOptions.executionEnv =
+    identity.executionEnvFromOptions(currentOptions);
   if (
     backend !== 'docker' &&
     !(backend === 'screen' && isInteractiveShellCommand(effectiveCommand))

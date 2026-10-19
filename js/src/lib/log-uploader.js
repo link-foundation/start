@@ -200,7 +200,21 @@ function uploadExecutionLog(store, identifier, options = {}) {
     };
   }
 
-  return uploadLogPath(record.logPath, options);
+  // A continuation chain uploads every execution, oldest first (#231).
+  let prepared;
+  try {
+    prepared = require('./execution-chain').prepareUploadLog(store, record);
+  } catch (error) {
+    return {
+      success: false,
+      error: `Could not join chain logs: ${error.message}`,
+    };
+  }
+  try {
+    return uploadLogPath(prepared.path, options);
+  } finally {
+    prepared.cleanup();
+  }
 }
 
 module.exports = {

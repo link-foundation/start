@@ -9,6 +9,7 @@
  * Control modes: --upload-log, --stop, --terminate, --attach [--read-only],
  *                --resume [-- <command>], --resume-all,
  *                --cleanup [<uuid-or-session-name>]
+ * Naming modes:  --alias <id> <name>, --rename <id> <name> (issue #231)
  */
 
 /**
@@ -39,6 +40,9 @@ function createQueryOptionDefaults() {
     cleanup: false, // Clean up stale "executing" records
     cleanupDryRun: false, // Show what would be cleaned without cleaning
     cleanupTarget: null, // UUID/session name whose containers and images --cleanup removes
+    alias: null, // Execution that --alias adds a name to
+    rename: null, // Execution that --rename renames
+    newName: null, // Name given by --alias/--rename
   };
 }
 
@@ -121,6 +125,35 @@ function hasValue(value) {
 }
 
 /**
+ * `--alias <id> <name>` and `--rename <id> <name>` take two arguments.
+ */
+const NAMING_OPTIONS = {
+  '--alias': 'alias',
+  '--rename': 'rename',
+};
+
+function parseNamingOption(args, index, options) {
+  const key = NAMING_OPTIONS[args[index]];
+  if (!key) {
+    return 0;
+  }
+  const [identifier, name] = args.slice(index + 1, index + 3);
+  if (
+    identifier === undefined ||
+    name === undefined ||
+    identifier.startsWith('-') ||
+    name.startsWith('-')
+  ) {
+    throw new Error(
+      `Option ${args[index]} requires a UUID or session name and a new name`
+    );
+  }
+  options[key] = identifier;
+  options.newName = name;
+  return 3;
+}
+
+/**
  * Parse a single query/control option.
  * @param {string[]} args - Arguments array
  * @param {number} index - Current index
@@ -133,6 +166,11 @@ function parseQueryOption(args, index, options) {
   const cleanupConsumed = parseCleanupOption(args, index, options);
   if (cleanupConsumed > 0) {
     return cleanupConsumed;
+  }
+
+  const namingConsumed = parseNamingOption(args, index, options);
+  if (namingConsumed > 0) {
+    return namingConsumed;
   }
 
   const flag = FLAG_OPTIONS[arg];
@@ -216,6 +254,12 @@ function activeQueryModes(options) {
   if (options.cleanup) {
     modes.push('--cleanup');
   }
+  if (hasValue(options.alias)) {
+    modes.push('--alias');
+  }
+  if (hasValue(options.rename)) {
+    modes.push('--rename');
+  }
   return modes;
 }
 
@@ -248,7 +292,7 @@ function validateQueryOptions(options) {
 
   if (modes.length > 1) {
     throw new Error(
-      'Cannot combine --status, --list, --upload-log, --stop, --terminate, --attach, --resume, --resume-all, or --cleanup in the same invocation'
+      'Cannot combine --status, --list, --upload-log, --stop, --terminate, --attach, --resume, --resume-all, --cleanup, --alias, or --rename in the same invocation'
     );
   }
 
