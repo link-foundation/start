@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.25.10] - 2026-10-19
+
+Manual patch release.
+
 ## [0.25.9] - 2026-10-19
 
 `start --status` renders nested option values (`launchOwner`, `exitEvidence`, `resolvedLimits`, `resourceLimitSpecs`) as nested links notation instead of quoted JSON strings, matching the JavaScript edition byte for byte (#226).
