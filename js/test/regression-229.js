@@ -27,12 +27,16 @@ const UUID = '22900000-0000-4000-8000-000000000229';
 
 function sandbox() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'start-229-'));
+  const app = path.join(root, 'app');
+  const logs = path.join(root, 'logs');
   return {
     root,
+    app,
+    logs,
     env: {
       ...process.env,
-      START_APP_FOLDER: path.join(root, 'app'),
-      START_LOG_DIR: path.join(root, 'logs'),
+      START_APP_FOLDER: app,
+      START_LOG_DIR: logs,
       START_DISABLE_AUTO_ISSUE: '1',
       START_DISABLE_LOG_UPLOAD: '1',
       START_EXECUTION_ID: '',
@@ -49,7 +53,7 @@ function run(box, args) {
 }
 
 function storeOf(box) {
-  return new ExecutionStore({ appFolder: box.env.START_APP_FOLDER });
+  return new ExecutionStore({ appFolder: box.app });
 }
 
 describe('issue #229: an existing --session-id is never overwritten', () => {
@@ -127,7 +131,7 @@ describe('issue #229: an existing --session-id is never overwritten', () => {
   it('recognises an untracked execution by its log file', () => {
     const box = sandbox();
     box.env.START_DISABLE_TRACKING = '1';
-    const logPath = path.join(box.env.START_LOG_DIR, 'direct', `${UUID}.log`);
+    const logPath = path.join(box.logs, 'direct', `${UUID}.log`);
     fs.mkdirSync(path.dirname(logPath), { recursive: true });
     fs.writeFileSync(logPath, '=== Start Command Log ===\nold\n');
     const store = { get: () => null };

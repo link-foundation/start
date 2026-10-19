@@ -211,7 +211,7 @@ fn refuses_append_attempt_while_the_execution_is_still_running() {
     store.save(&running).unwrap();
     let error =
         preflight_launch(params(Some(&store), true, true, Path::new("/nonexistent"))).unwrap_err();
-    assert!(error.contains("is still running"), "{}", error);
+    assert!(error.contains("is still running"));
 }
 
 #[test]
