@@ -117,6 +117,14 @@ impl CommandRunner for FakeRunner {
     }
 }
 
+/// `overrides` with the snapshot lock moved into `dir`. The default lock is
+/// host-wide, so parallel tests (or a real `start` on the same host) would
+/// otherwise fail a snapshot resume after its 1s wait (issue #234).
+pub fn with_test_lock(dir: &Path, mut overrides: Value) -> Value {
+    overrides["snapshotLockPath"] = json!(dir.join("snapshot.lock"));
+    overrides
+}
+
 pub fn test_store(dir: &Path) -> ExecutionStore {
     ExecutionStore::with_options(ExecutionStoreOptions {
         app_folder: Some(dir.to_path_buf()),

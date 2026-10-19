@@ -139,15 +139,17 @@ fn reservation_case(folder: &Path, fail: bool) {
         fake: FakeRunner::new(serde_json::json!({})),
     };
     let hooks = Hooks(Cell::new(false));
-    let result = start_command::execution_resume::resume_execution_with(
+    // The fail case swaps `folder` for a file, so the lock lives next to it.
+    let result = start_command::execution_resume::resume_execution_with_resources(
         Some(&store),
         &record.uuid,
         Some("new"),
         Some("json"),
         &runner,
         &hooks,
+        &with_test_lock(folder.parent().unwrap(), serde_json::json!({})),
     );
-    assert!(hooks.0.get());
+    assert!(hooks.0.get(), "{:?}", result.error);
     if fail {
         assert!(!result.success);
         let error: serde_json::Value = serde_json::from_str(&result.error.unwrap()).unwrap();
