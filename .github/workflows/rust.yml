@@ -491,12 +491,25 @@ jobs:
       group: main-writer-${{ github.repository }}-main
       cancel-in-progress: false
     name: Auto Release
-    needs: [lint, test, build]
+    # Every check the Rust Stage requires must have passed. Waiting only for
+    # build let run 39257928573 start Auto Release while the tarpaulin test
+    # run was failing (#234).
+    needs:
+      - syntax-check
+      - lint
+      - test
+      - test-parity
+      - coverage
+      - build
+      - cargo-audit
+      - rust-codeql
     if: |
       !cancelled() &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      needs.build.result == 'success'
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      !contains(needs.*.result, 'skipped')
     environment: release-main
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -634,13 +647,26 @@ jobs:
       group: main-writer-${{ github.repository }}-main
       cancel-in-progress: false
     name: Manual Release
-    needs: [lint, test, build]
+    # Every check the Rust Stage requires must have passed. Waiting only for
+    # build let run 39257928573 start Auto Release while the tarpaulin test
+    # run was failing (#234).
+    needs:
+      - syntax-check
+      - lint
+      - test
+      - test-parity
+      - coverage
+      - build
+      - cargo-audit
+      - rust-codeql
     if: |
       !cancelled() &&
       github.event_name == 'workflow_dispatch' &&
       github.ref == 'refs/heads/main' &&
       inputs.release_mode == 'instant' &&
-      needs.build.result == 'success'
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      !contains(needs.*.result, 'skipped')
     environment: release-main
     runs-on: ubuntu-24.04
     timeout-minutes: 30

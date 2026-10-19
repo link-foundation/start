@@ -715,3 +715,103 @@ fn rust_coverage_reports_a_failed_test_as_a_failed_test() {
         "an unversioned tarpaulin cache key never picks up a new release"
     );
 }
+
+/// Jobs the stage's pipeline-status gate passes to `--required`.
+fn required_stage_jobs(jobs: &[Job]) -> Vec<String> {
+    let Some(status) = jobs.iter().find(|job| job.name == "pipeline-status") else {
+        return Vec::new();
+    };
+    let Some(start) = status.body.find("--required ") else {
+        return Vec::new();
+    };
+    status.body[start + "--required ".len()..]
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == ','))
+        .next()
+        .unwrap_or_default()
+        .split(',')
+        .filter(|name| !name.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// `workflow_dispatch` inputs as `(name, body)` blocks.
+fn dispatch_inputs(workflow: &str) -> Vec<(String, String)> {
+    let lines: Vec<&str> = workflow.lines().collect();
+    let Some(start) = lines
+        .windows(2)
+        .position(|pair| pair[0] == "  workflow_dispatch:" && pair[1] == "    inputs:")
+    else {
+        return Vec::new();
+    };
+    let mut inputs: Vec<(String, String)> = Vec::new();
+    for line in &lines[start + 2..] {
+        if !line.is_empty() && !line.starts_with("      ") {
+            break;
+        }
+        let header = line
+            .strip_prefix("      ")
+            .filter(|rest| !rest.starts_with(' '))
+            .and_then(|rest| rest.strip_suffix(':'));
+        match header {
+            Some(name) => inputs.push((name.to_string(), String::new())),
+            None => {
+                if let Some((_, body)) = inputs.last_mut() {
+                    body.push_str(line);
+                    body.push('\n');
+                }
+            }
+        }
+    }
+    inputs
+}
+
+#[test]
+fn releases_only_after_every_check_its_stage_requires_has_passed() {
+    // Rust Auto Release needed only [lint, test, build] and started in run
+    // 39257928573 while the tarpaulin test run was failing (issue #234).
+    for name in ["js.yml", "rust.yml"] {
+        let jobs = parse_jobs(&read_workflow(name));
+        let required = required_stage_jobs(&jobs);
+        assert!(!required.is_empty(), "{name}: no --required list");
+        let releases: Vec<&Job> = jobs
+            .iter()
+            .filter(|job| WRITER_JOBS.contains(&job.name.as_str()) && job.name != "changeset-pr")
+            .collect();
+        assert!(!releases.is_empty(), "{name}: no release jobs");
+        for job in releases {
+            let needs = parse_needs(&job.body).unwrap_or_default();
+            for check in &required {
+                assert!(
+                    needs.contains(check),
+                    "{name}: {} does not wait for {check}",
+                    job.name
+                );
+            }
+            for result in ["failure", "cancelled", "skipped"] {
+                assert!(
+                    job.body
+                        .contains(&format!("!contains(needs.*.result, '{result}')")),
+                    "{name}: {} may start after a {result} check",
+                    job.name
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn gives_every_required_dispatch_input_a_default() {
+    // `gh workflow run` cannot fill a form; a required input without a
+    // default makes the dispatch API answer HTTP 422 (issue #234).
+    for name in list_workflows() {
+        for (input, body) in dispatch_inputs(&read_workflow(&name)) {
+            if body.lines().any(|line| line == "        required: true") {
+                assert!(
+                    body.lines()
+                        .any(|line| line.starts_with("        default: ")),
+                    "{name}: dispatch input \"{input}\" has no default"
+                );
+            }
+        }
+    }
+}

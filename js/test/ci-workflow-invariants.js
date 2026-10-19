@@ -127,6 +127,51 @@ function inRunBlock(workflow, index) {
   return false;
 }
 
+/** The `needs:` of a job, written inline (`[a, b]`) or as a block list. */
+function parseNeeds(body) {
+  const inline = jobKey(body, 'needs');
+  if (inline === null) {
+    return [];
+  }
+  if (inline) {
+    return inline
+      .split(/[,[\]]/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+  const block = body.match(/^ {4}needs:\n((?: {6}- .*\n?)+)/m);
+  return block
+    ? block[1]
+        .split('\n')
+        .map((line) => line.replace(/^ {6}- /, '').trim())
+        .filter(Boolean)
+    : [];
+}
+
+/** Jobs the stage's pipeline-status gate passes to `--required`. */
+function requiredStageJobs(jobs) {
+  const status = jobs.find((job) => job.name === 'pipeline-status');
+  const match = status && status.body.match(/--required ([\w,-]+)/);
+  return match ? match[1].split(',') : [];
+}
+
+/** `workflow_dispatch` inputs as `{ name, body }` blocks. */
+function dispatchInputs(workflow) {
+  const section = workflow.match(
+    /^ {2}workflow_dispatch:\n {4}inputs:\n((?: {6}.*\n| *\n)+)/m
+  );
+  if (!section) {
+    return [];
+  }
+  return section[1]
+    .split(/^(?= {6}[\w-]+:$)/m)
+    .map((block) => {
+      const header = block.match(/^ {6}([\w-]+):$/m);
+      return header ? { name: header[1], body: block } : null;
+    })
+    .filter(Boolean);
+}
+
 const workflows = listWorkflows();
 
 describe('CI workflow invariants', () => {
@@ -494,5 +539,49 @@ describe('CI workflow invariants', () => {
       /Could not determine coverage, skipping check/,
       'an unparsable coverage report must fail, not skip'
     );
+  });
+  it('releases only after every check its stage requires has passed', () => {
+    // Rust Auto Release needed only [lint, test, build] and started in run
+    // 39257928573 while the tarpaulin test run was failing (issue #234).
+    for (const name of ['js.yml', 'rust.yml']) {
+      const jobs = parseJobs(readWorkflow(name));
+      const required = requiredStageJobs(jobs);
+      assert.ok(required.length > 0, `${name}: no --required list`);
+      const releases = jobs.filter(
+        (job) => WRITER_JOBS.has(job.name) && job.name !== 'changeset-pr'
+      );
+      assert.ok(releases.length > 0, `${name}: no release jobs`);
+      for (const job of releases) {
+        const needs = parseNeeds(job.body);
+        for (const check of required) {
+          assert.ok(
+            needs.includes(check),
+            `${name}: ${job.name} does not wait for ${check}`
+          );
+        }
+        for (const result of ['failure', 'cancelled', 'skipped']) {
+          assert.ok(
+            job.body.includes(`!contains(needs.*.result, '${result}')`),
+            `${name}: ${job.name} may start after a ${result} check`
+          );
+        }
+      }
+    }
+  });
+
+  it('gives every required dispatch input a default', () => {
+    // `gh workflow run` cannot fill a form; a required input without a
+    // default makes the dispatch API answer HTTP 422 (issue #234).
+    for (const name of workflows) {
+      for (const input of dispatchInputs(readWorkflow(name))) {
+        if (/^ {8}required: true$/m.test(input.body)) {
+          assert.match(
+            input.body,
+            /^ {8}default: /m,
+            `${name}: dispatch input "${input.name}" has no default`
+          );
+        }
+      }
+    }
   });
 });

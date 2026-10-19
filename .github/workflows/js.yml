@@ -22,6 +22,9 @@ on:
       bump_type:
         description: 'Manual release type'
         required: true
+        # `gh workflow run` cannot fill a form: without a default the
+        # dispatch API answers HTTP 422 and no run is created (#234).
+        default: patch
         type: choice
         options:
           - patch
@@ -485,8 +488,17 @@ jobs:
       group: main-writer-${{ github.repository }}-main
       cancel-in-progress: false
     name: Release
-    needs: [lint, test]
-    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.lint.result == 'success' && needs.test.result == 'success' }}
+    # Every check the JavaScript Stage requires must have passed: a release
+    # that waited only for lint and test could publish while coverage or
+    # parity was still running or already red (#234).
+    needs: [syntax-check, lint, test, coverage, parity]
+    if: |
+      !cancelled() &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      !contains(needs.*.result, 'skipped')
     environment: release-main
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -589,7 +601,16 @@ jobs:
       group: main-writer-${{ github.repository }}-main
       cancel-in-progress: false
     name: Instant Release
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.event.inputs.release_mode == 'instant'
+    # A manual release is validated like an automatic one (#234).
+    needs: [syntax-check, lint, test, coverage, parity]
+    if: |
+      !cancelled() &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      github.event.inputs.release_mode == 'instant' &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      !contains(needs.*.result, 'skipped')
     environment: release-main
     runs-on: ubuntu-24.04
     timeout-minutes: 30
