@@ -106,11 +106,42 @@ fn isolation_arguments_match_shared_goldens() {
             networks: strings(&input["networks"]),
             network_aliases: strings(&input["networkAliases"]),
             resource_limits: strings(&input["resourceLimits"]),
+            execution_id: input["executionId"].as_str().map(str::to_string),
+            attempt_number: input["attemptNumber"].as_u64().unwrap_or(1),
             ..Default::default()
         };
-        let observed: Vec<String> = build_docker_runtime_args(&options);
+        let observed = build_docker_runtime_args(&options);
         assert_eq!(observed, strings(&fixture["argv"]), "{}", fixture["name"]);
     }
+}
+
+#[test]
+fn status_identity_matches_shared_goldens() {
+    use start_command::execution_chain::{build_chain, identity_text_lines};
+    use start_command::execution_identity::execution_aliases;
+    let fixture = &fixtures()["status-identity"];
+    let records: Vec<ExecutionRecord> = fixture["records"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| ExecutionRecord::from_json(r).unwrap())
+        .collect();
+    let record = records.iter().find(|r| r.uuid == fixture["uuid"]).unwrap();
+    let aliases = execution_aliases(record);
+    let chain: Vec<String> = build_chain(&records, record)
+        .into_iter()
+        .map(|r| r.uuid)
+        .collect();
+    assert_eq!(aliases, strings(&fixture["aliases"]));
+    assert_eq!(chain, strings(&fixture["chain"]));
+    let fields = vec![
+        ("aliases".to_string(), json!(aliases)),
+        ("chain".to_string(), json!(chain)),
+    ];
+    assert_eq!(
+        identity_text_lines(record, &fields),
+        strings(&fixture["text"])
+    );
 }
 
 #[test]
