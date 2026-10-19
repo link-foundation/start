@@ -53,6 +53,14 @@ fn docker_oom_event_matches_shared_goldens() {
     }
 }
 
+/// Seconds as JSON numbers compare in JavaScript: 600, not 600.0.
+fn seconds(value: Option<f64>) -> serde_json::Value {
+    match value {
+        Some(whole) if whole.fract() == 0.0 && whole >= 0.0 => json!(whole as u64),
+        other => json!(other),
+    }
+}
+
 #[test]
 fn cli_parsing_matches_shared_goldens() {
     for fixture in fixtures()["cli-parsing"].as_array().unwrap() {
@@ -72,7 +80,13 @@ fn cli_parsing_matches_shared_goldens() {
         let options = parsed.wrapper_options;
         let observed = json!({"isolated": options.isolated, "detached": options.detached,
             "session": options.session, "status": options.status, "outputFormat": options.output_format,
-            "memory": options.memory, "cpus": options.cpus});
+            "memory": options.memory, "cpus": options.cpus, "resume": options.resume,
+            "snapshotWait": seconds(options.snapshot.wait),
+            "snapshotDiskWait": seconds(options.snapshot.disk_wait),
+            "removeOriginalAfter": seconds(options.snapshot.remove_original_after),
+            "snapshotSizeHint": options.snapshot.size_hint, "snapshotPrepare": options.snapshot.prepare,
+            "removeOriginal": options.remove_original, "cleanup": options.cleanup,
+            "cleanupDryRun": options.cleanup_dry_run, "cleanupTarget": options.cleanup_target});
         for (key, expected) in fixture["options"].as_object().unwrap() {
             assert_eq!(&observed[key], expected, "{}: {}", fixture["name"], key);
         }
@@ -112,6 +126,43 @@ fn status_output_matches_shared_goldens() {
         format_record(&record, "text").unwrap(),
         fixture["text"].as_str().unwrap()
     );
+}
+
+fn output_block(text: &str, start: &str, is_end: fn(&str) -> bool) -> Vec<String> {
+    let lines: Vec<&str> = text.lines().collect();
+    let from = lines.iter().position(|line| *line == start).unwrap();
+    let mut block = vec![start.to_string()];
+    block.extend(
+        lines[from + 1..]
+            .iter()
+            .take_while(|line| !is_end(line))
+            .map(|line| line.to_string()),
+    );
+    block
+}
+
+#[test]
+fn status_nested_options_match_shared_goldens() {
+    // Issue #226: nested option values are rendered, never "[object Object]".
+    let fixture = &fixtures()["status-nested-options"];
+    let record = ExecutionRecord::from_json(&fixture["record"]).unwrap();
+    let expected = |key: &str| -> Vec<String> {
+        fixture[key]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|line| line.as_str().unwrap().to_string())
+            .collect()
+    };
+    let links = format_record(&record, "links-notation").unwrap();
+    let links_end = |line: &str| line.starts_with("  ") && !line.starts_with("   ");
+    assert_eq!(
+        output_block(&links, "  options", links_end),
+        expected("links")
+    );
+    let text = format_record(&record, "text").unwrap();
+    let text_end = |line: &str| !line.starts_with(' ');
+    assert_eq!(output_block(&text, "Options:", text_end), expected("text"));
 }
 
 #[test]

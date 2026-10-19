@@ -549,6 +549,10 @@ async function runWithIsolation(
     if (mode !== 'detached') {
       executionRecord.complete(exitCode);
     }
+    if (result.containerRemoved) {
+      // The cleanup policy removed the container (issue #225).
+      require('../lib/container-removal').markContainerRemoved(executionRecord);
+    }
     try {
       store.save(
         mode === 'detached'

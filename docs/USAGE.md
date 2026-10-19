@@ -60,7 +60,18 @@ a small command handoff script. Legacy containers and changed labels require a
 snapshot, guarded by a host lock and checks for twice the writable-layer size
 plus a 10 GiB reserve in both Docker and containerd storage. Snapshot successors
 retain the stopped container's memory, CPU and PIDs limits. Add
-`--remove-original` to remove the predecessor only after the successor starts.
+`--remove-original` to remove the predecessor only after the successor starts,
+or `--remove-original-after <seconds>` to remove it only if the successor still
+runs after a startup window. `--snapshot-wait <seconds>` and
+`--snapshot-disk-wait <seconds>` (or `START_SNAPSHOT_LOCK_WAIT` and
+`START_SNAPSHOT_DISK_WAIT`) wait for a busy snapshot lock or for free disk
+instead of failing; when the wait runs out the resume exits 75 (`EX_TEMPFAIL`)
+so a supervisor can retry it. `--snapshot-size-hint <bytes>` skips the
+`docker inspect --size` walk, and `--snapshot-prepare <command>` runs a cleanup
+command in the started original before the snapshot. A long `docker commit`
+reports its elapsed time every minute in the log. Snapshot replacements carry a
+stable `start-command.snapshot-image` label; `$ --cleanup <id>` removes an
+execution's containers and then those images, without forcing anything.
 Add `--on-kill-resume <N>` and
 `--recovery-command <cmd>` to a detached Docker launch to recover from an OOM
 kill in the same container automatically, and `--on-kill-resume-delay 30-90`

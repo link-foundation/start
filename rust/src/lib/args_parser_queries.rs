@@ -3,7 +3,7 @@
 //! These options address an execution that already exists instead of starting
 //! a new one: `--status`, `--list [--running]`, `--upload-log`, `--stop`,
 //! `--terminate`, `--attach [--read-only]`, `--resume [-- <command>]`,
-//! `--resume-all` and `--cleanup`. They are parsed here so `args_parser` stays
+//! `--resume-all` and `--cleanup [<uuid-or-session-name>]`. They are parsed here so `args_parser` stays
 //! focused on the options that shape a new execution (issue #162).
 
 use crate::args_parser::{WrapperOptions, VALID_OUTPUT_FORMATS};
@@ -25,17 +25,49 @@ const IDENTIFIER_OPTIONS: [(&str, IdentifierSetter); 6] = [
 ];
 
 /// Options that are plain flags.
-const FLAG_OPTIONS: [(&str, FlagSetter); 6] = [
+const FLAG_OPTIONS: [(&str, FlagSetter); 4] = [
     ("--list", |o| o.list = true),
     ("--running", |o| o.running = true),
     ("--read-only", |o| o.read_only = true),
     ("--resume-all", |o| o.resume_all = true),
-    ("--cleanup", |o| o.cleanup = true),
-    ("--cleanup-dry-run", |o| {
-        o.cleanup = true;
-        o.cleanup_dry_run = true;
-    }),
 ];
+
+/// `--cleanup` and `--cleanup-dry-run` take an optional execution: without one
+/// they clean up stale records, with one they remove that execution's Docker
+/// containers and snapshot images (issue #224).
+fn parse_cleanup_option(
+    args: &[String],
+    index: usize,
+    options: &mut WrapperOptions,
+) -> Result<usize, String> {
+    let arg = args[index].as_str();
+    let (name, inline) = match arg.split_once('=') {
+        Some((name, value)) => (name, Some(value)),
+        None => (arg, None),
+    };
+    if name != "--cleanup" && name != "--cleanup-dry-run" {
+        return Ok(0);
+    }
+    options.cleanup = true;
+    options.cleanup_dry_run |= name == "--cleanup-dry-run";
+    if let Some(value) = inline {
+        if value.is_empty() {
+            return Err(format!(
+                "Option {} requires a UUID or session name argument",
+                name
+            ));
+        }
+        options.cleanup_target = Some(value.to_string());
+        return Ok(1);
+    }
+    match args.get(index + 1).filter(|next| !next.starts_with('-')) {
+        Some(next) => {
+            options.cleanup_target = Some(next.clone());
+            Ok(2)
+        }
+        None => Ok(1),
+    }
+}
 
 /// Query modes that may be combined with `--output-format`.
 const OUTPUT_FORMAT_MODES: [&str; 4] = ["--status", "--list", "--resume", "--resume-all"];
@@ -50,6 +82,11 @@ pub fn parse_query_option(
     options: &mut WrapperOptions,
 ) -> Result<usize, String> {
     let arg = &args[index];
+
+    let cleanup_consumed = parse_cleanup_option(args, index, options)?;
+    if cleanup_consumed > 0 {
+        return Ok(cleanup_consumed);
+    }
 
     for (name, apply) in FLAG_OPTIONS {
         if arg == name {

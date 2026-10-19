@@ -40,6 +40,11 @@ checked examples.
 containers support copy-free command handoff; legacy snapshots require capacity
 preflight. Log uploads are private and sanitized; manual `--no-sanitize` opts out.
 
+Snapshot resumes take `--snapshot-wait`, `--snapshot-disk-wait`,
+`--remove-original-after`, `--snapshot-size-hint` and `--snapshot-prepare`, and
+exit 75 when they should be retried later; `--cleanup <id>` removes one
+execution's containers and snapshot images without forcing.
+
 ## Development
 
 ```bash

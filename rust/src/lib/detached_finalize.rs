@@ -20,6 +20,9 @@ use chrono::Utc;
 use serde_json::Value;
 
 use crate::cgroup_memory::{cgroup_shell_vars, parse_cgroup_memory_sample};
+use crate::container_removal::{
+    mark_container_removed, CONTAINER_REMOVED_ENV, CONTAINER_STATE_REMOVED,
+};
 use crate::docker_post_mortem::{normalize_docker_timestamp, shell_vars};
 use crate::execution_attempt::{append_lifecycle, read_attempt_activity, read_attempt_log_tail};
 use crate::execution_store::{
@@ -105,6 +108,18 @@ pub fn finalize_detached_execution_with_attempt(
     facts: &DetachedFinalizeFacts,
     attempt_number: Option<u64>,
 ) -> FinalizeOutcome {
+    finalize_detached_execution_with_removal(store, execution_id, facts, attempt_number, false)
+}
+
+/// Same as [`finalize_detached_execution_with_attempt`]; `container_removed`
+/// says the watcher's own `docker rm -f` removed the container (issue #225).
+pub fn finalize_detached_execution_with_removal(
+    store: &ExecutionStore,
+    execution_id: &str,
+    facts: &DetachedFinalizeFacts,
+    attempt_number: Option<u64>,
+    container_removed: bool,
+) -> FinalizeOutcome {
     if execution_id.is_empty() {
         return FinalizeOutcome {
             updated: false,
@@ -147,7 +162,19 @@ pub fn finalize_detached_execution_with_attempt(
     }
     if record.status == ExecutionStatus::Executed && record.end_time.is_some() {
         // Already finalized (e.g. a `--status` query got there first, or the
-        // watcher ran twice after a resume). Nothing to correct.
+        // watcher ran twice after a resume). Only the removal can still be new.
+        if container_removed
+            && record.container_state.as_deref() != Some(CONTAINER_STATE_REMOVED)
+            && matches!(
+                store.mark_container_removed(&record.uuid, &Utc::now().to_rfc3339()),
+                Ok(Some(_))
+            )
+        {
+            return FinalizeOutcome {
+                updated: true,
+                reason: "container-removed".to_string(),
+            };
+        }
         return FinalizeOutcome {
             updated: false,
             reason: "already-final".to_string(),
@@ -223,6 +250,11 @@ pub fn finalize_detached_execution_with_attempt(
         record
             .options
             .insert("containerError".to_string(), Value::String(error));
+    }
+    if container_removed {
+        // The cleanup policy removed the container: say so, and keep its id as
+        // history (issue #225).
+        mark_container_removed(&mut record, None);
     }
 
     read_attempt_activity(&mut record);
@@ -305,7 +337,9 @@ pub fn build_detached_finalize_snippet_with_attempt(
         .map(|path| path.to_string_lossy().to_string())
         .unwrap_or_else(|_| "start".to_string());
     format!(
-        "{} {} {} \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" \"${}\"{} >/dev/null 2>&1 || true",
+        "{}=\"${}\" {} {} {} \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" \"${}\" \"${}\"{} >/dev/null 2>&1 || true",
+        CONTAINER_REMOVED_ENV,
+        shell_vars::REMOVED,
         shell_quote(&executable),
         INTERNAL_FINALIZE_FLAG,
         shell_quote(execution_id),
@@ -321,7 +355,9 @@ pub fn build_detached_finalize_snippet_with_attempt(
 }
 
 /// Entry point for `--internal-finalize-detached-docker <uuid> <exit> <oom>
-/// <started> <finished> <error> <running> <cgroup>`. Always succeeds: see the module docs.
+/// <started> <finished> <error> <running> <cgroup> [attempt]`, with
+/// `START_INTERNAL_CONTAINER_REMOVED=true` when the watcher removed the
+/// container (issue #225). Always succeeds: see the module docs.
 pub fn run_internal_finalize(args: &[String]) {
     let execution_id = match args.first() {
         Some(value) if !value.is_empty() => value.clone(),
@@ -335,7 +371,7 @@ pub fn run_internal_finalize(args: &[String]) {
         app_folder: std::env::var("START_APP_FOLDER").ok().map(PathBuf::from),
         ..ExecutionStoreOptions::default()
     });
-    finalize_detached_execution_with_attempt(
+    finalize_detached_execution_with_removal(
         &store,
         &execution_id,
         &DetachedFinalizeFacts {
@@ -348,5 +384,7 @@ pub fn run_internal_finalize(args: &[String]) {
             cgroup_memory: field(7),
         },
         field(8).parse().ok(),
+        std::env::var(CONTAINER_REMOVED_ENV)
+            .is_ok_and(|value| normalize_bool(&value) == Some(true)),
     );
 }

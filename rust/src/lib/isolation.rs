@@ -35,6 +35,8 @@ pub struct IsolationResult {
     pub exit_code: Option<i32>,
     /// Captured output
     pub output: Option<String>,
+    /// The cleanup policy removed the container (issue #225)
+    pub container_removed: bool,
 }
 
 /// Options for isolation
@@ -839,7 +841,7 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                         "Docker container \"{}\" exited with code {}",
                         container_name, exit_code
                     );
-                    append_attached_docker_cleanup_message(
+                    let container_removed = append_attached_docker_cleanup_message(
                         &mut message,
                         &container_name,
                         cleanup_policy,
@@ -854,6 +856,7 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
                         session_name: Some(container_name.clone()),
                         message,
                         exit_code: Some(exit_code),
+                        container_removed,
                         ..Default::default()
                     }
                 }

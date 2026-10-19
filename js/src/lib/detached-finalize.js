@@ -63,6 +63,8 @@ const WATCHER_LOST_CONTAINER = 'watcher-lost-container';
  * @param {boolean|string|null} [options.running] - `.State.Running`
  * @param {string|null} [options.cgroupMemory] - Last cgroup v2 sample of the
  *   watcher, `<memory.max> <memory.peak> <oom> <oom_kill>` (issue #182)
+ * @param {boolean|string|null} [options.containerRemoved] - The watcher's own
+ *   `docker rm -f` removed the container (issue #225)
  * @returns {{updated: boolean, reason?: string, record?: Object}} Outcome
  */
 function finalizeDetachedExecution(options = {}) {
@@ -96,9 +98,23 @@ function finalizeDetachedExecution(options = {}) {
   ) {
     return { updated: false, reason: 'stale-attempt' };
   }
+  const containerRemoved = normalizeBoolean(options.containerRemoved) === true;
   if (record.status === 'executed' && record.endTime) {
     // Already finalized (e.g. a `--status` query got there first, or the
-    // watcher ran twice after a resume). Nothing to correct.
+    // watcher ran twice after a resume). Only the removal can still be new.
+    if (containerRemoved && record.containerState !== 'removed') {
+      try {
+        const marked = store.markContainerRemoved(
+          record.uuid,
+          new Date().toISOString()
+        );
+        if (marked) {
+          return { updated: true, reason: 'container-removed', record: marked };
+        }
+      } catch {
+        // Bookkeeping only: see the exit-0 contract of `main`.
+      }
+    }
     return { updated: false, reason: 'already-final', record };
   }
 
@@ -170,6 +186,11 @@ function finalizeDetachedExecution(options = {}) {
   const containerError = normalizeContainerError(options.containerError);
   if (containerError) {
     record.options = { ...(record.options || {}), containerError };
+  }
+  if (containerRemoved) {
+    // The cleanup policy removed the container: say so, and keep its id as
+    // history (issue #225).
+    require('./container-removal').markContainerRemoved(record);
   }
 
   const {
@@ -291,7 +312,9 @@ function reconcileFinalizedRecord(store, record) {
  */
 function buildDetachedFinalizeSnippet(executionId, attemptNumber = null) {
   const v = SHELL_VARS;
+  const { CONTAINER_REMOVED_ENV } = require('./container-removal');
   return (
+    `${CONTAINER_REMOVED_ENV}="$${v.removed}" ` +
     `${shellQuote(process.execPath)} ${shellQuote(__filename)} ` +
     `${shellQuote(executionId)} "$${v.exit}" "$${v.oom}" ` +
     `"$${v.started}" "$${v.finished}" "$${v.error}" "$${v.running}" ` +
@@ -301,7 +324,9 @@ function buildDetachedFinalizeSnippet(executionId, attemptNumber = null) {
 
 /**
  * Entry point used by the detached watcher:
- *   <runtime> detached-finalize.js <uuid> <exit> <oom> <started> <finished> <error> <running> <cgroup>
+ *   <runtime> detached-finalize.js <uuid> <exit> <oom> <started> <finished> <error> <running> <cgroup> [attempt]
+ * with `START_INTERNAL_CONTAINER_REMOVED=true` when the watcher removed the
+ * container (issue #225).
  * Always exits 0 — a bookkeeping failure must never turn into a visible error
  * in a log the user is reading for the command's own output.
  * @param {string[]} argv - Positional arguments
@@ -340,6 +365,8 @@ function main(argv) {
       running,
       cgroupMemory,
       attemptNumber: attemptNumber || null,
+      containerRemoved:
+        process.env[require('./container-removal').CONTAINER_REMOVED_ENV],
     });
   } catch {
     // Deliberately silent: see the exit-0 contract above.

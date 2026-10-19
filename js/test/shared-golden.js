@@ -60,6 +60,26 @@ describe('shared JavaScript and Rust golden contracts', () => {
     assert.deepEqual(JSON.parse(formatRecord(record, 'json')), fixture.json);
     assert.equal(formatRecord(record, 'text'), fixture.text);
   });
+  it('renders nested status options identically (issue #226)', () => {
+    const fixture = fixtures['status-nested-options'];
+    const record = ExecutionRecord.fromObject(fixture.record);
+    const block = (text, start, isEnd) => {
+      const lines = text.split('\n');
+      const rest = lines.slice(lines.indexOf(start) + 1);
+      const end = rest.findIndex(isEnd);
+      return [start, ...(end === -1 ? rest : rest.slice(0, end))];
+    };
+    const links = formatRecord(record, 'links-notation');
+    assert.deepEqual(
+      block(links, '  options', (line) => /^ {2}\S/.test(line)),
+      fixture.links
+    );
+    const text = formatRecord(record, 'text');
+    assert.deepEqual(
+      block(text, 'Options:', (line) => /^\S/.test(line)),
+      fixture.text
+    );
+  });
   for (const fixture of fixtures['execution-record-format']) {
     it(`preserves the complete execution record format (exit ${fixture.exitCode})`, () => {
       assert.deepEqual(ExecutionRecord.fromObject(fixture).toObject(), fixture);

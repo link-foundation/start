@@ -79,6 +79,8 @@ pub fn archive_attempt(record: &mut ExecutionRecord) {
         "observedAt",
         "staleDetectedAt",
         "containerStartedAt",
+        "containerState",
+        "containerRemovedObservedAt",
         "exitReason",
         "oomKilled",
         "memoryExhausted",
@@ -100,6 +102,8 @@ pub fn archive_attempt(record: &mut ExecutionRecord) {
     record.observed_at = None;
     record.stale_detected_at = None;
     record.container_started_at = None;
+    record.container_state = None;
+    record.container_removed_observed_at = None;
     record.exit_reason = None;
     record.oom_killed = None;
     record.memory_exhausted = None;

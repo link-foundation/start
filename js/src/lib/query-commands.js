@@ -13,6 +13,8 @@ const { ControlAction, controlExecution } = require('./execution-control');
 const { attachExecution } = require('./execution-attach');
 const { resumeAllExecutions, resumeExecution } = require('./execution-resume');
 const { uploadExecutionLog } = require('./log-uploader');
+const { snapshotResumeSettings } = require('./snapshot-resume-options');
+const { cleanupExecution } = require('./execution-cleanup');
 
 /**
  * Print a handler result, returning the process exit code.
@@ -68,6 +70,8 @@ async function handleResumeQuery(
       outputFormat,
       resourceOptions,
       removeOriginal: resourceOptions.removeOriginal === true,
+      removeOriginalAfter: resourceOptions.removeOriginalAfter ?? 0,
+      snapshotOptions: snapshotResumeSettings(resourceOptions),
     })
   );
 }
@@ -78,12 +82,21 @@ function handleResumeAllQuery(store, outputFormat) {
 
 /**
  * Handle --cleanup / --cleanup-dry-run.
- * Cleans up stale "executing" records (processes that crashed or were killed).
+ * Cleans up stale "executing" records (processes that crashed or were killed),
+ * or with a target the Docker containers and snapshot images of one execution.
  * @param {?object} store - Execution store
  * @param {boolean} dryRun - If true, just report what would be cleaned
+ * @param {?string} [target] - UUID or session name of one execution
  * @returns {number} Exit code
  */
-function handleCleanup(store, dryRun) {
+function handleCleanup(store, dryRun, target = null) {
+  if (hasValue(target)) {
+    const result = cleanupExecution(store, target, { dryRun });
+    if (!result.success && result.output) {
+      console.log(result.output);
+    }
+    return reportResult(result);
+  }
   if (!store) {
     console.error('Error: Execution tracking is disabled.');
     return 1;
@@ -193,7 +206,7 @@ async function dispatchQueryCommand(options, context = {}) {
     return handleResumeAllQuery(store, outputFormat);
   }
   if (options.cleanup) {
-    return handleCleanup(store, options.cleanupDryRun);
+    return handleCleanup(store, options.cleanupDryRun, options.cleanupTarget);
   }
 
   return null;

@@ -337,12 +337,12 @@ on a stopped container.
 
 `--resume <id>` continues a **stopped** detached execution:
 
-| Session state                       | What happens                                                                                             |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Container exists, no new command    | `docker start` re-runs the stored command in the same container.                                         |
-| Managed container exists, new command given | A small command script is copied into it and `docker start` reuses its filesystem. |
-| Legacy container or changed labels | A guarded snapshot creates a replacement container. |
-| Session is gone                     | The command is launched again through the stored isolation options (same image, volumes, env, networks). |
+| Session state                               | What happens                                                                                             |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Container exists, no new command            | `docker start` re-runs the stored command in the same container.                                         |
+| Managed container exists, new command given | A small command script is copied into it and `docker start` reuses its filesystem.                       |
+| Legacy container or changed labels          | A guarded snapshot creates a replacement container.                                                      |
+| Session is gone                             | The command is launched again through the stored isolation options (same image, volumes, env, networks). |
 
 `--resume <id> -- <command>` is the form downstream tools need: it runs a
 _different_ command against the same container filesystem, instead of
@@ -356,6 +356,34 @@ commit when those checks cannot establish sufficient capacity. Add
 `--remove-original` to a snapshot resume to remove the stopped predecessor after
 the replacement starts successfully. The existing container-removal policy also
 removes its wrapper-owned temporary resume image.
+
+Supervisors that resume many snapshot containers at once can tune the guarded
+snapshot (all options apply only to `--resume`):
+
+| Option                              | Effect                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--snapshot-wait <seconds>`         | Wait for another resume's snapshot on this host instead of failing at once. Prints `[Resume] Waiting up to <s> for the snapshot of <holder> ...` once. Default: `START_SNAPSHOT_LOCK_WAIT`, else 0.                                                                                                                                                      |
+| `--snapshot-disk-wait <seconds>`    | Re-check free space every `START_SNAPSHOT_DISK_POLL` seconds (default 10) instead of refusing at once. Default: `START_SNAPSHOT_DISK_WAIT`, else 0.                                                                                                                                                                                                      |
+| `--remove-original-after <seconds>` | Implies `--remove-original`, but removes the predecessor only if the replacement is still running after the delay.                                                                                                                                                                                                                                       |
+| `--snapshot-size-hint <bytes>`      | Use this writable-layer size (`k`, `m`, `g`, `t` suffixes, 1024-based) instead of walking the layer with `docker inspect --size`.                                                                                                                                                                                                                        |
+| `--snapshot-prepare <command>`      | `docker start` the stopped original, `docker exec` the command there with `sh -c` (for example to delete build caches), then `docker kill` it and snapshot. Only for containers whose start is safe to repeat. A failure is logged and the files are snapshotted as they are. `START_SNAPSHOT_PREPARE_TIMEOUT` bounds the command (default 600 seconds). |
+
+A busy snapshot lock, and disk that is still short, exit with code **75**
+(`EX_TEMPFAIL` from `sysexits.h`): the resume did nothing and can be retried.
+Other resume failures keep exit code 1. While `docker commit` runs, which prints
+nothing itself, `--resume` writes a line such as
+`[Resume] snapshotting box: 12 min elapsed (docker commit reports no progress)`
+to the execution log and stderr every `START_SNAPSHOT_PROGRESS_INTERVAL` seconds
+(default 60).
+
+Every snapshot replacement carries the label
+`start-command.snapshot-image=<image>`, naming the `start-command-resume/*`
+image it runs from. This label is a stable interface: a caller that removes
+containers itself can read it and remove the image after the container. Or run
+`$ --cleanup <uuid-or-session-name>`, which removes the execution's current and
+earlier containers, then their snapshot images newest first. It never forces a
+removal: running containers and images still in use are reported as retained,
+and the command exits 1. `$ --cleanup-dry-run <id>` lists what it would remove.
 
 For the legacy fallback, `docker commit` does not capture a container's HostConfig, so before committing
 `--resume` reads the stopped container's resource limits with `docker inspect`
@@ -662,7 +690,7 @@ This is useful for:
 | `--volume, -v`                   | Docker bind mount/volume `host:container[:mode]` (repeatable, docker only)   |
 | `--mount`                        | Docker `--mount` spec (repeatable, docker only)                              |
 | `--env, -e`                      | Environment variable `KEY=VALUE` for the container (repeatable, docker only) |
-| `--label KEY=VALUE`              | Task attribution label (repeatable, Docker only; persisted on resume) |
+| `--label KEY=VALUE`              | Task attribution label (repeatable, Docker only; persisted on resume)        |
 | `--privileged`                   | Run docker container in privileged mode (docker only)                        |
 | `--network`                      | Connect to a named network (repeatable, docker only)                         |
 | `--network-alias`                | Add an alias on the first network (repeatable, docker only)                  |

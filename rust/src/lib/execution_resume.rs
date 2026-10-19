@@ -83,6 +83,9 @@ pub struct ExecutionResumeResult {
     pub success: bool,
     pub output: Option<String>,
     pub error: Option<String>,
+    /// Process exit code for a failure, e.g. 75 (EX_TEMPFAIL) when a snapshot
+    /// resume can be retried later (issue #224).
+    pub exit_code: Option<i32>,
 }
 
 /// Side effects a resume performs beyond running plan steps.

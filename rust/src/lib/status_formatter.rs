@@ -39,7 +39,8 @@ pub fn read_exit_code_from_log(log_path: &str) -> Option<i32> {
 /// yields the `memoryExhausted` observation for consumers that key off
 /// `oomKilled` (issue #165).
 pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
-    let mut enriched = resolve_detached_status(record);
+    let mut enriched =
+        crate::container_removal::attach_container_removal(resolve_detached_status(record));
     if let Some(state) = crate::cpu_penalty_monitor::read_state(record) {
         enriched.cpu_penalty = Some(state);
     }
@@ -380,19 +381,20 @@ fn format_record_as_links_notation_with_enrichments(
         for (key, value) in map {
             if !value.is_null() {
                 if key == "options" {
-                    // Format options as nested Links notation
+                    // Nested option values (launchOwner, exitEvidence,
+                    // resolvedLimits…) are rendered as nested Links notation
+                    // instead of quoted JSON (issue #226).
                     if let Value::Object(opts) = &value {
                         if !opts.is_empty() {
                             lines.push("  options".to_string());
                             for (opt_key, opt_value) in opts {
                                 if !opt_value.is_null() {
-                                    let formatted = format_value_for_links_notation(opt_value);
-                                    lines.push(format!("    {} {}", opt_key, formatted));
+                                    append_links_value(&mut lines, opt_key, opt_value, 4);
                                 }
                             }
                         }
                     }
-                } else if value.is_object() {
+                } else if value.is_object() || value.is_array() {
                     // Nested records such as `cgroupMemory` (issue #182), in
                     // the same layout as the JavaScript formatter.
                     append_links_value(&mut lines, &key, &value, 2);
@@ -539,6 +541,17 @@ fn format_record_as_text_with_enrichments(
     if let Some(ref detected) = record.stale_detected_at {
         lines.push(format!("Stale Detected At: {}", detected));
     }
+    if let Some(ref state) = record.container_state {
+        // The container no longer exists; `containerId` is history (issue #225).
+        lines.push(format!("Container State:   {}", state));
+        lines.push(format!(
+            "Container Removed: {}",
+            record
+                .container_removed_observed_at
+                .as_deref()
+                .unwrap_or("N/A")
+        ));
+    }
     lines.push(format!("Log Path:          {}", record.log_path));
     if let Some(attempt) = &record.attempt {
         lines.extend([
@@ -569,7 +582,11 @@ fn format_record_as_text_with_enrichments(
     // Format options as nested list instead of JSON
     if !record.options.is_empty() {
         lines.push("Options:".to_string());
-        for (key, value) in &record.options {
+        // Sorted, like the links-notation and JSON output, so the text format
+        // is deterministic too.
+        let mut options: Vec<_> = record.options.iter().collect();
+        options.sort_by(|a, b| a.0.cmp(b.0));
+        for (key, value) in options {
             let value_str = match value {
                 Value::String(s) => s.clone(),
                 Value::Bool(b) => b.to_string(),
@@ -877,6 +894,7 @@ pub fn query_status(
 
     // Enrich detached execution status with live session check
     let enriched = enrich_detached_status(&record);
+    crate::container_removal::persist_container_removal(store, &record, &enriched);
     // Attach currentTime so callers can see how long an executing command has been running
     let current_time = attach_current_time(&enriched);
     let process_ids = collect_process_ids(&enriched);

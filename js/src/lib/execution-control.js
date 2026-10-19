@@ -17,10 +17,11 @@ const ControlAction = {
   TERMINATE: 'terminate',
 };
 
-function runCommand(command, args) {
+function runCommand(command, args, extra = {}) {
   const options = {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    ...(extra.timeout ? { timeout: extra.timeout } : {}),
   };
   const result = spawnSync(
     command,
