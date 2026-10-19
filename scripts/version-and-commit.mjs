@@ -30,6 +30,7 @@ import {
   checked,
   isCrateVersionPublished,
   nextUnpublishedVersion,
+  pushWithRetry,
   verifyCommitOnRemote,
 } from './release-git.mjs';
 
@@ -498,7 +499,8 @@ async function main() {
       // Push directly to main. A rejected push (such as a ruleset violation,
       // #211) must fail here instead of reporting a release that never
       // reached main; the ancestry check catches anything the exit code hides.
-      await checked($`git push origin main`, 'git push origin main');
+      // A writer that landed first is rebased onto and retried (#234).
+      await pushWithRetry($);
       const pushedCommit = await verifyCommitOnRemote($);
       console.log(`Verified ${pushedCommit} is on origin/main`);
 
