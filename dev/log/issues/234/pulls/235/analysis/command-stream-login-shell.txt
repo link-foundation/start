@@ -1,0 +1,4 @@
+simple  stdout: "profile-noise\n/usr/bin:/caller-first:/home/box/.local/bin:/h"
+pipeline stdout: "/caller-first:/home/box/.local/bin:/home/box/.perl5/bin:/hom"
+first PATH entry (simple):   /usr/bin
+first PATH entry (pipeline): /caller-first
