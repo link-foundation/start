@@ -1752,6 +1752,7 @@
       "javascript": {
         "implementation": [
           "js/src/lib/status-formatter.js",
+          "js/src/lib/status-links-notation.js",
           "js/src/lib/session-probe.js",
           "js/src/lib/isolation-log-utils.js",
           "js/src/lib/exit-reason.js",
@@ -1761,7 +1762,8 @@
           "js/test/status-query.js",
           "js/test/session-probe.js",
           "js/test/exit-reason.js",
-          "js/test/regression-209.js"
+          "js/test/regression-209.js",
+          "js/test/regression-226.js"
         ]
       },
       "rust": {
@@ -1779,7 +1781,8 @@
           "rust/tests/status_formatter.rs",
           "rust/tests/isolation_log.rs",
           "rust/tests/regression_201.rs",
-          "rust/tests/regression_209.rs"
+          "rust/tests/regression_209.rs",
+          "rust/tests/regression_226.rs"
         ]
       },
       "manualRust": [

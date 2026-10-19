@@ -8,10 +8,11 @@
  */
 
 const { execSync, spawnSync } = require('child_process');
+const { escapeForLinksNotation } = require('./output-blocks');
 const {
-  escapeForLinksNotation,
-  formatAsNestedLinksNotation,
-} = require('./output-blocks');
+  appendLinksValue,
+  formatTextOptionValue,
+} = require('./status-links-notation');
 const { collectProcessIds } = require('./execution-control');
 const { getDockerCommand, getDockerSpawnOptions } = require('./docker-cleanup');
 const {
@@ -671,22 +672,21 @@ function formatRecordAsLinksNotation(record) {
   for (const [key, value] of Object.entries(obj)) {
     if (value !== null && value !== undefined) {
       if (key === 'options' && typeof value === 'object') {
-        // Format options as nested Links notation
+        // Nested option values (launchOwner, exitEvidence, resolvedLimits…)
+        // are rendered as nested Links notation, never "[object Object]"
+        // (issue #226).
         const optionEntries = Object.entries(value).filter(
           ([, v]) => v !== null && v !== undefined
         );
         if (optionEntries.length > 0) {
           lines.push('  options');
           for (const [optKey, optValue] of optionEntries) {
-            const formattedOptValue = escapeForLinksNotation(optValue);
-            lines.push(`    ${optKey} ${formattedOptValue}`);
+            appendLinksValue(lines, optKey, optValue, 4);
           }
         }
       } else if (typeof value === 'object') {
-        // For other objects, still format as nested Links notation
-        lines.push(`  ${key}`);
-        const nested = formatAsNestedLinksNotation(value, 2, 2);
-        lines.push(nested);
+        // Other objects use the same nested layout as the Rust formatter.
+        appendLinksValue(lines, key, value, 2);
       } else {
         const formattedValue = escapeForLinksNotation(value);
         lines.push(`  ${key} ${formattedValue}`);
@@ -770,7 +770,7 @@ function formatRecordAsText(record) {
   if (optionEntries.length > 0) {
     lines.push(`Options:`);
     for (const [key, value] of optionEntries) {
-      lines.push(`  ${key}: ${value}`);
+      lines.push(`  ${key}: ${formatTextOptionValue(value)}`);
     }
   }
 

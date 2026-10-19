@@ -179,6 +179,76 @@
     },
     "text": "Execution Status\n==================================================\nUUID:              123e4567-e89b-42d3-a456-426614174000\nStatus:            executed\nCommand:           echo hello\nExit Code:         0\nPID:               12345\nWorking Directory: /workspace\nShell:             /bin/sh\nPlatform:          linux\nStart Time:        2026-10-10T00:00:00Z\nEnd Time:          2026-10-10T00:00:01Z\nLog Path:          /tmp/start-golden.log"
   },
+  "status-nested-options": {
+    "issue": "https://github.com/link-foundation/start/issues/226",
+    "record": {
+      "uuid": "123e4567-e89b-42d3-a456-426614174226",
+      "pid": 12345,
+      "status": "executed",
+      "exitCode": 1,
+      "command": "sh -c 'exit 1'",
+      "logPath": "/tmp/start-golden-226.log",
+      "startTime": "2026-10-10T00:00:00Z",
+      "endTime": "2026-10-10T00:00:01Z",
+      "workingDirectory": "/workspace",
+      "shell": "/bin/sh",
+      "platform": "linux",
+      "options": {
+        "exitEvidence": {
+          "daemonRestart": false,
+          "mainOom": false
+        },
+        "isolated": "docker",
+        "launchOwner": {
+          "hostname": "70a2c2990824",
+          "pid": 522913
+        },
+        "ports": [
+          "8080:80"
+        ],
+        "resolvedLimits": {
+          "cpus": 2,
+          "memory": "4g"
+        },
+        "resourceLimitSpecs": {
+          "memory": {
+            "source": "flag",
+            "value": "4g"
+          }
+        }
+      }
+    },
+    "links": [
+      "  options",
+      "    exitEvidence",
+      "        daemonRestart false",
+      "        mainOom false",
+      "    isolated docker",
+      "    launchOwner",
+      "        hostname 70a2c2990824",
+      "        pid 522913",
+      "    ports",
+      "      (",
+      "        \"8080:80\"",
+      "      )",
+      "    resolvedLimits",
+      "        cpus 2",
+      "        memory 4g",
+      "    resourceLimitSpecs",
+      "        memory",
+      "            source flag",
+      "            value 4g"
+    ],
+    "text": [
+      "Options:",
+      "  exitEvidence: {\"daemonRestart\":false,\"mainOom\":false}",
+      "  isolated: docker",
+      "  launchOwner: {\"hostname\":\"70a2c2990824\",\"pid\":522913}",
+      "  ports: [\"8080:80\"]",
+      "  resolvedLimits: {\"cpus\":2,\"memory\":\"4g\"}",
+      "  resourceLimitSpecs: {\"memory\":{\"source\":\"flag\",\"value\":\"4g\"}}"
+    ]
+  },
   "execution-record-format": [
     {
       "uuid": "123e4567-e89b-42d3-a456-426614174000",

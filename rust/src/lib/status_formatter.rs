@@ -380,19 +380,20 @@ fn format_record_as_links_notation_with_enrichments(
         for (key, value) in map {
             if !value.is_null() {
                 if key == "options" {
-                    // Format options as nested Links notation
+                    // Nested option values (launchOwner, exitEvidence,
+                    // resolvedLimits…) are rendered as nested Links notation
+                    // instead of quoted JSON (issue #226).
                     if let Value::Object(opts) = &value {
                         if !opts.is_empty() {
                             lines.push("  options".to_string());
                             for (opt_key, opt_value) in opts {
                                 if !opt_value.is_null() {
-                                    let formatted = format_value_for_links_notation(opt_value);
-                                    lines.push(format!("    {} {}", opt_key, formatted));
+                                    append_links_value(&mut lines, opt_key, opt_value, 4);
                                 }
                             }
                         }
                     }
-                } else if value.is_object() {
+                } else if value.is_object() || value.is_array() {
                     // Nested records such as `cgroupMemory` (issue #182), in
                     // the same layout as the JavaScript formatter.
                     append_links_value(&mut lines, &key, &value, 2);
@@ -569,7 +570,11 @@ fn format_record_as_text_with_enrichments(
     // Format options as nested list instead of JSON
     if !record.options.is_empty() {
         lines.push("Options:".to_string());
-        for (key, value) in &record.options {
+        // Sorted, like the links-notation and JSON output, so the text format
+        // is deterministic too.
+        let mut options: Vec<_> = record.options.iter().collect();
+        options.sort_by(|a, b| a.0.cmp(b.0));
+        for (key, value) in options {
             let value_str = match value {
                 Value::String(s) => s.clone(),
                 Value::Bool(b) => b.to_string(),
