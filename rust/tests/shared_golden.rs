@@ -108,10 +108,7 @@ fn isolation_arguments_match_shared_goldens() {
             resource_limits: strings(&input["resourceLimits"]),
             ..Default::default()
         };
-        let observed: Vec<String> = build_docker_runtime_args(&options)
-            .into_iter()
-            .map(str::to_string)
-            .collect();
+        let observed: Vec<String> = build_docker_runtime_args(&options);
         assert_eq!(observed, strings(&fixture["argv"]), "{}", fixture["name"]);
     }
 }

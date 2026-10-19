@@ -311,7 +311,7 @@ pub fn format_record_as_links_notation_with_current_time(
     record: &ExecutionRecord,
     current_time: Option<&str>,
 ) -> String {
-    format_record_as_links_notation_with_enrichments(record, current_time, None)
+    format_record_as_links_notation_with_enrichments(record, current_time, None, &[])
 }
 
 fn append_links_array(lines: &mut Vec<String>, values: &[Value], indent: usize) {
@@ -373,6 +373,7 @@ fn format_record_as_links_notation_with_enrichments(
     record: &ExecutionRecord,
     current_time: Option<&str>,
     process_ids: Option<&Value>,
+    identity: &[(String, Value)],
 ) -> String {
     let json = record.to_json();
     let mut lines = vec![record.uuid.clone()];
@@ -413,6 +414,13 @@ fn format_record_as_links_notation_with_enrichments(
                 }
             }
 
+            // Names and the continuation chain follow the UUID (issue #231).
+            if key == "uuid" {
+                for (field, value) in identity {
+                    append_links_value(&mut lines, field, value, 2);
+                }
+            }
+
             // Insert processIds right after pid so status output groups process
             // identity with the wrapper PID already present in older output.
             if key == "pid" {
@@ -444,7 +452,7 @@ pub fn format_record_as_text_with_current_time(
     record: &ExecutionRecord,
     current_time: Option<&str>,
 ) -> String {
-    format_record_as_text_with_enrichments(record, current_time, None)
+    format_record_as_text_with_enrichments(record, current_time, None, &[])
 }
 
 fn append_text_process_ids(lines: &mut Vec<String>, process_ids: &Value) {
@@ -472,6 +480,7 @@ fn format_record_as_text_with_enrichments(
     record: &ExecutionRecord,
     current_time: Option<&str>,
     process_ids: Option<&Value>,
+    identity: &[(String, Value)],
 ) -> String {
     let exit_code_str = record
         .exit_code
@@ -492,8 +501,11 @@ fn format_record_as_text_with_enrichments(
         format!("UUID:              {}", record.uuid),
         format!("Status:            {}", record.status),
         format!("Command:           {}", record.command),
-        format!("Exit Code:         {}", exit_code_str),
     ];
+    lines.extend(crate::execution_chain::identity_text_lines(
+        record, identity,
+    ));
+    lines.push(format!("Exit Code:         {}", exit_code_str));
     if let Some(oom_killed) = record.oom_killed {
         lines.push(format!("OOM Killed:        {}", oom_killed));
     }
@@ -605,9 +617,11 @@ fn record_json_with_enrichments(
     record: &ExecutionRecord,
     current_time: Option<&str>,
     process_ids: Option<&Value>,
+    identity: &[(String, Value)],
 ) -> Value {
     let mut json = record.to_json();
     if let Value::Object(map) = &mut json {
+        map.extend(identity.iter().cloned());
         if let Some(process_ids) = process_ids {
             map.insert("processIds".to_string(), process_ids.clone());
         }
@@ -631,7 +645,7 @@ pub fn format_record_with_current_time(
     format: &str,
     current_time: Option<&str>,
 ) -> Result<String, String> {
-    format_record_with_enrichments(record, format, current_time, None)
+    format_record_with_enrichments(record, format, current_time, None, &[])
 }
 
 fn format_record_with_enrichments(
@@ -639,23 +653,27 @@ fn format_record_with_enrichments(
     format: &str,
     current_time: Option<&str>,
     process_ids: Option<&Value>,
+    identity: &[(String, Value)],
 ) -> Result<String, String> {
     match format {
         "links-notation" => Ok(format_record_as_links_notation_with_enrichments(
             record,
             current_time,
             process_ids,
+            identity,
         )),
         "json" => serde_json::to_string_pretty(&record_json_with_enrichments(
             record,
             current_time,
             process_ids,
+            identity,
         ))
         .map_err(|e| format!("Failed to serialize to JSON: {}", e)),
         "text" => Ok(format_record_as_text_with_enrichments(
             record,
             current_time,
             process_ids,
+            identity,
         )),
         _ => Err(format!("Unknown output format: {}", format)),
     }
@@ -706,6 +724,7 @@ fn format_record_list_as_links_notation_with_current_times(
             record,
             current_time.as_deref(),
             process_ids.as_ref(),
+            &[],
         );
         lines.push(indent_block(&block, 4));
     }
@@ -741,6 +760,7 @@ fn format_record_list_as_text_with_current_times(
             record,
             current_time.as_deref(),
             process_ids.as_ref(),
+            &[],
         ));
     }
 
@@ -757,7 +777,7 @@ fn record_list_json_with_current_times(
         .zip(current_times.iter())
         .zip(process_ids.iter())
         .map(|((record, current_time), process_ids)| {
-            record_json_with_enrichments(record, current_time.as_deref(), process_ids.as_ref())
+            record_json_with_enrichments(record, current_time.as_deref(), process_ids.as_ref(), &[])
         })
         .collect();
 
@@ -898,6 +918,7 @@ pub fn query_status(
     // Attach currentTime so callers can see how long an executing command has been running
     let current_time = attach_current_time(&enriched);
     let process_ids = collect_process_ids(&enriched);
+    let identity = crate::execution_chain::status_identity(&enriched, Some(store));
 
     let format = output_format.unwrap_or("links-notation");
     match format_record_with_enrichments(
@@ -905,6 +926,7 @@ pub fn query_status(
         format,
         current_time.as_deref(),
         process_ids.as_ref(),
+        &identity,
     ) {
         Ok(output) => StatusQueryResult {
             success: true,
@@ -952,6 +974,7 @@ mod tests {
             "links-notation",
             Some("2026-04-23T10:10:13.042Z"),
             Some(&process_ids),
+            &[],
         )
         .expect("links-notation should format");
 

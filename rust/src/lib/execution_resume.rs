@@ -290,6 +290,8 @@ pub fn build_launch_options(record: &ExecutionRecord) -> IsolationOptions {
         // is the one that must mark it terminal (issue #170.1).
         execution_id: Some(record.uuid.clone()),
         defer_completion_watcher: true,
+        // START_ATTEMPT of the relaunched command (issue #230).
+        attempt_number: crate::execution_attempt::next_attempt_number(record),
     }
 }
 
@@ -379,11 +381,7 @@ fn docker_snapshot_plan(
         container_args.push("--user".to_string());
         container_args.push(user.to_string());
     }
-    container_args.extend(
-        build_docker_runtime_args(&launch_options)
-            .into_iter()
-            .map(str::to_string),
-    );
+    container_args.extend(build_docker_runtime_args(&launch_options));
     container_args.push(snapshot_image.clone());
     container_args.extend(crate::docker_command_handoff::build_command_handoff_args(
         &["sh".into(), "-c".into(), command.into()],

@@ -25,17 +25,27 @@ pub struct ExecutionAttempt {
     pub watcher_error: Option<String>,
 }
 
+/// Number of the record's current attempt: 1 until it is resumed.
+pub fn current_attempt_number(record: &ExecutionRecord) -> u64 {
+    let counter = |key| record.options.get(key).and_then(Value::as_u64).unwrap_or(0);
+    record
+        .attempt
+        .as_ref()
+        .map(|a| a.number)
+        .filter(|n| *n > 0)
+        .unwrap_or(counter("resumeCount") + counter("recoveryAttempts") + 1)
+}
+
+/// Number the next attempt of `record` gets (`START_ATTEMPT`, issue #230).
+pub fn next_attempt_number(record: &ExecutionRecord) -> u64 {
+    current_attempt_number(record) + 1
+}
+
 pub fn create_attempt(
     record: &ExecutionRecord,
     mode: &str,
     session_name: &str,
 ) -> ExecutionAttempt {
-    let counter = |key| record.options.get(key).and_then(Value::as_u64).unwrap_or(0);
-    let previous = record
-        .attempt
-        .as_ref()
-        .map(|a| a.number)
-        .unwrap_or(counter("resumeCount") + counter("recoveryAttempts") + 1);
     let log_offset = if record.log_path.is_empty() {
         None
     } else {
@@ -46,7 +56,7 @@ pub fn create_attempt(
         }
     };
     ExecutionAttempt {
-        number: previous + 1,
+        number: next_attempt_number(record),
         started_at: Utc::now().to_rfc3339(),
         log_offset,
         last_output_at: None,
@@ -67,8 +77,7 @@ pub fn archive_attempt(record: &mut ExecutionRecord) {
     read_attempt_activity(record);
     let value = serde_json::to_value(&*record).unwrap_or_default();
     let mut snapshot = record.attempt.as_ref().and_then(|a| serde_json::to_value(a).ok())
-        .unwrap_or_else(|| json!({ "number": record.options.get("resumeCount").and_then(Value::as_u64).unwrap_or(0)
-            + record.options.get("recoveryAttempts").and_then(Value::as_u64).unwrap_or(0) + 1,
+        .unwrap_or_else(|| json!({ "number": current_attempt_number(record),
             "startedAt": record.options.get("resumedAt").cloned().unwrap_or(json!(record.start_time)), "logOffset": null }));
     for key in [
         "command",

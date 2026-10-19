@@ -22,7 +22,9 @@ pub fn build_command_handoff_args(main_args: &[String], marker_path: &str) -> Ve
     let mut args = vec![
         "sh".into(),
         "-c".into(),
-        "p=$1; shift; if [ -f \"$p\" ]; then exec sh \"$p\"; fi; exec \"$@\"".into(),
+        // `$p.env` refreshes the START_* variables a `docker start` cannot
+        // change (issue #230) before either command runs.
+        "p=$1; shift; if [ -f \"$p.env\" ]; then . \"$p.env\"; fi; if [ -f \"$p\" ]; then exec sh \"$p\"; fi; exec \"$@\"".into(),
         "start-command-handoff".into(),
         marker_path.into(),
     ];
@@ -72,22 +74,17 @@ pub fn build_command_handoff_script(command: &str, shell: &str, keep_alive: bool
     )
 }
 
-pub fn write_command_handoff<R: CommandRunner + ?Sized>(
+fn copy_into_container<R: CommandRunner + ?Sized>(
     name: &str,
-    command: &str,
-    shell: &str,
-    keep_alive: bool,
+    target: &str,
+    content: &str,
     runner: &R,
 ) -> Result<CommandRunOutput, String> {
     let dir = std::env::temp_dir().join(format!("start-handoff-{}", uuid::Uuid::new_v4()));
     fs::create_dir(&dir).map_err(|e| e.to_string())?;
     let file = dir.join("command");
     let result = (|| {
-        fs::write(
-            &file,
-            build_command_handoff_script(command, shell, keep_alive),
-        )
-        .map_err(|e| e.to_string())?;
+        fs::write(&file, content).map_err(|e| e.to_string())?;
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -99,12 +96,48 @@ pub fn write_command_handoff<R: CommandRunner + ?Sized>(
             &[
                 "cp".into(),
                 file.to_string_lossy().into(),
-                format!("{}:{}", name, command_handoff_path(name)),
+                format!("{}:{}", name, target),
             ],
         ))
     })();
     let _ = fs::remove_dir_all(&dir);
     result
+}
+
+pub fn write_command_handoff<R: CommandRunner + ?Sized>(
+    name: &str,
+    command: &str,
+    shell: &str,
+    keep_alive: bool,
+    runner: &R,
+) -> Result<CommandRunOutput, String> {
+    copy_into_container(
+        name,
+        &command_handoff_path(name),
+        &build_command_handoff_script(command, shell, keep_alive),
+        runner,
+    )
+}
+
+/// Copy the START_* variables of the next attempt into a stopped container
+/// that was created with the handoff selector (issue #230).
+pub fn write_execution_env_handoff<R: CommandRunner + ?Sized>(
+    name: &str,
+    env: &crate::execution_env::ExecutionEnv,
+    runner: &R,
+) -> Result<CommandRunOutput, String> {
+    let statement = crate::execution_env::build_execution_env_export(env);
+    let content = if statement.is_empty() {
+        statement
+    } else {
+        format!("{}\n", statement)
+    };
+    copy_into_container(
+        name,
+        &format!("{}.env", command_handoff_path(name)),
+        &content,
+        runner,
+    )
 }
 
 #[cfg(test)]

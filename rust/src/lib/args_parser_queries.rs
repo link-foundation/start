@@ -3,7 +3,8 @@
 //! These options address an execution that already exists instead of starting
 //! a new one: `--status`, `--list [--running]`, `--upload-log`, `--stop`,
 //! `--terminate`, `--attach [--read-only]`, `--resume [-- <command>]`,
-//! `--resume-all` and `--cleanup [<uuid-or-session-name>]`. They are parsed here so `args_parser` stays
+//! `--resume-all` and `--cleanup [<uuid-or-session-name>]`, plus the naming
+//! modes `--alias <id> <name>` and `--rename <id> <name>` (issue #231). They are parsed here so `args_parser` stays
 //! focused on the options that shape a new execution (issue #162).
 
 use crate::args_parser::{WrapperOptions, VALID_OUTPUT_FORMATS};
@@ -69,6 +70,35 @@ fn parse_cleanup_option(
     }
 }
 
+/// `--alias <id> <name>` and `--rename <id> <name>` take two arguments.
+fn parse_naming_option(
+    args: &[String],
+    index: usize,
+    options: &mut WrapperOptions,
+) -> Result<usize, String> {
+    let arg = args[index].as_str();
+    if arg != "--alias" && arg != "--rename" {
+        return Ok(0);
+    }
+    match (args.get(index + 1), args.get(index + 2)) {
+        (Some(identifier), Some(name))
+            if !identifier.starts_with('-') && !name.starts_with('-') =>
+        {
+            if arg == "--alias" {
+                options.alias = Some(identifier.clone());
+            } else {
+                options.rename = Some(identifier.clone());
+            }
+            options.new_name = Some(name.clone());
+            Ok(3)
+        }
+        _ => Err(format!(
+            "Option {} requires a UUID or session name and a new name",
+            arg
+        )),
+    }
+}
+
 /// Query modes that may be combined with `--output-format`.
 const OUTPUT_FORMAT_MODES: [&str; 4] = ["--status", "--list", "--resume", "--resume-all"];
 
@@ -86,6 +116,11 @@ pub fn parse_query_option(
     let cleanup_consumed = parse_cleanup_option(args, index, options)?;
     if cleanup_consumed > 0 {
         return Ok(cleanup_consumed);
+    }
+
+    let naming_consumed = parse_naming_option(args, index, options)?;
+    if naming_consumed > 0 {
+        return Ok(naming_consumed);
     }
 
     for (name, apply) in FLAG_OPTIONS {
@@ -166,6 +201,12 @@ pub fn active_query_modes(options: &WrapperOptions) -> Vec<&'static str> {
     if options.cleanup {
         modes.push("--cleanup");
     }
+    if options.alias.is_some() {
+        modes.push("--alias");
+    }
+    if options.rename.is_some() {
+        modes.push("--rename");
+    }
     modes
 }
 
@@ -190,7 +231,7 @@ pub fn validate_query_options(options: &WrapperOptions) -> Result<(), String> {
 
     if modes.len() > 1 {
         return Err(
-            "Cannot combine --status, --list, --upload-log, --stop, --terminate, --attach, --resume, --resume-all, or --cleanup in the same invocation"
+            "Cannot combine --status, --list, --upload-log, --stop, --terminate, --attach, --resume, --resume-all, --cleanup, --alias, or --rename in the same invocation"
                 .to_string(),
         );
     }

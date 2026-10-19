@@ -505,6 +505,25 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
         log(&format!("{}\n", line));
     }
 
+    if record
+        .options
+        .get("commandHandoff")
+        .and_then(Value::as_bool)
+        == Some(true)
+    {
+        // `docker start` keeps the creation env; refresh START_ATTEMPT (#230).
+        // Non-fatal: the command still runs, with the previous START_ATTEMPT.
+        let _ = crate::docker_command_handoff::write_execution_env_handoff(
+            &container_name,
+            &crate::execution_env::build_execution_env(
+                Some(&record.uuid),
+                Some(&container_name),
+                crate::execution_attempt::next_attempt_number(&record),
+            ),
+            runner,
+        );
+    }
+
     if recovery_command.is_some() {
         let copied = if record
             .options

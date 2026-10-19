@@ -28,6 +28,15 @@ pub fn upload_execution_log_with_options(
         )
     })?;
 
+    // A continuation chain uploads every execution, oldest first (#231).
+    if let Some(chain_log) = crate::execution_chain::prepare_chain_upload(store, &record)? {
+        return upload_log_interactive_with_options(
+            &chain_log.path.to_string_lossy(),
+            no_sanitize,
+            verbose,
+        );
+    }
+
     if record.log_path.is_empty() {
         return Err("Execution record does not have a log path.".to_string());
     }

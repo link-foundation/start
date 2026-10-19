@@ -62,6 +62,9 @@ pub struct ExecutionRecord {
     pub attempt: Option<crate::execution_attempt::ExecutionAttempt>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub attempt_history: Vec<Value>,
+    /// UUID of the execution this one continues (`--continues`, issue #231).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub continues: Option<String>,
     /// Where `end_time` came from (issue #170.2): `docker-finished-at`,
     /// `log-footer` or `observed-at`. Without it a real finish time and a
     /// timestamp taken when someone happened to run `--status` are
@@ -131,6 +134,7 @@ impl ExecutionRecord {
             end_time: None,
             attempt: None,
             attempt_history: Vec::new(),
+            continues: None,
             end_time_source: None,
             observed_at: None,
             stale_detected_at: None,
@@ -568,34 +572,32 @@ impl ExecutionStore {
         Ok(Some(updated))
     }
 
-    /// Get an execution record by UUID or session name (falls back to options.sessionName)
+    /// Get an execution record by UUID, session name, earlier session name
+    /// (issue #162), display name or alias (issue #231).
     pub fn get(&self, identifier: &str) -> Option<ExecutionRecord> {
-        let records = self.read_lino_records();
-        records
-            .iter()
-            .find(|r| r.uuid == identifier)
-            .cloned()
-            .or_else(|| {
-                records
-                    .iter()
-                    .find(|r| {
-                        r.options.get("sessionName").and_then(|v| v.as_str()) == Some(identifier)
-                    })
-                    .cloned()
-            })
-            .or_else(|| {
-                // Finally, honor session names this record used before it was
-                // resumed, so one logical session stays addressable across
-                // restarts (issue #162).
-                records.into_iter().find(|r| {
-                    r.options
-                        .get("sessionNameHistory")
-                        .and_then(|v| v.as_array())
-                        .is_some_and(|history| {
-                            history.iter().any(|name| name.as_str() == Some(identifier))
-                        })
-                })
-            })
+        crate::execution_identity::find_record(&self.read_lino_records(), identifier).cloned()
+    }
+
+    /// Run `mutate` on the stored records under the database lock and persist
+    /// them when it returns a changed record (issues #229, #231).
+    pub fn with_lock<F>(&self, mutate: F) -> Result<Option<ExecutionRecord>, String>
+    where
+        F: FnOnce(&mut Vec<ExecutionRecord>) -> Result<Option<ExecutionRecord>, String>,
+    {
+        let mut lock = LockManager::new(self.lock_file_path.clone());
+        if !lock.acquire(LOCK_TIMEOUT_MS) {
+            return Err("Failed to acquire lock for database write".into());
+        }
+        let mut records = self.read_lino_records();
+        let changed = mutate(&mut records)?;
+        if let Some(record) = &changed {
+            self.write_lino_records(&records)
+                .map_err(|e| e.to_string())?;
+            if self.use_links {
+                self.write_links_record(record);
+            }
+        }
+        Ok(changed)
     }
 
     /// Get all execution records

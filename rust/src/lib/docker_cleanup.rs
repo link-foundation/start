@@ -50,39 +50,42 @@ pub(crate) fn build_docker_kept_reason_snippet() -> String {
 
 /// Build the extra `docker run` arguments contributed by runtime options
 /// (--privileged, --env/-e, --volume/-v, --mount, --network,
-/// --network-alias, resource limits). Returned references borrow
-/// from `options`, which outlives the `docker run` invocation.
-pub fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<&str> {
-    let mut args: Vec<&str> = Vec::new();
-    if options.privileged {
-        args.push("--privileged");
-    }
+/// --network-alias, resource limits) and the START_* execution identity.
+pub fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<String> {
+    let mut args: Vec<String> = Vec::new();
+    let mut push = |flag: &str, value: &str| {
+        args.push(flag.into());
+        args.push(value.into());
+    };
     for env_var in &options.env {
-        args.push("-e");
-        args.push(env_var);
+        push("-e", env_var);
+    }
+    // Execution identity (issue #230); last, so a user `--env` cannot spoof it.
+    for env_var in crate::execution_env::execution_env_assignments(
+        &crate::execution_env::execution_env_from_options(options),
+    ) {
+        push("-e", &env_var);
     }
     for label in &options.labels {
-        args.push("--label");
-        args.push(label);
+        push("--label", label);
     }
     for volume in &options.volumes {
-        args.push("-v");
-        args.push(volume);
+        push("-v", volume);
     }
     for mount in &options.mounts {
-        args.push("--mount");
-        args.push(mount);
+        push("--mount", mount);
     }
     if let Some(network) = docker_networks(options).first() {
-        args.push("--network");
-        args.push(network);
+        push("--network", network);
     }
     for alias in &options.network_aliases {
-        args.push("--network-alias");
-        args.push(alias);
+        push("--network-alias", alias);
+    }
+    if options.privileged {
+        args.insert(0, "--privileged".into());
     }
     // Already in `--flag=value` form (issue #176).
-    args.extend(options.resource_limits.iter().map(String::as_str));
+    args.extend(options.resource_limits.iter().cloned());
     args
 }
 

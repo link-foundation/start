@@ -272,7 +272,8 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
     }
 
     if plan.mode == ResumeMode::Relaunch {
-        let launch_options = plan.launch_options.clone().unwrap_or_default();
+        let mut launch_options = plan.launch_options.clone().unwrap_or_default();
+        launch_options.attempt_number = attempt.number;
         let launch_result = hooks.relaunch(&plan.backend, &plan.command, &launch_options);
         if !launch_result.success {
             let _ = store.save(&previous);
@@ -361,6 +362,19 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
                         copied.stderr.trim().into()
                     });
                 }
+            }
+            if plan.mode == ResumeMode::DockerStart && record_flag(&previous, "commandHandoff") {
+                // `docker start` keeps the creation env; refresh START_ATTEMPT (#230).
+                let env = crate::execution_env::build_execution_env(
+                    Some(&record.uuid),
+                    Some(&plan.session_name),
+                    attempt.number,
+                );
+                let _ = crate::docker_command_handoff::write_execution_env_handoff(
+                    &plan.session_name,
+                    &env,
+                    runner,
+                );
             }
             for step in &plan.steps {
                 let result = if step.args[0] == "commit" {

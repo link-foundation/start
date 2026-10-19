@@ -72,6 +72,7 @@ pub fn run_screen_with_log_capture(
     session_name: &str,
     user: Option<&str>,
     log_path: Option<&Path>,
+    env: &crate::execution_env::ExecutionEnv,
 ) -> IsolationResult {
     let (shell, shell_arg) = get_shell();
     let screen_temp_dir = get_temp_dir(&["isolation", "screen"]);
@@ -179,8 +180,10 @@ pub fn run_screen_with_log_capture(
         );
     }
 
+    // Each `screen -dmS` server inherits this env (START_*, issue #230).
     let status = Command::new("screen")
         .args(&screen_args)
+        .envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status();
@@ -350,6 +353,7 @@ pub fn start_detached_screen_with_log_capture(
     user: Option<&str>,
     keep_alive: bool,
     log_path: Option<&Path>,
+    env: &crate::execution_env::ExecutionEnv,
 ) -> IsolationResult {
     let (shell, shell_arg) = get_shell();
     let screen_temp_dir = get_temp_dir(&["isolation", "screen"]);
@@ -396,7 +400,11 @@ pub fn start_detached_screen_with_log_capture(
         eprintln!("[screen-isolation] Log file: {}", log_file.display());
     }
 
-    match Command::new("screen").args(&screen_args).status() {
+    match Command::new("screen")
+        .args(&screen_args)
+        .envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
+        .status()
+    {
         Ok(status) if status.success() => {
             let mut message = format!(
                 "Command started in detached screen session: {}",

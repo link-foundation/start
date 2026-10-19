@@ -31,6 +31,10 @@ use start_command::{
     failure_handler::{handle_failure, Config as FailureConfig},
     get_timestamp,
     isolation::{run_as_isolated_user, run_isolated, IsolationOptions},
+    launch_identity::{
+        apply_launch, claim_launch, direct_execution_env, isolated_user_command, prepare_launch,
+        write_launch_log, ClaimError, LaunchPlan,
+    },
     output_blocks::{FinishBlockOptions, StartBlockOptions},
     query_commands::dispatch_query_command,
     set_current_execution, setup_signal_handlers,
@@ -40,7 +44,7 @@ use start_command::{
         create_isolated_user, delete_user, get_current_user_groups, has_sudo_access,
         CreateIsolatedUserOptions, DeleteUserOptions,
     },
-    write_log_file, LogHeaderParams,
+    LogHeaderParams,
 };
 use start_command::{eprintln, println};
 
@@ -184,6 +188,28 @@ fn main() {
         process::exit(exit_code);
     }
     drop(query_store);
+
+    // Generate session ID if not provided (auto-generate UUID)
+    let session_id = wrapper_options
+        .session_id
+        .clone()
+        .unwrap_or_else(generate_uuid);
+    // An explicit --session-id must not overwrite a tracked execution (#229).
+    let launch = match prepare_launch(
+        config.create_execution_store().as_ref(),
+        &wrapper_options,
+        &session_id,
+        create_log_path_for_execution(
+            wrapper_options.isolated.as_deref().unwrap_or("direct"),
+            &session_id,
+        ),
+    ) {
+        Ok(launch) => launch,
+        Err(error) => {
+            eprintln!("Error: {}", error);
+            process::exit(1);
+        }
+    };
     if wrapper_options.isolated.as_deref() == Some("docker") {
         if let Err(error) = start_command::docker_resource_options::prepare(&mut wrapper_options) {
             eprintln!("Error: {}", error);
@@ -224,12 +250,6 @@ fn main() {
     // Determine if we should use command-stream
     let use_command_stream = wrapper_options.use_command_stream || config.use_command_stream;
 
-    // Generate session ID if not provided (auto-generate UUID)
-    let session_id = wrapper_options
-        .session_id
-        .clone()
-        .unwrap_or_else(generate_uuid);
-
     // Main execution
     if has_isolation(&wrapper_options) || wrapper_options.user {
         run_with_isolation(
@@ -238,6 +258,7 @@ fn main() {
             &command,
             use_command_stream,
             &session_id,
+            &launch,
         );
     } else {
         run_direct(
@@ -246,6 +267,7 @@ fn main() {
             &parsed_command,
             substitution_result.as_ref(),
             &session_id,
+            &launch,
         );
     }
 }
@@ -340,6 +362,7 @@ fn run_with_isolation(
     command: &str,
     _use_command_stream: bool,
     session_id: &str,
+    launch: &LaunchPlan,
 ) {
     let environment = wrapper_options.isolated.as_deref();
     let mode = get_effective_mode(wrapper_options);
@@ -348,7 +371,7 @@ fn run_with_isolation(
 
     // Docker image is now set in validate_options (defaults to OS-matched image)
     let effective_image = wrapper_options.image.clone();
-    let log_file_path = create_log_path_for_execution(environment.unwrap_or("direct"), session_id);
+    let log_file_path = launch.log_path.clone();
     let session_name = wrapper_options
         .session
         .clone()
@@ -481,10 +504,15 @@ fn run_with_isolation(
         options: Some(opts_map),
         ..Default::default()
     });
+    apply_launch(&mut execution_record, launch);
     if let Some(ref store) = execution_store {
         start_command::launch_owner::mark_launch(&mut execution_record);
-        match store.save(&execution_record) {
-            Err(e) => {
+        match claim_launch(store, &execution_record, launch) {
+            Err(ClaimError::Refused(e)) => {
+                eprintln!("Error: {}", e);
+                process::exit(1);
+            }
+            Err(ClaimError::Store(e)) => {
                 eprintln!(
                     "{}",
                     serde_json::json!({"code": "LAUNCH_RESERVATION_FAILED", "uuid": execution_record.uuid, "containerName": session_name, "error": e})
@@ -507,7 +535,8 @@ fn run_with_isolation(
         ),
         1,
     );
-    write_log_file(&log_file_path, &log_content);
+    let tracked = execution_store.as_ref().map(|_| &execution_record);
+    write_launch_log(&log_file_path, &log_content, launch, tracked);
 
     let result = if let Some(env) = environment {
         // Run in isolation backend
@@ -546,11 +575,12 @@ fn run_with_isolation(
                 .as_ref()
                 .map(|_| execution_record.uuid.clone()),
             defer_completion_watcher: false,
+            attempt_number: launch.attempt_number,
         };
         run_isolated(env, command, &options)
     } else if let Some(ref user) = created_user {
-        // Run directly as the created user
-        run_as_isolated_user(command, user)
+        // Run directly as the created user; sudo resets the environment.
+        run_as_isolated_user(&isolated_user_command(command, session_id, launch), user)
     } else {
         // This shouldn't happen
         start_command::IsolationResult {
@@ -680,6 +710,7 @@ fn run_direct(
     parsed_command: &str,
     substitution_result: Option<&start_command::SubstitutionResult>,
     session_id: &str,
+    launch: &LaunchPlan,
 ) {
     let start_time = get_timestamp();
     let start_instant = std::time::Instant::now();
@@ -729,7 +760,7 @@ fn run_direct(
         vec!["-c", command]
     };
 
-    let log_file_path = create_log_path_for_execution("direct", session_id);
+    let log_file_path = launch.log_path.clone();
 
     let mut log_content = String::new();
 
@@ -742,10 +773,18 @@ fn run_direct(
         pid: Some(process::id()),
         ..Default::default()
     });
+    apply_launch(&mut execution_record, launch);
 
     // Save initial execution record and set up signal cleanup
     if let Some(ref store) = execution_store {
-        if let Err(e) = store.save(&execution_record) {
+        if let Err(e) = claim_launch(store, &execution_record, launch) {
+            let e = match e {
+                ClaimError::Refused(message) => {
+                    eprintln!("Error: {}", message);
+                    process::exit(1);
+                }
+                ClaimError::Store(message) => message,
+            };
             if config.verbose {
                 eprintln!(
                     "[ExecutionStore] Warning: Failed to save initial record: {}",
@@ -783,12 +822,15 @@ fn run_direct(
         env::current_dir().unwrap_or_default().display()
     ));
     log_content.push_str(&format!("{}\n\n", "=".repeat(50)));
-    write_log_file(&log_file_path, &log_content);
+    let tracked = execution_store.as_ref().map(|_| &execution_record);
+    write_launch_log(&log_file_path, &log_content, launch, tracked);
+    let header_len = log_content.len();
 
     // Execute the command with piped stdout/stderr so we can capture and display output
     // Using spawn() instead of output() to stream data in real-time (Issue #57)
     let mut child = match Command::new(&shell)
         .args(&shell_args)
+        .envs(direct_execution_env(session_id, launch))
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -804,7 +846,8 @@ fn run_direct(
             log_content.push_str(&format!("Finished: {}\n", end_time));
             log_content.push_str("Exit Code: 1\n");
 
-            write_log_file(&log_file_path, &log_content);
+            // The header is already in the log (after any earlier attempts).
+            append_log_file(&log_file_path, &log_content[header_len..]);
 
             let duration_ms = start_instant.elapsed().as_secs_f64() * 1000.0;
             println!();

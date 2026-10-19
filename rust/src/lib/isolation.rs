@@ -96,6 +96,8 @@ pub struct IsolationOptions {
     pub execution_id: Option<String>,
     /// Explicit resume attaches only after saving its new attempt.
     pub defer_completion_watcher: bool,
+    /// `START_ATTEMPT` of the launched command (issue #230); 0 means 1.
+    pub attempt_number: u64,
 }
 
 impl Default for IsolationOptions {
@@ -128,6 +130,7 @@ impl Default for IsolationOptions {
             keep_container_on_fail: false,
             execution_id: None,
             defer_completion_watcher: false,
+            attempt_number: 1,
             shell: "auto".to_string(),
             log_path: None,
         }
@@ -209,6 +212,7 @@ pub fn run_in_screen(command: &str, options: &IsolationOptions) -> IsolationResu
             options.user.as_deref(),
             options.keep_alive,
             options.log_path.as_deref(),
+            &crate::execution_env::execution_env_from_options(options),
         )
     } else {
         // Attached mode with log capture
@@ -217,6 +221,7 @@ pub fn run_in_screen(command: &str, options: &IsolationOptions) -> IsolationResu
             &session_name,
             options.user.as_deref(),
             options.log_path.as_deref(),
+            &crate::execution_env::execution_env_from_options(options),
         )
     }
 }
@@ -620,6 +625,7 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
         .clone()
         .unwrap_or_else(|| generate_session_name(Some("docker")));
     let mut attributed_options = options.clone();
+    attributed_options.session = Some(container_name.clone());
     attributed_options.labels =
         crate::isolation_metadata::docker_attribution_labels(options, &container_name);
     let options = &attributed_options;
@@ -660,7 +666,8 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
             args.push(user);
         }
 
-        args.extend(build_docker_runtime_args(options));
+        let runtime_args = build_docker_runtime_args(options);
+        args.extend(runtime_args.iter().map(String::as_str));
 
         args.push(&image);
         let main_args =
@@ -797,7 +804,8 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
             args.push(user);
         }
 
-        args.extend(build_docker_runtime_args(options));
+        let runtime_args = build_docker_runtime_args(options);
+        args.extend(runtime_args.iter().map(String::as_str));
 
         if is_debug() {
             eprintln!("[DEBUG] shell: {}", shell_to_use);
@@ -885,6 +893,19 @@ pub fn run_in_docker(command: &str, options: &IsolationOptions) -> IsolationResu
 
 /// Run command in the specified isolation backend
 pub fn run_isolated(backend: &str, command: &str, options: &IsolationOptions) -> IsolationResult {
+    // START_* identity (issue #230): docker passes it with `-e`; a bare screen
+    // shell inherits the spawn env; everything else gets an `export` prefix.
+    let prefixed;
+    let command =
+        if backend != "docker" && !(backend == "screen" && is_interactive_shell_command(command)) {
+            prefixed = crate::execution_env::prefix_with_execution_env(
+                command,
+                &crate::execution_env::execution_env_from_options(options),
+            );
+            prefixed.as_str()
+        } else {
+            command
+        };
     match backend {
         "screen" => run_in_screen(command, options),
         "tmux" => run_in_tmux(command, options),

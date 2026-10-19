@@ -166,6 +166,16 @@ pub struct WrapperOptions {
     pub cleanup_dry_run: bool,
     /// UUID/session name whose containers and images --cleanup removes
     pub cleanup_target: Option<String>,
+    /// Execution `--alias` adds a name to (issue #231)
+    pub alias: Option<String>,
+    /// Execution `--rename` renames (issue #231)
+    pub rename: Option<String>,
+    /// Name given by `--alias`/`--rename`
+    pub new_name: Option<String>,
+    /// Run as the next attempt of the `--session-id` execution (issue #229)
+    pub append_attempt: bool,
+    /// Execution this launch continues (`--continues`, issue #231)
+    pub continues: Option<String>,
     /// --snapshot-wait, --remove-original-after, ... (issue #224)
     pub snapshot: crate::snapshot_resume_options::SnapshotResumeOptions,
 }
@@ -226,6 +236,11 @@ impl Default for WrapperOptions {
             cleanup: false,
             cleanup_dry_run: false,
             cleanup_target: None,
+            alias: None,
+            rename: None,
+            new_name: None,
+            append_attempt: false,
+            continues: None,
             snapshot: Default::default(),
         }
     }
@@ -658,6 +673,12 @@ fn parse_option(
         return Ok(query_consumed);
     }
 
+    // --append-attempt, --continues <id> (issues #229, #231)
+    let identity_consumed = crate::launch_identity_options::parse(args, index, options)?;
+    if identity_consumed > 0 {
+        return Ok(identity_consumed);
+    }
+
     // Not a recognized wrapper option
     Ok(0)
 }
@@ -823,6 +844,7 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
     crate::snapshot_resume_options::validate(options)?;
     // Query/control option combinations (--status, --attach, --resume, ...)
     validate_query_options(options)?;
+    crate::launch_identity_options::validate(options)?;
     crate::docker_resource_options::validate(options)?;
     crate::cpu_penalty::validate(options)?;
 
