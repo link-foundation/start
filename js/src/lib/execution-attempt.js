@@ -46,6 +46,21 @@ function readAttemptActivity(record) {
   return record;
 }
 
+/** Number of the record's current attempt: 1 until it is resumed. */
+function currentAttemptNumber(record) {
+  return (
+    record?.attempt?.number ||
+    (Number(record?.options?.resumeCount) || 0) +
+      (Number(record?.options?.recoveryAttempts) || 0) +
+      1
+  );
+}
+
+/** Number the next attempt of `record` gets (`START_ATTEMPT`, issue #230). */
+function nextAttemptNumber(record) {
+  return currentAttemptNumber(record) + 1;
+}
+
 function createAttempt(record, plan) {
   let logOffset = null;
   if (record.logPath) {
@@ -58,11 +73,7 @@ function createAttempt(record, plan) {
     }
   }
   return {
-    number:
-      (record.attempt?.number ||
-        (Number(record.options?.resumeCount) || 0) +
-          (Number(record.options?.recoveryAttempts) || 0) +
-          1) + 1,
+    number: nextAttemptNumber(record),
     startedAt: new Date().toISOString(),
     logOffset,
     lastOutputAt: null,
@@ -78,10 +89,7 @@ function archiveAttempt(record) {
   readAttemptActivity(record);
   const snapshot = {
     ...(record.attempt || {
-      number:
-        (Number(record.options?.resumeCount) || 0) +
-        (Number(record.options?.recoveryAttempts) || 0) +
-        1,
+      number: currentAttemptNumber(record),
       startedAt: record.options?.resumedAt || record.startTime,
       logOffset: null,
     }),
@@ -176,6 +184,8 @@ module.exports = {
   appendLifecycle,
   archiveAttempt,
   createAttempt,
+  currentAttemptNumber,
+  nextAttemptNumber,
   patchAttempt,
   readAttemptActivity,
   readAttemptLogTail,

@@ -201,7 +201,8 @@ function runScreenWithLogCapture(
   sessionName,
   shellInfo,
   user = null,
-  logPath = null
+  logPath = null,
+  env = null
 ) {
   return _runScreenWithLogCapture(
     command,
@@ -210,7 +211,8 @@ function runScreenWithLogCapture(
     user,
     wrapCommandWithUser,
     isInteractiveShellCommand,
-    logPath
+    logPath,
+    env
   );
 }
 
@@ -241,6 +243,7 @@ function runInScreen(command, options = {}) {
           keepAlive: options.keepAlive,
           logPath: options.logPath,
           wrapCommandWithUser,
+          env: options.executionEnv,
         })
       );
     } else {
@@ -249,7 +252,8 @@ function runInScreen(command, options = {}) {
         sessionName,
         shellInfo,
         options.user,
-        options.logPath
+        options.logPath,
+        options.executionEnv
       );
     }
   } catch (err) {
@@ -909,6 +913,19 @@ function runIsolated(backend, command, options = {}) {
     session: options.sessionStack ? options.sessionStack[0] : options.session,
     logPath: options.logPath,
   };
+  // START_* identity (issue #230): docker passes it with `-e`; a bare screen
+  // shell inherits the spawn env; everything else gets an `export` prefix.
+  const identity = require('./execution-env');
+  currentOptions.executionEnv = identity.executionEnvFromOptions(currentOptions);
+  if (
+    backend !== 'docker' &&
+    !(backend === 'screen' && isInteractiveShellCommand(effectiveCommand))
+  ) {
+    effectiveCommand = identity.prefixWithExecutionEnv(
+      effectiveCommand,
+      currentOptions.executionEnv
+    );
+  }
 
   switch (backend) {
     case 'screen':

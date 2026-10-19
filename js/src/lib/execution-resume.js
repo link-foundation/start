@@ -34,6 +34,7 @@ const {
   appendLifecycle,
   archiveAttempt,
   createAttempt,
+  nextAttemptNumber,
   patchAttempt,
 } = require('./execution-attempt');
 const { runCommand } = require('./execution-control');
@@ -46,6 +47,7 @@ const { SessionState, probeSession } = require('./session-probe');
 const { getDockerNetworks } = require('./docker-network-lifecycle');
 const {
   writeCommandHandoff,
+  writeExecutionEnvHandoff,
   buildCommandHandoffArgs,
   commandHandoffPath,
 } = require('./docker-command-handoff');
@@ -110,6 +112,8 @@ function buildLaunchOptions(record) {
     rootSession:
       opts.rootSession || opts.sessionNameHistory?.[0] || opts.sessionName,
     resumeCount: (Number(opts.resumeCount) || 0) + 1,
+    // START_ATTEMPT of the relaunched command (issue #230).
+    attemptNumber: nextAttemptNumber(record),
     image: opts.image || null,
     session: opts.sessionName,
     detached: true,
@@ -289,6 +293,7 @@ function buildResumePlan(
               session: newSessionName,
               containerName: newSessionName,
               sessionId: record.uuid,
+              attemptNumber: nextAttemptNumber(record),
               rootSession:
                 opts.rootSession || opts.sessionNameHistory?.[0] || sessionName,
               resumeCount: attempt,
@@ -656,6 +661,18 @@ async function resumeExecution(store, identifier, deps = {}) {
               'Could not copy replacement command into the stopped container'
           );
         }
+      }
+      if (plan.mode === ResumeMode.DOCKER_START && opts.commandHandoff) {
+        // `docker start` keeps the creation env; refresh START_ATTEMPT (#230).
+        writeExecutionEnvHandoff(
+          plan.sessionName,
+          require('./execution-env').buildExecutionEnv({
+            executionId: record.uuid,
+            sessionName: plan.sessionName,
+            attempt: attempt.number,
+          }),
+          runner
+        );
       }
       for (const step of plan.steps) {
         let result;

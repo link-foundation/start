@@ -379,6 +379,23 @@ function recoverKilledExecution(params = {}) {
     }
   }
 
+  if (opts.commandHandoff && record.uuid) {
+    // `docker start` keeps the creation env; refresh START_ATTEMPT (#230).
+    try {
+      require('./docker-command-handoff').writeExecutionEnvHandoff(
+        containerName,
+        require('./execution-env').buildExecutionEnv({
+          executionId: record.uuid,
+          sessionName: containerName,
+          attempt: require('./execution-attempt').nextAttemptNumber(record),
+        }),
+        runner
+      );
+    } catch {
+      // Non-fatal: the command still runs, with the previous START_ATTEMPT.
+    }
+  }
+
   const since = now().toISOString();
   const {
     appendLifecycle,

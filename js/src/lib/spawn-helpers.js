@@ -18,9 +18,14 @@ function ensureParentDirectory(filePath) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
 }
 
-function writeInitialLog(logFilePath, logContent) {
+function writeInitialLog(logFilePath, logContent, append = false) {
   ensureParentDirectory(logFilePath);
-  fs.writeFileSync(logFilePath, logContent || '', 'utf8');
+  if (append) {
+    // `--append-attempt` (issue #229): never truncate earlier attempts.
+    fs.appendFileSync(logFilePath, logContent || '', 'utf8');
+  } else {
+    fs.writeFileSync(logFilePath, logContent || '', 'utf8');
+  }
 }
 
 function appendLog(logFilePath, content) {
@@ -40,6 +45,8 @@ function appendLog(logFilePath, content) {
  * @param {Object} options.executionRecord - Execution tracking record
  * @param {Object} options.store - Execution store
  * @param {Object} options.config - CLI configuration
+ * @param {Object} [options.env] - Child environment (defaults to process.env)
+ * @param {boolean} [options.appendLog] - Append to an existing log (issue #229)
  * @param {Function} options.onComplete - Callback for completion (exitCode, endTime, logContent, durationMs)
  * @param {Function} options.onError - Callback for errors (errorMessage, endTime, durationMs)
  */
@@ -54,18 +61,21 @@ async function runWithBunSpawn(options) {
     config,
     onComplete,
     onError,
+    env,
+    appendLog: appendToLog = false,
   } = options;
 
   let logContent = options.logContent || '';
 
   try {
-    writeInitialLog(logFilePath, logContent);
+    writeInitialLog(logFilePath, logContent, appendToLog);
 
     // Spawn the process using Bun's native API
     const proc = Bun.spawn([shell, ...shellArgs], {
       stdout: 'pipe',
       stderr: 'pipe',
       stdin: 'inherit',
+      ...(env ? { env } : {}),
     });
 
     // Update execution record with PID and save initial state
@@ -186,14 +196,16 @@ async function runWithBunSpawn(options) {
     const endTime = new Date().toISOString().replace('T', ' ').substring(0, 23);
     const errorMessage = `Error executing command: ${err.message}`;
 
-    logContent += `\n${errorMessage}\n`;
-    logContent += `\n${'='.repeat(50)}\n`;
-    logContent += `Finished: ${endTime}\n`;
-    logContent += `Exit Code: 1\n`;
+    const errorTail = `\n${errorMessage}\n\n${'='.repeat(50)}\nFinished: ${endTime}\nExit Code: 1\n`;
+    logContent += errorTail;
 
-    // Write log file
+    // Write log file; an appended attempt keeps the earlier attempts (#229).
     try {
-      writeInitialLog(logFilePath, logContent);
+      if (appendToLog) {
+        writeInitialLog(logFilePath, errorTail, true);
+      } else {
+        writeInitialLog(logFilePath, logContent);
+      }
     } catch (writeErr) {
       console.error(`\nWarning: Could not save log file: ${writeErr.message}`);
     }
@@ -238,15 +250,18 @@ function runWithNodeSpawn(options) {
     config,
     onComplete,
     onError,
+    env,
+    appendLog: appendToLog = false,
   } = options;
 
   let logContent = options.logContent || '';
-  writeInitialLog(logFilePath, logContent);
+  writeInitialLog(logFilePath, logContent, appendToLog);
 
   // Execute the command with captured output
   const child = spawn(shell, shellArgs, {
     stdio: ['inherit', 'pipe', 'pipe'],
     shell: false,
+    ...(env ? { env } : {}),
   });
 
   // Update execution record with PID and save initial state
@@ -330,14 +345,16 @@ function runWithNodeSpawn(options) {
     const endTime = new Date().toISOString().replace('T', ' ').substring(0, 23);
     const errorMessage = `Error executing command: ${err.message}`;
 
-    logContent += `\n${errorMessage}\n`;
-    logContent += `\n${'='.repeat(50)}\n`;
-    logContent += `Finished: ${endTime}\n`;
-    logContent += `Exit Code: 1\n`;
+    const errorTail = `\n${errorMessage}\n\n${'='.repeat(50)}\nFinished: ${endTime}\nExit Code: 1\n`;
+    logContent += errorTail;
 
-    // Write log file
+    // Write log file; an appended attempt keeps the earlier attempts (#229).
     try {
-      writeInitialLog(logFilePath, logContent);
+      if (appendToLog) {
+        writeInitialLog(logFilePath, errorTail, true);
+      } else {
+        writeInitialLog(logFilePath, logContent);
+      }
     } catch (writeErr) {
       console.error(`\nWarning: Could not save log file: ${writeErr.message}`);
     }

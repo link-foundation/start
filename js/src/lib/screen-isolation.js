@@ -128,6 +128,8 @@ function supportsLogfileOption() {
  * @param {string|null} user - Username to run command as (optional)
  * @param {Function} wrapCommandWithUser - Function to wrap command with user
  * @param {Function} isInteractiveShellCommand - Function to check if command is interactive shell
+ * @param {string|null} logPath - Log file to append to (optional)
+ * @param {object|null} env - Extra environment, e.g. START_* (optional)
  * @returns {Promise<{success: boolean, sessionName: string, message: string, output: string, exitCode: number}>}
  */
 function runScreenWithLogCapture(
@@ -137,7 +139,8 @@ function runScreenWithLogCapture(
   user = null,
   wrapCommandWithUser,
   isInteractiveShellCommand,
-  logPath = null
+  logPath = null,
+  env = null
 ) {
   const { shell, shellArg } = shellInfo;
   const screenTempDir = getTempDir('isolation', 'screen');
@@ -237,8 +240,10 @@ function runScreenWithLogCapture(
       }
 
       // Use spawnSync with array args (not execSync string) to avoid quoting issues (issue #25)
+      // Each `screen -dmS` server inherits this env (START_*, issue #230).
       const result = spawnSync('screen', screenArgs, {
         stdio: 'inherit',
+        env: { ...process.env, ...env },
       });
 
       if (result.error) {
@@ -424,6 +429,7 @@ function startDetachedScreenWithLogCapture(
     keepAlive = false,
     logPath = null,
     wrapCommandWithUser,
+    env = null,
   } = options;
 
   const screenTempDir = getTempDir('isolation', 'screen');
@@ -471,7 +477,10 @@ function startDetachedScreenWithLogCapture(
   }
 
   try {
-    const result = spawnSync('screen', screenArgs, { stdio: 'inherit' });
+    const result = spawnSync('screen', screenArgs, {
+      stdio: 'inherit',
+      env: { ...process.env, ...env },
+    });
     if (result.error) {
       throw result.error;
     }
