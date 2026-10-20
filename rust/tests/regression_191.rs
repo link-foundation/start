@@ -35,7 +35,7 @@ impl CommandRunner for Runner {
 }
 fn runner() -> Runner {
     Runner(FakeRunner::new(
-        json!({"Memory":67108864,"MemorySwap":67108864,"NanoCpus":3000000000_i64}),
+        json!({"Memory":67108864,"MemorySwap":67108864,"MemoryReservation":33554432,"NanoCpus":3000000000_i64}),
     ))
 }
 #[test]
@@ -143,6 +143,11 @@ fn recovery_changes_memory_only_for_a_fresh_qualifying_oom() {
         assert_eq!(runner.0.call("update").is_some(), change);
         if change {
             assert!(result.recovered);
+            assert!(runner
+                .0
+                .call("update")
+                .unwrap()
+                .contains(&"--memory-reservation=32m".into()));
             let verbs = runner.0.verbs();
             assert!(
                 verbs.iter().position(|s| s == "update") < verbs.iter().position(|s| s == "start")

@@ -177,7 +177,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
         };
     if let Some(limits) = limits {
         plan.resource_limits = limits.clone();
-        let changed = ["memory", "memorySwap", "cpus"]
+        let changed = ["memory", "memorySwap", "memoryReservation", "cpus"]
             .iter()
             .any(|k| overrides.get(k).and_then(Value::as_str).is_some())
             || record.options.contains_key("cpuPenaltyConfig");
@@ -187,6 +187,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
                 [
                     "--memory=",
                     "--memory-swap=",
+                    "--memory-reservation=",
                     "--cpus=",
                     "--cpu-quota=",
                     "--cpu-period=",
@@ -228,7 +229,7 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
         .filter(|value| value.is_object())
         .cloned()
         .unwrap_or_else(|| json!({}));
-    for k in ["memory", "memorySwap", "cpus"] {
+    for k in ["memory", "memorySwap", "memoryReservation", "cpus"] {
         if let Some(value) = overrides.get(k).filter(|v| v.is_string()) {
             requested[k] = value.clone();
         }

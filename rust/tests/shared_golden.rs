@@ -80,7 +80,7 @@ fn cli_parsing_matches_shared_goldens() {
         let options = parsed.wrapper_options;
         let observed = json!({"isolated": options.isolated, "detached": options.detached,
             "session": options.session, "status": options.status, "outputFormat": options.output_format,
-            "memory": options.memory, "cpus": options.cpus, "resume": options.resume,
+            "memory": options.memory, "memoryReservation": options.memory_reservation, "cpus": options.cpus, "resume": options.resume,
             "snapshotWait": seconds(options.snapshot.wait),
             "snapshotDiskWait": seconds(options.snapshot.disk_wait),
             "removeOriginalAfter": seconds(options.snapshot.remove_original_after),

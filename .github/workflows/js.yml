@@ -324,6 +324,10 @@ jobs:
         working-directory: js
         run: bun run test
 
+      - name: Verify Docker memory reservation launch and resumes (Linux)
+        if: runner.os == 'Linux'
+        run: bun experiments/issue-236/docker-smoke.cjs js
+
       - name: Reproduce stale-sample OOM attribution (Linux)
         if: runner.os == 'Linux'
         run: |

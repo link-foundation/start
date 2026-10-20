@@ -299,7 +299,8 @@
         ],
         "tests": [
           "js/test/isolation.js",
-          "js/test/isolation-stacking.js"
+          "js/test/isolation-stacking.js",
+          "js/test/regression-236.js"
         ]
       },
       "rust": {
@@ -311,7 +312,8 @@
         ],
         "tests": [
           "rust/tests/isolation.rs",
-          "rust/tests/isolation_unit.rs"
+          "rust/tests/isolation_unit.rs",
+          "rust/tests/regression_236.rs"
         ]
       },
       "manualRust": [
@@ -452,7 +454,8 @@
         "tests": [
           "js/test/docker-runtime-options.js",
           "js/test/regression-199.js",
-          "js/test/regression-230.js"
+          "js/test/regression-230.js",
+          "js/test/regression-236.js"
         ]
       },
       "rust": {
@@ -463,7 +466,8 @@
         ],
         "tests": [
           "rust/tests/regression_199.rs",
-          "rust/tests/regression_230.rs"
+          "rust/tests/regression_230.rs",
+          "rust/tests/regression_236.rs"
         ]
       },
       "manualRust": [

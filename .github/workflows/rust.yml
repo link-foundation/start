@@ -308,6 +308,10 @@ jobs:
         working-directory: rust
         run: cargo build --release
 
+      - name: Verify Docker memory reservation launch and resumes (Linux)
+        if: runner.os == 'Linux'
+        run: node experiments/issue-236/docker-smoke.cjs rust
+
       - name: Check documented examples (Rust)
         if: runner.os == 'Linux'
         run: node scripts/check-doc-examples.mjs --implementation rust

@@ -60,6 +60,7 @@ function buildNextLevelCommand(options, command) {
     for (const [key, flag] of [
       ['memory', '--memory'],
       ['memorySwap', '--memory-swap'],
+      ['memoryReservation', '--memory-reservation'],
       ['cpus', '--cpus'],
       ['onKillResumeMemory', '--on-kill-resume-memory'],
     ]) {

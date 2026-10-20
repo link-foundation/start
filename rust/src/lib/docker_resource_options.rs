@@ -62,6 +62,7 @@ pub fn parse(args: &[String], index: usize, options: &mut WrapperOptions) -> Res
     let target = match flag {
         "--memory" => &mut options.memory,
         "--memory-swap" => &mut options.memory_swap,
+        "--memory-reservation" => &mut options.memory_reservation,
         "--cpus" => &mut options.cpus,
         "--on-kill-resume-memory" => &mut options.on_kill_resume_memory,
         _ => return Ok(0),
@@ -78,6 +79,7 @@ pub fn parse(args: &[String], index: usize, options: &mut WrapperOptions) -> Res
 pub fn validate(options: &WrapperOptions) -> Result<(), String> {
     if options.memory.is_none()
         && options.memory_swap.is_none()
+        && options.memory_reservation.is_none()
         && options.cpus.is_none()
         && options.on_kill_resume_memory.is_none()
     {
@@ -111,7 +113,7 @@ pub fn resolve<R: CommandRunner + ?Sized>(
     random: impl Fn() -> f64,
 ) -> Result<(Vec<String>, Value), String> {
     let mut parsed = Vec::new();
-    for field in ["memory", "memorySwap", "cpus"] {
+    for field in ["memory", "memorySwap", "memoryReservation", "cpus"] {
         if let Some(value) = specs.get(field).and_then(Value::as_str) {
             parsed.push((field, parse_spec(value, field == "cpus")?));
         }
@@ -177,10 +179,25 @@ pub fn resolve<R: CommandRunner + ?Sized>(
             return Err("memory-swap must be at least memory".into());
         }
     }
-    for field in ["memory", "memorySwap", "cpus"] {
+    let reservation = values
+        .get("memoryReservation")
+        .and_then(Value::as_f64)
+        .or_else(|| {
+            limits
+                .iter()
+                .find_map(|s| s.strip_prefix("--memory-reservation="))
+                .and_then(|s| parse_spec(s, false).ok())
+                .map(|s| s.0)
+        });
+    if memory.zip(reservation).is_some_and(|(m, r)| r >= m) {
+        return Err("memory-reservation must be less than memory".into());
+    }
+    for field in ["memory", "memorySwap", "memoryReservation", "cpus"] {
         if let Some(value) = values.get(field) {
             let flag = if field == "memorySwap" {
                 "--memory-swap"
+            } else if field == "memoryReservation" {
+                "--memory-reservation"
             } else if field == "memory" {
                 "--memory"
             } else {
@@ -198,7 +215,7 @@ pub fn resolve<R: CommandRunner + ?Sized>(
 }
 
 pub fn specs(options: &WrapperOptions) -> Value {
-    json!({"memory":options.memory,"memorySwap":options.memory_swap,"cpus":options.cpus})
+    json!({"memory":options.memory,"memorySwap":options.memory_swap,"memoryReservation":options.memory_reservation,"cpus":options.cpus})
 }
 
 pub fn prepare(options: &mut WrapperOptions) -> Result<(), String> {

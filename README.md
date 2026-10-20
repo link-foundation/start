@@ -453,16 +453,20 @@ execution record, so `--status` shows them.
 
 ##### Docker launch limits, recovery limits and CPU penalty
 
-Both CLIs accept `--memory`, `--memory-swap` and `--cpus` at launch. Memory uses
+Both CLIs accept `--memory`, `--memory-swap`, `--memory-reservation` and `--cpus` at launch. Memory uses
 positive Docker sizes (`64m`, `4g`, bytes); CPU uses a positive count (`1.5`).
-All three also accept `N%` or a uniform `MIN%-MAX%` range within `(0, 100]`.
+All four also accept `N%` or a uniform `MIN%-MAX%` range within `(0, 100]`.
 Percentages use `docker info` capacity on the daemon, including remote/DinD,
 and are resolved once when the container is created. Resolved bytes/CPU counts
 and raw requests appear in the log header and status options. Plain resumes
-preserve them. Swap defaults to the same memory value, disabling extra swap.
+preserve them. `--memory-reservation` sets Docker's soft memory limit and must
+be strictly below `--memory` when a hard cap is set (including an inherited cap
+on resume). It can also be used without a hard cap. Reservation percentages use
+daemon RAM, just like `--memory`; they are saved as resolved bytes and retain
+their original specification in `--status`. Swap defaults to the same memory value, disabling extra swap.
 
 ```bash
-$ -i docker -d --image alpine --memory 64m --cpus 1 -- sleep 30
+$ -i docker -d --image alpine --memory 256m --memory-reservation 64m --cpus 1 -- sleep 30
 $ -i docker -d --memory '90%-100%' --cpus '50%' --cpu-penalty -- my-task
 $ -i docker -d --memory '90%-100%' --on-kill-resume 3 --on-kill-resume-memory '70%-80%' -- my-task
 $ --resume my-session --memory 128m
