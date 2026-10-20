@@ -311,9 +311,11 @@ $ $'echo "hello \'world\'"'    # Use ANSI-C quoting
 
 ## Docker resource controls and exit evidence
 
-`--memory`, `--memory-swap`, and `--cpus` accept positive absolute values, daemon
+`--memory`, `--memory-swap`, `--memory-reservation`, and `--cpus` accept positive absolute values, daemon
 percentages, or uniform percentage ranges. Swap defaults to memory. Values resolve
-once at creation and survive a plain resume. `--resume <id> --memory 128m` and
+once at creation and survive a plain resume. `--memory-reservation 64m` (or
+`N%` of daemon RAM) sets a soft cap, strictly below `--memory` when a hard cap
+is set, and appears in `--status` alongside its resolved bytes. `--resume <id> --memory 128m` and
 `--on-kill-resume-memory '70%-80%'` apply overrides before the command starts;
 the latter requires fresh exit-time OOM evidence.
 

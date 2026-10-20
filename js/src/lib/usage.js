@@ -24,6 +24,7 @@ Options:
   --recovery-command <cmd>  Command to run in the same container on such a resume
   --on-kill-resume-delay <min[-max]>  Wait a random number of seconds before each such resume (default 0)
   --memory <size|N%|MIN%-MAX%>  Docker RAM cap; percentages use daemon capacity
+  --memory-reservation <spec>  Soft memory limit (Docker size or N%, below --memory)
   --memory-swap <spec>  Combined memory+swap cap (defaults to memory, no extra swap)
   --cpus <n|N%|MIN%-MAX%>  Docker CPU cap; ranges draw once per creation
   --on-kill-resume-memory <spec>  New memory cap before a qualifying OOM recovery

@@ -535,7 +535,9 @@ async function resumeExecution(store, identifier, deps = {}) {
         args: [
           'update',
           ...resources.resourceLimits.filter((s) =>
-            /^--(?:memory|memory-swap|cpus|cpu-quota|cpu-period)=/.test(s)
+            /^--(?:memory|memory-swap|memory-reservation|cpus|cpu-quota|cpu-period)=/.test(
+              s
+            )
           ),
           plan.sessionName,
         ],

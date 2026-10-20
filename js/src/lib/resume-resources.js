@@ -34,7 +34,7 @@ function prepareResumeResources(record, probe, overrides, runner, random) {
   const options = record.options || {};
   if (options.isolated !== 'docker') {
     if (
-      ['memory', 'memorySwap', 'cpus'].some(
+      ['memory', 'memorySwap', 'memoryReservation', 'cpus'].some(
         (k) => overrides[k] !== null && overrides[k] !== undefined
       )
     ) {
@@ -81,7 +81,7 @@ function prepareResumeResources(record, probe, overrides, runner, random) {
   };
   result.update =
     probe.state === 'stopped' &&
-    (['memory', 'memorySwap', 'cpus'].some(
+    (['memory', 'memorySwap', 'memoryReservation', 'cpus'].some(
       (k) => overrides[k] !== null && overrides[k] !== undefined
     ) ||
       Boolean(options.cpuPenaltyConfig));

@@ -4,6 +4,7 @@ const { normalizeResourceLimits } = require('./docker-resource-limits');
 const FIELDS = {
   '--memory': 'memory',
   '--memory-swap': 'memorySwap',
+  '--memory-reservation': 'memoryReservation',
   '--cpus': 'cpus',
   '--on-kill-resume-memory': 'onKillResumeMemory',
 };
@@ -95,7 +96,7 @@ function readDaemonCapacity(runner) {
 
 function resolveResourceOptions(options, runner, random = Math.random) {
   const specs = {};
-  for (const field of ['memory', 'memorySwap', 'cpus']) {
+  for (const field of ['memory', 'memorySwap', 'memoryReservation', 'cpus']) {
     if (options[field] !== null && options[field] !== undefined) {
       specs[field] = parseResourceSpec(options[field], field === 'cpus');
     }
@@ -137,8 +138,26 @@ function resolveResourceOptions(options, runner, random = Math.random) {
   ) {
     throw new Error('memory-swap must be at least memory');
   }
+  // Compare effective values so lowering a cap also checks a saved reservation.
+  const existingReservation = limits
+    .find((flag) => flag.startsWith('--memory-reservation='))
+    ?.slice('--memory-reservation='.length);
+  const reservation =
+    resolved.memoryReservation ??
+    (existingReservation
+      ? parseResourceSpec(existingReservation).amount
+      : null);
+  if (
+    memory !== null &&
+    memory !== undefined &&
+    reservation !== null &&
+    reservation !== undefined &&
+    reservation >= memory
+  ) {
+    throw new Error('memory-reservation must be less than memory');
+  }
   for (const [field, amount] of Object.entries(resolved)) {
-    const flag = field === 'memorySwap' ? '--memory-swap' : `--${field}`;
+    const flag = Object.keys(FIELDS).find((key) => FIELDS[key] === field);
     for (let i = limits.length - 1; i >= 0; i--) {
       if (
         limits[i].startsWith(`${flag}=`) ||

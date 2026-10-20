@@ -54,7 +54,7 @@ pub fn prepare<R: CommandRunner>(
     runner: &R,
 ) -> Result<(Option<Vec<String>>, Option<Value>, Value), String> {
     if record.options.get("isolated").and_then(Value::as_str) != Some("docker") {
-        if ["memory", "memorySwap", "cpus"]
+        if ["memory", "memorySwap", "memoryReservation", "cpus"]
             .iter()
             .any(|k| overrides.get(k).and_then(Value::as_str).is_some())
         {

@@ -676,6 +676,7 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
                     [
                         "--memory=",
                         "--memory-swap=",
+                        "--memory-reservation=",
                         "--cpus=",
                         "--cpu-quota=",
                         "--cpu-period=",

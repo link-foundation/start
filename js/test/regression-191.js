@@ -51,6 +51,7 @@ function fixture() {
         stdout: JSON.stringify({
           Memory: 67108864,
           MemorySwap: 67108864,
+          MemoryReservation: 33554432,
           NanoCpus: 3000000000,
         }),
       };
@@ -141,6 +142,7 @@ for (const [exitCode, oomKilled, sample, change, marker] of [
       if (change) {
         expect(result.recovered).toBe(true);
         expect(update).toContain('--memory=805306368');
+        expect(update).toContain('--memory-reservation=32m');
         expect(f.calls.indexOf(update)).toBeLessThan(
           f.calls.findIndex((a) => a[0] === 'start')
         );

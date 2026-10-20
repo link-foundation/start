@@ -490,7 +490,9 @@ function recoverKilledExecution(params = {}) {
     const updated = runner(getDockerCommand(), [
       'update',
       ...resourceLimits.filter((s) =>
-        /^--(?:memory|memory-swap|cpus|cpu-quota|cpu-period)=/.test(s)
+        /^--(?:memory|memory-swap|memory-reservation|cpus|cpu-quota|cpu-period)=/.test(
+          s
+        )
       ),
       containerName,
     ]);

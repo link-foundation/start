@@ -142,6 +142,71 @@
         "echo"
       ],
       "error": "--snapshot-wait is only valid with --resume"
+    },
+    {
+      "name": "Docker soft memory 64m (issue #236)",
+      "argv": [
+        "--isolated",
+        "docker",
+        "--memory",
+        "256m",
+        "--memory-reservation",
+        "64m",
+        "--",
+        "echo",
+        "hi"
+      ],
+      "command": "echo hi",
+      "rawCommand": [
+        "echo",
+        "hi"
+      ],
+      "options": {
+        "memory": "256m",
+        "memoryReservation": "64m"
+      },
+      "dockerResourceLimits": [
+        "--memory=268435456",
+        "--memory-reservation=67108864",
+        "--memory-swap=268435456"
+      ]
+    },
+    {
+      "name": "Docker soft memory --memory-reservation=25% (issue #236)",
+      "argv": [
+        "--isolated",
+        "docker",
+        "--memory",
+        "256m",
+        "--memory-reservation=25%",
+        "--",
+        "echo",
+        "hi"
+      ],
+      "command": "echo hi",
+      "rawCommand": [
+        "echo",
+        "hi"
+      ],
+      "options": {
+        "memory": "256m",
+        "memoryReservation": "25%"
+      }
+    },
+    {
+      "name": "reservation resume override (issue #236)",
+      "argv": [
+        "--resume",
+        "fixture-session",
+        "--memory-reservation",
+        "32m"
+      ],
+      "command": "",
+      "rawCommand": [],
+      "options": {
+        "resume": "fixture-session",
+        "memoryReservation": "32m"
+      }
     }
   ],
   "isolation-arguments": [
@@ -215,6 +280,21 @@
         "-e",
         "START_ATTEMPT=3"
       ]
+    },
+    {
+      "name": "hard and soft memory limits (issue #236)",
+      "options": {
+        "resourceLimits": [
+          "--memory=268435456",
+          "--memory-reservation=67108864",
+          "--memory-swap=268435456"
+        ]
+      },
+      "argv": [
+        "--memory=268435456",
+        "--memory-reservation=67108864",
+        "--memory-swap=268435456"
+      ]
     }
   ],
   "status-output": {
@@ -277,13 +357,15 @@
         ],
         "resolvedLimits": {
           "cpus": 2,
-          "memory": "4g"
+          "memory": "4g",
+          "memoryReservation": 67108864
         },
         "resourceLimitSpecs": {
           "memory": {
             "source": "flag",
             "value": "4g"
-          }
+          },
+          "memoryReservation": "64m"
         }
       }
     },
@@ -303,10 +385,12 @@
       "    resolvedLimits",
       "        cpus 2",
       "        memory 4g",
+      "        memoryReservation 67108864",
       "    resourceLimitSpecs",
       "        memory",
       "            source flag",
-      "            value 4g"
+      "            value 4g",
+      "        memoryReservation 64m"
     ],
     "text": [
       "Options:",
@@ -314,8 +398,8 @@
       "  isolated: docker",
       "  launchOwner: {\"hostname\":\"70a2c2990824\",\"pid\":522913}",
       "  ports: [\"8080:80\"]",
-      "  resolvedLimits: {\"cpus\":2,\"memory\":\"4g\"}",
-      "  resourceLimitSpecs: {\"memory\":{\"source\":\"flag\",\"value\":\"4g\"}}"
+      "  resolvedLimits: {\"cpus\":2,\"memory\":\"4g\",\"memoryReservation\":67108864}",
+      "  resourceLimitSpecs: {\"memory\":{\"source\":\"flag\",\"value\":\"4g\"},\"memoryReservation\":\"64m\"}"
     ]
   },
   "status-identity": {
@@ -477,6 +561,34 @@
           }
         }
       ]
+    },
+    {
+      "uuid": "123e4567-e89b-42d3-a456-426614174000",
+      "pid": 12345,
+      "status": "executed",
+      "exitCode": 0,
+      "command": "echo hello",
+      "logPath": "/tmp/start-golden.log",
+      "startTime": "2026-10-10T00:00:00Z",
+      "endTime": "2026-10-10T00:00:01Z",
+      "workingDirectory": "/workspace",
+      "shell": "/bin/sh",
+      "platform": "linux",
+      "options": {
+        "isolated": "docker",
+        "resourceLimits": [
+          "--memory=268435456",
+          "--memory-reservation=67108864"
+        ],
+        "resolvedLimits": {
+          "memory": 268435456,
+          "memoryReservation": 67108864
+        },
+        "resourceLimitSpecs": {
+          "memory": "256m",
+          "memoryReservation": "64m"
+        }
+      }
     }
   ],
   "parity-threshold": [
