@@ -123,11 +123,11 @@
       "references": [
         {
           "file": "README.md",
-          "text": "--memory 64m --cpus 1"
+          "text": "--memory 256m --memory-reservation 64m --cpus 1"
         },
         {
           "file": "examples/docker-resource-controls.sh",
-          "text": "--memory 64m --cpus 1"
+          "text": "--memory 256m --memory-reservation 64m --cpus 1"
         }
       ],
       "parseOnly": {
@@ -138,6 +138,8 @@
           "--image",
           "alpine",
           "--memory",
+          "256m",
+          "--memory-reservation",
           "64m",
           "--cpus",
           "1",
@@ -147,7 +149,8 @@
         ],
         "expected": {
           "isolated": "docker",
-          "memory": "64m",
+          "memory": "256m",
+          "memoryReservation": "64m",
           "cpus": "1",
           "command": "sleep 30"
         },

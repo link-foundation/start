@@ -44,3 +44,11 @@ Local container startup is unavailable: Docker reports `cannot enter cgroupv2
 The Linux CI jobs run the probe on a host that supports memory limits. Rust
 compilation and the full Rust suite run in the existing gated CI workflow, to
 respect this workspace's 2.92 GiB aggregate memory budget.
+
+The first feature CI run (`39500166976`, commit `ce6bf02`) passed the real-Docker
+reservation probe but found a stale documentation-manifest reference at
+`ci-logs/javascript-rust-39500166976.log:11083`: the README example gained
+a reservation while the manifest still required `--memory 64m --cpus 1`.
+The same failure was reproduced locally. The runnable resource example and its
+parse-only manifest now match the documented hard/soft limits; the documentation
+checker passes. The complete failed-run log is preserved locally.
