@@ -175,7 +175,8 @@
         ],
         "tests": [
           "js/test/args-parser.js",
-          "js/test/args-parser-control.js"
+          "js/test/args-parser-control.js",
+          "js/test/regression-236.js"
         ]
       },
       "rust": {
@@ -186,7 +187,8 @@
           "rust/src/lib/snapshot_resume_options.rs"
         ],
         "tests": [
-          "rust/tests/args_parser.rs"
+          "rust/tests/args_parser.rs",
+          "rust/tests/regression_236.rs"
         ]
       },
       "manualRust": [

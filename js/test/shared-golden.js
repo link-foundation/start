@@ -49,6 +49,17 @@ describe('shared JavaScript and Rust golden contracts', () => {
       for (const [key, value] of Object.entries(fixture.options)) {
         assert.deepEqual(parsed.wrapperOptions[key], value, key);
       }
+      if (fixture.dockerResourceLimits) {
+        const {
+          resolveResourceOptions,
+        } = require('../src/lib/docker-resource-options');
+        assert.deepEqual(
+          buildDockerRuntimeArgs(
+            resolveResourceOptions(parsed.wrapperOptions)
+          ).sort(),
+          [...fixture.dockerResourceLimits].sort()
+        );
+      }
     });
   }
   for (const fixture of fixtures['isolation-arguments']) {

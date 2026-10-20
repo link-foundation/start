@@ -78,6 +78,23 @@ fn cli_parsing_matches_shared_goldens() {
         );
         assert_eq!(parsed.raw_command, strings(&fixture["rawCommand"]));
         let options = parsed.wrapper_options;
+        if fixture.get("dockerResourceLimits").is_some() {
+            let (limits, _) = start_command::docker_resource_options::resolve(
+                &start_command::docker_resource_options::specs(&options),
+                &[],
+                &start_command::execution_control::SystemCommandRunner,
+                || 0.5,
+            )
+            .unwrap();
+            let mut actual = build_docker_runtime_args(&IsolationOptions {
+                resource_limits: limits,
+                ..Default::default()
+            });
+            let mut expected = strings(&fixture["dockerResourceLimits"]);
+            actual.sort();
+            expected.sort();
+            assert_eq!(actual, expected);
+        }
         let observed = json!({"isolated": options.isolated, "detached": options.detached,
             "session": options.session, "status": options.status, "outputFormat": options.output_format,
             "memory": options.memory, "memoryReservation": options.memory_reservation, "cpus": options.cpus, "resume": options.resume,

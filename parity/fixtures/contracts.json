@@ -164,7 +164,12 @@
       "options": {
         "memory": "256m",
         "memoryReservation": "64m"
-      }
+      },
+      "dockerResourceLimits": [
+        "--memory=268435456",
+        "--memory-reservation=67108864",
+        "--memory-swap=268435456"
+      ]
     },
     {
       "name": "Docker soft memory --memory-reservation=25% (issue #236)",
