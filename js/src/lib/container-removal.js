@@ -13,6 +13,7 @@
  */
 
 const { spawnSync } = require('child_process');
+const { prefetchedInspect } = require('./docker-inspect-batch');
 
 /** `containerState` of a record whose container no longer exists. */
 const CONTAINER_STATE_REMOVED = 'removed';
@@ -50,11 +51,9 @@ function isDockerNotFound(result) {
  *   the inspect failed; `notFound` says the failure was "no such container"
  */
 function dockerInspect(dockerCommand, spawnOptions, format, target) {
-  const result = spawnSync(
-    dockerCommand,
-    ['inspect', '-f', format, target],
-    spawnOptions
-  );
+  const result =
+    prefetchedInspect(format, target) ||
+    spawnSync(dockerCommand, ['inspect', '-f', format, target], spawnOptions);
   if (result.error || result.status !== 0 || !result.stdout) {
     return { stdout: null, notFound: isDockerNotFound(result) };
   }

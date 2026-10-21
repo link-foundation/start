@@ -1,6 +1,7 @@
 //! Execution Store - Dual storage (.lino text + .links binary) for command execution records
 
 use crate::lino_value_json::{json_to_lino_value, lino_value_to_json};
+use crate::store_decode_cache::{decode_store_content, DecodeSource};
 use chrono::Utc;
 use lino_objects_codec::{decode, encode, LinoValue};
 use serde::{Deserialize, Serialize};
@@ -20,6 +21,8 @@ const LINO_DB_FILE: &str = "executions.lino";
 const LINKS_DB_FILE: &str = "executions.links";
 /// Lock file name
 const LOCK_FILE: &str = "executions.lock";
+/// Decoded records as JSON, for the next process (issue #243)
+pub const DECODED_COPY_FILE: &str = "executions.decoded.rust.json";
 /// Lock timeout in milliseconds
 const LOCK_TIMEOUT_MS: u64 = 30000;
 
@@ -324,16 +327,33 @@ impl ExecutionStore {
                     return Vec::new();
                 }
 
-                match decode(&content) {
-                    Ok(data) => {
-                        if let LinoValue::Array(arr) = data {
-                            arr.iter()
-                                .map(lino_value_to_json)
-                                .filter_map(|value| ExecutionRecord::from_json(&value))
-                                .collect()
-                        } else {
-                            Vec::new()
-                        }
+                // Decoded once per content, not once per call (issue #243).
+                let decoded = decode_store_content(
+                    &self.lino_db_path,
+                    &content,
+                    |content| {
+                        decode(content).map(|data| match data {
+                            LinoValue::Array(arr) => arr.iter().map(lino_value_to_json).collect(),
+                            _ => Vec::new(),
+                        })
+                    },
+                    Some(&self.app_folder.join(DECODED_COPY_FILE)),
+                );
+                match decoded {
+                    Ok((records, source)) => {
+                        self.log(&match source {
+                            DecodeSource::Memory => {
+                                "Reused the decoded store: the file is unchanged".to_string()
+                            }
+                            DecodeSource::Copy => {
+                                "Read the decoded copy of the store: the file is unchanged"
+                                    .to_string()
+                            }
+                            DecodeSource::Decode => {
+                                format!("Decoded the store ({} characters)", content.len())
+                            }
+                        });
+                        records
                     }
                     Err(e) => {
                         self.log(&format!("Error decoding lino records: {}", e));

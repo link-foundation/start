@@ -39,6 +39,9 @@ pub fn is_docker_not_found(success: bool, stderr: &str) -> bool {
 
 /// `docker inspect -f {{.Id}} <target>` answered "no such container".
 fn docker_object_missing(target: &str) -> bool {
+    if let Some(answer) = crate::docker_inspect_batch::prefetched_inspect("{{.Id}}", target) {
+        return is_docker_not_found(answer.success, &answer.stderr);
+    }
     Command::new(docker_command())
         .args(["inspect", "-f", "{{.Id}}", target])
         .output()

@@ -11,7 +11,10 @@ use crate::detached_finalize::{
 };
 use crate::docker_cleanup::docker_command;
 use crate::docker_post_mortem::normalize_docker_timestamp;
-use crate::execution_store::ExecutionRecord;
+use crate::execution_attempt::read_attempt_log_tail;
+use crate::execution_store::{ExecutionRecord, ExecutionStatus};
+use crate::isolation::isolation_log::FATAL_MARKER_TAIL_BYTES;
+use crate::status_footer::parse_footer_from_tail;
 use crate::status_footer::LogFooter;
 use chrono::Utc;
 use std::process::Command;
@@ -58,22 +61,25 @@ impl DockerState {
 /// Returns None when the container cannot be inspected (not found yet, removed,
 /// or docker error).
 pub(crate) fn inspect_docker_state(session_name: &str) -> Option<DockerState> {
-    let output = Command::new(docker_command())
-        .args([
-            "inspect",
-            "-f",
-            concat!(
-                "{{.State.Running}} {{.State.ExitCode}} {{.State.OOMKilled}} ",
-                "{{.State.StartedAt}} {{.State.FinishedAt}}"
-            ),
-            session_name,
-        ])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let format = concat!(
+        "{{.State.Running}} {{.State.ExitCode}} {{.State.OOMKilled}} ",
+        "{{.State.StartedAt}} {{.State.FinishedAt}}"
+    );
+    // Answered by the query's batched inspect when it has one (issue #243).
+    let stdout = match crate::docker_inspect_batch::prefetched_inspect(format, session_name) {
+        Some(answer) if answer.success => answer.stdout,
+        Some(_) => return None,
+        None => {
+            let output = Command::new(docker_command())
+                .args(["inspect", "-f", format, session_name])
+                .output()
+                .ok()?;
+            if !output.status.success() {
+                return None;
+            }
+            String::from_utf8_lossy(&output.stdout).to_string()
+        }
+    };
     let trimmed = stdout.trim();
     if trimmed.is_empty() {
         return None;
@@ -112,6 +118,12 @@ pub(crate) fn read_docker_state(record: &ExecutionRecord) -> Option<DockerState>
         return None;
     }
     let session_name = record.options.get("sessionName")?.as_str()?;
+    if record.container_state.as_deref() == Some(crate::container_removal::CONTAINER_STATE_REMOVED)
+    {
+        // A removed container stays removed: a relaunch clears the marker, so
+        // there is nothing left to ask Docker (issue #243).
+        return None;
+    }
     let state = inspect_docker_state(session_name)?;
     if let Some(attempt) = &record.attempt {
         let older = state
@@ -248,4 +260,126 @@ pub(crate) fn apply_end_time(
     record.end_time = Some(now.clone());
     record.end_time_source = Some(END_TIME_SOURCE_OBSERVED_AT.to_string());
     record.observed_at = Some(now);
+}
+
+/// Reconcile the stored status of a detached execution with its live session.
+/// If a record shows "executing" but the detached session has actually ended,
+/// returns an updated copy with status "executed". If it shows "executed" but
+/// the session is still running, returns a copy with status "executing".
+pub(crate) fn resolve_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
+    if crate::launch_owner::has_active_launch(record) {
+        return record.clone();
+    }
+    let tail = read_attempt_log_tail(record, FATAL_MARKER_TAIL_BYTES);
+    let footer = parse_footer_from_tail(tail.as_deref().unwrap_or(""));
+    let footer_exit = footer.exit_code;
+    let is_detached_docker = is_detached_docker_record(record);
+    let docker_state = if is_detached_docker {
+        read_docker_state(record)
+    } else {
+        None
+    };
+
+    // `oomKilled` is exposed alongside the status, but never decides it (#151).
+    let oom_killed = resolve_oom_observation(record, docker_state.as_ref());
+    let clone_record = || {
+        let mut enriched = record.clone();
+        if oom_killed.is_some() {
+            enriched.oom_killed = oom_killed;
+        }
+        enriched
+    };
+
+    let alive = if is_detached_docker {
+        docker_state.as_ref().map(|state| state.running)
+    } else {
+        is_detached_session_alive(record)
+    };
+
+    let alive = match alive {
+        Some(value) => value,
+        None => {
+            // Liveness is unknown: the backend could not be probed (e.g. a
+            // detached docker container that is not visible yet on a slow
+            // Docker-in-Docker host, or one that has already been removed).
+            // Honor a terminal `Exit Code:` footer if the command wrote one;
+            // otherwise leave the record untouched (still executing) rather than
+            // fabricating a `-1` terminal result that orchestrators misread as a
+            // finished/failed run (issue #136).
+            let is_detached =
+                record.options.get("isolationMode").and_then(|v| v.as_str()) == Some("detached");
+            if is_detached && record.status == ExecutionStatus::Executing {
+                if footer_exit.is_some() {
+                    let mut enriched = clone_record();
+                    enriched.status = ExecutionStatus::Executed;
+                    enriched.exit_code = footer_exit;
+                    apply_end_time(&mut enriched, docker_state.as_ref(), &footer);
+                    return enriched;
+                }
+                if oom_killed == Some(true) {
+                    // The container is gone and wrote no footer, so the OOM
+                    // observation is the only evidence left: report the session
+                    // as finished with the conventional SIGKILL code (issue
+                    // #148). While the container is still inspectable this
+                    // branch is never taken — a live container keeps the session
+                    // `executing` no matter what the cgroup flag says (#151).
+                    let mut enriched = clone_record();
+                    enriched.status = ExecutionStatus::Executed;
+                    enriched.exit_code = Some(137);
+                    apply_end_time(&mut enriched, docker_state.as_ref(), &footer);
+                    return enriched;
+                }
+            }
+            return clone_record();
+        }
+    };
+
+    let mut enriched = clone_record();
+
+    if alive && enriched.status == ExecutionStatus::Executed {
+        // A live `screen -ls` (or `tmux`/`docker`) session does NOT mean the command
+        // is still running: a lingering shell can outlive a killed command (e.g. the
+        // OOM killer sends SIGKILL, exit 137, but the login shell stays up for a
+        // window after `start` already wrote the terminal footer). The footer/recorded
+        // exit code is authoritative. Only flip back to "executing" when there is NO
+        // recorded terminal exit code AND no `Exit Code:` footer in the log.
+        if enriched.exit_code.is_none() && footer_exit.is_none() {
+            // Session still running and no terminal record - correct it
+            enriched.status = ExecutionStatus::Executing;
+            enriched.exit_code = None;
+            enriched.end_time = None;
+            enriched.end_time_source = None;
+        }
+        // Otherwise keep the recorded/footer exit code - the command has finished.
+    } else if !alive && enriched.status == ExecutionStatus::Executing {
+        // Session ended but record says executing - correct it. Resolve a real
+        // exit code: prefer the backend's own record (e.g. `docker inspect
+        // .State.ExitCode`, which is authoritative and cannot be spoofed by
+        // command output — issue #150), then the anchored log footer, then
+        // `137` when the only evidence left is the OOM observation, and only
+        // fall back to the `-1` sentinel as a last resort when no real code can
+        // be obtained (issues #136, #151).
+        enriched.status = ExecutionStatus::Executed;
+        if enriched.exit_code.is_none() {
+            enriched.exit_code = Some(
+                backend_exit_code(docker_state.as_ref())
+                    .or(footer_exit)
+                    .or(if oom_killed == Some(true) {
+                        Some(137)
+                    } else {
+                        None
+                    })
+                    .unwrap_or(-1),
+            );
+        }
+        apply_end_time(&mut enriched, docker_state.as_ref(), &footer);
+        crate::exit_evidence::add_lost_watcher_evidence(
+            &mut enriched,
+            record,
+            docker_state.as_ref(),
+            tail.as_deref(),
+        );
+    }
+
+    enriched
 }

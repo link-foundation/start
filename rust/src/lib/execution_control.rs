@@ -320,14 +320,24 @@ pub fn collect_process_ids_with_runner<R: CommandRunner>(
                 "containerId",
                 option_value_as_string(record.options.get("containerId")).map(Value::String),
             );
-            let inspect_args = vec![
-                "inspect".to_string(),
-                "-f".to_string(),
-                "{{.Id}} {{.State.Pid}}".to_string(),
-                session_name.to_string(),
-            ];
-            let docker = docker_command().to_string_lossy().to_string();
-            let result = runner.run(&docker, &inspect_args);
+            if record.container_state.as_deref()
+                == Some(crate::container_removal::CONTAINER_STATE_REMOVED)
+            {
+                // The container is gone, so there is nothing to ask Docker (#243).
+                return (!process_ids.is_empty()).then_some(Value::Object(process_ids));
+            }
+            let format = "{{.Id}} {{.State.Pid}}";
+            let result = crate::docker_inspect_batch::prefetched_inspect(format, session_name)
+                .unwrap_or_else(|| {
+                    let inspect_args = vec![
+                        "inspect".to_string(),
+                        "-f".to_string(),
+                        format.to_string(),
+                        session_name.to_string(),
+                    ];
+                    let docker = docker_command().to_string_lossy().to_string();
+                    runner.run(&docker, &inspect_args)
+                });
             if result.success && !result.stdout.trim().is_empty() {
                 let mut parts = result.stdout.split_whitespace();
                 if let Some(container_id) = parts.next() {

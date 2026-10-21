@@ -856,11 +856,13 @@
           "js/src/lib/execution-store.js",
           "js/src/lib/store-lock.js",
           "js/src/lib/atomic-write.js",
-          "js/src/lib/launch-persistence.js"
+          "js/src/lib/launch-persistence.js",
+          "js/src/lib/store-decode-cache.js"
         ],
         "tests": [
           "js/test/execution-store.js",
-          "js/test/regression-207.js"
+          "js/test/regression-207.js",
+          "js/test/regression-243.js"
         ]
       },
       "rust": {
@@ -868,12 +870,14 @@
           "rust/src/lib/execution_store.rs",
           "rust/src/lib/execution_store_cases.rs",
           "rust/src/lib/store_lock.rs",
+          "rust/src/lib/store_decode_cache.rs",
           "rust/src/lib/atomic_write.rs",
           "rust/src/lib/lino_value_json.rs"
         ],
         "tests": [
           "rust/tests/execution_store.rs",
-          "rust/tests/regression_207.rs"
+          "rust/tests/regression_207.rs",
+          "rust/tests/regression_243.rs"
         ]
       },
       "manualRust": [
@@ -909,6 +913,21 @@
         },
         {
           "path": "rust/src/lib/store_lock.rs",
+          "reason": "Native filesystem/process adapter for execution-records; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/210",
+            "https://github.com/link-foundation/meta-language/issues/211",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/store_decode_cache.rs",
           "reason": "Native filesystem/process adapter for execution-records; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
           "blockers": [
             "https://github.com/link-foundation/meta-language/issues/222",
@@ -1968,7 +1987,9 @@
           "js/src/lib/session-probe.js",
           "js/src/lib/isolation-log-utils.js",
           "js/src/lib/exit-reason.js",
-          "js/src/lib/exit-evidence.js"
+          "js/src/lib/exit-evidence.js",
+          "js/src/lib/status-probe.js",
+          "js/src/lib/docker-inspect-batch.js"
         ],
         "tests": [
           "js/test/status-query.js",
@@ -1977,7 +1998,8 @@
           "js/test/regression-209.js",
           "js/test/regression-225.js",
           "js/test/regression-226.js",
-          "js/test/regression-241.js"
+          "js/test/regression-241.js",
+          "js/test/regression-243.js"
         ]
       },
       "rust": {
@@ -1985,6 +2007,7 @@
           "rust/src/lib/status_formatter.rs",
           "rust/src/lib/status_footer.rs",
           "rust/src/lib/status_probe.rs",
+          "rust/src/lib/docker_inspect_batch.rs",
           "rust/src/lib/container_removal.rs",
           "rust/src/lib/session_probe.rs",
           "rust/src/lib/session_probe_cases.rs",
@@ -1999,7 +2022,8 @@
           "rust/tests/regression_209.rs",
           "rust/tests/regression_225.rs",
           "rust/tests/regression_226.rs",
-          "rust/tests/regression_241.rs"
+          "rust/tests/regression_241.rs",
+          "rust/tests/regression_243.rs"
         ]
       },
       "manualRust": [
@@ -2033,6 +2057,20 @@
         },
         {
           "path": "rust/src/lib/status_probe.rs",
+          "reason": "Native filesystem/process adapter for status; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/211",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/docker_inspect_batch.rs",
           "reason": "Native filesystem/process adapter for status; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
           "blockers": [
             "https://github.com/link-foundation/meta-language/issues/222",
