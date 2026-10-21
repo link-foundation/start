@@ -328,6 +328,20 @@ jobs:
         if: runner.os == 'Linux'
         run: bun experiments/issue-236/docker-smoke.cjs js
 
+      - name: Verify Docker cgroup sampler polling (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p issue-238-evidence
+          bun experiments/issue-238-real-docker.mjs > issue-238-evidence/docker-probe.jsonl 2> issue-238-evidence/docker-probe-stderr.txt
+
+      - name: Preserve cgroup polling evidence (Linux)
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: issue-238-docker-evidence
+          path: issue-238-evidence/
+          if-no-files-found: ignore
+
       - name: Reproduce stale-sample OOM attribution (Linux)
         if: runner.os == 'Linux'
         run: |
