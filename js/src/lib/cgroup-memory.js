@@ -27,8 +27,8 @@
 
 const { shellQuote } = require('./isolation-log-utils');
 
-/** Seconds between two samples of a running container's cgroup. */
-const CGROUP_SAMPLE_INTERVAL_SECONDS = 1;
+/** Default seconds between samples; the watcher environment may override it. */
+const CGROUP_SAMPLE_INTERVAL_SECONDS = 5;
 
 /** Shell variables used by the sampler snippets. */
 const CGROUP_SHELL_VARS = {
@@ -94,9 +94,16 @@ function buildCgroupSamplerStartSnippet(containerName) {
     // The first counter is a baseline, including after watcher restart. Only
     // changes between adjacent successful samples supply exit-time evidence.
     `( export START_COMMAND_CGROUP_SAMPLING=1; __scs_previous=''; __scs_previous_at=0; __scs_changed=0; ` +
-      `__scs_dir=$(__start_command_cgroup_dir ${name}); while :; do ` +
+      // Validate in the watcher, so attached and detached launches inherit the
+      // same setting. Never allow a malformed/zero sleep to create a busy loop.
+      `__scs_interval=\${START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS:-${CGROUP_SAMPLE_INTERVAL_SECONDS}}; ` +
+      `case "$__scs_interval" in *[!0-9]*|'') __scs_interval=${CGROUP_SAMPLE_INTERVAL_SECONDS};; esac; ` +
+      `[ "$__scs_interval" -gt 0 ] 2>/dev/null || __scs_interval=${CGROUP_SAMPLE_INTERVAL_SECONDS}; ` +
+      `__scs_dir=$(__start_command_cgroup_dir ${name}); ` +
+      // The namespace is fixed at container creation, including when reads fail.
+      `__scs_ns=$(docker inspect -f '{{.HostConfig.CgroupnsMode}}' ${name} 2>/dev/null); while :; do ` +
       '__scs_line=""; if [ -n "$__scs_dir" ]; then __scs_line=$(__start_command_cgroup_read "$__scs_dir"); fi; ' +
-      `if [ -z "$__scs_line" ]; then __scs_ns=$(docker inspect -f '{{.HostConfig.CgroupnsMode}}' ${name} 2>/dev/null); ` +
+      'if [ -z "$__scs_line" ]; then ' +
       `if [ "$__scs_ns" = private ]; then ` +
       `__scs_remote=$(docker exec ${name} sh -c ${shellQuote(`${buildCgroupFunctionsSnippet()}; ${remoteRead}`)} 2>&1); __scs_exit=$?; ` +
       'if [ "$__scs_exit" = 0 ]; then __scs_line=$__scs_remote; ' +
@@ -109,8 +116,12 @@ function buildCgroupSamplerStartSnippet(containerName) {
       '__scs_previous=$__scs_kill; __scs_previous_at=$__scs_now; ' +
       '__scs_fields=$(printf "%s" "$__scs_line" | cut -d " " -f 1-4); ' +
       `printf '%s %s %s %s\\n' "$__scs_fields" "$__scs_changed" "$__scs_now" "$__scs_dir" > "$${v.file}.tmp" && mv -f "$${v.file}.tmp" "$${v.file}"; fi; ` +
-      `if [ "$(docker inspect -f '{{.State.Running}}' ${name} 2>/dev/null)" = false ]; then break; fi; ` +
-      `sleep ${CGROUP_SAMPLE_INTERVAL_SECONDS}; done ) >/dev/null 2>&1 & ${v.sampler}=$!`,
+      // A readable ID-attributed local cgroup needs no Docker liveness probe.
+      // The completion watcher still stops us after docker wait. Remote/hidden
+      // cgroups fall back to Docker, once per configured sample interval.
+      `if { [ -z "$__scs_dir" ] || [ ! -r "$__scs_dir/memory.events" ]; } && ` +
+      `[ "$(docker inspect -f '{{.State.Running}}' ${name} 2>/dev/null)" = false ]; then break; fi; ` +
+      `sleep "$__scs_interval"; done ) >/dev/null 2>&1 & ${v.sampler}=$!`,
   ].join('; ');
 }
 

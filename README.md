@@ -276,8 +276,8 @@ Automatic kill recovery after an explicit resume starts another scoped attempt.
 
 On a cgroup v2 host the watcher also samples the container's own memory
 counters while it runs (issue #182) — `memory.max`, `memory.peak` and the
-`oom`/`oom_kill` counters of `memory.events` — once a second, and once more
-after the container exits, so the numbers outlive the cgroup. They follow the
+`oom`/`oom_kill` counters of `memory.events` — every five seconds by default,
+and once more after the container exits, so the numbers outlive the cgroup. They follow the
 post-mortem (or the one-line removal note) as one more line:
 
 ```
@@ -307,8 +307,25 @@ looks for an ID-attributed local cgroup, then uses `docker exec ... sh` through
 the daemon with a private cgroup namespace, supporting remote and DinD setups.
 Missing shell, shared namespace or unavailable counters produce an explicit
 `Memory: unavailable (...) memory.limit=... (HostConfig)` line. Last valid
-samples survive temporary outages. A one-second interval can miss the final
-kill after the cgroup disappears, and older kernels may not expose peak usage.
+samples survive temporary outages. Set
+`START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS` to a positive whole number of
+seconds to change the interval for attached and detached runs; unset, invalid,
+zero, negative, fractional or out-of-range values fall back to `5`. For example:
+
+```sh
+START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS=1 $ --isolated docker --detached -- sleep 600
+```
+
+The namespace mode is resolved once per sampler. While the ID-attributed local
+`memory.events` file is readable, liveness requires no Docker probe. Hidden or
+remote cgroups use one Docker liveness probe per sample round. Each round
+finishes before sleeping, so slow Docker calls do not overlap. The first sample
+is immediate; the final local read still runs when the watcher stops the sampler.
+A longer interval reduces polling but increases the chance of missing a final
+kill before the cgroup disappears. Counter gaps longer than three seconds do
+not establish exit-time OOM evidence; the existing Docker OOM event query still
+provides independent evidence for exit 137 (#209). Older kernels may not expose
+peak usage.
 
 `--upload-log` accepts either an execution UUID or an isolation session name. It
 looks up the stored `logPath`, installs `gh-upload-log` with Bun or npm if the
@@ -869,6 +886,7 @@ The following environment variables can be used to customize behavior:
 | `START_VERBOSE`               | Set to `1` or `true` for verbose output                        |
 | `START_DISABLE_SUBSTITUTIONS` | Set to `1` or `true` to disable pattern matching/aliases       |
 | `START_SUBSTITUTIONS_PATH`    | Custom path to substitutions.lino file                         |
+| `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS` | Docker cgroup sample interval in positive whole seconds (default `5`) |
 
 Example:
 

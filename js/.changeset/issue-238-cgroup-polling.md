@@ -1,0 +1,5 @@
+---
+'start-command': patch
+---
+
+Reduce Docker cgroup sampler polling with a configurable five-second default, one namespace lookup per sampler, and local cgroup liveness checks. Set `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS` to a positive whole number of seconds to override the default for attached and detached runs.

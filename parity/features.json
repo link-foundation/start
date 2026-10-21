@@ -721,7 +721,8 @@
         ],
         "tests": [
           "js/test/regression-182.js",
-          "js/test/regression-207.js"
+          "js/test/regression-207.js",
+          "js/test/regression-238.js"
         ]
       },
       "rust": {
@@ -733,7 +734,8 @@
         ],
         "tests": [
           "rust/tests/regression_182.rs",
-          "rust/tests/regression_207.rs"
+          "rust/tests/regression_207.rs",
+          "rust/tests/regression_238.rs"
         ]
       },
       "manualRust": [
@@ -834,7 +836,7 @@
         {
           "construct": "regular expressions",
           "source": "js/src/lib/cgroup-memory.js",
-          "line": 201,
+          "line": 212,
           "issue": "https://github.com/link-foundation/meta-language/issues/211"
         },
         {

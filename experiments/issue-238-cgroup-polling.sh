@@ -1,0 +1,65 @@
+#!/bin/sh
+# Finite accelerated sampler fixture, shared by JavaScript and Rust tests.
+# Each mocked sleep advances the clock; the fourth sample observes shutdown.
+set -eu
+fixture_dir=$(mktemp -d)
+trap 'rm -rf "$fixture_dir"' EXIT
+export START_SAMPLER_FIXTURE="$fixture_dir" START_SAMPLER_MODE="$1"
+export TMPDIR="$fixture_dir" PATH="$fixture_dir/bin:$PATH"
+export START_COMMAND_CGROUP_ROOT="$fixture_dir/cgroup root"
+export START_COMMAND_PROC_ROOT="$fixture_dir/proc"
+scope="$START_COMMAND_CGROUP_ROOT/docker/238abc"
+mkdir -p "$fixture_dir/bin" "$scope"
+printf 'oom 0\noom_kill 0\n' > "$scope/memory.events"
+echo 67108864 > "$scope/memory.max"
+echo 33554432 > "$scope/memory.peak"
+echo 0 > "$fixture_dir/round"
+touch "$fixture_dir/calls" "$fixture_dir/sleeps"
+cat > "$fixture_dir/bin/docker" <<'DOCKER'
+#!/bin/sh
+printf '%s\n' "$*" >> "$START_SAMPLER_FIXTURE/calls"
+case "$1" in
+  inspect)
+    case "$3" in
+      *HostConfig.Memory*) echo 67108864;;
+      *CgroupnsMode*)
+        if [ "$START_SAMPLER_MODE" = shared ]; then echo host; else echo private; fi;;
+      *State.Pid*) echo 0;;
+      *State.Running*)
+        if [ -f "$START_SAMPLER_FIXTURE/stopped" ]; then echo false; else echo true; fi;;
+      *Id*)
+        case "$START_SAMPLER_MODE" in local|final) echo 238abc;; *) echo remote238;; esac;;
+    esac;;
+  exec)
+    case "$START_SAMPLER_MODE" in
+      local|final) exit 1;;
+      no-shell) echo 'sh: not found' >&2; exit 127;;
+      outage) if [ "$(cat "$START_SAMPLER_FIXTURE/round")" -gt 0 ]; then exit 1; fi;;
+    esac
+    echo '67108864 33554432 1 3 /sys/fs/cgroup';;
+esac
+DOCKER
+cat > "$fixture_dir/bin/sleep" <<'SLEEP'
+#!/bin/sh
+printf '%s\n' "$1" >> "$START_SAMPLER_FIXTURE/sleeps"
+round=$(cat "$START_SAMPLER_FIXTURE/round")
+round=$((round+1))
+echo "$round" > "$START_SAMPLER_FIXTURE/round"
+# Fail finitely even if a regression prevents the sampler from stopping.
+if [ "$round" -gt 4 ]; then kill -TERM "$PPID"; exit 1; fi
+if [ "$round" -ge 3 ]; then
+  touch "$START_SAMPLER_FIXTURE/stopped"
+  rm -f "$START_COMMAND_CGROUP_ROOT/docker/238abc/memory.events"
+else
+  printf 'oom %s\noom_kill %s\n' "$round" "$round" > "$START_COMMAND_CGROUP_ROOT/docker/238abc/memory.events"
+fi
+SLEEP
+cat > "$fixture_dir/bin/date" <<'DATE'
+#!/bin/sh
+round=$(cat "$START_SAMPLER_FIXTURE/round")
+echo "$((100+round*${START_SAMPLER_CLOCK_STEP:-5}))"
+DATE
+chmod +x "$fixture_dir/bin/"*
+# The generated shell waits for autonomous shutdown, optionally performs a
+# final read after a new counter value, and prints the sample and call trace.
+sh "$2"
