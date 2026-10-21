@@ -1,0 +1,8 @@
+independent	success
+middle	success
+skipped-ancestor	skipped
+gate-contains-direct-only	success
+dump	success
+gate-named	success
+gate-contains-inline	skipped
+gate-contains-block	skipped

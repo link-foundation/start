@@ -59,6 +59,31 @@ jobs:
     steps:
       - run: echo ran
 
+  # The exact form the release jobs now use (folded, named results).
+  gate-named-folded:
+    needs: [middle, independent]
+    if: >-
+      ${{ !cancelled() &&
+      github.event_name == 'pull_request' &&
+      needs.middle.result == 'success' &&
+      needs.independent.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - run: echo ran
+
+  # The negative control: the same folded form must skip on a failed need.
+  gate-named-folded-negative:
+    needs: [middle, independent]
+    if: >-
+      ${{ !cancelled() &&
+      needs.middle.result == 'failure' &&
+      needs.independent.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - run: echo ran
+
   gate-contains-direct-only:
     needs: [independent]
     if: |

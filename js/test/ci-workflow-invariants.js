@@ -559,13 +559,38 @@ describe('CI workflow invariants', () => {
             `${name}: ${job.name} does not wait for ${check}`
           );
         }
-        for (const result of ['failure', 'cancelled', 'skipped']) {
+        // The job-level `needs.*` also sees skipped ancestors (changeset-check
+        // and changelog are skipped on push), so a wildcard check skipped
+        // every main release; only named results are reliable (issue #240).
+        assert.ok(
+          !job.body.includes('needs.*'),
+          `${name}: ${job.name} checks needs.* instead of named results`
+        );
+        for (const check of needs) {
           assert.ok(
-            job.body.includes(`!contains(needs.*.result, '${result}')`),
-            `${name}: ${job.name} may start after a ${result} check`
+            job.body.includes(`needs.${check}.result == 'success'`),
+            `${name}: ${job.name} may start without a successful ${check}`
           );
         }
       }
+    }
+  });
+
+  it('fails a main run whose release was skipped although its needs succeeded', () => {
+    // Nothing was published for days while every run looked green (#240).
+    for (const [name, release] of [
+      ['js.yml', 'release'],
+      ['rust.yml', 'auto-release'],
+    ]) {
+      const jobs = parseJobs(readWorkflow(name));
+      const job = jobs.find((entry) => entry.name === release);
+      const gate = jobs.find((entry) => entry.name === 'pipeline-status');
+      assert.ok(
+        gate.body.includes(
+          `--release '${release}:${parseNeeds(job.body).join(',')}'`
+        ),
+        `${name}: pipeline-status does not check that ${release} ran`
+      );
     }
   });
 

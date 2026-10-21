@@ -787,15 +787,42 @@ fn releases_only_after_every_check_its_stage_requires_has_passed() {
                     job.name
                 );
             }
-            for result in ["failure", "cancelled", "skipped"] {
+            // The job-level `needs.*` also sees skipped ancestors (changeset-check
+            // and changelog are skipped on push), so a wildcard check skipped
+            // every main release; only named results are reliable (issue #240).
+            assert!(
+                !job.body.contains("needs.*"),
+                "{name}: {} checks needs.* instead of named results",
+                job.name
+            );
+            for check in &needs {
                 assert!(
                     job.body
-                        .contains(&format!("!contains(needs.*.result, '{result}')")),
-                    "{name}: {} may start after a {result} check",
+                        .contains(&format!("needs.{check}.result == 'success'")),
+                    "{name}: {} may start without a successful {check}",
                     job.name
                 );
             }
         }
+    }
+}
+
+#[test]
+fn fails_a_main_run_whose_release_was_skipped_although_its_needs_succeeded() {
+    // Nothing was published for days while every run looked green (#240).
+    for (name, release) in [("js.yml", "release"), ("rust.yml", "auto-release")] {
+        let jobs = parse_jobs(&read_workflow(name));
+        let job = jobs.iter().find(|job| job.name == release).unwrap();
+        let gate = jobs
+            .iter()
+            .find(|job| job.name == "pipeline-status")
+            .unwrap();
+        let needs = parse_needs(&job.body).unwrap_or_default().join(",");
+        assert!(
+            gate.body
+                .contains(&format!("--release '{release}:{needs}'")),
+            "{name}: pipeline-status does not check that {release} ran"
+        );
     }
 }
 

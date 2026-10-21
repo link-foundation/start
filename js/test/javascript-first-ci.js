@@ -179,6 +179,44 @@ describe('JavaScript first CI gate', () => {
     assert.equal(check.status, 0);
   });
 
+  const releaseCheck = (isMain, release, test = 'success') =>
+    spawnSync(
+      process.execPath,
+      [
+        resolve(root, 'scripts/check-stage-status.mjs'),
+        '--required',
+        'test',
+        '--release',
+        'release:test',
+      ],
+      {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          IS_MAIN: String(isMain),
+          NEEDS_JSON: JSON.stringify({
+            test: { result: test },
+            release: { result: release },
+          }),
+        },
+      }
+    );
+
+  it('fails a main push whose release was skipped after its needs passed', () => {
+    // Every main release was silently skipped since #234 (issue #240).
+    const check = releaseCheck(true, 'skipped');
+    assert.equal(check.status, 1);
+    assert.match(check.stderr, /release was skipped on a main push/);
+    // The terms of the release condition are printed for the next skip.
+    assert.match(check.stdout, /needs\.test\.result=success/);
+    assert.match(check.stdout, /release: skipped; expected to run: true/);
+  });
+
+  it('accepts a skipped release outside main pushes and a run release on main', () => {
+    assert.equal(releaseCheck(false, 'skipped').status, 0);
+    assert.equal(releaseCheck(true, 'success').status, 0);
+  });
+
   it('rejects a change to only one implementation of a feature', () => {
     const features = [
       {
