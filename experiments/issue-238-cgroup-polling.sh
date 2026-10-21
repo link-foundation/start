@@ -31,6 +31,23 @@ case "$1" in
         case "$START_SAMPLER_MODE" in local|final) echo 238abc;; *) echo remote238;; esac;;
     esac;;
   exec)
+    if [ "${7:-}" = start-command-cgroup-stream ]; then
+      # The long-lived exec of issue #242: one line per tick from the host
+      # ticker on stdin, until the container stops.
+      case "$START_SAMPLER_MODE" in
+        local|final) exit 1;;
+        no-shell) echo 'sh: not found' >&2; exit 127;;
+        outage)
+          if [ "$(cat "$START_SAMPLER_FIXTURE/round")" -gt 0 ]; then
+            echo 'Error response from daemon: connection reset' >&2; exit 1
+          fi
+          read -r tick; echo '67108864 33554432 1 3 /sys/fs/cgroup'; exit 1;;
+      esac
+      while read -r tick && [ ! -f "$START_SAMPLER_FIXTURE/stopped" ]; do
+        echo '67108864 33554432 1 3 /sys/fs/cgroup'
+      done
+      exit 137
+    fi
     case "$START_SAMPLER_MODE" in
       local|final) exit 1;;
       no-shell) echo 'sh: not found' >&2; exit 127;;
@@ -41,6 +58,13 @@ esac
 DOCKER
 cat > "$fixture_dir/bin/sleep" <<'SLEEP'
 #!/bin/sh
+# The ticker of the long-lived exec writes to a pipe. A real sleep outlasts an
+# exec that fails at once or a stopped container, and the ticker then ends on
+# its next write; end it here so the round count stays deterministic.
+if [ -p /dev/stdout ]; then
+  case "$START_SAMPLER_MODE" in no-shell|outage) exit 1;; esac
+  [ ! -f "$START_SAMPLER_FIXTURE/stopped" ] || exit 1
+fi
 printf '%s\n' "$1" >> "$START_SAMPLER_FIXTURE/sleeps"
 round=$(cat "$START_SAMPLER_FIXTURE/round")
 round=$((round+1))

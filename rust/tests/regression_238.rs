@@ -60,7 +60,9 @@ fn default_interval_and_local_liveness_after_removal() {
     assert_eq!(count(&output, "sleep=5"), 3);
     assert_eq!(count(&output, "{{.State.Running}}"), 1);
     assert_eq!(count(&output, "{{.HostConfig.CgroupnsMode}}"), 1);
-    assert_eq!(count(&output, "exec task"), 1);
+    // A readable local cgroup never starts a remote exec, even after removal
+    // (issue #242): the liveness probe ends the loop instead.
+    assert_eq!(count(&output, "task '238' sh -c"), 0);
 }
 
 #[test]
@@ -68,8 +70,10 @@ fn override_and_cached_remote_namespace() {
     let output = sample("remote", Some("2"), "5");
     assert_eq!(count(&output, "sleep=2"), 3);
     assert_eq!(count(&output, "{{.HostConfig.CgroupnsMode}}"), 1);
-    assert_eq!(count(&output, "{{.State.Running}}"), 4);
-    assert_eq!(count(&output, "exec task"), 4);
+    // One long-lived exec streams every round; liveness is probed once, after
+    // the stream ends (issue #242).
+    assert_eq!(count(&output, "{{.State.Running}}"), 1);
+    assert_eq!(count(&output, "task '238' sh -c"), 1);
     assert!(output.contains("memory.max=67108864 memory.peak=33554432 oom=1 oom_kill=3"));
 }
 
@@ -85,7 +89,7 @@ fn invalid_intervals_fall_back_without_a_busy_loop() {
         "1; exit 7",
         "99999999999999999999999999",
     ] {
-        assert_eq!(count(&sample("shared", Some(interval), "5"), "sleep=5"), 3);
+        assert_eq!(count(&sample("remote", Some(interval), "5"), "sleep=5"), 3);
     }
 }
 
@@ -94,7 +98,15 @@ fn remote_outages_and_unavailable_diagnostics() {
     for mode in ["shared", "no-shell", "outage"] {
         let output = sample(mode, None, "5");
         assert_eq!(count(&output, "{{.HostConfig.CgroupnsMode}}"), 1);
-        assert_eq!(count(&output, "{{.State.Running}}"), 4);
+        // A shared namespace or a missing shell ends sampling at once; an outage
+        // falls back to per-round execs, each followed by a liveness probe.
+        let (running, execs) = match mode {
+            "shared" => (0, 0),
+            "no-shell" => (0, 1),
+            _ => (4, 4),
+        };
+        assert_eq!(count(&output, "{{.State.Running}}"), running);
+        assert_eq!(count(&output, "task '238' sh -c"), execs);
         if mode == "outage" {
             assert!(output.contains("sample=67108864 33554432 1 3 0 100"));
         } else {

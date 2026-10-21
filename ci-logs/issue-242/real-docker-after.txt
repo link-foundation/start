@@ -1,0 +1,12 @@
+# sh experiments/issue-242-real-docker.sh (JavaScript snippets, Docker 29.9.1, cgroup v2)
+processes inside the task container while streaming:
+PID   COMMAND
+    1 sleep 20
+    7 sh -c while read -r __scx_tick; do __scx_oom=; __scx_kill=; __scx_max=-; __scx_peak=-; [ -r "$1/memory.events" ] || exit 3; while read -r __scx_key __scx_value; do case "$__scx_key" in oom) __scx_oom=$__scx_value;; oom_kill) __scx_kill=$__scx_value;; esac; done < "$1/memory.events"; case "$__scx_oom:$__scx_kill" in *[!0-9:]*|:*|*:) exit 3;; esac; [ ! -r "$1/memory.max" ] || read -r __scx_max < "$1/memory.max"; [ ! -r "$1/memory.peak" ] || read -r __scx_peak < "$1/memory.peak"; printf '%s %s %s %s %s\n' "${__scx_max:--}" "${__scx_peak:--}" "$__scx_oom" "$__scx_kill" "$1" || exit 0; done start-command-cgroup-stream /sys/fs/cgroup
+sample after 6 s: 67108864 1048576 1 1 1792621375 1792621376 
+final sample: 67108864 1048576 1 1 1792621375 1792621376
+processes inside the task container after the sampler stopped:
+PID   COMMAND
+    1 sleep 20
+reason: none
+left-over temp files: 0

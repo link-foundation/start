@@ -1,0 +1,98 @@
+== local (status 0)
+sample=67108864 33554432 2 2 0 110
+Memory:     memory.max=67108864 memory.peak=33554432 oom=2 oom_kill=2 (OOM kill scope unknown)
+inspect -f {{.HostConfig.Memory}} task '238'
+inspect -f {{.Id}} task '238'
+inspect -f {{.State.Pid}} task '238'
+inspect -f {{.HostConfig.CgroupnsMode}} task '238'
+exec task '238' sh -c __start_command_cgroup_dir() { __scd_i
+inspect -f {{.State.Running}} task '238'
+sleep=5
+sleep=5
+sleep=5
+
+== final (status 0)
+sample=67108864 33554432 2 2 0 110
+Memory:     memory.max=67108864 memory.peak=33554432 oom=2 oom_kill=2 (OOM kill scope unknown)
+inspect -f {{.HostConfig.Memory}} task '238'
+inspect -f {{.Id}} task '238'
+inspect -f {{.State.Pid}} task '238'
+inspect -f {{.HostConfig.CgroupnsMode}} task '238'
+exec task '238' sh -c __start_command_cgroup_dir() { __scd_i
+inspect -f {{.State.Running}} task '238'
+sleep=5
+sleep=5
+sleep=5
+
+== remote (status 0)
+sample=67108864 33554432 1 3 0 115
+Memory:     memory.max=67108864 memory.peak=33554432 oom=1 oom_kill=3 (OOM kill scope unknown)
+inspect -f {{.HostConfig.Memory}} task '238'
+inspect -f {{.Id}} task '238'
+inspect -f {{.State.Pid}} task '238'
+inspect -f {{.HostConfig.CgroupnsMode}} task '238'
+exec task '238' sh -c __start_command_cgroup_dir() { __scd_i
+inspect -f {{.State.Running}} task '238'
+exec task '238' sh -c __start_command_cgroup_dir() { __scd_i
+inspect -f {{.State.Running}} task '238'
+exec task '238' sh -c __start_command_cgroup_dir() { __scd_i
+inspect -f {{.State.Running}} task '238'
+exec task '238' sh -c __start_command_cgroup_dir() { __scd_i
+inspect -f {{.State.Running}} task '238'
+sleep=5
+sleep=5
+sleep=5
+
+== shared (status 0)
+sample=
+Memory:     unavailable (local cgroup unavailable; container cgroup namespace=host, private required) memory.limit=67108864 (HostConfig)
+inspect -f {{.HostConfig.Memory}} task '238'
+inspect -f {{.Id}} task '238'
+inspect -f {{.State.Pid}} task '238'
+inspect -f {{.HostConfig.CgroupnsMode}} task '238'
+inspect -f {{.State.Running}} task '238'
+inspect -f {{.State.Running}} task '238'
+inspect -f {{.State.Running}} task '238'
+inspect -f {{.State.Running}} task '238'
+sleep=5
+sleep=5
+sleep=5
+
+== no-shell (status 0)
+sample=
+Memory:     unavailable (local cgroup unavailable; Docker exec exit=127: sh: not found) memory.limit=67108864 (HostConfig)
+inspect -f {{.HostConfig.Memory}} task '238'
+inspect -f {{.Id}} task '238'
+inspect -f {{.State.Pid}} task '238'
+inspect -f {{.HostConfig.CgroupnsMode}} task '238'
+exec task '238' sh -c __start_command_cgroup_dir() { __scd_i
+inspect -f {{.State.Running}} task '238'
+exec task '238' sh -c __start_command_cgroup_dir() { __scd_i
+inspect -f {{.State.Running}} task '238'
+exec task '238' sh -c __start_command_cgroup_dir() { __scd_i
+inspect -f {{.State.Running}} task '238'
+exec task '238' sh -c __start_command_cgroup_dir() { __scd_i
+inspect -f {{.State.Running}} task '238'
+sleep=5
+sleep=5
+sleep=5
+
+== outage (status 0)
+sample=67108864 33554432 1 3 0 100
+Memory:     memory.max=67108864 memory.peak=33554432 oom=1 oom_kill=3 (OOM kill scope unknown)
+inspect -f {{.HostConfig.Memory}} task '238'
+inspect -f {{.Id}} task '238'
+inspect -f {{.State.Pid}} task '238'
+inspect -f {{.HostConfig.CgroupnsMode}} task '238'
+exec task '238' sh -c __start_command_cgroup_dir() { __scd_i
+inspect -f {{.State.Running}} task '238'
+exec task '238' sh -c __start_command_cgroup_dir() { __scd_i
+inspect -f {{.State.Running}} task '238'
+exec task '238' sh -c __start_command_cgroup_dir() { __scd_i
+inspect -f {{.State.Running}} task '238'
+exec task '238' sh -c __start_command_cgroup_dir() { __scd_i
+inspect -f {{.State.Running}} task '238'
+sleep=5
+sleep=5
+sleep=5
+

@@ -304,21 +304,30 @@ reason is `signal (SIGKILL; cause unknown)`; raw flags/counters remain available
 
 Both attached and detached Docker runs sample cgroup v2. The sampler first
 looks for an ID-attributed local cgroup, then uses `docker exec ... sh` through
-the daemon with a private cgroup namespace, supporting remote and DinD setups.
+the daemon with a private cgroup namespace, supporting remote, DinD and mounted
+`docker.sock` setups. Through the daemon, one long-lived
+`docker exec -i <container> sh -c ... start-command-cgroup-stream` per run
+answers one host tick per interval on its stdin using only shell builtins, so
+the task's CPU limit pays for no `cat`, `sed` or `sleep` processes. The stream
+ends with the sampler, because its stdin closes. If that stream cannot start,
+the sampler falls back to one `docker exec` per round (#242).
 Missing shell, shared namespace or unavailable counters produce an explicit
 `Memory: unavailable (...) memory.limit=... (HostConfig)` line. Last valid
 samples survive temporary outages. Set
 `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS` to a positive whole number of
 seconds to change the interval for attached and detached runs; unset, invalid,
-zero, negative, fractional or out-of-range values fall back to `5`. For example:
+zero, negative, fractional or out-of-range values fall back to `5`, and `off`
+(any case) disables sampling for callers that need no OOM evidence. For example:
 
 ```sh
 START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS=1 $ --isolated docker --detached -- sleep 600
+START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS=off $ --isolated docker --detached -- sleep 600
 ```
 
-The namespace mode is resolved once per sampler. While the ID-attributed local
-`memory.events` file is readable, liveness requires no Docker probe. Hidden or
-remote cgroups use one Docker liveness probe per sample round. Each round
+The namespace mode is resolved once per sampler. A successful sample, local or
+streamed, proves the container is running, so Docker is asked for
+`{{.State.Running}}` only after a round without a sample or when the stream
+ends; the completion watcher stops the sampler after `docker wait`. Each round
 finishes before sleeping, so slow Docker calls do not overlap. The first sample
 is immediate; the final local read still runs when the watcher stops the sampler.
 A longer interval reduces polling but increases the chance of missing a final
@@ -886,7 +895,7 @@ The following environment variables can be used to customize behavior:
 | `START_VERBOSE`               | Set to `1` or `true` for verbose output                        |
 | `START_DISABLE_SUBSTITUTIONS` | Set to `1` or `true` to disable pattern matching/aliases       |
 | `START_SUBSTITUTIONS_PATH`    | Custom path to substitutions.lino file                         |
-| `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS` | Docker cgroup sample interval in positive whole seconds (default `5`) |
+| `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS` | Docker cgroup sample interval in positive whole seconds (default `5`); `off` disables sampling |
 
 Example:
 

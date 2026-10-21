@@ -1,0 +1,15 @@
+# Same experiment with the first, sleep-paced stream design (never released): the in-container loop outlives the stopped sampler. Lines cut at 160 columns.
+processes inside the task container while streaming:
+PID   COMMAND
+    1 sleep 20
+    7 sh -c while :; do __scx_oom=; __scx_kill=; __scx_max=-; __scx_peak=-; [ -r "$2/memory.events" ] || exit 3; while read -r __scx_key __scx_value; do case "$
+   18 sleep 1
+sample after 6 s: 67108864 1048576 1 1 1792621427 1792621428 
+final sample: 67108864 1048576 1 1 1792621427 1792621428
+processes inside the task container after the sampler stopped:
+PID   COMMAND
+    1 sleep 20
+    7 sh -c while :; do __scx_oom=; __scx_kill=; __scx_max=-; __scx_peak=-; [ -r "$2/memory.events" ] || exit 3; while read -r __scx_key __scx_value; do case "$
+   26 sleep 1
+reason: none
+left-over temp files: 0
