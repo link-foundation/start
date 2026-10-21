@@ -84,3 +84,8 @@ Raw log names above are preserved as gzip archives under `ci-logs/issue-238/`.
 The full local JavaScript suite passed (1453 passed, one unavailable-tmux skip,
 zero failures). Local lint/format, shared contracts, workflow guards, manifest
 inventory, pinned translator regeneration and documented examples also passed.
+
+The initial JavaScript/Rust run 39550857855 completed successfully. All jobs
+from both baseline runs were complete before the implementation push; NPM
+Audit was their only failure. Its complete logs and the successful run logs
+are archived alongside the baseline job metadata.
