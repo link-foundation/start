@@ -1,0 +1,85 @@
+name: Needs Probe (temporary, issue 240)
+
+# Temporary root-cause probe for #240. It reproduces the release dependency
+# shape: a job skipped by its condition (like changeset-check on push), a job
+# that still runs after it (like test), and a gate that checks `needs.*`.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  skipped-ancestor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    if: github.event_name == 'push'
+    steps:
+      - run: echo never
+
+  middle:
+    needs: [skipped-ancestor]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - run: echo middle
+
+  independent:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - run: echo independent
+
+  gate-contains-block:
+    needs: [middle, independent]
+    if: |
+      !cancelled() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      !contains(needs.*.result, 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - run: echo ran
+
+  gate-contains-inline:
+    needs: [middle, independent]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'skipped') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - run: echo ran
+
+  gate-named:
+    needs: [middle, independent]
+    if: ${{ !cancelled() && needs.middle.result == 'success' && needs.independent.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - run: echo ran
+
+  gate-contains-direct-only:
+    needs: [independent]
+    if: |
+      !cancelled() &&
+      !contains(needs.*.result, 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - run: echo ran
+
+  dump:
+    needs: [middle, independent]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          RESULTS: ${{ toJSON(needs.*.result) }}
+          HAS_SKIPPED: ${{ contains(needs.*.result, 'skipped') }}
+        run: |
+          echo "needs=$NEEDS_JSON"
+          echo "results=$RESULTS"
+          echo "contains-skipped=$HAS_SKIPPED"
