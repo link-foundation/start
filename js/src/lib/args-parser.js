@@ -14,6 +14,7 @@
  * --mount <mount-spec>             Docker --mount spec (repeatable, docker only)
  * --env, -e <KEY=VALUE>            Environment variable for docker container (repeatable, docker only)
  * --privileged                     Run docker container in privileged mode (docker only)
+ * --init, --no-init                Run an init process (tini) as PID 1 to reap orphans (docker only; default START_COMMAND_DOCKER_INIT)
  * --network <name>                 Connect docker container to a named network (repeatable, docker only)
  * --network-alias <alias>          Add an alias to the first network (repeatable, docker only)
  * --endpoint <endpoint>            SSH endpoint (required for ssh isolation, e.g., user@host)
@@ -47,6 +48,7 @@ const dockerNetworkOptions = require('./docker-network-options');
 const dockerRecoveryOptions = require('./docker-recovery-options');
 const cpuPenalty = require('./cpu-penalty');
 const dockerResourceOptions = require('./docker-resource-options');
+const dockerInitOption = require('./docker-init-option');
 const snapshotResumeOptions = require('./snapshot-resume-options');
 const launchIdentityOptions = require('./launch-identity-options');
 const { parseSequence, isSequence } = require('./sequence-parser');
@@ -199,6 +201,7 @@ function parseArgs(args) {
     labels: [], // Caller attribution, applied to every Docker level
     help: false,
     privileged: false, // Run docker container in privileged mode
+    init: null, // docker run --init; null until resolved from START_COMMAND_DOCKER_INIT (issue #244)
     network: null, // First Docker network name (compatibility accessor)
     networks: [], // Ordered Docker network names
     networkAliases: [], // Docker network-scoped aliases
@@ -427,6 +430,11 @@ function parseOption(args, index, options) {
   // --privileged (for docker)
   if (arg === '--privileged') {
     options.privileged = true;
+    return 1;
+  }
+
+  // --init / --no-init (for docker, issue #244)
+  if (dockerInitOption.parse(args, index, options)) {
     return 1;
   }
 
@@ -803,6 +811,7 @@ function validateOptions(options) {
 
   dockerRecoveryOptions.validate(options);
   dockerResourceOptions.validate(options);
+  dockerInitOption.validate(options);
   cpuPenalty.validate(options);
 
   // Session name is only valid with isolation

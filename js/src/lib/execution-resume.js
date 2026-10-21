@@ -127,6 +127,7 @@ function buildLaunchOptions(record) {
     useCommandStream: opts.useCommandStream || false,
     shell: opts.shell || 'auto',
     privileged: opts.privileged || false,
+    init: opts.init || false,
     env: opts.env || [],
     volumes: opts.volumes || [],
     mounts: opts.mounts || [],

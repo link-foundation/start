@@ -710,6 +710,9 @@ $ -i docker --image konard/hive-mind-dind:latest \
 # Run a Docker-in-Docker image in privileged mode
 $ -i docker --image konard/hive-mind-dind:latest --privileged -- solve <issue-url>
 
+# Run tini as PID 1 so orphaned processes of a long-running task are reaped
+$ -i docker --init -d -- solve <issue-url>
+
 # Run on remote server via SSH
 $ --isolated ssh --endpoint user@remote.server -- npm test
 
@@ -778,6 +781,7 @@ This is useful for:
 | `--env, -e`                      | Environment variable `KEY=VALUE` for the container (repeatable, docker only) |
 | `--label KEY=VALUE`              | Task attribution label (repeatable, Docker only; persisted on resume)        |
 | `--privileged`                   | Run docker container in privileged mode (docker only)                        |
+| `--init`, `--no-init`            | Run tini as PID 1 to reap orphans (docker only; default off, see below)      |
 | `--network`                      | Connect to a named network (repeatable, docker only)                         |
 | `--network-alias`                | Add an alias on the first network (repeatable, docker only)                  |
 | `--endpoint`                     | SSH endpoint (required for ssh, e.g., user@host)                             |
@@ -819,6 +823,26 @@ first network.
 ```bash
 $ --isolated docker --image alpine:3.23 \
     --network bridge --network my-sidecar-net -- ping -c 1 sidecar
+```
+
+By default the command is PID 1 of its container. Most programs never reap
+orphaned grandchildren, so a long-running task can collect hundreds of zombie
+processes. They count against `--pids-limit` and slow every `/proc` scan.
+`--init` adds `docker run --init`, which makes Docker's bundled tini PID 1. tini
+reaps orphans, forwards signals to the command and exits with its exit code.
+The flag is stored in the execution record, reused by `--resume` and
+`--resume-all`, and shown as `init` in the start block and `$ --status`.
+`START_COMMAND_DOCKER_INIT=1` turns it on for every docker launch; `--no-init`
+opts one launch out. The default stays off, so a command that supervises its
+own children keeps today's behaviour. One visible difference: `--stop` sends
+`SIGTERM`, which tini passes on. A command that does not handle `SIGTERM` then
+ends at once with exit code 143. Without `--init` the kernel drops that signal
+for PID 1, so Docker kills the container after its grace period, with exit code
+137.
+
+```bash
+$ -i docker --init -d --image alpine:3.23 -- my-long-running-task
+docker inspect -f '{{.HostConfig.Init}}' <session>   # true
 ```
 
 #### Auto-Exit Behavior
@@ -896,6 +920,7 @@ The following environment variables can be used to customize behavior:
 | `START_DISABLE_SUBSTITUTIONS` | Set to `1` or `true` to disable pattern matching/aliases       |
 | `START_SUBSTITUTIONS_PATH`    | Custom path to substitutions.lino file                         |
 | `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS` | Docker cgroup sample interval in positive whole seconds (default `5`); `off` disables sampling |
+| `START_COMMAND_DOCKER_INIT`   | Set to `1` or `true` to launch every docker task with `--init` (`--no-init` overrides it) |
 
 Example:
 
