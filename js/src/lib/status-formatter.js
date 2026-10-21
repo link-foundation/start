@@ -28,6 +28,7 @@ const {
 const { normalizeDockerTimestamp } = require('./docker-post-mortem');
 const { END_TIME_SOURCE } = require('./detached-finalize');
 const { formatCgroupMemory } = require('./cgroup-memory');
+const { addLostWatcherEvidence } = require('./exit-evidence');
 const {
   attachContainerRemoval,
   dockerInspect,
@@ -433,6 +434,7 @@ function resolveDetachedStatus(record, logTail, probe = null) {
         (oomKilled === true ? 137 : -1);
     }
     applyEndTime(enriched, dockerState, footer.finishedAt);
+    addLostWatcherEvidence(enriched, record, dockerState, logTail);
   }
 
   return enriched;

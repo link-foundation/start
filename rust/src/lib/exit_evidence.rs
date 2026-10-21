@@ -4,6 +4,22 @@ use chrono::{DateTime, Duration};
 pub const MAIN_OOM: &str = "Exit evidence: main-oom (recent cgroup oom_kill delta)";
 pub const DOCKER_OOM: &str = "Exit evidence: main-oom (recent Docker oom event)";
 pub const DAEMON_RESTART: &str = "Exit evidence: docker-daemon-restart (Docker service journal)";
+pub const DAEMON_RESTART_API: &str =
+    "Exit evidence: docker-daemon-restart (Docker API: containers finished together)";
+const DAEMON_RESTART_PREFIX: &str = "Exit evidence: docker-daemon-restart";
+const UNAVAILABLE: &str =
+    "Exit evidence: unavailable (no attributed exit-time OOM or daemon restart evidence)";
+// dockerd gives every container its stop timeout and kills the rest within its
+// 15 s shutdown timeout, so the containers of one restart finish this close.
+const DAEMON_RESTART_WINDOW_MS: i64 = 15_000;
+const CONTAINER_STATE_FORMAT: &str =
+    "{{.Id}} {{.State.FinishedAt}} {{.State.StartedAt}} {{.State.ExitCode}} {{.State.OOMKilled}}";
+// Bounds one `docker inspect` call on hosts with many stopped containers.
+const MAX_PEER_CONTAINERS: usize = 256;
+
+fn is_container_id(id: &str) -> bool {
+    id.len() == 64 && id.bytes().all(|c| matches!(c, b'0'..=b'9' | b'a'..=b'f'))
+}
 
 pub fn recent_oom_delta(sample: &str, finished_at: &str) -> bool {
     let fields = sample.split_whitespace().collect::<Vec<_>>();
@@ -25,14 +41,70 @@ pub fn recent_oom_delta(sample: &str, finished_at: &str) -> bool {
 }
 
 pub fn from_log(log: Option<&str>) -> (bool, bool) {
-    let last = log
-        .unwrap_or("")
-        .lines()
-        .rfind(|s| s.starts_with("Exit evidence:"));
+    let last = last_marker(log);
     (
         last == Some(MAIN_OOM) || last == Some(DOCKER_OOM),
-        last == Some(DAEMON_RESTART),
+        last.is_some_and(|s| s.starts_with(DAEMON_RESTART_PREFIX)),
     )
+}
+
+fn last_marker(log: Option<&str>) -> Option<&str> {
+    log.unwrap_or("")
+        .lines()
+        .rfind(|s| s.starts_with("Exit evidence:"))
+}
+
+/// Which source attributed the restart: the host journal or the API (#241).
+pub fn daemon_restart_source(log: Option<&str>) -> Option<&'static str> {
+    match last_marker(log) {
+        Some(DAEMON_RESTART_API) => Some("api"),
+        Some(s) if s.starts_with(DAEMON_RESTART_PREFIX) => Some("journal"),
+        _ => None,
+    }
+}
+
+/// The stored `exitEvidence` object; the source is kept only for a restart.
+pub fn evidence_json(log: Option<&str>, main_oom: bool) -> serde_json::Value {
+    let (_, daemon) = from_log(log);
+    let mut value = serde_json::json!({"mainOom": main_oom, "daemonRestart": daemon});
+    if let Some(source) = daemon_restart_source(log).filter(|_| daemon) {
+        value["daemonRestartSource"] = source.into();
+    }
+    value
+}
+
+/// Socket-only daemon-restart evidence (issue #241): another container that
+/// finished within the same shutdown window, was not OOM-killed, and was either
+/// stopped by a signal (137/143) or started again afterwards (restart policy;
+/// moby resets its ExitCode to 0 but keeps FinishedAt). `docker events` cannot
+/// be used: its buffer does not survive the restart, while State does.
+pub fn daemon_restart_api_evidence(states: &str, container_id: &str, finished_at: &str) -> bool {
+    let Ok(finished) = DateTime::parse_from_rfc3339(finished_at) else {
+        return false;
+    };
+    let finished = finished.timestamp_millis();
+    states.lines().any(|line| {
+        let fields = line.split_whitespace().collect::<Vec<_>>();
+        let [id, peer_finished, peer_started, exit, oom] = fields[..] else {
+            return false;
+        };
+        let Ok(end) = DateTime::parse_from_rfc3339(peer_finished) else {
+            return false;
+        };
+        let end = end.timestamp_millis();
+        if !is_container_id(id)
+            || id == container_id
+            || oom != "false"
+            || end <= 0
+            || (end - finished).abs() > DAEMON_RESTART_WINDOW_MS
+        {
+            return false;
+        }
+        exit == "137"
+            || exit == "143"
+            || DateTime::parse_from_rfc3339(peer_started)
+                .is_ok_and(|started| started.timestamp_millis() > end)
+    })
 }
 
 pub fn recent_docker_oom(events: &str, finished_at: &str) -> bool {
@@ -65,7 +137,15 @@ pub fn record_tail(
         .and_then(serde_json::Value::as_bool)
         == Some(true)
     {
-        Some(DAEMON_RESTART)
+        if stored
+            .and_then(|s| s.get("daemonRestartSource"))
+            .and_then(serde_json::Value::as_str)
+            == Some("api")
+        {
+            Some(DAEMON_RESTART_API)
+        } else {
+            Some(DAEMON_RESTART)
+        }
     } else if stored
         .and_then(|s| s.get("mainOom"))
         .and_then(serde_json::Value::as_bool)
@@ -73,7 +153,7 @@ pub fn record_tail(
     {
         Some(MAIN_OOM)
     } else if stored.is_some() {
-        Some("Exit evidence: unavailable (no attributed exit-time OOM or daemon restart evidence)")
+        Some(UNAVAILABLE)
     } else {
         None
     };
@@ -113,6 +193,9 @@ pub fn collect<R: CommandRunner>(
     let local = std::env::var("DOCKER_HOST")
         .map(|s| s.starts_with("unix://"))
         .unwrap_or(true);
+    let sampled_oom = oom == "true"
+        && (exit == "137" || exit.parse::<i32>().is_ok_and(|n| n < 0))
+        && recent_oom_delta(sample, finished);
     if exit == "137" && !name.is_empty() {
         if let Ok(end) = DateTime::parse_from_rfc3339(finished) {
             let id = runner.run(
@@ -120,7 +203,7 @@ pub fn collect<R: CommandRunner>(
                 &["inspect".into(), "-f".into(), "{{.Id}}".into(), name.into()],
             );
             let id_text = id.stdout.trim();
-            if id.success && id_text.len() == 64 && id_text.chars().all(|c| c.is_ascii_hexdigit()) {
+            if id.success && is_container_id(id_text) {
                 let journal = if local {
                     runner.run(
                         "journalctl",
@@ -161,19 +244,106 @@ pub fn collect<R: CommandRunner>(
                 if events.success && recent_docker_oom(&events.stdout, finished) {
                     return DOCKER_OOM.into();
                 }
+                // Without a host journal (a mounted docker.sock, a remote
+                // daemon) the only record of the restart is the state of the
+                // other containers.
+                let docker = crate::docker_cleanup::docker_command()
+                    .to_string_lossy()
+                    .into_owned();
+                let peers = if sampled_oom {
+                    Default::default()
+                } else {
+                    runner.run(
+                        &docker,
+                        &["ps".into(), "-a".into(), "-q".into(), "--no-trunc".into()],
+                    )
+                };
+                let ids = peers
+                    .stdout
+                    .split_whitespace()
+                    .filter(|peer| is_container_id(peer) && *peer != id_text)
+                    .take(MAX_PEER_CONTAINERS)
+                    .map(str::to_string)
+                    .collect::<Vec<_>>();
+                // A container removed after `docker ps` fails inspect with
+                // status 1 but the others are still printed, so the output is
+                // used either way.
+                let states = if ids.is_empty() {
+                    Default::default()
+                } else {
+                    let mut args =
+                        vec!["inspect".into(), "-f".into(), CONTAINER_STATE_FORMAT.into()];
+                    args.extend(ids.iter().cloned());
+                    runner.run(&docker, &args)
+                };
+                if daemon_restart_api_evidence(&states.stdout, id_text, finished) {
+                    return DAEMON_RESTART_API.into();
+                }
                 if std::env::var("START_DEBUG").as_deref() == Ok("1") {
-                    eprintln!("[DEBUG] Exit evidence: container={} finishedAt={} eventsAvailable={} oomEvents={:?} sample={:?}", id_text, finished, events.success, events.stdout, sample);
+                    eprintln!("[DEBUG] Exit evidence: container={} finishedAt={} eventsAvailable={} oomEvents={:?} peerContainers={} peerStates={:?} sample={:?}", id_text, finished, events.success, events.stdout, ids.len(), states.stdout, sample);
                 }
             }
         }
     }
-    if oom == "true"
-        && (exit == "137" || exit.parse::<i32>().is_ok_and(|n| n < 0))
-        && recent_oom_delta(sample, finished)
-    {
+    if sampled_oom {
         return MAIN_OOM.into();
     }
-    "Exit evidence: unavailable (no attributed exit-time OOM or daemon restart evidence)".into()
+    UNAVAILABLE.into()
+}
+
+/// A watcher that shares the daemon with its task (a mounted docker.sock) dies
+/// in the same restart and never logs evidence, so `--status` collects it from
+/// the container state that survived, once per process (issue #241).
+pub fn collect_lost_watcher_evidence<R: CommandRunner>(
+    record: &crate::execution_store::ExecutionRecord,
+    finished_at: &str,
+    oom_killed: Option<bool>,
+    runner: &R,
+) -> Option<serde_json::Value> {
+    use std::collections::HashMap;
+    use std::sync::{Mutex, OnceLock};
+    static CACHE: OnceLock<Mutex<HashMap<String, serde_json::Value>>> = OnceLock::new();
+    let name = record
+        .options
+        .get("sessionName")
+        .and_then(serde_json::Value::as_str)
+        .filter(|name| !name.is_empty())?;
+    if record.options.contains_key("exitEvidence") || finished_at.is_empty() {
+        return None;
+    }
+    let key = format!("{}\0{}", name, finished_at);
+    let cache = CACHE.get_or_init(Default::default);
+    if let Some(value) = cache.lock().ok().and_then(|c| c.get(&key).cloned()) {
+        return Some(value);
+    }
+    let oom = match oom_killed {
+        Some(true) => "true",
+        Some(false) => "false",
+        None => "",
+    };
+    let line = collect(name, "", finished_at, "137", oom, runner);
+    let (main, _) = from_log(Some(&line));
+    let value = evidence_json(Some(&line), main);
+    if let Ok(mut cache) = cache.lock() {
+        cache.insert(key, value.clone());
+    }
+    Some(value)
+}
+
+/// Stores the lost watcher's evidence when the log tail carries none.
+pub(crate) fn add_lost_watcher_evidence(
+    enriched: &mut crate::execution_store::ExecutionRecord,
+    record: &crate::execution_store::ExecutionRecord,
+    state: Option<&crate::status_probe::DockerState>,
+    tail: Option<&str>,
+) {
+    let logged = tail.is_some_and(|tail| tail.lines().any(|l| l.starts_with("Exit evidence:")));
+    if let Some(evidence) = state
+        .filter(|_| !logged)
+        .and_then(|state| state.lost_watcher_evidence(record))
+    {
+        enriched.options.insert("exitEvidence".into(), evidence);
+    }
 }
 
 pub fn main(args: &[String]) {

@@ -273,6 +273,12 @@ fn resolve_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
             );
         }
         apply_end_time(&mut enriched, docker_state.as_ref(), &footer);
+        crate::exit_evidence::add_lost_watcher_evidence(
+            &mut enriched,
+            record,
+            docker_state.as_ref(),
+            tail.as_deref(),
+        );
     }
 
     enriched

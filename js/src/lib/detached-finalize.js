@@ -170,6 +170,7 @@ function finalizeDetachedExecution(options = {}) {
   );
   record.options.exitEvidence = {
     daemonRestart: logged.daemonRestart,
+    ...evidence.sourceOf(logged),
     mainOom:
       !logged.daemonRestart &&
       (logged.mainOom ||

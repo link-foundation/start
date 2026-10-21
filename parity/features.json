@@ -1974,7 +1974,8 @@
           "js/test/exit-reason.js",
           "js/test/regression-209.js",
           "js/test/regression-225.js",
-          "js/test/regression-226.js"
+          "js/test/regression-226.js",
+          "js/test/regression-241.js"
         ]
       },
       "rust": {
@@ -1995,7 +1996,8 @@
           "rust/tests/regression_201.rs",
           "rust/tests/regression_209.rs",
           "rust/tests/regression_225.rs",
-          "rust/tests/regression_226.rs"
+          "rust/tests/regression_226.rs",
+          "rust/tests/regression_241.rs"
         ]
       },
       "manualRust": [

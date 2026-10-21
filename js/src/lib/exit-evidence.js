@@ -5,6 +5,16 @@ const MAIN_OOM = 'Exit evidence: main-oom (recent cgroup oom_kill delta)';
 const DOCKER_OOM = 'Exit evidence: main-oom (recent Docker oom event)';
 const DAEMON_RESTART =
   'Exit evidence: docker-daemon-restart (Docker service journal)';
+const DAEMON_RESTART_API =
+  'Exit evidence: docker-daemon-restart (Docker API: containers finished together)';
+const DAEMON_RESTART_PREFIX = 'Exit evidence: docker-daemon-restart';
+// dockerd gives every container its stop timeout and kills the rest within its
+// 15 s shutdown timeout, so the containers of one restart finish this close.
+const DAEMON_RESTART_WINDOW_MS = 15000;
+const CONTAINER_STATE_FORMAT =
+  '{{.Id}} {{.State.FinishedAt}} {{.State.StartedAt}} {{.State.ExitCode}} {{.State.OOMKilled}}';
+// Bounds one `docker inspect` call on hosts with many stopped containers.
+const MAX_PEER_CONTAINERS = 256;
 
 function recentOomDelta(sample, finishedAt) {
   const fields = String(sample || '')
@@ -39,6 +49,42 @@ function daemonRestartEvidence(journal, containerId) {
   return Boolean(exited && forced);
 }
 
+/**
+ * Socket-only daemon-restart evidence (issue #241): another container that
+ * finished within the same shutdown window, was not OOM-killed, and was either
+ * stopped by a signal (137/143) or started again afterwards (restart policy;
+ * moby resets its ExitCode to 0 but keeps FinishedAt). `docker events` cannot
+ * be used: its buffer does not survive the restart, while State does.
+ * @param {string} states - `CONTAINER_STATE_FORMAT` lines, one per container
+ */
+function daemonRestartApiEvidence(states, containerId, finishedAt) {
+  const finished = Date.parse(finishedAt);
+  return (
+    Number.isFinite(finished) &&
+    String(states || '')
+      .split('\n')
+      .some((line) => {
+        const [id, peerFinished, peerStarted, exit, oom] = line
+          .trim()
+          .split(/\s+/);
+        const end = Date.parse(peerFinished);
+        if (
+          !/^[a-f0-9]{64}$/.test(id || '') ||
+          id === containerId ||
+          oom !== 'false' ||
+          !Number.isFinite(end) ||
+          end <= 0 ||
+          Math.abs(end - finished) > DAEMON_RESTART_WINDOW_MS
+        ) {
+          return false;
+        }
+        return (
+          exit === '137' || exit === '143' || Date.parse(peerStarted) > end
+        );
+      })
+  );
+}
+
 function recentDockerOom(events, finishedAt) {
   const finished = Date.parse(finishedAt) / 1000;
   return (
@@ -68,6 +114,10 @@ function collectExitEvidence(
   // A local journal cannot diagnose a remote daemon. Require a local socket.
   const local =
     !process.env.DOCKER_HOST || process.env.DOCKER_HOST.startsWith('unix://');
+  const sampledOom =
+    (oomKilled === true || oomKilled === 'true') &&
+    (Number(exitCode) === 137 || Number(exitCode) < 0) &&
+    recentOomDelta(sample, finishedAt);
   if (
     Number(exitCode) === 137 &&
     containerName &&
@@ -114,18 +164,35 @@ function collectExitEvidence(
       if (events.success && recentDockerOom(events.stdout, finishedAt)) {
         return DOCKER_OOM;
       }
+      // Without a host journal (a mounted docker.sock, a remote daemon) the
+      // only record of the restart is the state of the other containers.
+      const peers = sampledOom
+        ? { success: false, stdout: '' }
+        : run(docker, ['ps', '-a', '-q', '--no-trunc']);
+      const ids = peers.stdout
+        .split(/\s+/)
+        .filter(
+          (peer) => /^[a-f0-9]{64}$/.test(peer) && peer !== id.stdout.trim()
+        )
+        .slice(0, MAX_PEER_CONTAINERS);
+      // A container removed after `docker ps` fails inspect with status 1 but
+      // the others are still printed, so the output is used either way.
+      const states = ids.length
+        ? run(docker, ['inspect', '-f', CONTAINER_STATE_FORMAT, ...ids])
+        : { success: false, stdout: '' };
+      if (
+        daemonRestartApiEvidence(states.stdout, id.stdout.trim(), finishedAt)
+      ) {
+        return DAEMON_RESTART_API;
+      }
       if (process.env.START_DEBUG === '1') {
         console.error(
-          `[DEBUG] Exit evidence: container=${id.stdout.trim()} finishedAt=${finishedAt} eventsAvailable=${events.success} oomEvents=${JSON.stringify(events.stdout)} sample=${JSON.stringify(sample || '')}`
+          `[DEBUG] Exit evidence: container=${id.stdout.trim()} finishedAt=${finishedAt} eventsAvailable=${events.success} oomEvents=${JSON.stringify(events.stdout)} peerContainers=${ids.length} peerStates=${JSON.stringify(states.stdout)} sample=${JSON.stringify(sample || '')}`
         );
       }
     }
   }
-  if (
-    (oomKilled === true || oomKilled === 'true') &&
-    (Number(exitCode) === 137 || Number(exitCode) < 0) &&
-    recentOomDelta(sample, finishedAt)
-  ) {
+  if (sampledOom) {
     return MAIN_OOM;
   }
   return 'Exit evidence: unavailable (no attributed exit-time OOM or daemon restart evidence)';
@@ -134,10 +201,70 @@ function collectExitEvidence(
 function fromLog(log) {
   const lines = String(log || '').split('\n');
   const last = lines.filter((line) => line.startsWith('Exit evidence:')).at(-1);
+  const daemonRestart = Boolean(last?.startsWith(DAEMON_RESTART_PREFIX));
   return {
     mainOom: last === MAIN_OOM || last === DOCKER_OOM,
-    daemonRestart: last === DAEMON_RESTART,
+    daemonRestart,
+    // Which source attributed the restart: the host journal or the API.
+    ...(daemonRestart
+      ? { daemonRestartSource: last === DAEMON_RESTART_API ? 'api' : 'journal' }
+      : {}),
   };
+}
+
+/** The stored `daemonRestartSource`, kept only when a restart was attributed. */
+function sourceOf(logged) {
+  return logged?.daemonRestart && logged.daemonRestartSource
+    ? { daemonRestartSource: logged.daemonRestartSource }
+    : {};
+}
+
+// A watcher that shares the daemon with its task (a mounted docker.sock) dies
+// in the same restart and never logs evidence, so `--status` collects it from
+// the container state that survived, once per process (issue #241).
+const lostWatcherEvidence = new Map();
+function collectLostWatcherEvidence(record, state, runner) {
+  const name = record?.options?.sessionName;
+  if (
+    !name ||
+    record.options.exitEvidence ||
+    state?.running !== false ||
+    state.exitCode !== 137 ||
+    !state.finishedAt
+  ) {
+    return null;
+  }
+  const key = `${name}\0${state.finishedAt}`;
+  if (!lostWatcherEvidence.has(key)) {
+    const logged = fromLog(
+      collectExitEvidence(
+        {
+          containerName: name,
+          finishedAt: state.finishedAt,
+          exitCode: state.exitCode,
+          oomKilled: state.oomKilled,
+        },
+        runner
+      )
+    );
+    lostWatcherEvidence.set(key, {
+      mainOom: logged.mainOom,
+      daemonRestart: logged.daemonRestart,
+      ...sourceOf(logged),
+    });
+  }
+  return { ...lostWatcherEvidence.get(key) };
+}
+
+/** Stores the lost watcher's evidence when the log tail carries none. */
+function addLostWatcherEvidence(enriched, record, state, logTail) {
+  const lost =
+    state && !/^Exit evidence:/m.test(logTail || '')
+      ? collectLostWatcherEvidence(record, state)
+      : null;
+  if (lost) {
+    enriched.options = { ...enriched.options, exitEvidence: lost };
+  }
 }
 
 function buildExitEvidenceSnippet(containerName, quotedLogPath) {
@@ -149,11 +276,16 @@ module.exports = {
   MAIN_OOM,
   DOCKER_OOM,
   DAEMON_RESTART,
+  DAEMON_RESTART_API,
   recentOomDelta,
+  daemonRestartApiEvidence,
   recentDockerOom,
   daemonRestartEvidence,
   collectExitEvidence,
   fromLog,
+  sourceOf,
+  collectLostWatcherEvidence,
+  addLostWatcherEvidence,
   buildExitEvidenceSnippet,
 };
 if (require.main === module) {

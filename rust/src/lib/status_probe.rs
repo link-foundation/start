@@ -30,6 +30,22 @@ pub struct DockerState {
     finished_at: Option<String>,
 }
 
+impl DockerState {
+    /// Exit evidence for a stopped `137` container whose watcher never logged
+    /// any (issue #241).
+    pub fn lost_watcher_evidence(&self, record: &ExecutionRecord) -> Option<serde_json::Value> {
+        if self.running || self.exit_code != Some(137) {
+            return None;
+        }
+        crate::exit_evidence::collect_lost_watcher_evidence(
+            record,
+            self.finished_at.as_deref()?,
+            self.oom_killed,
+            &crate::execution_control::SystemCommandRunner,
+        )
+    }
+}
+
 /// Inspect the live state of a detached docker container by name.
 ///
 /// Distinguishes "running", "stopped (with a real exit code)", and "cannot be

@@ -239,7 +239,7 @@ pub fn finalize_detached_execution_with_removal(
                 )));
     record.options.insert(
         "exitEvidence".into(),
-        serde_json::json!({"mainOom": main, "daemonRestart": daemon}),
+        crate::exit_evidence::evidence_json(tail.as_deref(), main),
     );
     let reason =
         resolve_reason(&record).or_else(|| lost.then(|| WATCHER_LOST_CONTAINER.to_string()));
