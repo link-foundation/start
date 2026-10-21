@@ -451,30 +451,48 @@
           "js/src/lib/docker-runtime-args.js",
           "js/src/lib/docker-resource-options.js",
           "js/src/lib/docker-network-options.js",
-          "js/src/lib/docker-labels.js"
+          "js/src/lib/docker-labels.js",
+          "js/src/lib/docker-init-option.js"
         ],
         "tests": [
           "js/test/docker-runtime-options.js",
           "js/test/regression-199.js",
           "js/test/regression-230.js",
-          "js/test/regression-236.js"
+          "js/test/regression-236.js",
+          "js/test/regression-244.js"
         ]
       },
       "rust": {
         "implementation": [
           "rust/src/lib/docker_resource_options.rs",
+          "rust/src/lib/docker_init_option.rs",
           "rust/src/lib/isolation_metadata.rs",
           "rust/src/lib/isolation_metadata_cases.rs"
         ],
         "tests": [
           "rust/tests/regression_199.rs",
           "rust/tests/regression_230.rs",
-          "rust/tests/regression_236.rs"
+          "rust/tests/regression_236.rs",
+          "rust/tests/regression_244.rs"
         ]
       },
       "manualRust": [
         {
           "path": "rust/src/lib/docker_resource_options.rs",
+          "reason": "Typed native representation and control flow for docker-options; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/211",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/docker_init_option.rs",
           "reason": "Typed native representation and control flow for docker-options; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
           "blockers": [
             "https://github.com/link-foundation/meta-language/issues/222",

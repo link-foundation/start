@@ -116,6 +116,7 @@ fn isolation_arguments_match_shared_goldens() {
         let input = &fixture["options"];
         let options = IsolationOptions {
             privileged: input["privileged"].as_bool().unwrap_or(false),
+            init: input["init"].as_bool().unwrap_or(false),
             env: strings(&input["env"]),
             labels: strings(&input["labels"]),
             volumes: strings(&input["volumes"]),

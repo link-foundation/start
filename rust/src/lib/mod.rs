@@ -51,6 +51,7 @@ pub mod detached_finalize;
 pub mod detached_output;
 pub(crate) mod docker_cleanup;
 pub mod docker_command_handoff;
+pub mod docker_init_option;
 pub mod docker_inspect_batch;
 mod docker_network_lifecycle;
 pub mod docker_post_mortem;

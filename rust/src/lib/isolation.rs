@@ -58,6 +58,8 @@ pub struct IsolationOptions {
     pub resume_count: u32,
     /// Run docker container in privileged mode
     pub privileged: bool,
+    /// `docker run --init`: tini as PID 1 reaps orphans (issue #244)
+    pub init: bool,
     /// First Docker network name (compatibility accessor)
     pub network: Option<String>,
     /// Ordered Docker network names
@@ -113,6 +115,7 @@ impl Default for IsolationOptions {
             root_session: None,
             resume_count: 0,
             privileged: false,
+            init: false,
             network: None,
             networks: Vec::new(),
             network_aliases: Vec::new(),
