@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.29.0] - 2026-10-22
+
+Manual minor release.
+
 ## [0.28.0] - 2026-10-22
 
 CI/CD no longer reports false results (#234). `Cargo.lock` follows each release bump. Rust releases wait for every check of the Rust stage. A failing test in the tarpaulin run is reported as a failed test rather than as low coverage. Every snapshot-resume test takes its own snapshot lock instead of the host-wide one. Release step outputs reach `run:` blocks through `env`, and the workflow invariants test that path-filtered workflows re-run when their scripts change and that release pull requests are opened with a token that triggers their checks.
