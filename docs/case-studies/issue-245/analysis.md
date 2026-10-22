@@ -19,6 +19,18 @@ parity (`parity/features.json`). The pull request has one JS changeset
 (`js/.changeset/issue-245-open-issues.md`) and one Rust changelog fragment per
 issue (`rust/changelog.d/`).
 
+## CI failures on the pushed #243 commit
+
+JavaScript CI/CD run 39692685074 on `b4a1a82` failed in three jobs. The
+failed-job log is preserved in `ci-logs/issue-245/js-ci-39692685074-failed.log.gz`.
+Rust CI/CD did not start, because it waits for the JavaScript stage.
+
+| Job | Error | Root cause | Fix |
+| --- | --- | --- | --- |
+| Behavioral Parity | `cli: change the JavaScript and Rust implementations or behavioral tests together` | Against the run's base `3d11f6bf`, the only `cli` file that changed was `rust/src/lib/mod.rs` (the new #243 modules). #244 changes `usage.js` and `usage.rs`, which balances `cli`, but then the same check reported `docker-cleanup` and `parity-threshold`, because `build_docker_runtime_args` lives in `docker_cleanup.rs` and the Rust golden harness gained an `init` field while their JS counterparts were untouched. | Shared `cli-parsing` goldens for `--init`, `--no-init`, the default and `--init` without docker (`parity/fixtures/contracts.json`). The JS golden harness now parses them without a host `START_COMMAND_DOCKER_INIT`, and the Rust one compares `init`. A JS test checks that `--init` is forwarded only to a remaining docker level of a stack. The check passes with `PARITY_BASE_SHA` set to `origin/main`, `3d11f6bf` and `b4a1a82`. |
+| Test (Bun on ubuntu-24.04), "Verify Docker cgroup sampler polling" | `Real Docker polling or memory sample regression` (`experiments/issue-238-real-docker.mjs:107`) | The probe from #238 still expected one `docker exec` per round in the hidden-cgroup mode. #242 replaced those with one long-lived `docker exec -i`. The uploaded trace shows exactly that, with `exec: 1`, `liveness: 1` and a correct `sample=33554432` sample. | The probe now requires exactly one `exec -i` in hidden mode and none with a readable local cgroup. A return to per-round execs fails it. |
+| Test (Bun on windows-2025) | `renders the per-record templates from the batch only inside a query`: `null` instead of the batched answer | The test's fake `docker` is a `#!/bin/sh` script, which Windows cannot spawn, so the batch was empty. The other fake-docker tests in the file were already skipped on Windows, and the Rust counterpart is in a `#[cfg(unix)]` module. | The test is skipped on Windows like its neighbours. The pure parsing tests still run there. |
+
 ## What can only be proven after merge
 
 - **#240:** the release jobs run only on a push to `main`, so the first main push

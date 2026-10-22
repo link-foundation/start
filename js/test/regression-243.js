@@ -35,6 +35,8 @@ const {
 } = require('../src/lib/store-decode-cache');
 
 const posix = process.platform === 'win32' ? describe.skip : describe;
+// The fake docker is a shell script, which Windows cannot spawn.
+const posixIt = process.platform === 'win32' ? it.skip : it;
 const tempDirs = [];
 
 function makeTempDir(prefix) {
@@ -319,30 +321,38 @@ describe('issue #243: batched inspect answers', () => {
     expect(answers.has('x')).toBe(false);
   });
 
-  it('renders the per-record templates from the batch only inside a query', () => {
-    expect(prefetchedInspect('{{.Id}}', 'kept-c')).toBeNull();
-    withFakeDocker('batch', () => {
-      const docker = {
-        dockerCommand: process.env.START_DOCKER_BIN,
-        spawnOptions: { encoding: 'utf8' },
-      };
-      withDockerInspectBatch(
-        [dockerRecord('kept-c'), dockerRecord('nope')],
-        docker,
-        () => {
-          expect(prefetchedInspect('{{.Id}} {{.State.Pid}}', 'kept-c')).toEqual(
-            { success: true, status: 0, stdout: 'cccc3333 0\n', stderr: '' }
-          );
-          expect(prefetchedInspect('{{.Config.Image}}', 'kept-c')).toBeNull();
-          expect(prefetchedInspect('{{.Id}}', 'nope').stderr).toMatch(
-            /No such container: nope/
-          );
-          expect(prefetchedInspect('{{.Id}}', 'unrelated')).toBeNull();
-        }
-      );
-    });
-    expect(prefetchedInspect('{{.Id}}', 'kept-c')).toBeNull();
-  });
+  posixIt(
+    'renders the per-record templates from the batch only inside a query',
+    () => {
+      expect(prefetchedInspect('{{.Id}}', 'kept-c')).toBeNull();
+      withFakeDocker('batch', () => {
+        const docker = {
+          dockerCommand: process.env.START_DOCKER_BIN,
+          spawnOptions: { encoding: 'utf8' },
+        };
+        withDockerInspectBatch(
+          [dockerRecord('kept-c'), dockerRecord('nope')],
+          docker,
+          () => {
+            expect(
+              prefetchedInspect('{{.Id}} {{.State.Pid}}', 'kept-c')
+            ).toEqual({
+              success: true,
+              status: 0,
+              stdout: 'cccc3333 0\n',
+              stderr: '',
+            });
+            expect(prefetchedInspect('{{.Config.Image}}', 'kept-c')).toBeNull();
+            expect(prefetchedInspect('{{.Id}}', 'nope').stderr).toMatch(
+              /No such container: nope/
+            );
+            expect(prefetchedInspect('{{.Id}}', 'unrelated')).toBeNull();
+          }
+        );
+      });
+      expect(prefetchedInspect('{{.Id}}', 'kept-c')).toBeNull();
+    }
+  );
 });
 
 describe('issue #243: the store is decoded once per content', () => {

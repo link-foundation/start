@@ -103,6 +103,11 @@ second stream gets no sample, and per-round execs follow.
     `parity/fixtures/cgroup-sampler-start-242.sh`.
 - `js/test/regression-238.js` / `rust/tests/regression_238.rs` now assert the
   counts above. regression-182 and regression-192 pass unchanged.
+- `experiments/issue-238-real-docker.mjs` (the Linux CI probe against a real
+  daemon) now requires exactly one `docker exec -i` with a hidden cgroup and
+  none with a readable one. Before, it required one exec per round and failed
+  on the first CI run after this change. Its trace there already showed the
+  single stream exec and a correct 32 MiB sample.
 - `ci-logs/issue-242/regression-242-before.txt`: all 13 JS tests fail on the
   original code.
 - `ci-logs/issue-242/real-docker-after.txt`
