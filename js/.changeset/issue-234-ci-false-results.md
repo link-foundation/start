@@ -1,5 +1,0 @@
----
-'start-command': patch
----
-
-CI/CD no longer reports false results (#234). A rejected `npm publish` or any failing release command now fails the release instead of printing success, and the published version is confirmed on the registry: npm gets up to 20 minutes to show it, and a "cannot publish over" conflict is read as "already landed" rather than retried. A release push that loses the race for `main` is rebased and retried. Releases wait for every check their stage requires. A failing Rust test is reported as a failed test rather than as low coverage. `bun test -t <pattern>` keeps the 30s default timeout. Snapshot-resume tests in both languages use a private snapshot lock. The link checker fails on every broken live link, re-checks transient 429/5xx answers, persists its cache and uploads its report. ESLint warnings fail CI and the pre-commit hook. The changeset PR is opened with `RELEASE_PR_TOKEN` so its checks run. Step outputs reach `run:` blocks through `env`, tool versions are pinned, path-filtered workflows re-run when their scripts change, and the npm-publish tests no longer reach the real npm on macOS.

@@ -1,5 +1,25 @@
 # start-command
 
+## 0.39.0
+
+### Minor Changes
+
+- CI/CD no longer reports false results (#234). A rejected `npm publish` or any failing release command now fails the release instead of printing success, and the published version is confirmed on the registry: npm gets up to 20 minutes to show it, and a "cannot publish over" conflict is read as "already landed" rather than retried. A release push that loses the race for `main` is rebased and retried. Releases wait for every check their stage requires. A failing Rust test is reported as a failed test rather than as low coverage. `bun test -t <pattern>` keeps the 30s default timeout. Snapshot-resume tests in both languages use a private snapshot lock. The link checker fails on every broken live link, re-checks transient 429/5xx answers, persists its cache and uploads its report. ESLint warnings fail CI and the pre-commit hook. The changeset PR is opened with `RELEASE_PR_TOKEN` so its checks run. Step outputs reach `run:` blocks through `env`, tool versions are pinned, path-filtered workflows re-run when their scripts change, and the npm-publish tests no longer reach the real npm on macOS.
+
+  Support Docker `--memory-reservation` with sizes, daemon percentages and percentage ranges. Validate the soft cap against the effective hard memory limit, record it in status, and preserve or override it across resumes and recovery.
+
+  Reduce Docker cgroup sampler polling with a configurable five-second default, one namespace lookup per sampler, and local cgroup liveness checks. Set `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS` to a positive whole number of seconds to override the default for attached and detached runs.
+
+  Main pushes publish again (#240). Since #234 the Release job was skipped on every push to `main`: at job level the wildcard `needs.*.result` list also saw the deliberately skipped changeset check behind `test`/`coverage`. Release now compares each needed job by name, and the JavaScript Stage prints every term of the release condition and fails a main push whose release was skipped although all of its needs succeeded.
+
+  Attribute a Docker daemon restart without the host journal (#241). With a mounted `docker.sock` (Docker-outside-of-Docker) or a remote daemon, an exit-137 task is now reported as `killed (docker daemon restart)` when another container finished within the 15 s shutdown window with exit 137/143, or was started again after it, and was not OOM-killed. `exitEvidence.daemonRestartSource` records whether the host journal or the Docker API supported the attribution, and `--status` collects the evidence itself when the detached watcher died with the daemon before it could log any.
+
+  Sample Docker cgroup counters through one long-lived `docker exec -i` per run when the cgroup is only readable through the daemon (a mounted `docker.sock`). The host paces it with one tick per interval on stdin, so the container runs only shell builtins and the stream ends with the sampler; the per-round exec stays as a fallback. Docker is asked for `{{.State.Running}}` only after a round without a sample, and `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS=off` disables sampling.
+
+  `$ --status` and `$ --list` cost far less with many records (#243). The store is decoded once per content within a process, and a JSON copy of the decoded records next to `executions.lino` (tagged with the store's SHA-256) lets the next process skip the decode entirely. One `docker inspect --type container` now answers every docker probe of a query instead of one or two processes per record, and records whose container is already marked removed are no longer probed. Output is unchanged; probes the batch cannot answer (an old or stubbed `docker`) run one by one as before.
+
+  `--init` / `--no-init` run Docker's bundled tini (`docker run --init`) as PID 1 for docker isolation, so orphaned processes of a long-running task are reaped instead of piling up as zombies (#244). The default stays off; `START_COMMAND_DOCKER_INIT=1` turns it on for every docker launch on a host, and `--no-init` overrides that. The choice is stored with the record, shown as an `init` row in the start block and in `--status`, and carried into `--resume` snapshots and stacked launches; records from before keep running without it. Exit codes and OOM evidence are unchanged, but `--stop` (`docker stop`) now ends a command without a SIGTERM handler with 143 at once instead of 137 after the grace period.
+
 ## 0.38.0
 
 ### Minor Changes
