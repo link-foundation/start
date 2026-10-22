@@ -356,6 +356,23 @@ jobs:
           path: issue-209-evidence/
           if-no-files-found: ignore
 
+      - name: Verify docker --init keeps exit evidence (Linux)
+        if: runner.os == 'Linux'
+        env:
+          ISSUE_244_REQUIRE_OOM: '1'
+        run: |
+          set -o pipefail
+          mkdir -p issue-244-evidence
+          bun experiments/issue-244-tini-exit-evidence.js 2>&1 | tee issue-244-evidence/tini-exit-evidence.txt
+
+      - name: Preserve --init exit evidence (Linux)
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: issue-244-docker-evidence
+          path: issue-244-evidence/
+          if-no-files-found: ignore
+
       - name: Check documented examples (JavaScript)
         if: runner.os == 'Linux'
         run: bun scripts/check-doc-examples.mjs --implementation js
