@@ -119,6 +119,7 @@ function parseIsolationMetadata(extraLines) {
     session: null,
     endpoint: null,
     user: null,
+    init: false,
   };
 
   for (const line of extraLines) {
@@ -143,6 +144,12 @@ function parseIsolationMetadata(extraLines) {
     const imageMatch = line.match(/\[Isolation\] Image: (.+)/);
     if (imageMatch) {
       metadata.image = imageMatch[1];
+      continue;
+    }
+
+    // Parse [Isolation] Init: true (docker run --init, issue #244)
+    if (line === '[Isolation] Init: true') {
+      metadata.init = true;
       continue;
     }
 
@@ -205,6 +212,10 @@ function generateIsolationLines(metadata, containerOrScreenName = null) {
     if (metadata.endpoint) {
       lines.push(createTimelineLine('endpoint', metadata.endpoint));
     }
+  }
+
+  if (metadata.init) {
+    lines.push(createTimelineLine('init', 'true'));
   }
 
   if (metadata.user) {

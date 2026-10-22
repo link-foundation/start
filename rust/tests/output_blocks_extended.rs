@@ -158,6 +158,7 @@ mod generate_isolation_lines_tests {
             image: Some("ubuntu:latest".to_string()),
             endpoint: None,
             user: None,
+            init: false,
         };
         let lines = generate_isolation_lines(&meta, None);
         // Should contain isolation metadata
@@ -174,6 +175,7 @@ mod generate_isolation_lines_tests {
             image: None,
             endpoint: None,
             user: None,
+            init: false,
         };
         let lines = generate_isolation_lines(&meta, None);
         let all = lines.join("\n");

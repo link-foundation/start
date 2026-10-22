@@ -49,7 +49,7 @@ pub(crate) fn build_docker_kept_reason_snippet() -> String {
 }
 
 /// Build the extra `docker run` arguments contributed by runtime options
-/// (--privileged, --env/-e, --volume/-v, --mount, --network,
+/// (--privileged, --init, --env/-e, --volume/-v, --mount, --network,
 /// --network-alias, resource limits) and the START_* execution identity.
 pub fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<String> {
     let mut args: Vec<String> = Vec::new();
@@ -83,6 +83,10 @@ pub fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<String> {
     }
     if options.privileged {
         args.insert(0, "--privileged".into());
+    }
+    // tini as PID 1 reaps orphaned processes (issue #244).
+    if options.init {
+        args.insert(usize::from(options.privileged), "--init".into());
     }
     // Already in `--flag=value` form (issue #176).
     args.extend(options.resource_limits.iter().cloned());

@@ -356,6 +356,23 @@ jobs:
           path: issue-209-evidence/
           if-no-files-found: ignore
 
+      - name: Verify docker --init keeps exit evidence (Linux)
+        if: runner.os == 'Linux'
+        env:
+          ISSUE_244_REQUIRE_OOM: '1'
+        run: |
+          set -o pipefail
+          mkdir -p issue-244-evidence
+          bun experiments/issue-244-tini-exit-evidence.js 2>&1 | tee issue-244-evidence/tini-exit-evidence.txt
+
+      - name: Preserve --init exit evidence (Linux)
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: issue-244-docker-evidence
+          path: issue-244-evidence/
+          if-no-files-found: ignore
+
       - name: Check documented examples (JavaScript)
         if: runner.os == 'Linux'
         run: bun scripts/check-doc-examples.mjs --implementation js
@@ -510,13 +527,18 @@ jobs:
     # that waited only for lint and test could publish while coverage or
     # parity was still running or already red (#234).
     needs: [syntax-check, lint, test, coverage, parity]
-    if: |
-      !cancelled() &&
+    # Name every result: at job level the wildcard needs result list also
+    # sees the skipped changeset-check behind test/coverage, so a "no result
+    # is skipped" check skipped every main release since #234 (issue #240).
+    if: >-
+      ${{ !cancelled() &&
       github.ref == 'refs/heads/main' &&
       github.event_name == 'push' &&
-      !contains(needs.*.result, 'failure') &&
-      !contains(needs.*.result, 'cancelled') &&
-      !contains(needs.*.result, 'skipped')
+      needs.syntax-check.result == 'success' &&
+      needs.lint.result == 'success' &&
+      needs.test.result == 'success' &&
+      needs.coverage.result == 'success' &&
+      needs.parity.result == 'success' }}
     environment: release-main
     runs-on: ubuntu-24.04
     # Room for scripts/npm-publish.mjs to wait 20 minutes for npm to show
@@ -626,14 +648,17 @@ jobs:
     name: Instant Release
     # A manual release is validated like an automatic one (#234).
     needs: [syntax-check, lint, test, coverage, parity]
-    if: |
-      !cancelled() &&
+    # Named results, as in release (issue #240).
+    if: >-
+      ${{ !cancelled() &&
       github.event_name == 'workflow_dispatch' &&
       github.ref == 'refs/heads/main' &&
       github.event.inputs.release_mode == 'instant' &&
-      !contains(needs.*.result, 'failure') &&
-      !contains(needs.*.result, 'cancelled') &&
-      !contains(needs.*.result, 'skipped')
+      needs.syntax-check.result == 'success' &&
+      needs.lint.result == 'success' &&
+      needs.test.result == 'success' &&
+      needs.coverage.result == 'success' &&
+      needs.parity.result == 'success' }}
     environment: release-main
     runs-on: ubuntu-24.04
     # Room for scripts/npm-publish.mjs to wait 20 minutes for npm to show
@@ -848,7 +873,7 @@ jobs:
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
           IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
-        run: node scripts/check-stage-status.mjs --required syntax-check,lint,test,coverage,parity
+        run: node scripts/check-stage-status.mjs --required syntax-check,lint,test,coverage,parity --release 'release:syntax-check,lint,test,coverage,parity'
 
   # Same checkout SHA and event context; skipped/failed/cancelled JS never calls Rust.
   rust-stage:

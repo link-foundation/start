@@ -571,7 +571,7 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
     let described = describe_exit_code_str(&facts.exit_code);
     record.options.insert(
         "exitEvidence".into(),
-        json!({"mainOom": terminal_oom, "daemonRestart": daemon_restart}),
+        crate::exit_evidence::evidence_json(tail.as_deref(), terminal_oom),
     );
     if let Some(attempt) = next_attempt.as_mut() {
         record.status = ExecutionStatus::Executed;

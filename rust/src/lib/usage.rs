@@ -30,6 +30,7 @@ Options:
   --env, -e <KEY=VALUE> Environment variable for docker container (repeatable, docker only)
   --label <KEY=VALUE>   Container attribution (repeatable, docker only; start-command.* reserved)
   --privileged          Run docker container in privileged mode (docker only)
+  --init, --no-init     Run tini as PID 1 to reap orphaned processes (docker only; default START_COMMAND_DOCKER_INIT=1)
   --network <name>      Connect to a named network (repeatable, docker only)
   --network-alias <alias> Add alias to the first network (repeatable, docker only)
   --on-kill-resume <N>  Resume a killed (exit 137 / OOM) detached docker session up to N times
@@ -92,6 +93,7 @@ Examples:
   start --isolated docker --image oven/bun:latest -- bun install
   start -i docker -v ~/.config/gh:/root/.config/gh -e TOKEN=abc -- gh repo list
   start -i docker --image konard/hive-mind-dind:latest --privileged -- solve ...
+  start -i docker --init -d -- solve ...   # tini reaps zombies of long-running tasks
   start --isolated ssh --endpoint user@remote.server -- ls -la
   start --isolated-user -- npm test
   start -u myuser -- npm start

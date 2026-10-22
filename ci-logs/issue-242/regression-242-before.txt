@@ -1,0 +1,178 @@
+bun test v1.4.3 (c6da4a4d3)
+
+test/regression-242.js:
+56 |   for (const [name, content] of Object.entries(files)) {
+57 |     fs.writeFileSync(path.join(cgroup, name), content);
+58 |   }
+59 |   const result = spawnSync(
+60 |     '/bin/sh',
+61 |     ['-c', buildCgroupStreamScript(), CGROUP_STREAM_NAME, cgroup],
+                ^
+TypeError: buildCgroupStreamScript is not a function. (In 'buildCgroupStreamScript()', 'buildCgroupStreamScript' is undefined)
+      at stream (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:61:12)
+      at <anonymous> (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:76:20)
+(fail) issue #242: the long-lived sampler exec > prints one line per host tick using only builtins [2.58ms]
+56 |   for (const [name, content] of Object.entries(files)) {
+57 |     fs.writeFileSync(path.join(cgroup, name), content);
+58 |   }
+59 |   const result = spawnSync(
+60 |     '/bin/sh',
+61 |     ['-c', buildCgroupStreamScript(), CGROUP_STREAM_NAME, cgroup],
+                ^
+TypeError: buildCgroupStreamScript is not a function. (In 'buildCgroupStreamScript()', 'buildCgroupStreamScript' is undefined)
+      at stream (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:61:12)
+      at <anonymous> (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:90:20)
+(fail) issue #242: the long-lived sampler exec > prints - for counters the kernel does not provide [0.95ms]
+56 |   for (const [name, content] of Object.entries(files)) {
+57 |     fs.writeFileSync(path.join(cgroup, name), content);
+58 |   }
+59 |   const result = spawnSync(
+60 |     '/bin/sh',
+61 |     ['-c', buildCgroupStreamScript(), CGROUP_STREAM_NAME, cgroup],
+                ^
+TypeError: buildCgroupStreamScript is not a function. (In 'buildCgroupStreamScript()', 'buildCgroupStreamScript' is undefined)
+      at stream (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:61:12)
+      at <anonymous> (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:96:20)
+(fail) issue #242: the long-lived sampler exec > prints nothing before the first tick [1.05ms]
+56 |   for (const [name, content] of Object.entries(files)) {
+57 |     fs.writeFileSync(path.join(cgroup, name), content);
+58 |   }
+59 |   const result = spawnSync(
+60 |     '/bin/sh',
+61 |     ['-c', buildCgroupStreamScript(), CGROUP_STREAM_NAME, cgroup],
+                ^
+TypeError: buildCgroupStreamScript is not a function. (In 'buildCgroupStreamScript()', 'buildCgroupStreamScript' is undefined)
+      at stream (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:61:12)
+      at <anonymous> (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:107:22)
+(fail) issue #242: the long-lived sampler exec > exits 3 on missing memory.events [0.71ms]
+56 |   for (const [name, content] of Object.entries(files)) {
+57 |     fs.writeFileSync(path.join(cgroup, name), content);
+58 |   }
+59 |   const result = spawnSync(
+60 |     '/bin/sh',
+61 |     ['-c', buildCgroupStreamScript(), CGROUP_STREAM_NAME, cgroup],
+                ^
+TypeError: buildCgroupStreamScript is not a function. (In 'buildCgroupStreamScript()', 'buildCgroupStreamScript' is undefined)
+      at stream (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:61:12)
+      at <anonymous> (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:107:22)
+(fail) issue #242: the long-lived sampler exec > exits 3 on memory.events without oom_kill [0.73ms]
+56 |   for (const [name, content] of Object.entries(files)) {
+57 |     fs.writeFileSync(path.join(cgroup, name), content);
+58 |   }
+59 |   const result = spawnSync(
+60 |     '/bin/sh',
+61 |     ['-c', buildCgroupStreamScript(), CGROUP_STREAM_NAME, cgroup],
+                ^
+TypeError: buildCgroupStreamScript is not a function. (In 'buildCgroupStreamScript()', 'buildCgroupStreamScript' is undefined)
+      at stream (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:61:12)
+      at <anonymous> (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:107:22)
+(fail) issue #242: the long-lived sampler exec > exits 3 on a malformed counter [1.07ms]
+110 |     });
+111 |   }
+112 | 
+113 |   it('starts the stream under a recognisable name', () => {
+114 |     const snippet = buildCgroupSamplerStartSnippet('task');
+115 |     expect(snippet).toContain("| docker exec -i 'task' sh -c ");
+                          ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "| docker exec -i 'task' sh -c "
+Received: "__start_command_cgroup_dir() { __scd_id=$(docker inspect -f '{{.Id}}' \"$1\" 2>/dev/null); [ -n \"$__scd_id\" ] || return 1; __scd_pid=$(docker inspect -f '{{.State.Pid}}' \"$1\" 2>/dev/null); __scd_rel=''; case \"$__scd_pid\" in ''|0|*[!0-9]*) ;; *) __scd_rel=$(sed -n 's/^0:://p' \"${START_COMMAND_PROC_ROOT:-/proc}/$__scd_pid/cgroup\" 2>/dev/null);; esac; __scd_root=${START_COMMAND_CGROUP_ROOT:-/sys/fs/cgroup}; for __scd_dir in ${__scd_rel:+\"$__scd_root$__scd_rel\"} \"$__scd_root/system.slice/docker-$__scd_id.scope\" \"$__scd_root/docker/$__scd_id\"; do case \"$__scd_dir\" in *\"$__scd_id\"*) if [ -r \"$__scd_dir/memory.events\" ]; then printf '%s' \"$__scd_dir\"; return 0; fi;; esac; done; return 1; }; __start_command_cgroup_read() { __scr_events=$(cat \"$1/memory.events\" 2>/dev/null) || return 1; __scr_oom=$(printf '%s\\n' \"$__scr_events\" | sed -n 's/^oom //p'); __scr_kill=$(printf '%s\\n' \"$__scr_events\" | sed -n 's/^oom_kill //p'); case \"$__scr_oom:$__scr_kill\" in *[!0-9:]*|:*|*:) return 1;; esac; __scr_max=$(cat \"$1/memory.max\" 2>/dev/null); __scr_peak=$(cat \"$1/memory.peak\" 2>/dev/null); printf '%s %s %s %s %s\\n' \"${__scr_max:--}\" \"${__scr_peak:--}\" \"${__scr_oom:--}\" \"${__scr_kill:--}\" \"$1\"; }; __start_command_cgroup_file=\"${TMPDIR:-/tmp}/start-command-cgroup.$$\"; rm -f \"$__start_command_cgroup_file\" \"$__start_command_cgroup_file.tmp\" \"$__start_command_cgroup_file.reason\"; __start_command_memory_limit=$(docker inspect -f '{{.HostConfig.Memory}}' 'task' 2>/dev/null); __start_command_sample_name='task'; ( export START_COMMAND_CGROUP_SAMPLING=1; __scs_previous=''; __scs_previous_at=0; __scs_changed=0; __scs_interval=${START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS:-5}; case \"$__scs_interval\" in *[!0-9]*|'') __scs_interval=5;; esac; [ \"$__scs_interval\" -gt 0 ] 2>/dev/null || __scs_interval=5; __scs_dir=$(__start_command_cgroup_dir 'task'); __scs_ns=$(docker inspect -f '{{.HostConfig.CgroupnsMode}}' 'task' 2>/dev/null); while :; do __scs_line=\"\"; if [ -n \"$__scs_dir\" ]; then __scs_line=$(__start_command_cgroup_read \"$__scs_dir\"); fi; if [ -z \"$__scs_line\" ]; then if [ \"$__scs_ns\" = private ]; then __scs_remote=$(docker exec 'task' sh -c '__start_command_cgroup_dir() { __scd_id=$(docker inspect -f '\\''{{.Id}}'\\'' \"$1\" 2>/dev/null); [ -n \"$__scd_id\" ] || return 1; __scd_pid=$(docker inspect -f '\\''{{.State.Pid}}'\\'' \"$1\" 2>/dev/null); __scd_rel='\\'''\\''; case \"$__scd_pid\" in '\\'''\\''|0|*[!0-9]*) ;; *) __scd_rel=$(sed -n '\\''s/^0:://p'\\'' \"${START_COMMAND_PROC_ROOT:-/proc}/$__scd_pid/cgroup\" 2>/dev/null);; esac; __scd_root=${START_COMMAND_CGROUP_ROOT:-/sys/fs/cgroup}; for __scd_dir in ${__scd_rel:+\"$__scd_root$__scd_rel\"} \"$__scd_root/system.slice/docker-$__scd_id.scope\" \"$__scd_root/docker/$__scd_id\"; do case \"$__scd_dir\" in *\"$__scd_id\"*) if [ -r \"$__scd_dir/memory.events\" ]; then printf '\\''%s'\\'' \"$__scd_dir\"; return 0; fi;; esac; done; return 1; }; __start_command_cgroup_read() { __scr_events=$(cat \"$1/memory.events\" 2>/dev/null) || return 1; __scr_oom=$(printf '\\''%s\\n'\\'' \"$__scr_events\" | sed -n '\\''s/^oom //p'\\''); __scr_kill=$(printf '\\''%s\\n'\\'' \"$__scr_events\" | sed -n '\\''s/^oom_kill //p'\\''); case \"$__scr_oom:$__scr_kill\" in *[!0-9:]*|:*|*:) return 1;; esac; __scr_max=$(cat \"$1/memory.max\" 2>/dev/null); __scr_peak=$(cat \"$1/memory.peak\" 2>/dev/null); printf '\\''%s %s %s %s %s\\n'\\'' \"${__scr_max:--}\" \"${__scr_peak:--}\" \"${__scr_oom:--}\" \"${__scr_kill:--}\" \"$1\"; }; __start_command_cgroup_read /sys/fs/cgroup' 2>&1); __scs_exit=$?; if [ \"$__scs_exit\" = 0 ]; then __scs_line=$__scs_remote; else __scs_detail=$(printf \"%s\" \"$__scs_remote\" | sed -n \"1p\" | cut -c 1-240); printf '%s\n' \"local cgroup unavailable; Docker exec exit=$__scs_exit: ${__scs_detail:-private cgroup v2 counters unreadable}\" > \"$__start_command_cgroup_file.reason\"; fi; else printf '%s\n' \"local cgroup unavailable; container cgroup namespace=${__scs_ns:-unavailable}, private required\" > \"$__start_command_cgroup_file.reason\"; fi; fi; __scs_now=$(date +%s); if [ -n \"$__scs_line\" ]; then __scs_kill=$(printf \"%s\" \"$__scs_line\" | cut -d \" \" -f 4); if [ -n \"$__scs_previous\" ] && [ \"$__scs_kill\" -gt \"$__scs_previous\" ] 2>/dev/null && [ \"$((__scs_now-__scs_previous_at))\" -le 3 ]; then __scs_changed=$__scs_now; fi; __scs_previous=$__scs_kill; __scs_previous_at=$__scs_now; __scs_fields=$(printf \"%s\" \"$__scs_line\" | cut -d \" \" -f 1-4); printf '%s %s %s %s\\n' \"$__scs_fields\" \"$__scs_changed\" \"$__scs_now\" \"$__scs_dir\" > \"$__start_command_cgroup_file.tmp\" && mv -f \"$__start_command_cgroup_file.tmp\" \"$__start_command_cgroup_file\"; fi; if { [ -z \"$__scs_dir\" ] || [ ! -r \"$__scs_dir/memory.events\" ]; } && [ \"$(docker inspect -f '{{.State.Running}}' 'task' 2>/dev/null)\" = false ]; then break; fi; sleep \"$__scs_interval\"; done ) >/dev/null 2>&1 & __start_command_cgroup_sampler=$!"
+
+      at <anonymous> (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:115:21)
+(fail) issue #242: the long-lived sampler exec > starts the stream under a recognisable name [0.86ms]
+124 |         __dirname,
+125 |         '../../parity/fixtures/cgroup-sampler-start-242.sh'
+126 |       ),
+127 |       'utf8'
+128 |     );
+129 |     expect(`${buildCgroupSamplerStartSnippet("task '242'")}\n`).toBe(golden);
+                                                                      ^
+error: expect(received).toBe(expected)
+
+- "__start_command_cgroup_dir() { __scd_id=$(docker ... (6671 bytes truncated) .../dev/null 2>&1 & __start_command_cgroup_sampler=$!
++ "__start_command_cgroup_dir() { __scd_id=$(docker ... (3584 bytes truncated) ..._remote" | sed -n "1p" | cut -c 1-240); printf '%s
++ ' "local cgroup unavailable; Docker exec exit=$__scs_exit: ${__scs_detail:-private cgroup v2 counters unreadable}" > "$__start_command_cgroup_file.reason"; fi; else printf '%s
++ ' "local cgroup unavailable; container cgroup namespace=${__scs_ns:-unavailable}, private required" > "$__start_command_cgroup_file.reason"; fi; fi; __scs_now=$(date +%s); if [ -n "$__scs_line" ]; then __scs_kill=$(printf "%s" "$__scs_line" | cut -d " " -f 4); if [ -n "$__scs_previous" ] && [ "$__scs_kill" -gt "$__scs_previous" ] 2>/dev/null && [ "$((__scs_now-__scs_previous_at))" -le 3 ]; then __scs_changed=$__scs_now; fi; __scs_previous=$__scs_kill; __scs_previous_at=$__scs_now; __scs_fields=$(printf "%s" "$__scs_line" | cut -d " " -f 1-4); printf '%s %s %s %s\n' "$__scs_fields" "$__scs_changed" "$__scs_now" "$__scs_dir" > "$__start_command_cgroup_file.tmp" && mv -f "$__start_command_cgroup_file.tmp" "$__start_command_cgroup_file"; fi; if { [ -z "$__scs_dir" ] || [ ! -r "$__scs_dir/memory.events" ]; } && [ "$(docker inspect -f '{{.State.Running}}' 'task '\''242'\''' 2>/dev/null)" = false ]; then break; fi; sleep "$__scs_interval"; done ) >/dev/null 2>&1 & __start_command_cgroup_sampler=$!
+  "
+
+- Expected  - 1
++ Received  + 3
+
+      at <anonymous> (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:129:65)
+(fail) issue #242: the long-lived sampler exec > matches the Rust snippet byte for byte [14.14ms]
+198 |   it('samples from one exec and stops it with the sampler', async () => {
+199 |     const { output, calls, pid } = run(
+200 |       { START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS: '1' },
+201 |       'sleep 2'
+202 |     );
+203 |     expect(output).toMatch(/^sample=67108864 1048576 0 0 0 \d+$/m);
+                         ^
+error: expect(received).toMatch(expected)
+
+Expected substring or pattern: /^sample=67108864 1048576 0 0 0 \d+$/m
+Received: "sample=\nMemory:     unavailable (local cgroup unavailable; Docker exec exit=1: private cgroup v2 counters unreadable) memory.limit=0 (HostConfig)\n"
+
+      at <anonymous> (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:203:20)
+(fail) issue #242: sampler lifecycle against a mounted docker.sock > samples from one exec and stops it with the sampler [2038.01ms]
+222 |       const { output, calls } = run(
+223 |         { START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS: value },
+224 |         'wait "$__start_command_cgroup_sampler"'
+225 |       );
+226 |       expect(output).toContain('sample=\n');
+227 |       expect(output).toContain(
+                           ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Memory:     unavailable (undefined) memory.limit=0 (HostConfig)"
+Received: "sample=\nMemory:     unavailable (local cgroup unavailable; Docker exec exit=1: private cgroup v2 counters unreadable) memory.limit=0 (HostConfig)\n"
+
+      at <anonymous> (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:227:22)
+(fail) issue #242: sampler lifecycle against a mounted docker.sock > turns sampling off with off [111.10ms]
+222 |       const { output, calls } = run(
+223 |         { START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS: value },
+224 |         'wait "$__start_command_cgroup_sampler"'
+225 |       );
+226 |       expect(output).toContain('sample=\n');
+227 |       expect(output).toContain(
+                           ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Memory:     unavailable (undefined) memory.limit=0 (HostConfig)"
+Received: "sample=\nMemory:     unavailable (local cgroup unavailable; Docker exec exit=1: private cgroup v2 counters unreadable) memory.limit=0 (HostConfig)\n"
+
+      at <anonymous> (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:227:22)
+(fail) issue #242: sampler lifecycle against a mounted docker.sock > turns sampling off with OFF [74.99ms]
+222 |       const { output, calls } = run(
+223 |         { START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS: value },
+224 |         'wait "$__start_command_cgroup_sampler"'
+225 |       );
+226 |       expect(output).toContain('sample=\n');
+227 |       expect(output).toContain(
+                           ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Memory:     unavailable (undefined) memory.limit=0 (HostConfig)"
+Received: "sample=\nMemory:     unavailable (local cgroup unavailable; Docker exec exit=1: private cgroup v2 counters unreadable) memory.limit=0 (HostConfig)\n"
+
+      at <anonymous> (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:227:22)
+(fail) issue #242: sampler lifecycle against a mounted docker.sock > turns sampling off with Off [92.52ms]
+233 |     });
+234 |   }
+235 | 
+236 |   it('keeps unrelated values on the default interval', () => {
+237 |     const snippet = buildCgroupSamplerStartSnippet('task');
+238 |     expect(snippet).toContain("[Oo][Ff][Ff]) printf '%s\\n' ");
+                          ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "[Oo][Ff][Ff]) printf '%s\\n' "
+Received: "__start_command_cgroup_dir() { __scd_id=$(docker inspect -f '{{.Id}}' \"$1\" 2>/dev/null); [ -n \"$__scd_id\" ] || return 1; __scd_pid=$(docker inspect -f '{{.State.Pid}}' \"$1\" 2>/dev/null); __scd_rel=''; case \"$__scd_pid\" in ''|0|*[!0-9]*) ;; *) __scd_rel=$(sed -n 's/^0:://p' \"${START_COMMAND_PROC_ROOT:-/proc}/$__scd_pid/cgroup\" 2>/dev/null);; esac; __scd_root=${START_COMMAND_CGROUP_ROOT:-/sys/fs/cgroup}; for __scd_dir in ${__scd_rel:+\"$__scd_root$__scd_rel\"} \"$__scd_root/system.slice/docker-$__scd_id.scope\" \"$__scd_root/docker/$__scd_id\"; do case \"$__scd_dir\" in *\"$__scd_id\"*) if [ -r \"$__scd_dir/memory.events\" ]; then printf '%s' \"$__scd_dir\"; return 0; fi;; esac; done; return 1; }; __start_command_cgroup_read() { __scr_events=$(cat \"$1/memory.events\" 2>/dev/null) || return 1; __scr_oom=$(printf '%s\\n' \"$__scr_events\" | sed -n 's/^oom //p'); __scr_kill=$(printf '%s\\n' \"$__scr_events\" | sed -n 's/^oom_kill //p'); case \"$__scr_oom:$__scr_kill\" in *[!0-9:]*|:*|*:) return 1;; esac; __scr_max=$(cat \"$1/memory.max\" 2>/dev/null); __scr_peak=$(cat \"$1/memory.peak\" 2>/dev/null); printf '%s %s %s %s %s\\n' \"${__scr_max:--}\" \"${__scr_peak:--}\" \"${__scr_oom:--}\" \"${__scr_kill:--}\" \"$1\"; }; __start_command_cgroup_file=\"${TMPDIR:-/tmp}/start-command-cgroup.$$\"; rm -f \"$__start_command_cgroup_file\" \"$__start_command_cgroup_file.tmp\" \"$__start_command_cgroup_file.reason\"; __start_command_memory_limit=$(docker inspect -f '{{.HostConfig.Memory}}' 'task' 2>/dev/null); __start_command_sample_name='task'; ( export START_COMMAND_CGROUP_SAMPLING=1; __scs_previous=''; __scs_previous_at=0; __scs_changed=0; __scs_interval=${START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS:-5}; case \"$__scs_interval\" in *[!0-9]*|'') __scs_interval=5;; esac; [ \"$__scs_interval\" -gt 0 ] 2>/dev/null || __scs_interval=5; __scs_dir=$(__start_command_cgroup_dir 'task'); __scs_ns=$(docker inspect -f '{{.HostConfig.CgroupnsMode}}' 'task' 2>/dev/null); while :; do __scs_line=\"\"; if [ -n \"$__scs_dir\" ]; then __scs_line=$(__start_command_cgroup_read \"$__scs_dir\"); fi; if [ -z \"$__scs_line\" ]; then if [ \"$__scs_ns\" = private ]; then __scs_remote=$(docker exec 'task' sh -c '__start_command_cgroup_dir() { __scd_id=$(docker inspect -f '\\''{{.Id}}'\\'' \"$1\" 2>/dev/null); [ -n \"$__scd_id\" ] || return 1; __scd_pid=$(docker inspect -f '\\''{{.State.Pid}}'\\'' \"$1\" 2>/dev/null); __scd_rel='\\'''\\''; case \"$__scd_pid\" in '\\'''\\''|0|*[!0-9]*) ;; *) __scd_rel=$(sed -n '\\''s/^0:://p'\\'' \"${START_COMMAND_PROC_ROOT:-/proc}/$__scd_pid/cgroup\" 2>/dev/null);; esac; __scd_root=${START_COMMAND_CGROUP_ROOT:-/sys/fs/cgroup}; for __scd_dir in ${__scd_rel:+\"$__scd_root$__scd_rel\"} \"$__scd_root/system.slice/docker-$__scd_id.scope\" \"$__scd_root/docker/$__scd_id\"; do case \"$__scd_dir\" in *\"$__scd_id\"*) if [ -r \"$__scd_dir/memory.events\" ]; then printf '\\''%s'\\'' \"$__scd_dir\"; return 0; fi;; esac; done; return 1; }; __start_command_cgroup_read() { __scr_events=$(cat \"$1/memory.events\" 2>/dev/null) || return 1; __scr_oom=$(printf '\\''%s\\n'\\'' \"$__scr_events\" | sed -n '\\''s/^oom //p'\\''); __scr_kill=$(printf '\\''%s\\n'\\'' \"$__scr_events\" | sed -n '\\''s/^oom_kill //p'\\''); case \"$__scr_oom:$__scr_kill\" in *[!0-9:]*|:*|*:) return 1;; esac; __scr_max=$(cat \"$1/memory.max\" 2>/dev/null); __scr_peak=$(cat \"$1/memory.peak\" 2>/dev/null); printf '\\''%s %s %s %s %s\\n'\\'' \"${__scr_max:--}\" \"${__scr_peak:--}\" \"${__scr_oom:--}\" \"${__scr_kill:--}\" \"$1\"; }; __start_command_cgroup_read /sys/fs/cgroup' 2>&1); __scs_exit=$?; if [ \"$__scs_exit\" = 0 ]; then __scs_line=$__scs_remote; else __scs_detail=$(printf \"%s\" \"$__scs_remote\" | sed -n \"1p\" | cut -c 1-240); printf '%s\n' \"local cgroup unavailable; Docker exec exit=$__scs_exit: ${__scs_detail:-private cgroup v2 counters unreadable}\" > \"$__start_command_cgroup_file.reason\"; fi; else printf '%s\n' \"local cgroup unavailable; container cgroup namespace=${__scs_ns:-unavailable}, private required\" > \"$__start_command_cgroup_file.reason\"; fi; fi; __scs_now=$(date +%s); if [ -n \"$__scs_line\" ]; then __scs_kill=$(printf \"%s\" \"$__scs_line\" | cut -d \" \" -f 4); if [ -n \"$__scs_previous\" ] && [ \"$__scs_kill\" -gt \"$__scs_previous\" ] 2>/dev/null && [ \"$((__scs_now-__scs_previous_at))\" -le 3 ]; then __scs_changed=$__scs_now; fi; __scs_previous=$__scs_kill; __scs_previous_at=$__scs_now; __scs_fields=$(printf \"%s\" \"$__scs_line\" | cut -d \" \" -f 1-4); printf '%s %s %s %s\\n' \"$__scs_fields\" \"$__scs_changed\" \"$__scs_now\" \"$__scs_dir\" > \"$__start_command_cgroup_file.tmp\" && mv -f \"$__start_command_cgroup_file.tmp\" \"$__start_command_cgroup_file\"; fi; if { [ -z \"$__scs_dir\" ] || [ ! -r \"$__scs_dir/memory.events\" ]; } && [ \"$(docker inspect -f '{{.State.Running}}' 'task' 2>/dev/null)\" = false ]; then break; fi; sleep \"$__scs_interval\"; done ) >/dev/null 2>&1 & __start_command_cgroup_sampler=$!"
+
+      at <anonymous> (/tmp/gh-issue-solver-1792617829160/js/test/regression-242.js:238:21)
+(fail) issue #242: sampler lifecycle against a mounted docker.sock > keeps unrelated values on the default interval [0.42ms]
+
+ 0 pass
+ 13 fail
+ 14 expect() calls
+Ran 13 tests across 1 file. [2.36s]

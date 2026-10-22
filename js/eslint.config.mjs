@@ -25,6 +25,7 @@ export default [
         process: 'readonly',
         Buffer: 'readonly',
         fetch: 'readonly',
+        structuredClone: 'readonly',
         Bun: 'readonly',
       },
     },

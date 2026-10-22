@@ -113,6 +113,9 @@ function buildNextLevelCommand(options, command) {
     if (options.privileged) {
       parts.push('--privileged');
     }
+    if (options.init) {
+      parts.push('--init');
+    }
   }
 
   // Pass through global flags

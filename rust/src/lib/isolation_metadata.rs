@@ -101,6 +101,14 @@ pub fn docker_runtime_status_lines_for_options(options: &WrapperOptions) -> Vec<
         &options.networks,
         &options.network_aliases,
     );
+    if options.init == Some(true) {
+        // Right after Privileged, before the network lines (issue #244).
+        let at = lines
+            .iter()
+            .position(|line| line.starts_with("[Isolation] Network"))
+            .unwrap_or(lines.len());
+        lines.insert(at, "[Isolation] Init: true".to_string());
+    }
     if !options.labels.is_empty() {
         lines.push(format!("[Isolation] Labels: {}", options.labels.join(", ")));
     }
@@ -289,6 +297,9 @@ pub fn build_isolation_options_map(
         options.on_kill_resume_delay.as_deref(),
     )) {
         opts_map.insert(k, v);
+    }
+    if options.init == Some(true) {
+        opts_map.insert("init".into(), serde_json::Value::Bool(true));
     }
     if let Some(config) = &options.cpu_penalty_config {
         opts_map.insert("cpuPenaltyConfig".into(), serde_json::json!(config));

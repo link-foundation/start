@@ -25,6 +25,7 @@ const os = require('os');
 const { execFileSync, spawnSync } = require('child_process');
 const crypto = require('crypto');
 const { atomicWrite } = require('./atomic-write');
+const { decodeStoreContent } = require('./store-decode-cache');
 
 // Synchronous wrapper using Bun's native ESM support
 // This works because Bun handles ESM/CJS interop
@@ -37,6 +38,12 @@ function encodeSync(data) {
     return JSON.stringify(data);
   }
 }
+
+const DECODE_LOG = {
+  memory: () => 'Reused the decoded store: the file is unchanged',
+  copy: () => 'Read the decoded copy of the store: the file is unchanged',
+  decode: (content) => `Decoded the store (${content.length} characters)`,
+};
 
 function decodeSync(notation) {
   try {
@@ -52,6 +59,8 @@ const DEFAULT_APP_FOLDER = path.join(os.homedir(), '.start-command');
 const LINO_DB_FILE = 'executions.lino';
 const LINKS_DB_FILE = 'executions.links';
 const LOCK_FILE = 'executions.lock';
+// Decoded records as JSON, for the next process (issue #243)
+const DECODED_COPY_FILE = 'executions.decoded.js.json';
 const { LockManager } = require('./store-lock');
 
 /**
@@ -262,6 +271,7 @@ class ExecutionStore {
     this.linoDbPath = path.join(this.appFolder, LINO_DB_FILE);
     this.linksDbPath = path.join(this.appFolder, LINKS_DB_FILE);
     this.lockFilePath = path.join(this.appFolder, LOCK_FILE);
+    this.decodedCopyPath = path.join(this.appFolder, DECODED_COPY_FILE);
     this.useLinks = options.useLinks !== false && isClinkInstalled();
     this.verbose = options.verbose || false;
 
@@ -302,7 +312,14 @@ class ExecutionStore {
         return [];
       }
 
-      const data = decodeSync(content);
+      // Decoded once per content, not once per call (issue #243).
+      const { data, source } = decodeStoreContent(
+        this.linoDbPath,
+        content,
+        decodeSync,
+        { copyPath: this.decodedCopyPath }
+      );
+      this.log(DECODE_LOG[source](content));
       if (!Array.isArray(data)) {
         return [];
       }
@@ -915,4 +932,5 @@ module.exports = {
   LINO_DB_FILE,
   LINKS_DB_FILE,
   LOCK_FILE,
+  DECODED_COPY_FILE,
 };

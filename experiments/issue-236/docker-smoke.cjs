@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { removeStateFolder } = require('./state-folder.cjs');
 const root = path.resolve(__dirname, '../..');
 const edition = process.argv[2] || 'js';
 assert.ok(['js', 'rust'].includes(edition));
@@ -104,5 +105,6 @@ try {
 } finally {
   for (const name of containers) run('docker', ['rm', '-f', name], true);
   for (const image of images) run('docker', ['image', 'rm', image], true);
-  fs.rmSync(state, { recursive: true, force: true });
+  // Detached watchers may still be finalizing the record into `state`.
+  removeStateFolder(state);
 }

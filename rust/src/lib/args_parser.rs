@@ -14,6 +14,7 @@
 //! --mount <mount-spec>             Docker --mount spec (repeatable, docker only)
 //! --env, -e <KEY=VALUE>            Environment variable for docker container (repeatable, docker only)
 //! --privileged                     Run docker container in privileged mode (docker only)
+//! --init, --no-init                Run an init process (tini) as PID 1 to reap orphans (docker only; default START_COMMAND_DOCKER_INIT)
 //! --network <name>                 Connect docker container to a named network (repeatable, docker only)
 //! --network-alias <alias>          Add an alias to the first network (repeatable, docker only)
 //! --endpoint <endpoint>            SSH endpoint (required for ssh isolation, e.g., user@host)
@@ -96,6 +97,8 @@ pub struct WrapperOptions {
     pub remove_original: bool,
     /// Run docker container in privileged mode
     pub privileged: bool,
+    /// `docker run --init`; `None` until resolved from START_COMMAND_DOCKER_INIT (issue #244)
+    pub init: Option<bool>,
     /// First Docker network name (compatibility accessor)
     pub network: Option<String>,
     /// Ordered Docker network names
@@ -198,6 +201,7 @@ impl Default for WrapperOptions {
             no_sanitize: false,
             remove_original: false,
             privileged: false,
+            init: None,
             network: None,
             networks: Vec::new(),
             network_aliases: Vec::new(),
@@ -493,6 +497,12 @@ fn parse_option(
     if arg == "--privileged" {
         options.privileged = true;
         return Ok(1);
+    }
+
+    // --init / --no-init (for docker, issue #244)
+    let init_consumed = crate::docker_init_option::parse(args, index, options);
+    if init_consumed > 0 {
+        return Ok(init_consumed);
     }
 
     // --network (for docker)
@@ -848,6 +858,7 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
     validate_query_options(options)?;
     crate::launch_identity_options::validate(options)?;
     crate::docker_resource_options::validate(options)?;
+    crate::docker_init_option::validate(options)?;
     crate::cpu_penalty::validate(options)?;
 
     // Validate shell option

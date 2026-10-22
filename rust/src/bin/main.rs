@@ -551,6 +551,7 @@ fn run_with_isolation(
             root_session: None,
             resume_count: 0,
             privileged: wrapper_options.privileged,
+            init: wrapper_options.init.unwrap_or(false),
             network: wrapper_options.network.clone(),
             networks: wrapper_options.networks.clone(),
             network_aliases: wrapper_options.network_aliases.clone(),

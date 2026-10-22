@@ -11,6 +11,7 @@ const {
   formatAsNestedLinksNotation,
 } = require('./output-blocks');
 const { getDockerCommand, getDockerSpawnOptions } = require('./docker-cleanup');
+const { prefetchedInspect } = require('./docker-inspect-batch');
 
 const ControlAction = {
   STOP: 'stop',
@@ -148,14 +149,15 @@ function collectProcessIds(record, runner = runCommand) {
       ),
     ];
     addIfPresent(processIds, 'commandPids', commandPids);
+  } else if (isolated === 'docker' && record.containerState === 'removed') {
+    // The container is gone, so there is nothing to ask Docker (#243).
+    addIfPresent(processIds, 'containerId', opts.containerId);
   } else if (isolated === 'docker') {
     addIfPresent(processIds, 'containerId', opts.containerId);
-    const result = runner(getDockerCommand(), [
-      'inspect',
-      '-f',
-      '{{.Id}} {{.State.Pid}}',
-      sessionName,
-    ]);
+    const format = '{{.Id}} {{.State.Pid}}';
+    const result =
+      prefetchedInspect(format, sessionName) ||
+      runner(getDockerCommand(), ['inspect', '-f', format, sessionName]);
     if (result.success && result.stdout.trim()) {
       const [containerId, pidValue] = result.stdout.trim().split(/\s+/);
       addIfPresent(processIds, 'containerId', containerId);

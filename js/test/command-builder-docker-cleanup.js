@@ -32,4 +32,28 @@ describe('command-builder docker cleanup forwarding', () => {
     assert.match(command, /--isolated "tmux"/);
     assert.doesNotMatch(command, /--keep-container/);
   });
+
+  it('forwards --init only to a remaining docker level (issue #244)', () => {
+    const nested = buildNextLevelCommand(
+      {
+        isolatedStack: ['screen', 'docker'],
+        imageStack: [null, 'alpine'],
+        init: true,
+      },
+      'npm test'
+    );
+    assert.match(nested, /--isolated "docker"/);
+    assert.match(nested, / --init(?: |$)/);
+
+    const consumed = buildNextLevelCommand(
+      {
+        isolatedStack: ['docker', 'tmux'],
+        imageStack: ['alpine', null],
+        init: true,
+      },
+      'npm test'
+    );
+    assert.match(consumed, /--isolated "tmux"/);
+    assert.doesNotMatch(consumed, /--init/);
+  });
 });

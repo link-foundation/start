@@ -1,0 +1,23 @@
+docker 29.9.1
+no init  PID 1=sleep       zombies=1
+no init  exit3  exit=3 oom=false
+no init  segv   exit=139 oom=false
+no init  oom    skipped: docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: unable to apply cgroup configuration: cannot enter cgroupv2 "/sys/fs/cgroup/docker" with domain controllers -- it is in threaded mode
+no init  kill   exit=137 oom=false
+no init  stop   exit=137 oom=false after 2.5 s
+--init   PID 1=docker-init zombies=0
+--init   exit3  exit=3 oom=false
+--init   segv   exit=139 oom=false
+--init   oom    skipped: docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: unable to apply cgroup configuration: cannot enter cgroupv2 "/sys/fs/cgroup/docker" with domain controllers -- it is in threaded mode
+--init   kill   exit=137 oom=false
+--init   stop   exit=143 oom=false after 0.7 s
+OK: --init reaps orphans and keeps exit evidence
+
+# docker info / restart check (same host)
+InitBinary=docker-init InitCommit=de40ad0
+/proc/1/exe -> /sbin/docker-init; cmdline: /sbin/docker-init -- sh -c ...
+after docker stop + docker start: HostConfig.Init=true, PID 1=docker-init
+# OOM case: the host's root cgroup does not delegate the memory controller
+# (cgroup.subtree_control = "cpuset cpu pids", /sys/fs/cgroup/docker is
+# "threaded"), so no container with --memory can start here. CI runs the
+# same script with ISSUE_244_REQUIRE_OOM=1.

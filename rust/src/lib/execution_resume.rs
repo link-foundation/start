@@ -260,6 +260,7 @@ pub fn build_launch_options(record: &ExecutionRecord) -> IsolationOptions {
         mounts: record_strings(record, "mounts"),
         env: record_strings(record, "env"),
         privileged: record_flag(record, "privileged"),
+        init: record_flag(record, "init"),
         network: networks.first().cloned(),
         networks,
         network_aliases: record_strings(record, "networkAliases"),

@@ -336,6 +336,7 @@ function recoverKilledExecution(params = {}) {
   record.options.exitEvidence = {
     mainOom: terminalOom,
     daemonRestart: logged.daemonRestart,
+    ...evidence.sourceOf(logged),
   };
   let recoveryLimits = null;
   if (opts.onKillResumeMemory && terminalOom) {

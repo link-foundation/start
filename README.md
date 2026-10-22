@@ -304,21 +304,30 @@ reason is `signal (SIGKILL; cause unknown)`; raw flags/counters remain available
 
 Both attached and detached Docker runs sample cgroup v2. The sampler first
 looks for an ID-attributed local cgroup, then uses `docker exec ... sh` through
-the daemon with a private cgroup namespace, supporting remote and DinD setups.
+the daemon with a private cgroup namespace, supporting remote, DinD and mounted
+`docker.sock` setups. Through the daemon, one long-lived
+`docker exec -i <container> sh -c ... start-command-cgroup-stream` per run
+answers one host tick per interval on its stdin using only shell builtins, so
+the task's CPU limit pays for no `cat`, `sed` or `sleep` processes. The stream
+ends with the sampler, because its stdin closes. If that stream cannot start,
+the sampler falls back to one `docker exec` per round (#242).
 Missing shell, shared namespace or unavailable counters produce an explicit
 `Memory: unavailable (...) memory.limit=... (HostConfig)` line. Last valid
 samples survive temporary outages. Set
 `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS` to a positive whole number of
 seconds to change the interval for attached and detached runs; unset, invalid,
-zero, negative, fractional or out-of-range values fall back to `5`. For example:
+zero, negative, fractional or out-of-range values fall back to `5`, and `off`
+(any case) disables sampling for callers that need no OOM evidence. For example:
 
 ```sh
 START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS=1 $ --isolated docker --detached -- sleep 600
+START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS=off $ --isolated docker --detached -- sleep 600
 ```
 
-The namespace mode is resolved once per sampler. While the ID-attributed local
-`memory.events` file is readable, liveness requires no Docker probe. Hidden or
-remote cgroups use one Docker liveness probe per sample round. Each round
+The namespace mode is resolved once per sampler. A successful sample, local or
+streamed, proves the container is running, so Docker is asked for
+`{{.State.Running}}` only after a round without a sample or when the stream
+ends; the completion watcher stops the sampler after `docker wait`. Each round
 finishes before sleeping, so slow Docker calls do not overlap. The first sample
 is immediate; the final local read still runs when the watcher stops the sampler.
 A longer interval reduces polling but increases the chance of missing a final
@@ -701,6 +710,9 @@ $ -i docker --image konard/hive-mind-dind:latest \
 # Run a Docker-in-Docker image in privileged mode
 $ -i docker --image konard/hive-mind-dind:latest --privileged -- solve <issue-url>
 
+# Run tini as PID 1 so orphaned processes of a long-running task are reaped
+$ -i docker --init -d -- solve <issue-url>
+
 # Run on remote server via SSH
 $ --isolated ssh --endpoint user@remote.server -- npm test
 
@@ -769,6 +781,7 @@ This is useful for:
 | `--env, -e`                      | Environment variable `KEY=VALUE` for the container (repeatable, docker only) |
 | `--label KEY=VALUE`              | Task attribution label (repeatable, Docker only; persisted on resume)        |
 | `--privileged`                   | Run docker container in privileged mode (docker only)                        |
+| `--init`, `--no-init`            | Run tini as PID 1 to reap orphans (docker only; default off, see below)      |
 | `--network`                      | Connect to a named network (repeatable, docker only)                         |
 | `--network-alias`                | Add an alias on the first network (repeatable, docker only)                  |
 | `--endpoint`                     | SSH endpoint (required for ssh, e.g., user@host)                             |
@@ -810,6 +823,26 @@ first network.
 ```bash
 $ --isolated docker --image alpine:3.23 \
     --network bridge --network my-sidecar-net -- ping -c 1 sidecar
+```
+
+By default the command is PID 1 of its container. Most programs never reap
+orphaned grandchildren, so a long-running task can collect hundreds of zombie
+processes. They count against `--pids-limit` and slow every `/proc` scan.
+`--init` adds `docker run --init`, which makes Docker's bundled tini PID 1. tini
+reaps orphans, forwards signals to the command and exits with its exit code.
+The flag is stored in the execution record, reused by `--resume` and
+`--resume-all`, and shown as `init` in the start block and `$ --status`.
+`START_COMMAND_DOCKER_INIT=1` turns it on for every docker launch; `--no-init`
+opts one launch out. The default stays off, so a command that supervises its
+own children keeps today's behaviour. One visible difference: `--stop` sends
+`SIGTERM`, which tini passes on. A command that does not handle `SIGTERM` then
+ends at once with exit code 143. Without `--init` the kernel drops that signal
+for PID 1, so Docker kills the container after its grace period, with exit code
+137.
+
+```bash
+$ -i docker --init -d --image alpine:3.23 -- my-long-running-task
+docker inspect -f '{{.HostConfig.Init}}' <session>   # true
 ```
 
 #### Auto-Exit Behavior
@@ -886,7 +919,8 @@ The following environment variables can be used to customize behavior:
 | `START_VERBOSE`               | Set to `1` or `true` for verbose output                        |
 | `START_DISABLE_SUBSTITUTIONS` | Set to `1` or `true` to disable pattern matching/aliases       |
 | `START_SUBSTITUTIONS_PATH`    | Custom path to substitutions.lino file                         |
-| `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS` | Docker cgroup sample interval in positive whole seconds (default `5`) |
+| `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS` | Docker cgroup sample interval in positive whole seconds (default `5`); `off` disables sampling |
+| `START_COMMAND_DOCKER_INIT`   | Set to `1` or `true` to launch every docker task with `--init` (`--no-init` overrides it) |
 
 Example:
 

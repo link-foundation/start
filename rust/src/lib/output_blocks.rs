@@ -92,6 +92,8 @@ pub struct IsolationMetadata {
     pub session: Option<String>,
     pub endpoint: Option<String>,
     pub user: Option<String>,
+    /// `[Isolation] Init: true` (docker run --init, issue #244)
+    pub init: bool,
 }
 
 /// Parse isolation metadata from extra lines
@@ -118,6 +120,12 @@ pub fn parse_isolation_metadata(extra_lines: &[&str]) -> IsolationMetadata {
 
         if let Some(caps) = image_re.captures(line) {
             metadata.image = Some(caps[1].to_string());
+            continue;
+        }
+
+        // docker run --init (issue #244)
+        if *line == "[Isolation] Init: true" {
+            metadata.init = true;
             continue;
         }
 
@@ -172,6 +180,10 @@ pub fn generate_isolation_lines(
                 _ => {}
             }
         }
+    }
+
+    if metadata.init {
+        lines.push(create_timeline_line("init", "true"));
     }
 
     if let Some(ref user) = metadata.user {

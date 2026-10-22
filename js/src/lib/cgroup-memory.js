@@ -75,9 +75,49 @@ function buildCgroupFunctionsSnippet() {
 }
 
 /**
+ * In-container loop of the long-lived sampler exec (issue #242): `$1` is the
+ * cgroup directory. The host paces it with one newline per interval on stdin
+ * (`docker exec -i`), so it runs only shell builtins: the task's own CPU
+ * limit pays for no `cat`, `sed` or `sleep` processes. Stdin reaches EOF when
+ * the exec's client is gone, so the loop never outlives the sampler; dockerd
+ * would accept its output even then. Exit 3: unreadable counters.
+ * @returns {string} Shell script for `sh -c`
+ */
+function buildCgroupStreamScript() {
+  return [
+    'while read -r __scx_tick; do __scx_oom=; __scx_kill=; __scx_max=-; __scx_peak=-',
+    '[ -r "$1/memory.events" ] || exit 3',
+    'while read -r __scx_key __scx_value; do case "$__scx_key" in ' +
+      'oom) __scx_oom=$__scx_value;; oom_kill) __scx_kill=$__scx_value;; esac; ' +
+      'done < "$1/memory.events"',
+    'case "$__scx_oom:$__scx_kill" in *[!0-9:]*|:*|*:) exit 3;; esac',
+    '[ ! -r "$1/memory.max" ] || read -r __scx_max < "$1/memory.max"',
+    '[ ! -r "$1/memory.peak" ] || read -r __scx_peak < "$1/memory.peak"',
+    'printf \'%s %s %s %s %s\\n\' "${__scx_max:--}" "${__scx_peak:--}" ' +
+      '"$__scx_oom" "$__scx_kill" "$1" || exit 0; done',
+  ].join('; ');
+}
+
+/** `$0` of the long-lived exec, visible in `ps` inside the task container. */
+const CGROUP_STREAM_NAME = 'start-command-cgroup-stream';
+
+/** Interval value that turns the sampler off (issue #242). */
+const CGROUP_SAMPLING_OFF_REASON =
+  'sampling disabled by START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS=off';
+
+/**
  * Shell fragment starting the background sampler. It writes each sample to a
  * temp file with `mv`, so the watcher never reads a half-written line, and
- * ends by itself once the cgroup is gone.
+ * ends by itself once the container is gone.
+ *
+ * Where the cgroup is readable locally it reads it directly. Otherwise, with
+ * a private cgroup namespace (a mounted docker.sock), one long-lived
+ * `docker exec -i` answers one host tick per interval (issue #242); a
+ * successful read proves the container runs, so Docker is asked for liveness
+ * only after a failed round or when the stream ends. Without a usable stream it falls back
+ * to one `docker exec` per round; without `sh` in the image (exit 126/127) or
+ * without any readable cgroup it records the reason and stops.
+ * `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS=off` disables sampling.
  * @param {string} containerName - Container to sample
  * @returns {string} Shell command
  */
@@ -85,42 +125,60 @@ function buildCgroupSamplerStartSnippet(containerName) {
   const v = CGROUP_SHELL_VARS;
   const name = shellQuote(containerName);
   const remoteRead = '__start_command_cgroup_read /sys/fs/cgroup';
+  const unavailable = (detail) =>
+    `printf '%s\\n' "local cgroup unavailable; ${detail}" > "$${v.file}.reason"`;
+  const execReason = unavailable(
+    'Docker exec exit=$__scs_exit: ${__scs_detail:-private cgroup v2 counters unreadable}'
+  );
   return [
     buildCgroupFunctionsSnippet(),
     `${v.file}="\${TMPDIR:-/tmp}/start-command-cgroup.$$"`,
     `rm -f "$${v.file}" "$${v.file}.tmp" "$${v.file}.reason"`,
     `__start_command_memory_limit=$(docker inspect -f '{{.HostConfig.Memory}}' ${name} 2>/dev/null)`,
     `__start_command_sample_name=${name}`,
-    // The first counter is a baseline, including after watcher restart. Only
-    // changes between adjacent successful samples supply exit-time evidence.
-    `( export START_COMMAND_CGROUP_SAMPLING=1; __scs_previous=''; __scs_previous_at=0; __scs_changed=0; ` +
+    `( export START_COMMAND_CGROUP_SAMPLING=1; ` +
       // Validate in the watcher, so attached and detached launches inherit the
       // same setting. Never allow a malformed/zero sleep to create a busy loop.
       `__scs_interval=\${START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS:-${CGROUP_SAMPLE_INTERVAL_SECONDS}}; ` +
-      `case "$__scs_interval" in *[!0-9]*|'') __scs_interval=${CGROUP_SAMPLE_INTERVAL_SECONDS};; esac; ` +
+      `case "$__scs_interval" in [Oo][Ff][Ff]) printf '%s\\n' '${CGROUP_SAMPLING_OFF_REASON}' > "$${v.file}.reason"; exit 0;; ` +
+      `*[!0-9]*|'') __scs_interval=${CGROUP_SAMPLE_INTERVAL_SECONDS};; esac; ` +
       `[ "$__scs_interval" -gt 0 ] 2>/dev/null || __scs_interval=${CGROUP_SAMPLE_INTERVAL_SECONDS}; ` +
+      // Store one `<max> <peak> <oom> <oom_kill>` line. The previous sample is
+      // read back from the file, so the stream's reader subshell can record
+      // too. The first counter is a baseline, including after watcher restart;
+      // only changes between adjacent samples supply exit-time evidence.
+      `__scs_record() { set -f; set -- $1; set +f; case "$3:$4" in *[!0-9:]*|:*|*:) return 1;; esac; ` +
+      `__scs_now=$(date +%s); __scs_previous=''; __scs_changed=0; __scs_previous_at=0; ` +
+      `[ ! -r "$${v.file}" ] || read -r __scs_p __scs_p __scs_p __scs_previous __scs_changed __scs_previous_at __scs_p < "$${v.file}"; ` +
+      'if [ -n "$__scs_previous" ] && [ "$4" -gt "$__scs_previous" ] 2>/dev/null && [ "$((__scs_now-__scs_previous_at))" -le 3 ]; then __scs_changed=$__scs_now; fi; ' +
+      `printf '%s %s %s %s %s %s %s\\n' "$1" "$2" "$3" "$4" "$__scs_changed" "$__scs_now" "$__scs_dir" > "$${v.file}.tmp" && mv -f "$${v.file}.tmp" "$${v.file}"; }; ` +
       `__scs_dir=$(__start_command_cgroup_dir ${name}); ` +
       // The namespace is fixed at container creation, including when reads fail.
-      `__scs_ns=$(docker inspect -f '{{.HostConfig.CgroupnsMode}}' ${name} 2>/dev/null); while :; do ` +
-      '__scs_line=""; if [ -n "$__scs_dir" ]; then __scs_line=$(__start_command_cgroup_read "$__scs_dir"); fi; ' +
-      'if [ -z "$__scs_line" ]; then ' +
-      `if [ "$__scs_ns" = private ]; then ` +
-      `__scs_remote=$(docker exec ${name} sh -c ${shellQuote(`${buildCgroupFunctionsSnippet()}; ${remoteRead}`)} 2>&1); __scs_exit=$?; ` +
-      'if [ "$__scs_exit" = 0 ]; then __scs_line=$__scs_remote; ' +
-      'else __scs_detail=$(printf "%s" "$__scs_remote" | sed -n "1p" | cut -c 1-240); ' +
-      `printf '%s\n' "local cgroup unavailable; Docker exec exit=$__scs_exit: \${__scs_detail:-private cgroup v2 counters unreadable}" > "$${v.file}.reason"; fi; ` +
-      `else printf '%s\n' "local cgroup unavailable; container cgroup namespace=\${__scs_ns:-unavailable}, private required" > "$${v.file}.reason"; fi; fi; ` +
-      '__scs_now=$(date +%s); if [ -n "$__scs_line" ]; then ' +
-      '__scs_kill=$(printf "%s" "$__scs_line" | cut -d " " -f 4); ' +
-      'if [ -n "$__scs_previous" ] && [ "$__scs_kill" -gt "$__scs_previous" ] 2>/dev/null && [ "$((__scs_now-__scs_previous_at))" -le 3 ]; then __scs_changed=$__scs_now; fi; ' +
-      '__scs_previous=$__scs_kill; __scs_previous_at=$__scs_now; ' +
-      '__scs_fields=$(printf "%s" "$__scs_line" | cut -d " " -f 1-4); ' +
-      `printf '%s %s %s %s\\n' "$__scs_fields" "$__scs_changed" "$__scs_now" "$__scs_dir" > "$${v.file}.tmp" && mv -f "$${v.file}.tmp" "$${v.file}"; fi; ` +
-      // A readable ID-attributed local cgroup needs no Docker liveness probe.
-      // The completion watcher still stops us after docker wait. Remote/hidden
-      // cgroups fall back to Docker, once per configured sample interval.
-      `if { [ -z "$__scs_dir" ] || [ ! -r "$__scs_dir/memory.events" ]; } && ` +
-      `[ "$(docker inspect -f '{{.State.Running}}' ${name} 2>/dev/null)" = false ]; then break; fi; ` +
+      `__scs_ns=$(docker inspect -f '{{.HostConfig.CgroupnsMode}}' ${name} 2>/dev/null); __scs_stream=1; __scs_reader=''; ` +
+      `while :; do __scs_ok=''; if [ -n "$__scs_dir" ]; then ` +
+      '__scs_line=$(__start_command_cgroup_read "$__scs_dir") && __scs_record "$__scs_line" && __scs_ok=1; ' +
+      `elif [ "$__scs_ns" != private ]; then ${unavailable('container cgroup namespace=${__scs_ns:-unavailable}, private required')}; break; ` +
+      `elif [ "$__scs_stream" = 1 ]; then ` +
+      // The reader ends with the stream; stopping the sampler stops it too.
+      `trap 'kill "$__scs_reader" 2>/dev/null; wait "$__scs_reader" 2>/dev/null; exit 0' TERM; ` +
+      // The ticker runs in the background, so a failed exec is reported at
+      // once; it ends on its first write after the exec is gone.
+      `{ { while :; do echo || exit 0; sleep "$__scs_interval" || exit 0; done 2>/dev/null & } | ` +
+      `docker exec -i ${name} sh -c ${shellQuote(buildCgroupStreamScript())} ${CGROUP_STREAM_NAME} /sys/fs/cgroup 2>&1; printf '__scs_exit %s\\n' "$?"; } | ` +
+      `{ __scs_got=''; __scs_exit=''; __scs_detail=''; while IFS= read -r __scs_line; do case "$__scs_line" in ` +
+      `'__scs_exit '*) __scs_exit=\${__scs_line#__scs_exit };; ` +
+      `*) if __scs_record "$__scs_line"; then __scs_got=1; elif [ -z "$__scs_detail" ]; then __scs_detail=$(printf '%s' "$__scs_line" | cut -c 1-240); fi;; esac; done; ` +
+      `[ -z "$__scs_got" ] || exit 0; ${execReason}; ` +
+      `case "$__scs_exit" in ''|0|*[!0-9]*) exit 1;; esac; exit "$__scs_exit"; } & ` +
+      `__scs_reader=$!; wait "$__scs_reader"; __scs_exit=$?; trap - TERM; __scs_reader=''; ` +
+      // No shell in the image: a per-round exec cannot succeed either.
+      `case "$__scs_exit" in 0) ;; 126|127) break;; *) __scs_stream=0;; esac; ` +
+      `else __scs_remote=$(docker exec ${name} sh -c ${shellQuote(`${buildCgroupFunctionsSnippet()}; ${remoteRead}`)} 2>&1); __scs_exit=$?; ` +
+      'if [ "$__scs_exit" = 0 ] && __scs_record "$__scs_remote"; then __scs_ok=1; ' +
+      `else __scs_detail=$(printf "%s" "$__scs_remote" | sed -n "1p" | cut -c 1-240); ${execReason}; fi; fi; ` +
+      // A successful read needs no Docker liveness probe, and the completion
+      // watcher still stops us after docker wait.
+      `if [ -z "$__scs_ok" ] && [ "$(docker inspect -f '{{.State.Running}}' ${name} 2>/dev/null)" = false ]; then break; fi; ` +
       `sleep "$__scs_interval"; done ) >/dev/null 2>&1 & ${v.sampler}=$!`,
   ].join('; ');
 }
@@ -316,13 +374,16 @@ function formatCgroupMemory(memory) {
 
 module.exports = {
   CGROUP_SAMPLE_INTERVAL_SECONDS,
+  CGROUP_SAMPLING_OFF_REASON,
   CGROUP_SHELL_VARS,
+  CGROUP_STREAM_NAME,
   OOM_SCOPE,
   OOM_SCOPE_NOTES,
   buildCgroupFunctionsSnippet,
   buildCgroupMemoryLogSnippet,
   buildCgroupSamplerStartSnippet,
   buildCgroupSamplerStopSnippet,
+  buildCgroupStreamScript,
   describeCgroupOomScope,
   formatCgroupMemory,
   formatCgroupMemoryLogLine,

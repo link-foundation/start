@@ -14,7 +14,7 @@ const {
   formatTextOptionValue,
 } = require('./status-links-notation');
 const { collectProcessIds } = require('./execution-control');
-const { getDockerCommand, getDockerSpawnOptions } = require('./docker-cleanup');
+const { getDockerCommand } = require('./docker-cleanup');
 const {
   describeExitCode,
   CGROUP_OOM_EXIT_REASON,
@@ -25,134 +25,29 @@ const {
   FATAL_MARKER_TAIL_BYTES,
   readLogTail,
 } = require('./isolation-log-utils');
-const { normalizeDockerTimestamp } = require('./docker-post-mortem');
 const { END_TIME_SOURCE } = require('./detached-finalize');
 const { formatCgroupMemory } = require('./cgroup-memory');
+const { addLostWatcherEvidence } = require('./exit-evidence');
 const {
   attachContainerRemoval,
-  dockerInspect,
   persistContainerRemoval,
 } = require('./container-removal');
+const { withDockerInspectBatch } = require('./docker-inspect-batch');
+const {
+  backendExitCode,
+  dockerProbeSpawnOptions,
+  inspectDockerState,
+  isDetachedDockerRecord,
+  readDockerState,
+  resolveOomObservation,
+} = require('./status-probe');
 
-/**
- * Inspect the live state of a detached docker container by name.
- *
- * Distinguishes three outcomes that matter for status reporting:
- * - the container exists and is running,
- * - the container exists but has stopped (with a real exit code), and
- * - the container cannot be inspected at all.
- *
- * The last case is crucial on slow Docker-in-Docker hosts (issue #136): right
- * after `docker run -d` returns, `docker inspect <name>` can transiently fail
- * because the container is not visible yet. A failed inspect must NOT be read
- * as "stopped"; it means "unknown", so callers can keep the session running
- * instead of fabricating a terminal `-1` result.
- *
- * @param {string} sessionName - Container name
- * @param {Object|null} [probe] - Receives `sessionNotFound` (issue #225)
- * @returns {{running: boolean, exitCode: number|null, oomKilled: boolean|null}|null} State,
- *   or null when the container cannot be inspected (not found yet, removed, or docker error)
- */
-function inspectDockerState(sessionName, probe = null) {
-  const { stdout, notFound } = dockerInspect(
-    getDockerCommand(),
-    dockerProbeSpawnOptions(),
-    '{{.State.Running}} {{.State.ExitCode}} {{.State.OOMKilled}} ' +
-      '{{.State.StartedAt}} {{.State.FinishedAt}}',
-    sessionName
-  );
-  if (probe) {
-    // "No such container" is a fact, unlike a docker that cannot be reached
-    // (issue #225); it still reads as unknown liveness here (issue #136).
-    probe.sessionNotFound = notFound;
-  }
-  if (stdout === null) {
-    return null;
-  }
-  // Parsed positionally and defensively: an older docker (or a stubbed one)
-  // may answer with fewer fields than the template asks for.
-  const [runningRaw, exitRaw, oomKilledRaw, startedRaw, finishedRaw] = stdout
-    .trim()
-    .split(/\s+/);
-  const exitCode = Number.parseInt(exitRaw, 10);
+/** How the status probes run docker. */
+function dockerProbe() {
   return {
-    running: runningRaw === 'true',
-    exitCode: Number.isFinite(exitCode) ? exitCode : null,
-    oomKilled:
-      oomKilledRaw === 'true' ? true : oomKilledRaw === 'false' ? false : null,
-    startedAt: normalizeDockerTimestamp(startedRaw),
-    finishedAt: normalizeDockerTimestamp(finishedRaw),
+    dockerCommand: getDockerCommand(),
+    spawnOptions: dockerProbeSpawnOptions(),
   };
-}
-
-function isDetachedDockerRecord(record) {
-  const opts = record.options || {};
-  return (
-    opts.isolated === 'docker' &&
-    opts.isolationMode === 'detached' &&
-    Boolean(opts.sessionName)
-  );
-}
-
-function dockerProbeSpawnOptions() {
-  return getDockerSpawnOptions({
-    encoding: 'utf8',
-    env: process.env,
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
-}
-
-function readDockerState(record, probe = null) {
-  const opts = record.options || {};
-  if (opts.isolated !== 'docker' || !opts.sessionName) {
-    return null;
-  }
-  const state = inspectDockerState(opts.sessionName, probe);
-  if (
-    record.attempt &&
-    state?.startedAt &&
-    Date.parse(state.startedAt) < Date.parse(record.attempt.startedAt)
-  ) {
-    return null;
-  }
-  return state;
-}
-
-/**
- * Best-effort terminal exit code reported by the isolation backend itself
- * (currently docker via `docker inspect .State.ExitCode`). Returns null when
- * the backend cannot provide a real code, so callers never surface the `-1`
- * sentinel for a session whose real exit code is simply not available yet.
- * A running container has no terminal exit code (docker reports `0` for it),
- * so only a stopped container contributes one.
- * @param {{running: boolean, exitCode: number|null}|null} dockerState - Inspected state
- * @returns {number|null}
- */
-function backendExitCode(dockerState) {
-  return dockerState && !dockerState.running ? dockerState.exitCode : null;
-}
-
-/**
- * Reconcile the OOM observation from the stored record and from `docker inspect`.
- *
- * `State.OOMKilled` is a container-cgroup flag: the kernel sets it when ANY
- * process in the cgroup is OOM-killed and it is never cleared for the life of
- * the container (moby/moby#47618). It is therefore an *observation*, never a
- * verdict about the session (issue #151) — a container that lost one child
- * process keeps running and can still exit `0`. Once observed, the flag stays
- * `true` for the record.
- * @param {Object} record - Execution record
- * @param {{oomKilled: boolean|null}|null} dockerState - Inspected state
- * @returns {boolean|undefined} Observation, or undefined when nothing is known
- */
-function resolveOomObservation(record, dockerState) {
-  if (record.oomKilled === true || dockerState?.oomKilled === true) {
-    return true;
-  }
-  if (record.oomKilled === false || dockerState?.oomKilled === false) {
-    return false;
-  }
-  return undefined;
 }
 
 /**
@@ -433,6 +328,7 @@ function resolveDetachedStatus(record, logTail, probe = null) {
         (oomKilled === true ? 137 : -1);
     }
     applyEndTime(enriched, dockerState, footer.finishedAt);
+    addLostWatcherEvidence(enriched, record, dockerState, logTail);
   }
 
   return enriched;
@@ -563,10 +459,7 @@ function enrichDetachedStatus(record) {
   const logTail = record
     ? readAttemptLogTail(record, FATAL_MARKER_TAIL_BYTES)
     : null;
-  const probe = {
-    dockerCommand: getDockerCommand(),
-    spawnOptions: dockerProbeSpawnOptions(),
-  };
+  const probe = dockerProbe();
   const resolved = attachContainerRemoval(
     resolveDetachedStatus(record, logTail, probe),
     probe
@@ -920,10 +813,17 @@ function queryStatus(store, identifier, outputFormat) {
     };
   }
   try {
-    // Enrich detached execution status with live session check
-    const enrichedRecord = enrichDetachedStatus(record);
-    persistContainerRemoval(store, record, enrichedRecord);
-    const withProcessIds = attachProcessIds(enrichedRecord);
+    // Enrich detached execution status with live session check; its docker
+    // probes are answered by one inspect (issue #243).
+    const withProcessIds = withDockerInspectBatch(
+      [record],
+      dockerProbe(),
+      () => {
+        const enrichedRecord = enrichDetachedStatus(record);
+        persistContainerRemoval(store, record, enrichedRecord);
+        return attachProcessIds(enrichedRecord);
+      }
+    );
     // Attach currentTime so callers can see how long an executing command has been running
     const withCurrentTime = require('./execution-chain').attachIdentity(
       attachCurrentTime(withProcessIds),
@@ -952,8 +852,12 @@ function listExecutions(store, outputFormat, options = {}) {
   }
 
   try {
+    const all = store.getAll();
+    // One docker inspect for every listed container (issue #243).
     const enriched = sortRecordsByStartTimeDesc(
-      store.getAll().map(prepareRecordForList)
+      withDockerInspectBatch(all, dockerProbe(), () =>
+        all.map(prepareRecordForList)
+      )
     );
     // --running reports the reconciled status, not the stored one: a record
     // whose session already died is listed as executed even if the store still

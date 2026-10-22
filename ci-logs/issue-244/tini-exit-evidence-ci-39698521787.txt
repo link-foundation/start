@@ -1,0 +1,14 @@
+docker 28.0.4
+no init  PID 1=sleep       zombies=1
+no init  exit3  exit=3 oom=false
+no init  segv   exit=139 oom=false
+no init  oom    exit=137 oom=true reason=memory-exhaustion (cgroup-oom-killer) memoryExhausted=true
+no init  kill   exit=137 oom=false
+no init  stop   exit=137 oom=false after 2.3 s
+--init   PID 1=docker-init zombies=0
+--init   exit3  exit=3 oom=false
+--init   segv   exit=139 oom=false
+--init   oom    exit=137 oom=true reason=memory-exhaustion (cgroup-oom-killer) memoryExhausted=true
+--init   kill   exit=137 oom=false
+--init   stop   exit=143 oom=false after 0.1 s
+OK: --init reaps orphans and keeps exit evidence

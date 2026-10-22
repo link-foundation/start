@@ -111,10 +111,10 @@ impl AttachedDiagnostics {
         if let Some(log) = log {
             append_log_file(log, &format!("{}\n{}\n", memory_line, evidence));
         }
-        let (main, daemon) = crate::exit_evidence::from_log(Some(&evidence));
+        let (main, _) = crate::exit_evidence::from_log(Some(&evidence));
         DiagnosticFacts {
             memory: cgroup_memory::parse_cgroup_memory_sample(&sample),
-            evidence: serde_json::json!({"mainOom": main, "daemonRestart": daemon}),
+            evidence: crate::exit_evidence::evidence_json(Some(&evidence), main),
         }
     }
 }

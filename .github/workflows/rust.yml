@@ -507,13 +507,21 @@ jobs:
       - build
       - cargo-audit
       - rust-codeql
-    if: |
-      !cancelled() &&
+    # Name every result: at job level the wildcard needs result list also
+    # sees the skipped changelog check behind test/coverage, so a "no result
+    # is skipped" check skipped every main release since #234 (issue #240).
+    if: >-
+      ${{ !cancelled() &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      !contains(needs.*.result, 'failure') &&
-      !contains(needs.*.result, 'cancelled') &&
-      !contains(needs.*.result, 'skipped')
+      needs.syntax-check.result == 'success' &&
+      needs.lint.result == 'success' &&
+      needs.test.result == 'success' &&
+      needs.test-parity.result == 'success' &&
+      needs.coverage.result == 'success' &&
+      needs.build.result == 'success' &&
+      needs.cargo-audit.result == 'success' &&
+      needs.rust-codeql.result == 'success' }}
     environment: release-main
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -667,14 +675,20 @@ jobs:
       - build
       - cargo-audit
       - rust-codeql
-    if: |
-      !cancelled() &&
+    # Named results, as in auto-release (issue #240).
+    if: >-
+      ${{ !cancelled() &&
       github.event_name == 'workflow_dispatch' &&
       github.ref == 'refs/heads/main' &&
       inputs.release_mode == 'instant' &&
-      !contains(needs.*.result, 'failure') &&
-      !contains(needs.*.result, 'cancelled') &&
-      !contains(needs.*.result, 'skipped')
+      needs.syntax-check.result == 'success' &&
+      needs.lint.result == 'success' &&
+      needs.test.result == 'success' &&
+      needs.test-parity.result == 'success' &&
+      needs.coverage.result == 'success' &&
+      needs.build.result == 'success' &&
+      needs.cargo-audit.result == 'success' &&
+      needs.rust-codeql.result == 'success' }}
     environment: release-main
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -873,4 +887,4 @@ jobs:
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
           IS_MAIN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
-        run: node scripts/check-stage-status.mjs --required syntax-check,lint,test,test-parity,coverage,cargo-audit,rust-codeql
+        run: node scripts/check-stage-status.mjs --required syntax-check,lint,test,test-parity,coverage,cargo-audit,rust-codeql --release 'auto-release:syntax-check,lint,test,test-parity,coverage,build,cargo-audit,rust-codeql'

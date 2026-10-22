@@ -1,4 +1,9 @@
-/** Finite, sequential real-daemon polling probes: 32 MiB, 32 PIDs, 0.2 CPU. */
+/**
+ * Finite, sequential real-daemon polling probes: 32 MiB, 32 PIDs, 0.2 CPU.
+ * Since issue #242 the hidden-cgroup fallback reads through one long-lived
+ * `docker exec -i` per sampler instead of one exec per round, and a local
+ * cgroup needs no exec at all.
+ */
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -101,7 +106,8 @@ try {
         count('State.Running') > (interval ? 12 : 3) ||
         sleeps.length < (interval ? 6 : 2) ||
         sleeps.some((value) => value !== (interval || '5')) ||
-        (mode === 'hidden' && count('exec ') < (interval ? 6 : 2)) ||
+        count('exec ') !== (mode === 'hidden' ? 1 : 0) ||
+        count('exec -i ') !== (mode === 'hidden' ? 1 : 0) ||
         !output.includes('sample=33554432 ')
       ) {
         throw new Error('Real Docker polling or memory sample regression');

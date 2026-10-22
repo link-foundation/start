@@ -64,16 +64,19 @@ posix('issue #238: bounded Docker cgroup sampling', () => {
     expect(count(output, 'sleep=5')).toBe(3);
     expect(count(output, '{{.State.Running}}')).toBe(1);
     expect(count(output, '{{.HostConfig.CgroupnsMode}}')).toBe(1);
-    // One fallback after local removal; no remote exec on readable rounds.
-    expect(count(output, 'exec task')).toBe(1);
+    // A readable local cgroup never starts a remote exec, even after removal
+    // (issue #242): the liveness probe ends the loop instead.
+    expect(count(output, "task '238' sh -c")).toBe(0);
   });
 
   it('honors an override in the watcher environment and caches remote namespace', () => {
     const output = sample('remote', '2');
     expect(count(output, 'sleep=2')).toBe(3);
     expect(count(output, '{{.HostConfig.CgroupnsMode}}')).toBe(1);
-    expect(count(output, '{{.State.Running}}')).toBe(4);
-    expect(count(output, 'exec task')).toBe(4);
+    // One long-lived exec streams every round; liveness is probed once, after
+    // the stream ends (issue #242).
+    expect(count(output, '{{.State.Running}}')).toBe(1);
+    expect(count(output, "task '238' sh -c")).toBe(1);
     expect(output).toContain(
       'memory.max=67108864 memory.peak=33554432 oom=1 oom_kill=3'
     );
@@ -90,7 +93,7 @@ posix('issue #238: bounded Docker cgroup sampling', () => {
       '1; exit 7',
       '99999999999999999999999999',
     ]) {
-      expect(count(sample('shared', interval), 'sleep=5')).toBe(3);
+      expect(count(sample('remote', interval), 'sleep=5')).toBe(3);
     }
   });
 
@@ -98,7 +101,14 @@ posix('issue #238: bounded Docker cgroup sampling', () => {
     for (const mode of ['shared', 'no-shell', 'outage']) {
       const output = sample(mode);
       expect(count(output, '{{.HostConfig.CgroupnsMode}}')).toBe(1);
-      expect(count(output, '{{.State.Running}}')).toBe(4);
+      // A shared namespace or a missing shell ends sampling at once; an outage
+      // falls back to per-round execs, each followed by a liveness probe.
+      expect(count(output, '{{.State.Running}}')).toBe(
+        mode === 'outage' ? 4 : 0
+      );
+      expect(count(output, "task '238' sh -c")).toBe(
+        { shared: 0, 'no-shell': 1, outage: 4 }[mode]
+      );
       if (mode === 'outage') {
         expect(output).toContain('sample=67108864 33554432 1 3 0 100');
       } else {
