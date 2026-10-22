@@ -1,0 +1,5 @@
+---
+'start-command': patch
+---
+
+Stop the Docker cgroup sampler when the counters can never be read (#247). On hosts whose containers have no `memory.events` (the `memory` controller is not delegated, e.g. a root `cgroup.subtree_control` of `cpuset cpu pids`) and whose local cgroup is hidden, the sampler started one `docker exec` and one `docker inspect -f {{.State.Running}}` every interval for the whole life of the task without ever recording a sample. Exit 3 (unreadable counters) from the long-lived stream or from the per-round read now records the reason and stops sampling, as a missing `sh` (exit 126/127) already did; the post-mortem reports `Memory:     unavailable (local cgroup unavailable; Docker exec exit=3: private cgroup v2 counters unreadable)` instead of the last round's error. Other failed rounds are still retried, but each one doubles the wait, up to 60 s (or the interval, if longer); a sample restores the interval. The completion watcher (`docker wait`) still finishes the run.

@@ -312,8 +312,13 @@ the task's CPU limit pays for no `cat`, `sed` or `sleep` processes. The stream
 ends with the sampler, because its stdin closes. If that stream cannot start,
 the sampler falls back to one `docker exec` per round (#242).
 Missing shell, shared namespace or unavailable counters produce an explicit
-`Memory: unavailable (...) memory.limit=... (HostConfig)` line. Last valid
-samples survive temporary outages. Set
+`Memory: unavailable (...) memory.limit=... (HostConfig)` line and stop the
+sampler at once: a container without `memory.events` (its `memory` controller
+is not delegated) can never produce a sample, so it costs no further
+`docker exec` or `docker inspect` per round (#247). Other failed rounds are
+retried, each one doubling the wait up to 60 s (or the interval, if longer),
+and a sample restores the interval. Last valid samples survive temporary
+outages. Set
 `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS` to a positive whole number of
 seconds to change the interval for attached and detached runs; unset, invalid,
 zero, negative, fractional or out-of-range values fall back to `5`, and `off`
