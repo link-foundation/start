@@ -172,6 +172,76 @@
       ]
     },
     {
+      "name": "docker --init (issue #244)",
+      "argv": [
+        "--isolated",
+        "docker",
+        "--init",
+        "--",
+        "echo",
+        "hi"
+      ],
+      "command": "echo hi",
+      "rawCommand": [
+        "echo",
+        "hi"
+      ],
+      "options": {
+        "isolated": "docker",
+        "init": true
+      }
+    },
+    {
+      "name": "docker --no-init (issue #244)",
+      "argv": [
+        "--isolated",
+        "docker",
+        "--no-init",
+        "--",
+        "echo",
+        "hi"
+      ],
+      "command": "echo hi",
+      "rawCommand": [
+        "echo",
+        "hi"
+      ],
+      "options": {
+        "isolated": "docker",
+        "init": false
+      }
+    },
+    {
+      "name": "docker without --init stays off (issue #244)",
+      "argv": [
+        "--isolated",
+        "docker",
+        "--",
+        "echo",
+        "hi"
+      ],
+      "command": "echo hi",
+      "rawCommand": [
+        "echo",
+        "hi"
+      ],
+      "options": {
+        "init": false
+      }
+    },
+    {
+      "name": "--init without docker (issue #244)",
+      "argv": [
+        "--isolated",
+        "screen",
+        "--init",
+        "--",
+        "echo",
+        "hi"
+      ],
+      "error": "--init option is only valid"
+    },
+    {
       "name": "Docker soft memory --memory-reservation=25% (issue #236)",
       "argv": [
         "--isolated",

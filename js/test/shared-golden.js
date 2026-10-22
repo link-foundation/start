@@ -37,13 +37,29 @@ describe('shared JavaScript and Rust golden contracts', () => {
       );
     });
   }
+  // The fixtures describe the defaults, so a host-wide docker init default
+  // (issue #244) must not leak into them.
+  function parseWithoutHostDefaults(argv) {
+    const saved = process.env.START_COMMAND_DOCKER_INIT;
+    delete process.env.START_COMMAND_DOCKER_INIT;
+    try {
+      return parseArgs(argv);
+    } finally {
+      if (saved !== undefined) {
+        process.env.START_COMMAND_DOCKER_INIT = saved;
+      }
+    }
+  }
   for (const fixture of fixtures['cli-parsing']) {
     it(`CLI parsing: ${fixture.name}`, () => {
       if (fixture.error) {
-        assert.throws(() => parseArgs(fixture.argv), new RegExp(fixture.error));
+        assert.throws(
+          () => parseWithoutHostDefaults(fixture.argv),
+          new RegExp(fixture.error)
+        );
         return;
       }
-      const parsed = parseArgs(fixture.argv);
+      const parsed = parseWithoutHostDefaults(fixture.argv);
       assert.equal(parsed.command, fixture.command);
       assert.deepEqual(parsed.rawCommand, fixture.rawCommand);
       for (const [key, value] of Object.entries(fixture.options)) {
