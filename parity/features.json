@@ -741,7 +741,8 @@
           "js/test/regression-182.js",
           "js/test/regression-207.js",
           "js/test/regression-238.js",
-          "js/test/regression-242.js"
+          "js/test/regression-242.js",
+          "js/test/regression-247.js"
         ]
       },
       "rust": {
@@ -755,7 +756,8 @@
           "rust/tests/regression_182.rs",
           "rust/tests/regression_207.rs",
           "rust/tests/regression_238.rs",
-          "rust/tests/regression_242.rs"
+          "rust/tests/regression_242.rs",
+          "rust/tests/regression_247.rs"
         ]
       },
       "manualRust": [

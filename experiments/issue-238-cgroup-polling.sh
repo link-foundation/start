@@ -1,6 +1,8 @@
 #!/bin/sh
 # Finite accelerated sampler fixture, shared by JavaScript and Rust tests.
 # Each mocked sleep advances the clock; the fourth sample observes shutdown.
+# The no-memory modes (issue #247) run the real in-container scripts against
+# a container cgroup without memory.events (no delegated memory controller).
 set -eu
 fixture_dir=$(mktemp -d)
 trap 'rm -rf "$fixture_dir"' EXIT
@@ -9,7 +11,8 @@ export TMPDIR="$fixture_dir" PATH="$fixture_dir/bin:$PATH"
 export START_COMMAND_CGROUP_ROOT="$fixture_dir/cgroup root"
 export START_COMMAND_PROC_ROOT="$fixture_dir/proc"
 scope="$START_COMMAND_CGROUP_ROOT/docker/238abc"
-mkdir -p "$fixture_dir/bin" "$scope"
+mkdir -p "$fixture_dir/bin" "$scope" "$fixture_dir/container"
+echo max > "$fixture_dir/container/memory.max"
 printf 'oom 0\noom_kill 0\n' > "$scope/memory.events"
 echo 67108864 > "$scope/memory.max"
 echo 33554432 > "$scope/memory.peak"
@@ -37,6 +40,8 @@ case "$1" in
       case "$START_SAMPLER_MODE" in
         local|final) exit 1;;
         no-shell) echo 'sh: not found' >&2; exit 127;;
+        no-memory) exec sh -c "$6" "$7" "$START_SAMPLER_FIXTURE/container";;
+        *-outage) echo 'Error response from daemon: connection reset' >&2; exit 1;;
         outage)
           if [ "$(cat "$START_SAMPLER_FIXTURE/round")" -gt 0 ]; then
             echo 'Error response from daemon: connection reset' >&2; exit 1
@@ -50,7 +55,9 @@ case "$1" in
     fi
     case "$START_SAMPLER_MODE" in
       local|final) exit 1;;
-      no-shell) echo 'sh: not found' >&2; exit 127;;
+      no-shell|no-shell-outage) echo 'sh: not found' >&2; exit 127;;
+      no-memory|no-memory-outage)
+        exec sh -c "$(printf '%s' "$5" | sed "s#/sys/fs/cgroup#$START_SAMPLER_FIXTURE/container#g")";;
       outage) if [ "$(cat "$START_SAMPLER_FIXTURE/round")" -gt 0 ]; then exit 1; fi;;
     esac
     echo '67108864 33554432 1 3 /sys/fs/cgroup';;
@@ -62,7 +69,7 @@ cat > "$fixture_dir/bin/sleep" <<'SLEEP'
 # exec that fails at once or a stopped container, and the ticker then ends on
 # its next write; end it here so the round count stays deterministic.
 if [ -p /dev/stdout ]; then
-  case "$START_SAMPLER_MODE" in no-shell|outage) exit 1;; esac
+  case "$START_SAMPLER_MODE" in no-shell*|no-memory*|outage) exit 1;; esac
   [ ! -f "$START_SAMPLER_FIXTURE/stopped" ] || exit 1
 fi
 printf '%s\n' "$1" >> "$START_SAMPLER_FIXTURE/sleeps"
