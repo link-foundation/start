@@ -11,10 +11,7 @@ use start_command::exit_evidence::{
     DAEMON_RESTART_API, MAIN_OOM,
 };
 use start_command::exit_reason::resolve_exit_reason;
-use start_command::{
-    query_status, CommandRunOutput, CommandRunner, ExecutionRecord, ExecutionStore,
-    ExecutionStoreOptions,
-};
+use start_command::{CommandRunOutput, CommandRunner};
 use std::cell::RefCell;
 use std::sync::Mutex;
 
@@ -236,6 +233,7 @@ fn keeps_attempt_scoped_oom_evidence_ahead_of_the_api_check() {
 #[cfg(unix)]
 #[test]
 fn status_collects_evidence_the_lost_watcher_never_wrote() {
+    use start_command::{query_status, ExecutionRecord, ExecutionStore, ExecutionStoreOptions};
     use std::os::unix::fs::PermissionsExt;
     let dir = tempfile::TempDir::new().unwrap();
     let docker = dir.path().join("docker");

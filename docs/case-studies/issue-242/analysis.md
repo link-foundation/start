@@ -107,7 +107,17 @@ second stream gets no sample, and per-round execs follow.
   daemon) now requires exactly one `docker exec -i` with a hidden cgroup and
   none with a readable one. Before, it required one exec per round and failed
   on the first CI run after this change. Its trace there already showed the
-  single stream exec and a correct 32 MiB sample.
+  single stream exec and a correct 32 MiB sample. With the fixed expectation
+  (`ci-logs/issue-242/real-docker-probe-ci-39698521787.jsonl`, Docker on the
+  Linux CI runner, 32 MiB container), these are the results:
+
+  | Mode | `docker exec` | `{{.State.Running}}` | Ticks |
+  | --- | --- | --- | --- |
+  | local cgroup readable, default interval | 0 | 0 | 3 |
+  | hidden cgroup, default interval | 1 | 1 | 3 |
+  | hidden cgroup, 1 s interval | 1 | 1 | 12 |
+
+  For the 1 s row, #238's run of the same probe reported eleven of each.
 - `ci-logs/issue-242/regression-242-before.txt`: all 13 JS tests fail on the
   original code.
 - `ci-logs/issue-242/real-docker-after.txt`

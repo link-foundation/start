@@ -9,14 +9,18 @@
 //! the same as before.
 
 use serde_json::Value;
+use start_command::docker_inspect_batch::parse_batch_inspect;
+#[cfg(unix)]
 use start_command::docker_inspect_batch::{
-    batch_format, parse_batch_inspect, prefetched_inspect, with_docker_inspect_batch,
+    batch_format, prefetched_inspect, with_docker_inspect_batch,
 };
 use start_command::execution_store::DECODED_COPY_FILE;
-use start_command::status_formatter::{list_executions, query_status};
+use start_command::status_formatter::query_status;
 use start_command::store_decode_cache::{decode_count, forget_decoded_store, DECODED_COPY_FORMAT};
+#[cfg(unix)]
+use start_command::{status_formatter::list_executions, ExecutionStatus};
 use start_command::{
-    ExecutionRecord, ExecutionRecordOptions, ExecutionStatus, ExecutionStore, ExecutionStoreOptions,
+    ExecutionRecord, ExecutionRecordOptions, ExecutionStore, ExecutionStoreOptions,
 };
 use std::collections::HashMap;
 use std::path::Path;
@@ -30,6 +34,7 @@ fn test_store(dir: &Path) -> ExecutionStore {
     })
 }
 
+#[cfg(unix)]
 fn docker_record(
     session_name: &str,
     status: ExecutionStatus,
@@ -66,6 +71,7 @@ fn docker_record(
 }
 
 /// One store with every kind of record `--list` handles.
+#[cfg(unix)]
 fn populated_store(dir: &Path) -> (ExecutionStore, HashMap<&'static str, String>) {
     let store = test_store(dir);
     let mut removed = docker_record(
@@ -121,6 +127,7 @@ fn populated_store(dir: &Path) -> (ExecutionStore, HashMap<&'static str, String>
 }
 
 /// Query-time clocks, which differ between any two runs.
+#[cfg(unix)]
 fn stable(output: &str) -> Value {
     fn strip(value: &mut Value) {
         match value {

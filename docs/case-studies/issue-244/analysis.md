@@ -63,7 +63,9 @@ Details:
 `experiments/issue-244-tini-exit-evidence.js` runs each case with and without
 `--init` against a real daemon and exits 1 on any difference from the
 expectations. Results from Docker 29.9.1 on this host
-(`ci-logs/issue-244/tini-exit-evidence.txt`):
+(`ci-logs/issue-244/tini-exit-evidence.txt`), with the OOM row from Docker
+28.0.4 on the Linux CI runner (`ci-logs/issue-244/tini-exit-evidence-ci-39698521787.txt`,
+JavaScript CI/CD run 39698521787):
 
 | Case | Without `--init` | With `--init` |
 | --- | --- | --- |
@@ -73,16 +75,18 @@ expectations. Results from Docker 29.9.1 on this host
 | Child killed by SIGSEGV | 139, false | 139, false |
 | `docker kill` | 137, false | 137, false |
 | `docker stop -t 2` | 137 after 2.5 s (SIGTERM ignored by PID 1, then SIGKILL) | 143 after 0.7 s (tini forwards SIGTERM) |
-| Memory-limit OOM kill | blocked on this host, see below | blocked on this host, see below |
+| Memory-limit OOM kill (CI) | 137, true, `memory-exhaustion (cgroup-oom-killer)`, memoryExhausted true | the same |
 
 The `docker stop` row is the one visible behaviour change. Without an init, the
 kernel drops a signal sent to a namespace's PID 1 when PID 1 has no handler for
 it. So `--stop` on a command without a SIGTERM handler waited out the grace
 period and ended with SIGKILL (137). Under tini the command gets SIGTERM and
-ends at once with 143. The README and the changeset describe this.
+ends at once with 143. The README and the changeset describe this. The CI
+runner shows the same rows: 1 against 0 zombies, 3, 139 and 137 either way,
+and `docker stop` 137 after 2.3 s against 143 after 0.1 s.
 
-**OOM case: blocked locally, run in CI.** This host cannot start any container
-with `--memory`: its root cgroup does not delegate the memory controller
+**OOM case: blocked locally, verified in CI.** This host cannot start any
+container with `--memory`: its root cgroup does not delegate the memory controller
 (`cgroup.subtree_control` is `cpuset cpu pids`, and `/sys/fs/cgroup/docker` is
 `threaded`). runc fails with `cannot enter cgroupv2 "/sys/fs/cgroup/docker" with
 domain controllers -- it is in threaded mode`, and `--cgroup-parent` does not
@@ -93,7 +97,8 @@ same way `experiments/issue-209-docker.mjs` does: `collectExitEvidence`
 `exit=137 oom=true reason=memory-exhaustion (cgroup-oom-killer)
 memoryExhausted=true`. The Linux JS CI job runs it with
 `ISSUE_244_REQUIRE_OOM=1`, so a skipped OOM case fails there, and uploads the
-output as the `issue-244-docker-evidence` artifact.
+output as the `issue-244-docker-evidence` artifact. Its first run on this
+branch attributed both OOM kills the same way, as in the table above.
 
 Why the attribution cannot change: OOM evidence in `$` is container-wide
 (`State.OOMKilled`, the cgroup `oom_kill` counter, Docker's `oom` event). It
