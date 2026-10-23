@@ -1,0 +1,489 @@
+9Z Current runner version: '2.338.0'
+##[group]Runner Image Provisioner
+Hosted Compute Agent
+Version: 20261012.601
+Commit: f3dc54e1fb89da6852db922499a0233137369e1d
+Build Date: 2026-10-12T17:48:21Z
+Worker ID: {fd9e116d-47bd-4845-87fe-dd3be8ae1485}
+Region: westus3
+Cloud: Azure
+##[endgroup]
+##[group]Operating System
+Ubuntu
+24.04.5
+LTS
+##[endgroup]
+##[group]Runner Image
+Image: ubuntu-24.04
+Version: 20261012.334.1
+Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261012.334/images/ubuntu/Ubuntu2404-Readme.md
+Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261012.334
+##[endgroup]
+##[group]GITHUB_TOKEN Permissions
+Contents: read
+Metadata: read
+##[endgroup]
+Secret source: Actions
+Cache mode: write
+Prepare workflow directory
+Prepare all required actions
+Getting action download info
+Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+Download action repository 'oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6' (SHA:0c5077e51419868618aeaa5fe8019c62421857d6)
+Complete job name: Check for Changesets
+##[group]Run actions/checkout@v6
+with:
+  persist-credentials: false
+  fetch-depth: 0
+  repository: link-foundation/start
+  token: ***
+  ssh-strict: true
+  ssh-user: git
+  clean: true
+  sparse-checkout-cone-mode: true
+  fetch-tags: false
+  show-progress: true
+  lfs: false
+  submodules: false
+  set-safe-directory: true
+  allow-unsafe-pr-checkout: false
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GIT_CONFIG_COUNT: 1
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: main
+##[endgroup]
+Syncing repository: link-foundation/start
+##[group]Getting Git version info
+Working directory is '/home/runner/work/start/start'
+[command]/usr/bin/git version
+git version 2.55.0
+##[endgroup]
+Temporarily overriding HOME='/home/runner/work/_temp/eb1b3a22-3551-4e22-a2af-80bff1e7d5cb' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+[command]/usr/bin/git config --global --add safe.directory /home/runner/work/start/start
+Deleting the contents of '/home/runner/work/start/start'
+##[group]Determining repository object format
+##[endgroup]
+##[group]Initializing the repository
+[command]/usr/bin/git init /home/runner/work/start/start
+Initialized empty Git repository in /home/runner/work/start/start/.git/
+[command]/usr/bin/git remote add origin https://github.com/link-foundation/start
+##[endgroup]
+##[group]Disabling automatic garbage collection
+[command]/usr/bin/git config --local gc.auto 0
+##[endgroup]
+##[group]Setting up auth
+Removing SSH command configuration
+[command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Removing HTTP extra header
+[command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Removing includeIf entries pointing to credentials config files
+[command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+[command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+[command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-bfbc1b19-d12b-4c3a-a336-7757c10d2c71.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+[command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/start/start/.git.path /home/runner/work/_temp/git-credentials-bfbc1b19-d12b-4c3a-a336-7757c10d2c71.config
+[command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/start/start/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-bfbc1b19-d12b-4c3a-a336-7757c10d2c71.config
+[command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-bfbc1b19-d12b-4c3a-a336-7757c10d2c71.config
+[command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-bfbc1b19-d12b-4c3a-a336-7757c10d2c71.config
+##[endgroup]
+##[group]Fetching the repository
+[command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/* +c38c42a1091bea8b8ad0784dcd1e5341bdc16859:refs/remotes/pull/248/merge
+From https://github.com/link-foundation/start
+ * [new branch]      crates-oidc-token-fallback               -> origin/crates-oidc-token-fallback
+ * [new branch]      crates-trusted-publishing                -> origin/crates-trusted-publishing
+ * [new branch]      fix-rust-release-deploy-key              -> origin/fix-rust-release-deploy-key
+ * [new branch]      issue-1-06306849                         -> origin/issue-1-06306849
+ * [new branch]      issue-101-f6ea3a87b1de                   -> origin/issue-101-f6ea3a87b1de
+ * [new branch]      issue-103-d2eee141f4bc                   -> origin/issue-103-d2eee141f4bc
+ * [new branch]      issue-105-0edd650b7149                   -> origin/issue-105-0edd650b7149
+ * [new branch]      issue-108-c821d8a93f01                   -> origin/issue-108-c821d8a93f01
+ * [new branch]      issue-11-1524425f0588                    -> origin/issue-11-1524425f0588
+ * [new branch]      issue-110-c1b9267a2743                   -> origin/issue-110-c1b9267a2743
+ * [new branch]      issue-112-46af7527c0d9                   -> origin/issue-112-46af7527c0d9
+ * [new branch]      issue-114-8181f01863b9                   -> origin/issue-114-8181f01863b9
+ * [new branch]      issue-116-01c61894edbd                   -> origin/issue-116-01c61894edbd
+ * [new branch]      issue-118-4ed21210786f                   -> origin/issue-118-4ed21210786f
+ * [new branch]      issue-120-22538e16da80                   -> origin/issue-120-22538e16da80
+ * [new branch]      issue-122-9e4e6b1efac6                   -> origin/issue-122-9e4e6b1efac6
+ * [new branch]      issue-124-0288905fdd33                   -> origin/issue-124-0288905fdd33
+ * [new branch]      issue-126-c5c8579b3ab4                   -> origin/issue-126-c5c8579b3ab4
+ * [new branch]      issue-128-9d904e7dd227                   -> origin/issue-128-9d904e7dd227
+ * [new branch]      issue-13-52ae2ce06ee2                    -> origin/issue-13-52ae2ce06ee2
+ * [new branch]      issue-130-cefa8a965461                   -> origin/issue-130-cefa8a965461
+ * [new branch]      issue-132-81888ef731d7                   -> origin/issue-132-81888ef731d7
+ * [new branch]      issue-134-1a26eb545a18                   -> origin/issue-134-1a26eb545a18
+ * [new branch]      issue-136-cffa39dbc470                   -> origin/issue-136-cffa39dbc470
+ * [new branch]      issue-138-3f4ef74d216e                   -> origin/issue-138-3f4ef74d216e
+ * [new branch]      issue-140-55c0984f3705                   -> origin/issue-140-55c0984f3705
+ * [new branch]      issue-142-e63b64dd46e6                   -> origin/issue-142-e63b64dd46e6
+ * [new branch]      issue-144-d8d3fb7dfd56                   -> origin/issue-144-d8d3fb7dfd56
+ * [new branch]      issue-146-5fd1b386b75b                   -> origin/issue-146-5fd1b386b75b
+ * [new branch]      issue-148-799a293d3d5b                   -> origin/issue-148-799a293d3d5b
+ * [new branch]      issue-15-ccfe6d130337                    -> origin/issue-15-ccfe6d130337
+ * [new branch]      issue-15-d3d0f1c82afa                    -> origin/issue-15-d3d0f1c82afa
+ * [new branch]      issue-150-140b61c8f491                   -> origin/issue-150-140b61c8f491
+ * [new branch]      issue-151-50e985780da1                   -> origin/issue-151-50e985780da1
+ * [new branch]      issue-154-73165f3b5cf7                   -> origin/issue-154-73165f3b5cf7
+ * [new branch]      issue-156-a9778f176d79                   -> origin/issue-156-a9778f176d79
+ * [new branch]      issue-158-ecf4c4dc2e55                   -> origin/issue-158-ecf4c4dc2e55
+ * [new branch]      issue-160-9bad94da73d2                   -> origin/issue-160-9bad94da73d2
+ * [new branch]      issue-162-9b675d4abc32                   -> origin/issue-162-9b675d4abc32
+ * [new branch]      issue-164-f956a1709ae9                   -> origin/issue-164-f956a1709ae9
+ * [new branch]      issue-165-1ffee76f3bb1                   -> origin/issue-165-1ffee76f3bb1
+ * [new branch]      issue-168-73204420fd49                   -> origin/issue-168-73204420fd49
+ * [new branch]      issue-172-8dae28a68ba0                   -> origin/issue-172-8dae28a68ba0
+ * [new branch]      issue-174-546074361e83                   -> origin/issue-174-546074361e83
+ * [new branch]      issue-176-9340b1a01546                   -> origin/issue-176-9340b1a01546
+ * [new branch]      issue-178-a1e164f83ee0                   -> origin/issue-178-a1e164f83ee0
+ * [new branch]      issue-18-acfe3ddbe902                    -> origin/issue-18-acfe3ddbe902
+ * [new branch]      issue-183-4cba24615d2f                   -> origin/issue-183-4cba24615d2f
+ * [new branch]      issue-185-a11357b0d32d                   -> origin/issue-185-a11357b0d32d
+ * [new branch]      issue-187-35965f410f56                   -> origin/issue-187-35965f410f56
+ * [new branch]      issue-19-83cfc521f662                    -> origin/issue-19-83cfc521f662
+ * [new branch]      issue-195-cd307f03a9cf                   -> origin/issue-195-cd307f03a9cf
+ * [new branch]      issue-203-b56519b4c758                   -> origin/issue-203-b56519b4c758
+ * [new branch]      issue-207-c95cbdc7bbc2                   -> origin/issue-207-c95cbdc7bbc2
+ * [new branch]      issue-209-e3ae560c4c7c                   -> origin/issue-209-e3ae560c4c7c
+ * [new branch]      issue-211-694addd7e007                   -> origin/issue-211-694addd7e007
+ * [new branch]      issue-212-6ec86f9f3beb                   -> origin/issue-212-6ec86f9f3beb
+ * [new branch]      issue-22-08e44246441d                    -> origin/issue-22-08e44246441d
+ * [new branch]      issue-22-2d1c04999e6d                    -> origin/issue-22-2d1c04999e6d
+ * [new branch]      issue-220-ac9b85005218                   -> origin/issue-220-ac9b85005218
+ * [new branch]      issue-222-3f96a1c24be2                   -> origin/issue-222-3f96a1c24be2
+ * [new branch]      issue-227-0b7398984854                   -> origin/issue-227-0b7398984854
+ * [new branch]      issue-232-dddd70bf60fe                   -> origin/issue-232-dddd70bf60fe
+ * [new branch]      issue-234-a27fac6c586f                   -> origin/issue-234-a27fac6c586f
+ * [new branch]      issue-236-18c037eef059                   -> origin/issue-236-18c037eef059
+ * [new branch]      issue-238-a42cab4e013d                   -> origin/issue-238-a42cab4e013d
+ * [new branch]      issue-245-dbb63b192457                   -> origin/issue-245-dbb63b192457
+ * [new branch]      issue-247-1c6e68ba32a3                   -> origin/issue-247-1c6e68ba32a3
+ * [new branch]      issue-25-6419574a6cfe                    -> origin/issue-25-6419574a6cfe
+ * [new branch]      issue-25-8fe656da1123                    -> origin/issue-25-8fe656da1123
+ * [new branch]      issue-28-9a07df20ebbb                    -> origin/issue-28-9a07df20ebbb
+ * [new branch]      issue-3-908abf67e50f                     -> origin/issue-3-908abf67e50f
+ * [new branch]      issue-30-3c74b37eedc9                    -> origin/issue-30-3c74b37eedc9
+ * [new branch]      issue-31-e419d5f83f9d                    -> origin/issue-31-e419d5f83f9d
+ * [new branch]      issue-34-fcfbf90ca3a5                    -> origin/issue-34-fcfbf90ca3a5
+ * [new branch]      issue-36-4d2e05cadca2                    -> origin/issue-36-4d2e05cadca2
+ * [new branch]      issue-38-8d65d5c6dcf1                    -> origin/issue-38-8d65d5c6dcf1
+ * [new branch]      issue-40-500ee5a3c836                    -> origin/issue-40-500ee5a3c836
+ * [new branch]      issue-42-231914cdf85a                    -> origin/issue-42-231914cdf85a
+ * [new branch]      issue-44-05c1999867e1                    -> origin/issue-44-05c1999867e1
+ * [new branch]      issue-46-db1336ec1bd4                    -> origin/issue-46-db1336ec1bd4
+ * [new branch]      issue-49-49badfb087ae                    -> origin/issue-49-49badfb087ae
+ * [new branch]      issue-5-e920ed9704b1                     -> origin/issue-5-e920ed9704b1
+ * [new branch]      issue-51-ce9116974281                    -> origin/issue-51-ce9116974281
+ * [new branch]      issue-53-3037eb51507e                    -> origin/issue-53-3037eb51507e
+ * [new branch]      issue-55-62ca352b2854                    -> origin/issue-55-62ca352b2854
+ * [new branch]      issue-57-319974e37702                    -> origin/issue-57-319974e37702
+ * [new branch]      issue-57-9389c40a25d3                    -> origin/issue-57-9389c40a25d3
+ * [new branch]      issue-60-23ad1508ca00                    -> origin/issue-60-23ad1508ca00
+ * [new branch]      issue-62-0bf0e6dba402                    -> origin/issue-62-0bf0e6dba402
+ * [new branch]      issue-64-531bd4a9716c                    -> origin/issue-64-531bd4a9716c
+ * [new branch]      issue-66-b4bebb964b80                    -> origin/issue-66-b4bebb964b80
+ * [new branch]      issue-67-c74bf55321d9                    -> origin/issue-67-c74bf55321d9
+ * [new branch]      issue-7-6b049fda1d30                     -> origin/issue-7-6b049fda1d30
+ * [new branch]      issue-70-210190e0ad55                    -> origin/issue-70-210190e0ad55
+ * [new branch]      issue-70-490c526a882f                    -> origin/issue-70-490c526a882f
+ * [new branch]      issue-73-163864f76573                    -> origin/issue-73-163864f76573
+ * [new branch]      issue-73-47a3e673b0a8                    -> origin/issue-73-47a3e673b0a8
+ * [new branch]      issue-73-c42828279fb5                    -> origin/issue-73-c42828279fb5
+ * [new branch]      issue-77-acc01682cb56                    -> origin/issue-77-acc01682cb56
+ * [new branch]      issue-79-1581a427bf82                    -> origin/issue-79-1581a427bf82
+ * [new branch]      issue-79-48234c0f95fa                    -> origin/issue-79-48234c0f95fa
+ * [new branch]      issue-79-5fc029ea058c                    -> origin/issue-79-5fc029ea058c
+ * [new branch]      issue-79-740a4286522a                    -> origin/issue-79-740a4286522a
+ * [new branch]      issue-84-2301d58a902f                    -> origin/issue-84-2301d58a902f
+ * [new branch]      issue-84-8c8db1f16f9d                    -> origin/issue-84-8c8db1f16f9d
+ * [new branch]      issue-84-ca99d5699c03                    -> origin/issue-84-ca99d5699c03
+ * [new branch]      issue-84-e79fd3fe5cef                    -> origin/issue-84-e79fd3fe5cef
+ * [new branch]      issue-89-58b19f5dac12                    -> origin/issue-89-58b19f5dac12
+ * [new branch]      issue-9-9cb379f155fb                     -> origin/issue-9-9cb379f155fb
+ * [new branch]      issue-91-5ff8719c4182                    -> origin/issue-91-5ff8719c4182
+ * [new branch]      issue-91-8e243739c7af                    -> origin/issue-91-8e243739c7af
+ * [new branch]      issue-93-2ef57910c60b                    -> origin/issue-93-2ef57910c60b
+ * [new branch]      issue-96-829d21ddabc4                    -> origin/issue-96-829d21ddabc4
+ * [new branch]      issue-96-efde41b8c023                    -> origin/issue-96-efde41b8c023
+ * [new branch]      issue-99-bc78b28ed258                    -> origin/issue-99-bc78b28ed258
+ * [new branch]      main                                     -> origin/main
+ * [new tag]         js-v0.25.5                               -> js-v0.25.5
+ * [new tag]         js-v0.26.0                               -> js-v0.26.0
+ * [new tag]         js-v0.27.0                               -> js-v0.27.0
+ * [new tag]         js-v0.27.1                               -> js-v0.27.1
+ * [new tag]         js-v0.27.2                               -> js-v0.27.2
+ * [new tag]         js-v0.28.0                               -> js-v0.28.0
+ * [new tag]         js-v0.29.0                               -> js-v0.29.0
+ * [new tag]         js-v0.29.1                               -> js-v0.29.1
+ * [new tag]         js-v0.29.2                               -> js-v0.29.2
+ * [new tag]         js-v0.30.0                               -> js-v0.30.0
+ * [new tag]         js-v0.30.1                               -> js-v0.30.1
+ * [new tag]         js-v0.30.2                               -> js-v0.30.2
+ * [new tag]         js-v0.30.3                               -> js-v0.30.3
+ * [new tag]         js-v0.30.4                               -> js-v0.30.4
+ * [new tag]         js-v0.30.5                               -> js-v0.30.5
+ * [new tag]         js-v0.31.0                               -> js-v0.31.0
+ * [new tag]         js-v0.32.0                               -> js-v0.32.0
+ * [new tag]         js-v0.32.1                               -> js-v0.32.1
+ * [new tag]         js-v0.33.0                               -> js-v0.33.0
+ * [new tag]         js-v0.34.0                               -> js-v0.34.0
+ * [new tag]         js-v0.34.1                               -> js-v0.34.1
+ * [new tag]         js-v0.35.0                               -> js-v0.35.0
+ * [new tag]         js-v0.35.1                               -> js-v0.35.1
+ * [new tag]         js-v0.35.2                               -> js-v0.35.2
+ * [new tag]         js-v0.35.3                               -> js-v0.35.3
+ * [new tag]         js-v0.35.4                               -> js-v0.35.4
+ * [new tag]         js-v0.36.0                               -> js-v0.36.0
+ * [new tag]         js-v0.37.0                               -> js-v0.37.0
+ * [new tag]         js-v0.37.1                               -> js-v0.37.1
+ * [new tag]         js-v0.37.2                               -> js-v0.37.2
+ * [new tag]         js-v0.37.3                               -> js-v0.37.3
+ * [new tag]         js-v0.37.4                               -> js-v0.37.4
+ * [new tag]         js-v0.37.5                               -> js-v0.37.5
+ * [new tag]         js-v0.37.6                               -> js-v0.37.6
+ * [new tag]         js-v0.37.7                               -> js-v0.37.7
+ * [new tag]         js-v0.37.8                               -> js-v0.37.8
+ * [new tag]         js-v0.37.9                               -> js-v0.37.9
+ * [new tag]         js-v0.38.0                               -> js-v0.38.0
+ * [new tag]         js-v0.39.0                               -> js-v0.39.0
+ * [new tag]         rust-v0.14.1                             -> rust-v0.14.1
+ * [new tag]         rust-v0.14.2                             -> rust-v0.14.2
+ * [new tag]         rust-v0.14.3                             -> rust-v0.14.3
+ * [new tag]         rust-v0.15.0                             -> rust-v0.15.0
+ * [new tag]         rust-v0.15.1                             -> rust-v0.15.1
+ * [new tag]         rust-v0.16.0                             -> rust-v0.16.0
+ * [new tag]         rust-v0.16.1                             -> rust-v0.16.1
+ * [new tag]         rust-v0.16.2                             -> rust-v0.16.2
+ * [new tag]         rust-v0.17.0                             -> rust-v0.17.0
+ * [new tag]         rust-v0.17.1                             -> rust-v0.17.1
+ * [new tag]         rust-v0.17.2                             -> rust-v0.17.2
+ * [new tag]         rust-v0.17.3                             -> rust-v0.17.3
+ * [new tag]         rust-v0.17.4                             -> rust-v0.17.4
+ * [new tag]         rust-v0.17.5                             -> rust-v0.17.5
+ * [new tag]         rust-v0.18.0                             -> rust-v0.18.0
+ * [new tag]         rust-v0.19.0                             -> rust-v0.19.0
+ * [new tag]         rust-v0.19.1                             -> rust-v0.19.1
+ * [new tag]         rust-v0.19.2                             -> rust-v0.19.2
+ * [new tag]         rust-v0.20.0                             -> rust-v0.20.0
+ * [new tag]         rust-v0.21.0                             -> rust-v0.21.0
+ * [new tag]         rust-v0.21.1                             -> rust-v0.21.1
+ * [new tag]         rust-v0.22.0                             -> rust-v0.22.0
+ * [new tag]         rust-v0.22.1                             -> rust-v0.22.1
+ * [new tag]         rust-v0.22.2                             -> rust-v0.22.2
+ * [new tag]         rust-v0.22.3                             -> rust-v0.22.3
+ * [new tag]         rust-v0.22.4                             -> rust-v0.22.4
+ * [new tag]         rust-v0.23.0                             -> rust-v0.23.0
+ * [new tag]         rust-v0.24.0                             -> rust-v0.24.0
+ * [new tag]         rust-v0.25.0                             -> rust-v0.25.0
+ * [new tag]         rust-v0.25.1                             -> rust-v0.25.1
+ * [new tag]         rust-v0.25.10                            -> rust-v0.25.10
+ * [new tag]         rust-v0.25.2                             -> rust-v0.25.2
+ * [new tag]         rust-v0.25.3                             -> rust-v0.25.3
+ * [new tag]         rust-v0.25.4                             -> rust-v0.25.4
+ * [new tag]         rust-v0.25.5                             -> rust-v0.25.5
+ * [new tag]         rust-v0.25.6                             -> rust-v0.25.6
+ * [new tag]         rust-v0.25.7                             -> rust-v0.25.7
+ * [new tag]         rust-v0.25.8                             -> rust-v0.25.8
+ * [new tag]         rust-v0.25.9                             -> rust-v0.25.9
+ * [new tag]         rust-v0.26.0                             -> rust-v0.26.0
+ * [new tag]         rust-v0.27.0                             -> rust-v0.27.0
+ * [new tag]         rust-v0.28.0                             -> rust-v0.28.0
+ * [new tag]         rust-v0.29.0                             -> rust-v0.29.0
+ * [new tag]         v0.10.0                                  -> v0.10.0
+ * [new tag]         v0.11.0                                  -> v0.11.0
+ * [new tag]         v0.13.0                                  -> v0.13.0
+ * [new tag]         v0.15.0                                  -> v0.15.0
+ * [new tag]         v0.16.0                                  -> v0.16.0
+ * [new tag]         v0.17.0                                  -> v0.17.0
+ * [new tag]         v0.17.1                                  -> v0.17.1
+ * [new tag]         v0.17.2                                  -> v0.17.2
+ * [new tag]         v0.17.3                                  -> v0.17.3
+ * [new tag]         v0.17.4                                  -> v0.17.4
+ * [new tag]         v0.18.0                                  -> v0.18.0
+ * [new tag]         v0.19.0                                  -> v0.19.0
+ * [new tag]         v0.19.1                                  -> v0.19.1
+ * [new tag]         v0.20.0                                  -> v0.20.0
+ * [new tag]         v0.20.1                                  -> v0.20.1
+ * [new tag]         v0.20.2                                  -> v0.20.2
+ * [new tag]         v0.20.3                                  -> v0.20.3
+ * [new tag]         v0.20.4                                  -> v0.20.4
+ * [new tag]         v0.21.0                                  -> v0.21.0
+ * [new tag]         v0.22.0                                  -> v0.22.0
+ * [new tag]         v0.23.0                                  -> v0.23.0
+ * [new tag]         v0.24.0                                  -> v0.24.0
+ * [new tag]         v0.24.1                                  -> v0.24.1
+ * [new tag]         v0.24.2                                  -> v0.24.2
+ * [new tag]         v0.24.3                                  -> v0.24.3
+ * [new tag]         v0.24.4                                  -> v0.24.4
+ * [new tag]         v0.24.5                                  -> v0.24.5
+ * [new tag]         v0.24.6                                  -> v0.24.6
+ * [new tag]         v0.24.7                                  -> v0.24.7
+ * [new tag]         v0.24.8                                  -> v0.24.8
+ * [new tag]         v0.24.9                                  -> v0.24.9
+ * [new tag]         v0.25.0                                  -> v0.25.0
+ * [new tag]         v0.25.1                                  -> v0.25.1
+ * [new tag]         v0.25.2                                  -> v0.25.2
+ * [new tag]         v0.25.3                                  -> v0.25.3
+ * [new tag]         v0.25.4                                  -> v0.25.4
+ * [new tag]         v0.3.1                                   -> v0.3.1
+ * [new tag]         v0.4.0                                   -> v0.4.0
+ * [new tag]         v0.4.1                                   -> v0.4.1
+ * [new tag]         v0.5.0                                   -> v0.5.0
+ * [new tag]         v0.5.1                                   -> v0.5.1
+ * [new tag]         v0.5.2                                   -> v0.5.2
+ * [new tag]         v0.5.3                                   -> v0.5.3
+ * [new tag]         v0.6.0                                   -> v0.6.0
+ * [new tag]         v0.7.0                                   -> v0.7.0
+ * [new tag]         v0.7.1                                   -> v0.7.1
+ * [new tag]         v0.7.2                                   -> v0.7.2
+ * [new tag]         v0.7.4                                   -> v0.7.4
+ * [new tag]         v0.7.5                                   -> v0.7.5
+ * [new tag]         v0.7.6                                   -> v0.7.6
+ * [new tag]         v0.9.0                                   -> v0.9.0
+ * [new ref]         c38c42a1091bea8b8ad0784dcd1e5341bdc16859 -> pull/248/merge
+##[endgroup]
+##[group]Determining the checkout info
+##[endgroup]
+[command]/usr/bin/git sparse-checkout disable
+[command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+##[group]Checking out the ref
+[command]/usr/bin/git checkout --progress --force refs/remotes/pull/248/merge
+Note: switching to 'refs/remotes/pull/248/merge'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+HEAD is now at c38c42a Merge 2b38cdf30f4aa1d4c2255445ec7ed8d75217266a into 09a564b7615f2bad35ab7522e31affeeb953c152
+##[endgroup]
+[command]/usr/bin/git log -1 --format=%H
+c38c42a1091bea8b8ad0784dcd1e5341bdc16859
+##[group]Removing auth
+Removing SSH command configuration
+[command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Removing HTTP extra header
+[command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Removing includeIf entries pointing to credentials config files
+[command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+includeif.gitdir:/home/runner/work/start/start/.git.path
+includeif.gitdir:/home/runner/work/start/start/.git/worktrees/*.path
+includeif.gitdir:/github/workspace/.git.path
+includeif.gitdir:/github/workspace/.git/worktrees/*.path
+[command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/start/start/.git.path
+/home/runner/work/_temp/git-credentials-bfbc1b19-d12b-4c3a-a336-7757c10d2c71.config
+[command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/start/start/.git.path /home/runner/work/_temp/git-credentials-bfbc1b19-d12b-4c3a-a336-7757c10d2c71.config
+[command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/start/start/.git/worktrees/*.path
+/home/runner/work/_temp/git-credentials-bfbc1b19-d12b-4c3a-a336-7757c10d2c71.config
+[command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/start/start/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-bfbc1b19-d12b-4c3a-a336-7757c10d2c71.config
+[command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+/github/runner_temp/git-credentials-bfbc1b19-d12b-4c3a-a336-7757c10d2c71.config
+[command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-bfbc1b19-d12b-4c3a-a336-7757c10d2c71.config
+[command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+/github/runner_temp/git-credentials-bfbc1b19-d12b-4c3a-a336-7757c10d2c71.config
+[command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-bfbc1b19-d12b-4c3a-a336-7757c10d2c71.config
+[command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Removing credentials config '/home/runner/work/_temp/git-credentials-bfbc1b19-d12b-4c3a-a336-7757c10d2c71.config'
+##[endgroup]
+##[group]Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+with:
+  bun-version: 1.x
+  no-cache: false
+  token: ***
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GIT_CONFIG_COUNT: 1
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: main
+##[endgroup]
+Cache hit for: bun-vyrKTwhw5PEh6pGRz1Zgyle11uQ=
+Received 42156117 of 50544725 (83.4%), 40.2 MBs/sec
+Received 50544725 of 50544725 (100.0%), 45.1 MBs/sec
+Cache Size: ~48 MB (50544725 B)
+[command]/usr/bin/tar -xf /home/runner/work/_temp/f832a889-f151-461c-8a38-117d82227767/cache.tzst -P -C /home/runner/work/start/start --use-compress-program unzstd
+Cache restored successfully
+[command]/home/runner/.bun/bin/bun --revision
+1.4.4+38afee6c8
+Using a cached version of Bun: 1.4.4+38afee6c8
+##[group]Run bun install
+bun install
+shell: /usr/bin/bash -e {0}
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GIT_CONFIG_COUNT: 1
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: main
+##[endgroup]
+bun install v1.4.4 (38afee6c8)
+
+$ cd .. && husky .husky || true
+
++ @changesets/cli@3.0.3
++ @eslint/js@10.0.1
++ eslint@10.3.0
++ eslint-config-prettier@10.1.8
++ eslint-plugin-prettier@5.5.5
++ husky@9.1.7
++ lint-staged@17.0.4
++ prettier@3.8.3
++ command-stream@0.9.4
++ lino-objects-codec@0.4.0
+
+149 packages installed [1.70s]
+##[group]Run # Skip changeset check for automated version PRs
+# Skip changeset check for automated version PRs
+if [[ "$GITHUB_HEAD_REF" == "changeset-release/"* ]]; then
+  echo "Skipping changeset check for automated release PR"
+  exit 0
+fi
+
+# Run changeset validation script
+node scripts/validate-changeset.mjs
+shell: /usr/bin/bash -e {0}
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GIT_CONFIG_COUNT: 1
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: main
+  GITHUB_BASE_REF: main
+  GITHUB_BASE_SHA: 09a564b7615f2bad35ab7522e31affeeb953c152
+  GITHUB_HEAD_REF: issue-247-1c6e68ba32a3
+  GITHUB_HEAD_SHA: 2b38cdf30f4aa1d4c2255445ec7ed8d75217266a
+##[endgroup]
+Using PR diff 09a564b...2b38cdf for changeset validation
+Found 2 changeset file(s)
+##[error]Multiple changesets found (2). Each PR should have exactly ONE changeset.
+##[error]Found changeset files:
+  issue-247-cgroup-unreadable.md
+  screen-unlisted-session.md
+##[error]Process completed with exit code 1.
+Post job cleanup.
+[command]/usr/bin/git version
+git version 2.55.0
+Temporarily overriding HOME='/home/runner/work/_temp/5e497546-644c-45bb-92ad-9ad11b4ce097' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+[command]/usr/bin/git config --global --add safe.directory /home/runner/work/start/start
+Removing SSH command configuration
+[command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Removing HTTP extra header
+[command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Removing includeIf entries pointing to credentials config files
+[command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+[command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Cleaning up orphan processes

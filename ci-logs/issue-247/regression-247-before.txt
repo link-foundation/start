@@ -1,0 +1,9 @@
+# bun test ./test/regression-247.js against js/src/lib/cgroup-memory.js of start-command 0.39.0
+(fail) issue #247: unreadable cgroup counters stop the sampler > stops after the stream exits 3, without per-round execs or liveness probes [488.85ms]
+(fail) issue #247: unreadable cgroup counters stop the sampler > stops after a per-round read exits 3 [213.98ms]
+(fail) issue #247: unreadable cgroup counters stop the sampler > stops after a per-round exec finds no shell [186.38ms]
+(fail) issue #247: unreadable cgroup counters stop the sampler > records the per-round reason as exit 3, not as an exec failure [0.49ms]
+(fail) issue #247: failed rounds back off exponentially > doubles the wait after each round without a sample [195.20ms]
+(fail) issue #247: failed rounds back off exponentially > caps the wait at 60 seconds [169.31ms]
+ 2 pass
+ 6 fail

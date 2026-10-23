@@ -1,0 +1,11 @@
+# sh experiments/issue-247-real-docker.sh (start-command 0.39.0, Docker 29.9.1, cgroupfs, cgroup v2, no memory controller)
+memory.events inside a container:
+cat: can't open '/sys/fs/cgroup/memory.events': No such file or directory
+docker calls while the task ran (20 s, interval 1 s):
+  exec -i                        1
+  exec                           16
+  {{.State.Running}}             19
+  {{.HostConfig.CgroupnsMode}}   1
+  total                          51
+Memory line of the post-mortem:
+Memory:     unavailable (local cgroup unavailable; Docker exec exit=1: Error response from daemon: container f8b6773ef8e81547cd8c393e29411356ab2d522b6243d10a7094f0dce4ae835f is not running) memory.limit=0 (HostConfig)

@@ -325,7 +325,8 @@ the latter requires fresh exit-time OOM evidence.
 
 Attached and detached memory diagnostics use a local cgroup or daemon exec with
 a private namespace and shell. Missing counters produce an explicit unavailable
-line plus HostConfig memory limit. Historical child OOMs and a sticky flag cannot
+line plus HostConfig memory limit and stop sampling (#247); other failed rounds
+back off exponentially up to 60 s. Historical child OOMs and a sticky flag cannot
 explain a later SIGKILL; matching Docker service journal evidence identifies a
 daemon restart, otherwise the cause stays unknown.
 
