@@ -12,7 +12,7 @@
  * `Authorization: <scheme> <value>` to the end of the line, which drops the
  * rest of a logged one-line JSON prompt (issue #249). The pre-pass below masks
  * only the scheme and its token first; the library keeps values that already
- * start with [REDACTED]. Remove it once the library limits that value itself.
+ * start with [REDACTED]. Remove it with sensitive-data-sanitizer#45.
  */
 
 const fs = require('fs');

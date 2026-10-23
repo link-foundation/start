@@ -82,7 +82,7 @@ stdin mode exit=0 seconds=208
 4. `--env-secrets` takes values of names such as `*_AUTH_TRANSPORT`, so `HIVE_MIND_GIT_AUTH_TRANSPORT=github.com` masks every `github.com`. start's old rule used the same name pattern, so this is not new.
 5. Throughput is about 1 MB/s on ordinary log text, plus about 4 s of CLI startup.
 
-These are reported to sensitive-data-sanitizer; the PR description links the reports.
+Reported upstream: item 1 as [sensitive-data-sanitizer#45](https://github.com/link-foundation/sensitive-data-sanitizer/issues/45), 4 as [#46](https://github.com/link-foundation/sensitive-data-sanitizer/issues/46), and 2, 3 and 5 as [#47](https://github.com/link-foundation/sensitive-data-sanitizer/issues/47).
 
 ## Not done here
 
