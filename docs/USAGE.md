@@ -39,9 +39,13 @@ with `--output-format json` or `--output-format text`.
 Use `--upload-log <id>` to look up a stored execution by UUID or session name
 and run `gh-upload-log` for its saved log file. If `gh-upload-log` is missing,
 the command attempts to install it first with Bun or npm.
-Uploads use a private sanitized copy; the original stays local and a failed
-sanitization stops the upload. `--upload-log <id> --no-sanitize` is an explicit
-manual opt-out. Automatic reporting always sanitizes.
+Uploads use a private sanitized copy made with
+`@link-foundation/sensitive-data-sanitizer` in credentials-only mode: secrets
+become `[REDACTED]`, while paths, URLs, ports and the rest of each line stay.
+The original stays local and a failed sanitization stops the upload with a
+value-free `ERR_*` code. `START_SENSITIVE_DATA_SANITIZER` selects the sanitizer
+CLI. `--upload-log <id> --no-sanitize` is an explicit manual opt-out. Automatic
+reporting always sanitizes.
 
 `--help` and `-h` print the same usage as running `$` without arguments and exit
 zero. Only wrapper options before `--` are interpreted: `$ -- grep --help`

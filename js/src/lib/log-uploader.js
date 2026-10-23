@@ -6,7 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { sanitizeLogToTemp } = require('./log-sanitizer');
+const { SanitizationError, sanitizeLogToTemp } = require('./log-sanitizer');
 
 function isExecutable(filePath) {
   try {
@@ -174,11 +174,14 @@ function uploadLogPath(logPath, options = {}) {
       };
     }
     return { success: true, exitCode: 0 };
-  } catch {
+  } catch (error) {
     return {
       success: false,
       exitCode: 1,
-      error: 'Log preparation or upload failed; upload blocked.',
+      error:
+        error instanceof SanitizationError
+          ? error.message
+          : 'Log preparation or upload failed; upload blocked.',
     };
   } finally {
     if (prepared) {

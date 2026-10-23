@@ -45,6 +45,10 @@ checked examples.
 `-h` also prints usage. Labels persist across Docker resumes. New detached
 containers support copy-free command handoff; legacy snapshots require capacity
 preflight. Log uploads are private and sanitized; manual `--no-sanitize` opts out.
+Sanitization runs the `sensitive-data-sanitizer` CLI of
+`@link-foundation/sensitive-data-sanitizer` (Node.js 22.13 or later) from `PATH`
+or `START_SENSITIVE_DATA_SANITIZER`; `--upload-log` installs it with Bun or npm
+when it is missing, and automatic uploads without it are blocked.
 
 Snapshot resumes take `--snapshot-wait`, `--snapshot-disk-wait`,
 `--remove-original-after`, `--snapshot-size-hint` and `--snapshot-prepare`, and

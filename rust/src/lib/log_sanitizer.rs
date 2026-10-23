@@ -1,238 +1,305 @@
-//! Bounded byte-wise sanitization for logs prepared for publication.
+//! Prepares logs and issue text for publication with
+//! @link-foundation/sensitive-data-sanitizer, the sanitizer shared by
+//! start-command, gh-upload-log and hive-mind (issue #250).
+//!
+//! The library CLI runs with `--credentials-only`, `--env-secrets` and
+//! `--gh-config`; it streams the log from stdin, keeps invalid UTF-8 bytes and
+//! writes a new private file atomically (`--output`). Its error messages are
+//! value-free and only their `ERR_*` code is kept here.
+//!
+//! One rule stays here: the library masks an unquoted or single-quoted
+//! `Authorization: <scheme> <value>` to the end of the line, which drops the
+//! rest of a logged one-line JSON prompt (issue #249). The pre-pass below masks
+//! only the scheme and its token first; the library keeps values that already
+//! start with [REDACTED]. Remove it with sensitive-data-sanitizer#45.
 
-use regex::bytes::Regex;
+use regex::bytes::{Regex, RegexBuilder};
+use std::ffi::OsString;
 use std::fs::{self, DirBuilder, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use std::sync::OnceLock;
 
 pub const BLOCK_SIZE: usize = 64 * 1024;
 const MARKER: &[u8] = b"[REDACTED]";
-const BLOCKED: &str = "Log sanitization failed; upload blocked.";
+const COMMAND: &str = "sensitive-data-sanitizer";
+/// The library version the JavaScript package depends on.
+pub const PACKAGE: &str = "@link-foundation/sensitive-data-sanitizer@^0.12.0";
+/// Path of the library CLI to use instead of the one on PATH.
+pub const OVERRIDE: &str = "START_SENSITIVE_DATA_SANITIZER";
+const OPTIONS: [&str; 3] = ["--credentials-only", "--env-secrets", "--gh-config"];
 
-#[derive(Clone, Copy)]
-enum Continuation {
-    Token,
-    Jwt,
-    Line,
-    Value,
-    Url,
-    AnyValue,
-}
+// The longest header and scheme prefix is 122 bytes.
+const HOLDBACK: usize = 160;
+// Shell expressions, placeholders and masked values are not credentials.
+const NOT_A_VALUE: &[u8] = b"$<[{";
 
-impl Continuation {
-    fn accepts(self, byte: u8) -> bool {
-        match self {
-            Self::Token => byte.is_ascii_alphanumeric() || b"_-".contains(&byte),
-            Self::Jwt => byte.is_ascii_alphanumeric() || b"_.-".contains(&byte),
-            Self::Line => !b"\r\n".contains(&byte),
-            Self::Value => !byte.is_ascii_whitespace() && !b"\"';,".contains(&byte),
-            Self::Url => !byte.is_ascii_whitespace() && byte != b'@',
-            Self::AnyValue => !byte.is_ascii_whitespace(),
-        }
-    }
-
-    fn union(self, other: Self) -> Self {
-        // Nested tokens must not narrow a containing header/URL's suffix.
-        match (self, other) {
-            (Self::Line, _) | (_, Self::Line) => Self::Line,
-            (Self::AnyValue, _) | (_, Self::AnyValue) => Self::AnyValue,
-            (Self::Value, Self::Url) | (Self::Url, Self::Value) => Self::AnyValue,
-            (Self::Value, _) | (_, Self::Value) => Self::Value,
-            (Self::Url, _) | (_, Self::Url) => Self::Url,
-            (Self::Jwt, _) | (_, Self::Jwt) => Self::Jwt,
-            _ => Self::Token,
-        }
-    }
-}
-
-fn rules() -> &'static [(Regex, Option<Continuation>)] {
-    static RULES: OnceLock<Vec<(Regex, Option<Continuation>)>> = OnceLock::new();
-    RULES.get_or_init(|| {
-        [
-            (
-                r"\b[A-Za-z0-9_-]{2,512}\.[A-Za-z0-9_-]{2,512}\.[A-Za-z0-9_-]{0,512}",
-                Some(Continuation::Jwt),
-            ),
-            (
-                r"[A-Za-z0-9_-]{512,}[A-Za-z0-9_.-]*",
-                Some(Continuation::Jwt),
-            ),
-            (
-                r"(?:gh[pousr]_|github_pat_|sk-)[A-Za-z0-9_-]*",
-                Some(Continuation::Token),
-            ),
-            (r"(?:AKIA|ASIA)[A-Z0-9]{16}", None),
-            (r"eyJ[A-Za-z0-9_.-]*", Some(Continuation::Jwt)),
-            (
-                r"(?i:(?:Proxy-)?Authorization)[ \t]{0,32}:[^\r\n]*",
-                Some(Continuation::Line),
-            ),
-            (
-                r#"(?:AWS_SECRET_ACCESS_KEY|AWS_SESSION_TOKEN)[ \t]{0,32}[=:][ \t]*["']?[^\s"';,]*"#,
-                Some(Continuation::Value),
-            ),
-            (
-                r"(?:https?|git|ssh)://[^\s:/@]{1,256}:[^\s@]*",
-                Some(Continuation::Url),
-            ),
-        ]
-        .into_iter()
-        .map(|(pattern, continuation)| {
-            (
-                regex::bytes::RegexBuilder::new(pattern)
-                    .unicode(false)
-                    .build()
-                    .expect("static credential rule"),
-                continuation,
-            )
-        })
-        .collect()
+fn header() -> &'static Regex {
+    static HEADER: OnceLock<Regex> = OnceLock::new();
+    HEADER.get_or_init(|| {
+        RegexBuilder::new(
+            r"(?i)((?:Proxy-)?Authorization[ \t]{0,32}:[ \t]{0,32})(?:Bearer|Basic|Digest|token)[ \t]{1,32}",
+        )
+        .unicode(false)
+        .build()
+        .expect("static Authorization rule")
     })
 }
 
-fn is_jwt(value: &[u8]) -> bool {
-    use base64::Engine;
-    let header = value.split(|byte| *byte == b'.').next().unwrap_or_default();
-    let Ok(bytes) = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(header) else {
-        return false;
-    };
-    serde_json::from_slice::<serde_json::Value>(&bytes)
-        .ok()
-        .and_then(|header| {
-            header
-                .get("alg")
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_owned)
-        })
-        .is_some()
+fn is_value_byte(byte: u8) -> bool {
+    byte > 0x20 && !b"\"',\\".contains(&byte)
 }
 
-/// Holds at most one block of pending bytes, independent of source file size.
-/// Very long credential-like words are conservatively redacted as well.
-pub struct StreamingSanitizer {
-    secrets: Vec<Vec<u8>>,
-    holdback: usize,
+fn value_end(text: &[u8], start: usize) -> usize {
+    start
+        + text[start..]
+            .iter()
+            .take_while(|byte| is_value_byte(**byte))
+            .count()
+}
+
+/// Masks `Authorization: <scheme> <token>` as `Authorization: [REDACTED]`
+/// byte-wise, so invalid UTF-8 passes through unchanged, holding at most
+/// HOLDBACK pending bytes.
+#[derive(Default)]
+pub struct AuthorizationHeaderMask {
     pending: Vec<u8>,
-    continuation: Option<Continuation>,
+    in_value: bool,
     pub redactions: u64,
 }
 
-impl StreamingSanitizer {
-    pub fn new(env: impl IntoIterator<Item = (String, String)>) -> Result<Self, String> {
-        Self::new_bytes(
-            env.into_iter()
-                .map(|(name, value)| (name, value.into_bytes())),
-        )
-    }
-
-    fn new_bytes(env: impl IntoIterator<Item = (String, Vec<u8>)>) -> Result<Self, String> {
-        let env_name = Regex::new(r"(?i)(?:^|_)(?:TOKEN|(?:API|ACCESS|PRIVATE)?KEY|SECRET|PASSWORD|PASSWD|CREDENTIALS?|AUTH|PAT)(?:_|$)")
-            .map_err(|_| BLOCKED.to_string())?;
-        let mut secrets: Vec<Vec<u8>> = env
-            .into_iter()
-            .filter(|(name, value)| env_name.is_match(name.as_bytes()) && !value.is_empty())
-            .map(|(_, value)| value)
-            .collect();
-        if secrets.iter().any(|value| value.len() > BLOCK_SIZE) {
-            return Err(
-                "Known environment secret is too large for bounded sanitization.".to_string(),
-            );
-        }
-        secrets.sort_by(|left, right| right.len().cmp(&left.len()).then_with(|| left.cmp(right)));
-        secrets.dedup();
-        let holdback = secrets.iter().map(Vec::len).max().unwrap_or(0).max(2048);
-        Ok(Self {
-            secrets,
-            holdback,
-            pending: Vec::new(),
-            continuation: None,
-            redactions: 0,
-        })
+impl AuthorizationHeaderMask {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn pending_bytes(&self) -> usize {
         self.pending.len()
     }
 
-    fn find_matches(&self, input: &[u8]) -> Vec<(usize, usize, Option<Continuation>)> {
-        let mut matches = Vec::new();
-        for (index, (rule, continuation)) in rules().iter().enumerate() {
-            for found in rule.find_iter(input) {
-                if index != 0 || is_jwt(&input[found.start()..found.end()]) {
-                    matches.push((found.start(), found.end(), *continuation));
-                }
-            }
-        }
-        for secret in &self.secrets {
-            for (index, _) in input
-                .windows(secret.len())
-                .enumerate()
-                .filter(|(_, window)| *window == secret)
-            {
-                matches.push((index, index + secret.len(), None));
-            }
-        }
-        matches.sort_unstable_by_key(|(index, end, _)| (*index, std::cmp::Reverse(*end)));
-        let mut merged: Vec<(usize, usize, Option<Continuation>)> = Vec::new();
-        for (index, end, continuation) in matches {
-            if let Some(previous) = merged.last_mut().filter(|previous| index <= previous.1) {
-                if end > previous.1 {
-                    previous.1 = end;
-                    previous.2 = continuation;
-                } else if end == previous.1 && continuation.is_some() {
-                    previous.2 = match (previous.2, continuation) {
-                        (Some(retained), Some(additional)) => Some(retained.union(additional)),
-                        _ => continuation,
-                    };
-                }
-            } else {
-                merged.push((index, end, continuation));
-            }
-        }
-        merged
-    }
-
     pub fn push(&mut self, block: &[u8], final_block: bool) -> Vec<u8> {
-        let mut input = std::mem::take(&mut self.pending);
-        input.extend_from_slice(block);
-        let mut beginning = 0;
-        if let Some(continuation) = self.continuation {
-            beginning = input
-                .iter()
-                .take_while(|byte| continuation.accepts(**byte))
-                .count();
-            if beginning == input.len() && !final_block {
-                return Vec::new();
-            }
-            self.continuation = None;
-        }
-        let input = &input[beginning..];
-        let safe_end = if final_block {
-            input.len()
-        } else {
-            input.len().saturating_sub(self.holdback)
-        };
-        let mut offset = 0;
+        let mut text = std::mem::take(&mut self.pending);
+        text.extend_from_slice(block);
         let mut output = Vec::new();
-        for (start, end, continuation) in self.find_matches(input) {
-            if start >= safe_end {
-                break;
+        let mut offset = 0;
+        if self.in_value {
+            offset = value_end(&text, 0);
+            if offset == text.len() && !final_block {
+                return output;
             }
-            output.extend_from_slice(&input[offset..start]);
+            self.in_value = false;
+        }
+        let mut search = offset;
+        while let Some(found) = header().captures_at(&text, search) {
+            let whole = found.get(0).expect("whole match");
+            let prefix_end = found.get(1).expect("header group").end();
+            let value_start = whole.end();
+            search = value_start;
+            if value_start == text.len() && !final_block {
+                output.extend_from_slice(&text[offset..whole.start()]);
+                self.pending = text[whole.start()..].to_vec();
+                return output;
+            }
+            if value_start == text.len()
+                || !is_value_byte(text[value_start])
+                || NOT_A_VALUE.contains(&text[value_start])
+            {
+                continue;
+            }
+            output.extend_from_slice(&text[offset..prefix_end]);
             output.extend_from_slice(MARKER);
             self.redactions += 1;
-            offset = end;
-            if offset == input.len() && continuation.is_some() && !final_block {
-                self.continuation = continuation;
-                break;
+            offset = value_end(&text, value_start);
+            if offset == text.len() && !final_block {
+                self.in_value = true;
+                return output;
             }
+            search = offset;
         }
-        let end = offset.max(safe_end);
-        output.extend_from_slice(&input[offset..end]);
-        self.pending.extend_from_slice(&input[end..]);
+        let safe_end = if final_block {
+            text.len()
+        } else {
+            offset.max(text.len().saturating_sub(HOLDBACK))
+        };
+        output.extend_from_slice(&text[offset..safe_end]);
+        self.pending = text[safe_end..].to_vec();
         output
     }
+}
+
+/// Value-free failure message: `code` is a fixed ERR_* name, never content.
+fn blocked(code: &str, subject: &str) -> String {
+    let action = if subject == "Log" {
+        "upload"
+    } else {
+        "publication"
+    };
+    format!(
+        "{} sanitization failed ({}); {} blocked.",
+        subject, code, action
+    )
+}
+
+/// The environment the library runs with: inherited, or exactly the given
+/// variables (so tests control which credential-named values it masks).
+enum Environment {
+    Inherit,
+    Explicit(Vec<(String, String)>),
+}
+
+impl Environment {
+    fn get(&self, name: &str) -> Option<OsString> {
+        match self {
+            Self::Inherit => std::env::var_os(name),
+            Self::Explicit(values) => values
+                .iter()
+                .find(|(key, _)| {
+                    if cfg!(windows) {
+                        key.eq_ignore_ascii_case(name)
+                    } else {
+                        key == name
+                    }
+                })
+                .map(|(_, value)| value.into()),
+        }
+    }
+
+    fn apply(&self, command: &mut Command) {
+        if let Self::Explicit(values) = self {
+            command.env_clear().envs(values.iter().cloned());
+        }
+    }
+}
+
+fn is_executable(path: &Path) -> bool {
+    let Ok(metadata) = fs::metadata(path) else {
+        return false;
+    };
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+    }
+    #[cfg(not(unix))]
+    metadata.is_file()
+}
+
+fn resolve(env: &Environment) -> Option<PathBuf> {
+    if let Some(command) = env.get(OVERRIDE).filter(|value| !value.is_empty()) {
+        return Some(PathBuf::from(command));
+    }
+    // npm installs a .cmd shim on Windows next to a POSIX script of the bare
+    // name; Rust runs .exe/.cmd/.bat files, with argument escaping for batch.
+    let names: &[&str] = if cfg!(windows) {
+        &[".exe", ".cmd", ".bat"]
+    } else {
+        &[""]
+    };
+    let path = env.get("PATH")?;
+    std::env::split_paths(&path).find_map(|directory| {
+        names
+            .iter()
+            .map(|extension| directory.join(format!("{}{}", COMMAND, extension)))
+            .find(|candidate| is_executable(candidate))
+    })
+}
+
+/// The library CLI: START_SENSITIVE_DATA_SANITIZER, else sensitive-data-sanitizer on PATH.
+pub fn find_sanitizer() -> Option<PathBuf> {
+    resolve(&Environment::Inherit)
+}
+
+/// Install the library CLI with an available JavaScript package manager.
+pub fn ensure_sanitizer_available() -> Result<(), String> {
+    if find_sanitizer().is_some() {
+        return Ok(());
+    }
+    let npm = if cfg!(windows) { "npm.cmd" } else { "npm" };
+    for command in ["bun", npm] {
+        let available = Command::new(command)
+            .arg("--version")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false);
+        if !available {
+            continue;
+        }
+        let args = ["install", "-g", PACKAGE];
+        println!(
+            "{} not found; installing with: {} {}",
+            COMMAND,
+            command,
+            args.join(" ")
+        );
+        let installed = Command::new(command)
+            .args(args)
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false);
+        if installed && find_sanitizer().is_some() {
+            return Ok(());
+        }
+    }
+    Err(format!(
+        "{} is not installed and automatic installation did not make it available on PATH.",
+        COMMAND
+    ))
+}
+
+fn error_code(stderr: &[u8]) -> String {
+    static CODE: OnceLock<Regex> = OnceLock::new();
+    CODE.get_or_init(|| Regex::new(r"\bERR_[A-Z_]+\b").expect("static code rule"))
+        .find(stderr)
+        .map(|code| String::from_utf8_lossy(code.as_bytes()).into_owned())
+        .unwrap_or_else(|| "ERR_SANITIZER".to_string())
+}
+
+fn sanitizer_command(env: &Environment, subject: &str) -> Result<Command, String> {
+    let program = resolve(env).ok_or_else(|| blocked("ERR_UNAVAILABLE", subject))?;
+    let mut command = Command::new(program);
+    env.apply(&mut command);
+    command.arg("redact").arg("-");
+    Ok(command)
+}
+
+fn text_with(text: &str, env: &Environment) -> Result<String, String> {
+    let fail = |code: &str| blocked(code, "Text");
+    let input = AuthorizationHeaderMask::new().push(text.as_bytes(), true);
+    let mut child = sanitizer_command(env, "Text")?
+        .args(OPTIONS)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|_| fail("ERR_UNAVAILABLE"))?;
+    let mut stdin = child.stdin.take().ok_or_else(|| fail("ERR_SANITIZER"))?;
+    let writer = std::thread::spawn(move || stdin.write_all(&input));
+    let output = child
+        .wait_with_output()
+        .map_err(|_| fail("ERR_SANITIZER"))?;
+    let written = writer.join().map(|result| result.is_ok()).unwrap_or(false);
+    if !output.status.success() {
+        return Err(fail(&error_code(&output.stderr)));
+    }
+    if !written {
+        return Err(fail("ERR_SANITIZER"));
+    }
+    String::from_utf8(output.stdout).map_err(|_| fail("ERR_SANITIZER"))
+}
+
+/// Sanitize a short text, such as the failing command quoted in an issue.
+pub fn sanitize_text(text: &str) -> Result<String, String> {
+    text_with(text, &Environment::Inherit)
+}
+
+pub fn sanitize_text_with_env(
+    text: &str,
+    env: impl IntoIterator<Item = (String, String)>,
+) -> Result<String, String> {
+    text_with(text, &Environment::Explicit(env.into_iter().collect()))
 }
 
 /// Private temporary copy; dropping it removes its file and directory.
@@ -247,55 +314,72 @@ impl Drop for PreparedLog {
     }
 }
 
-pub fn sanitize_log_to_temp(source_path: &Path, verbose: bool) -> Result<PreparedLog, String> {
-    let values = std::env::vars_os().map(|(name, value)| {
-        #[cfg(unix)]
-        let bytes = {
-            use std::os::unix::ffi::OsStringExt;
-            value.into_vec()
-        };
-        #[cfg(not(unix))]
-        let bytes = value.to_string_lossy().into_owned().into_bytes();
-        (name.to_string_lossy().into_owned(), bytes)
-    });
-    sanitize_log_to_temp_with_bytes(source_path, values, verbose)
-}
-
-pub fn sanitize_log_to_temp_with_env(
-    source_path: &Path,
-    env: impl IntoIterator<Item = (String, String)>,
-    verbose: bool,
-) -> Result<PreparedLog, String> {
-    sanitize_log_to_temp_with_bytes(
-        source_path,
-        env.into_iter()
-            .map(|(name, value)| (name, value.into_bytes())),
-        verbose,
-    )
-}
-
-fn sanitize_log_to_temp_with_bytes(
-    source_path: &Path,
-    env: impl IntoIterator<Item = (String, Vec<u8>)>,
-    verbose: bool,
-) -> Result<PreparedLog, String> {
-    let blocked_at = |stage| {
-        if verbose {
-            eprintln!("Log sanitization failed at stage: {}.", stage);
+fn count_markers(path: &Path) -> std::io::Result<u64> {
+    let mut file = File::open(path)?;
+    let mut buffer = vec![0; BLOCK_SIZE];
+    let mut text = Vec::new();
+    let mut count = 0;
+    loop {
+        let length = file.read(&mut buffer)?;
+        text.extend_from_slice(&buffer[..length]);
+        let mut next = 0;
+        while let Some(index) = text[next..]
+            .windows(MARKER.len())
+            .position(|window| window == MARKER)
+        {
+            count += 1;
+            next += index + MARKER.len();
         }
-        BLOCKED.to_string()
-    };
-    // Static errors prevent paths and system error details from leaking secrets.
-    let mut sanitizer =
-        StreamingSanitizer::new_bytes(env).map_err(|_| blocked_at("environment"))?;
-    let mut source = File::open(source_path).map_err(|_| blocked_at("source"))?;
-    if !source
-        .metadata()
-        .map_err(|_| blocked_at("source"))?
-        .is_file()
-    {
-        return Err(blocked_at("source"));
+        if length == 0 {
+            return Ok(count);
+        }
+        let keep = next.max(text.len().saturating_sub(MARKER.len() - 1));
+        text.drain(..keep);
     }
+}
+
+fn create_private_file(path: &Path) -> std::io::Result<File> {
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let file = options.open(path)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        file.set_permissions(fs::Permissions::from_mode(0o600))?;
+    }
+    Ok(file)
+}
+
+fn mask_authorization_headers(source_path: &Path, stage_path: &Path) -> Result<u64, String> {
+    let failed = |_| blocked("ERR_SOURCE", "Log");
+    let mut source = File::open(source_path).map_err(failed)?;
+    if !source.metadata().map_err(failed)?.is_file() {
+        return Err(blocked("ERR_SOURCE", "Log"));
+    }
+    let mut stage = create_private_file(stage_path).map_err(failed)?;
+    let mut mask = AuthorizationHeaderMask::new();
+    let mut buffer = vec![0; BLOCK_SIZE];
+    let mut bytes = 0_u64;
+    loop {
+        let length = source.read(&mut buffer).map_err(failed)?;
+        stage
+            .write_all(&mask.push(&buffer[..length], length == 0))
+            .map_err(failed)?;
+        if length == 0 {
+            break;
+        }
+        bytes += length as u64;
+    }
+    stage.sync_all().map_err(failed)?;
+    Ok(bytes)
+}
+
+fn private_directory() -> Result<PathBuf, String> {
     let directory = std::env::temp_dir().join(format!("start-sanitized-{}", uuid::Uuid::new_v4()));
     let builder = DirBuilder::new();
     #[cfg(unix)]
@@ -307,50 +391,83 @@ fn sanitize_log_to_temp_with_bytes(
     };
     builder
         .create(&directory)
-        .map_err(|_| blocked_at("private-file"))?;
+        .map_err(|_| blocked("ERR_PRIVATE_FILE", "Log"))?;
+    Ok(directory)
+}
+
+fn log_with(source_path: &Path, env: &Environment, verbose: bool) -> Result<PreparedLog, String> {
+    // Static messages keep paths and system error details out of the output.
+    let directory = private_directory()?;
     let prepared = PreparedLog {
         path: directory.join("execution.log"),
         directory,
     };
-    let mut options = OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
+    let target = prepared.path.clone();
+    let stage_path = prepared.directory.join("authorization-masked.log");
+    let bytes = mask_authorization_headers(source_path, &stage_path)?;
+    let private_file = |_| blocked("ERR_PRIVATE_FILE", "Log");
+    let stage = File::open(&stage_path).map_err(private_file)?;
+    let size = stage.metadata().map_err(private_file)?.len().max(1);
+    let output = sanitizer_command(env, "Log")?
+        .arg("--stream")
+        .args(OPTIONS)
+        .arg("--max-bytes")
+        .arg(size.to_string())
+        .arg("--output")
+        .arg(&target)
+        .stdin(Stdio::from(stage))
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|_| blocked("ERR_UNAVAILABLE", "Log"))?;
+    if !output.status.success() {
+        return Err(blocked(&error_code(&output.stderr), "Log"));
     }
-    let mut destination = options
-        .open(&prepared.path)
-        .map_err(|_| blocked_at("private-file"))?;
+    let metadata = fs::symlink_metadata(&target).map_err(|_| blocked("ERR_OUTPUT", "Log"))?;
     #[cfg(unix)]
-    {
+    let private = {
         use std::os::unix::fs::PermissionsExt;
-        destination
-            .set_permissions(fs::Permissions::from_mode(0o600))
-            .map_err(|_| blocked_at("private-file"))?;
+        metadata.permissions().mode() & 0o077 == 0
+    };
+    #[cfg(not(unix))]
+    let private = true;
+    if !metadata.is_file() || !private {
+        return Err(blocked("ERR_OUTPUT", "Log"));
     }
-    let mut buffer = [0; BLOCK_SIZE];
-    let mut bytes = 0_u64;
-    loop {
-        let length = source.read(&mut buffer).map_err(|_| blocked_at("read"))?;
-        if length == 0 {
-            break;
-        }
-        bytes += length as u64;
-        destination
-            .write_all(&sanitizer.push(&buffer[..length], false))
-            .map_err(|_| blocked_at("write"))?;
-    }
-    destination
-        .write_all(&sanitizer.push(&[], true))
-        .map_err(|_| blocked_at("write"))?;
-    destination.sync_all().map_err(|_| blocked_at("sync"))?;
-    drop(destination);
     if verbose {
+        let redactions = count_markers(&target)
+            .unwrap_or(0)
+            .saturating_sub(count_markers(source_path).unwrap_or(0));
         println!(
             "Prepared private sanitized log: {} bytes scanned, {} redactions.",
-            bytes, sanitizer.redactions
+            bytes, redactions
         );
     }
+    let _ = fs::remove_file(&stage_path);
     Ok(prepared)
+}
+
+fn report(result: Result<PreparedLog, String>, verbose: bool) -> Result<PreparedLog, String> {
+    if let (Err(message), true) = (&result, verbose) {
+        eprintln!("{}", message);
+    }
+    result
+}
+
+/// Create a private sanitized copy of a log. The source is never modified;
+/// any failure removes the copy and returns a value-free message.
+pub fn sanitize_log_to_temp(source_path: &Path, verbose: bool) -> Result<PreparedLog, String> {
+    report(
+        log_with(source_path, &Environment::Inherit, verbose),
+        verbose,
+    )
+}
+
+pub fn sanitize_log_to_temp_with_env(
+    source_path: &Path,
+    env: impl IntoIterator<Item = (String, String)>,
+    verbose: bool,
+) -> Result<PreparedLog, String> {
+    let env = Environment::Explicit(env.into_iter().collect());
+    report(log_with(source_path, &env, verbose), verbose)
 }

@@ -7,7 +7,7 @@ use std::fs;
 use std::process::Command;
 
 use crate::isolation::get_timestamp;
-use crate::log_sanitizer::{sanitize_log_to_temp, StreamingSanitizer};
+use crate::log_sanitizer::{ensure_sanitizer_available, sanitize_log_to_temp, sanitize_text};
 
 /// Configuration for the failure handler
 #[derive(Debug, Default)]
@@ -312,6 +312,7 @@ pub fn upload_log_interactive_with_options(
     let prepared = if no_sanitize {
         None
     } else {
+        ensure_sanitizer_available()?;
         Some(sanitize_log_to_temp(
             std::path::Path::new(log_path),
             verbose,
@@ -341,8 +342,8 @@ pub fn upload_log(log_path: &str) -> Option<String> {
 pub fn upload_log_with_options(log_path: &str, verbose: bool) -> Option<String> {
     let prepared = match sanitize_log_to_temp(std::path::Path::new(log_path), verbose) {
         Ok(copy) => copy,
-        Err(_) => {
-            println!("Warning: Log sanitization failed; upload blocked.");
+        Err(message) => {
+            println!("Warning: {}", message);
             return None;
         }
     };
@@ -397,12 +398,13 @@ pub fn create_issue(
     exit_code: i32,
     log_url: Option<&str>,
 ) -> Option<String> {
-    let mut sanitizer =
-        StreamingSanitizer::new(std::env::vars_os().filter_map(|(name, value)| {
-            Some((name.into_string().ok()?, value.into_string().ok()?))
-        }))
-        .ok()?;
-    let safe_command = String::from_utf8(sanitizer.push(full_command.as_bytes(), true)).ok()?;
+    let safe_command = match sanitize_text(full_command) {
+        Ok(text) => text,
+        Err(message) => {
+            println!("Warning: Issue creation failed - {}", message);
+            return None;
+        }
+    };
     let full_command = safe_command.as_str();
     let title = format!(
         "Command failed with exit code {}: {}{}",

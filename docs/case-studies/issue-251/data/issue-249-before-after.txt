@@ -1,0 +1,18 @@
+== input
+gate='/tmp/hive-mind-disk-baseline-0ce9e170-e6d3-494d-91e1-0d820245d34b'
+🧠 Formal AI: endpoint http://172.18.0.2:8080/api/openai/v1
+{"bodyPreview":"{\"messages\":[{\"content\":\"use: curl -L -H \\\"Authorization: token $(gh auth token)\\\" -o <filename> <url>\\n...the rest of a 100 KB prompt...\"}]}"}
+curl -H "Authorization: token ghx1234567890abcdefXYZ" -o out.txt https://api.github.com
+token ghp_<36 x> end
+== before (704a644, own sanitizer)
+gate='/tmp/hive-mind-di[REDACTED]'
+🧠 Formal AI: endpoint [REDACTED]
+{"bodyPreview":"{\"messages\":[{\"content\":\"use: curl -L -H \\\"[REDACTED]
+curl -H "[REDACTED]
+token [REDACTED] end
+== after (sensitive-data-sanitizer)
+gate='/tmp/hive-mind-disk-baseline-0ce9e170-e6d3-494d-91e1-0d820245d34b'
+🧠 Formal AI: endpoint http://172.18.0.2:8080/api/openai/v1
+{"bodyPreview":"{\"messages\":[{\"content\":\"use: curl -L -H \\\"Authorization: token $(gh auth token)\\\" -o <filename> <url>\\n...the rest of a 100 KB prompt...\"}]}"}
+curl -H "Authorization: [REDACTED]" -o out.txt https://api.github.com
+token [REDACTED] end

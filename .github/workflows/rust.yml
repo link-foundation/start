@@ -275,11 +275,20 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Setup Node.js (Linux doc examples)
-        if: runner.os == 'Linux'
+      # Linux doc examples and the sanitizer CLI on every OS.
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '24.x'
+
+      # Log and issue sanitization runs the shared library CLI (issue #250);
+      # install the version locked for the JavaScript package and put it on PATH.
+      - name: Install sensitive-data-sanitizer
+        shell: bash
+        working-directory: js
+        run: |
+          npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+          echo "$GITHUB_WORKSPACE/js/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Cache cargo registry
         uses: actions/cache@v5
@@ -427,6 +436,15 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '24.x'
+
+      # Log and issue sanitization runs the shared library CLI (issue #250);
+      # install the version locked for the JavaScript package and put it on PATH.
+      - name: Install sensitive-data-sanitizer
+        shell: bash
+        working-directory: js
+        run: |
+          npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+          echo "$GITHUB_WORKSPACE/js/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Run coverage
         id: coverage

@@ -41,7 +41,8 @@ checked examples.
 
 `-h` also prints usage. Labels persist across Docker resumes. New detached
 containers support copy-free command handoff; legacy snapshots require capacity
-preflight. Log uploads are private and sanitized; manual `--no-sanitize` opts out.
+preflight. Log uploads are private and sanitized with the bundled
+`@link-foundation/sensitive-data-sanitizer`; manual `--no-sanitize` opts out.
 
 Snapshot resumes take `--snapshot-wait`, `--snapshot-disk-wait`,
 `--remove-original-after`, `--snapshot-size-hint` and `--snapshot-prepare`, and
