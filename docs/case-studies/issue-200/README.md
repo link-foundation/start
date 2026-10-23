@@ -2,6 +2,8 @@
 
 [Issue #200](https://github.com/link-foundation/start/issues/200) reports that manual execution-log uploads publish raw command output. This is implemented with equivalent protections in JavaScript and Rust in [PR #204](https://github.com/link-foundation/start/pull/204).
 
+Issue #251 later replaced the sanitizer described here with link-foundation/sensitive-data-sanitizer, after #249 found rules that removed content that is not secret. See `docs/case-studies/issue-251`.
+
 ## Evidence and timeline
 
 - 2026-05-20 18:48 UTC: commit `38d1fe4` introduced `--upload-log`; both implementations sent the stored log path directly to `gh-upload-log`.

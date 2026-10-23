@@ -1,0 +1,5 @@
+---
+'start-command': patch
+---
+
+Sanitize `--upload-log` logs and auto-reported issue text with `@link-foundation/sensitive-data-sanitizer` (#250) instead of start-command's own rules, which removed content that is not secret (#249). Before, `Authorization:` was masked to the end of the line, which dropped the rest of one-line JSON request bodies. Every URL with a port was masked, and `sk-` matched inside words such as `disk-baseline-`. Now only credentials are masked (`--credentials-only`): values of credential-named environment variables, the gh `hosts.yml` tokens, and `Authorization` schemes with their token. The rest of the line, account details and URLs with ports stay. The log streams through the library CLI from stdin into a private `0600` copy, and invalid UTF-8 bytes are kept. Any failure blocks the upload with a value-free code such as `Log sanitization failed (ERR_BINARY); upload blocked.` `START_SENSITIVE_DATA_SANITIZER` selects another CLI, and `--no-sanitize` is unchanged.
