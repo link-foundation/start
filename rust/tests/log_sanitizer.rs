@@ -36,11 +36,20 @@ fn sanitizer() -> Option<PathBuf> {
 fn test_env(extra: &[(&str, &str)]) -> Option<Vec<(String, String)>> {
     static GH_CONFIG_DIR: OnceLock<PathBuf> = OnceLock::new();
     let gh_config = GH_CONFIG_DIR.get_or_init(|| tempfile::tempdir().unwrap().keep());
+    // Windows reports PATH as `Path`, and its names are case-insensitive.
+    let same = |a: &str, b: &str| {
+        if cfg!(windows) {
+            a.eq_ignore_ascii_case(b)
+        } else {
+            a == b
+        }
+    };
     let mut env: Vec<(String, String)> = std::env::vars()
         .filter(|(name, _)| {
             [
                 "PATH",
-                "SystemRoot",
+                "PATHEXT",
+                "COMSPEC",
                 "SYSTEMROOT",
                 "TEMP",
                 "TMP",
@@ -48,13 +57,14 @@ fn test_env(extra: &[(&str, &str)]) -> Option<Vec<(String, String)>> {
                 "HOME",
                 "USERPROFILE",
             ]
-            .contains(&name.as_str())
+            .iter()
+            .any(|kept| same(name, kept))
         })
         .collect();
     env.push((OVERRIDE.into(), sanitizer()?.to_string_lossy().into_owned()));
     env.push(("GH_CONFIG_DIR".into(), gh_config.display().to_string()));
     for (name, value) in extra {
-        env.retain(|(existing, _)| existing != name);
+        env.retain(|(existing, _)| !same(existing, name));
         env.push((name.to_string(), value.to_string()));
     }
     Some(env)
