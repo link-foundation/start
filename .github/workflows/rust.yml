@@ -282,10 +282,13 @@ jobs:
           node-version: '24.x'
 
       # Log and issue sanitization runs the shared library CLI (issue #250);
-      # install the version the JavaScript package depends on.
+      # install the version locked for the JavaScript package and put it on PATH.
       - name: Install sensitive-data-sanitizer
         shell: bash
-        run: npm install -g "@link-foundation/sensitive-data-sanitizer@$(node -p "require('./js/package.json').dependencies['@link-foundation/sensitive-data-sanitizer']")"
+        working-directory: js
+        run: |
+          npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+          echo "$GITHUB_WORKSPACE/js/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Cache cargo registry
         uses: actions/cache@v5
@@ -435,10 +438,13 @@ jobs:
           node-version: '24.x'
 
       # Log and issue sanitization runs the shared library CLI (issue #250);
-      # install the version the JavaScript package depends on.
+      # install the version locked for the JavaScript package and put it on PATH.
       - name: Install sensitive-data-sanitizer
         shell: bash
-        run: npm install -g "@link-foundation/sensitive-data-sanitizer@$(node -p "require('./js/package.json').dependencies['@link-foundation/sensitive-data-sanitizer']")"
+        working-directory: js
+        run: |
+          npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+          echo "$GITHUB_WORKSPACE/js/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Run coverage
         id: coverage

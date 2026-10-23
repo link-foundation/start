@@ -16,6 +16,7 @@ git -C "$ROOT" show 704a644:js/src/lib/log-sanitizer.js > "$WORK/old/log-sanitiz
 show() {
   node -e 'const {sanitizeLogToTemp}=require(process.argv[1]); const r=sanitizeLogToTemp(process.argv[2],{env:{PATH:process.env.PATH,GH_CONFIG_DIR:process.argv[3]}}); process.stdout.write(require("fs").readFileSync(r.path)); r.cleanup()' "$1" "$WORK/sample.log" "$WORK"
 }
-echo '== input'; cat "$WORK/sample.log"
+# The fake token is abbreviated so the saved output does not look like a credential.
+echo '== input'; sed 's/ghp_x\{36\}/ghp_<36 x>/' "$WORK/sample.log"
 echo '== before (704a644, own sanitizer)'; show "$WORK/old/log-sanitizer.js"
 echo '== after (sensitive-data-sanitizer)'; show "$ROOT/js/src/lib/log-sanitizer.js"
