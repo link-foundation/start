@@ -80,7 +80,7 @@ stdin mode exit=0 seconds=208
 2. File mode stops after 60 s (`workerTimeoutMs ?? 60000` in `src/stream.js`) with `ERR_WORKER`. start therefore streams the log through stdin, with `--max-bytes` set to the file size.
 3. A NUL byte blocks the whole log (`ERR_BINARY`). start fails closed and does not upload.
 4. `--env-secrets` takes values of names such as `*_AUTH_TRANSPORT`, so `HIVE_MIND_GIT_AUTH_TRANSPORT=github.com` masks every `github.com`. start's old rule used the same name pattern, so this is not new.
-5. Throughput is about 1 MB/s on ordinary log text, plus about 4 s of CLI startup.
+5. Throughput is about 1 MB/s on ordinary log text, plus about 4 s of CLI startup. It drops sharply when credentials are dense. `experiments/issue-200/large-log.js` puts a `ghp_` token on every 60-byte line of a 110 MiB log. Start's Authorization pre-pass finished it in about a minute, but in 66 minutes the CLI wrote only 8,978,218 bytes (about 2.2 KB/s), and the run was stopped. start sets no time limit, because a limit would block the upload. A real log rarely has a token on every line.
 
 Reported upstream: item 1 as [sensitive-data-sanitizer#45](https://github.com/link-foundation/sensitive-data-sanitizer/issues/45), 4 as [#46](https://github.com/link-foundation/sensitive-data-sanitizer/issues/46), and 2, 3 and 5 as [#47](https://github.com/link-foundation/sensitive-data-sanitizer/issues/47).
 
