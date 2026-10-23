@@ -348,3 +348,40 @@ mod isolation_options_tests {
         assert!(opts.detached);
     }
 }
+
+mod is_screen_run_finished_tests {
+    //! `screen -dmS` can return before `screen -ls` lists the session; a
+    //! failed command then read as exit 0 (Rust CI run 39873000384).
+    use start_command::isolation::isolation_screen::{
+        is_screen_run_finished, SCREEN_UNLISTED_GRACE_POLLS,
+    };
+
+    #[test]
+    fn waits_while_the_session_is_listed() {
+        assert!(!is_screen_run_finished(true, true, 0));
+    }
+
+    #[test]
+    fn finishes_once_the_session_is_gone_and_its_exit_code_is_written() {
+        assert!(is_screen_run_finished(false, true, 1));
+    }
+
+    #[test]
+    fn keeps_polling_an_unlisted_session_without_an_exit_code() {
+        assert!(!is_screen_run_finished(false, false, 1));
+        assert!(!is_screen_run_finished(
+            false,
+            false,
+            SCREEN_UNLISTED_GRACE_POLLS - 1
+        ));
+    }
+
+    #[test]
+    fn gives_up_after_the_grace_polls() {
+        assert!(is_screen_run_finished(
+            false,
+            false,
+            SCREEN_UNLISTED_GRACE_POLLS
+        ));
+    }
+}

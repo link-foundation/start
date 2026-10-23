@@ -52,6 +52,19 @@ pub fn supports_logfile_option() -> bool {
     }
 }
 
+/// Polls without the session in `screen -ls` and without an exit code before
+/// the session counts as gone. `screen -dmS` can return before the session is
+/// listed, so a missing session alone is no proof that the command finished;
+/// its exit code is written just before the session ends.
+pub const SCREEN_UNLISTED_GRACE_POLLS: u32 = 20;
+
+/// Whether an attached screen run is over: the session is not in
+/// `screen -ls` and either the exit-code sidecar has content (or none is
+/// expected, as for a bare shell) or the grace polls ran out.
+pub fn is_screen_run_finished(listed: bool, exit_code_ready: bool, unlisted_polls: u32) -> bool {
+    !listed && (exit_code_ready || unlisted_polls >= SCREEN_UNLISTED_GRACE_POLLS)
+}
+
 /// Run screen with log capture using `-L` flag + screenrc directives (for attached mode without TTY).
 ///
 /// Uses a unified approach combining the `-L` flag with screenrc directives:
@@ -287,15 +300,22 @@ pub fn run_screen_with_log_capture(
     let check_interval = Duration::from_millis(100);
     let mut waited = Duration::ZERO;
 
+    let exit_code_ready = || {
+        is_bare_shell
+            || fs::read_to_string(&exit_code_file).is_ok_and(|content| !content.trim().is_empty())
+    };
+    let mut unlisted_polls = 0;
+
     loop {
         // Check if session still exists
-        let sessions = Command::new("screen")
+        let listed = Command::new("screen")
             .arg("-ls")
             .output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
-            .unwrap_or_default();
+            .map(|o| String::from_utf8_lossy(&o.stdout).contains(session_name))
+            .unwrap_or(false);
+        unlisted_polls = if listed { 0 } else { unlisted_polls + 1 };
 
-        if !sessions.contains(session_name) {
+        if is_screen_run_finished(listed, exit_code_ready(), unlisted_polls) {
             // Session ended, read output and exit code
             let output = read_log_with_retry();
             let exit_code = read_exit_code();

@@ -812,3 +812,35 @@ describe('isInteractiveShellCommand (issue #84)', () => {
     assert.strictEqual(isInteractiveShellCommand('  '), false);
   });
 });
+
+describe('isScreenRunFinished', () => {
+  // `screen -dmS` can return before `screen -ls` lists the session; a failed
+  // command then read as exit 0 (Rust CI run 39873000384).
+  const {
+    SCREEN_UNLISTED_GRACE_POLLS,
+    isScreenRunFinished,
+  } = require('../src/lib/screen-isolation');
+
+  it('waits while the session is listed', () => {
+    assert.strictEqual(isScreenRunFinished(true, true, 0), false);
+  });
+
+  it('finishes once the session is gone and its exit code is written', () => {
+    assert.strictEqual(isScreenRunFinished(false, true, 1), true);
+  });
+
+  it('keeps polling an unlisted session without an exit code', () => {
+    assert.strictEqual(isScreenRunFinished(false, false, 1), false);
+    assert.strictEqual(
+      isScreenRunFinished(false, false, SCREEN_UNLISTED_GRACE_POLLS - 1),
+      false
+    );
+  });
+
+  it('gives up after the grace polls', () => {
+    assert.strictEqual(
+      isScreenRunFinished(false, false, SCREEN_UNLISTED_GRACE_POLLS),
+      true
+    );
+  });
+});

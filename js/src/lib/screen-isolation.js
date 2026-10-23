@@ -101,6 +101,28 @@ function supportsLogfileOption() {
 }
 
 /**
+ * Polls without the session in `screen -ls` and without an exit code before
+ * the session counts as gone. `screen -dmS` can return before the session is
+ * listed, so a missing session alone is no proof that the command finished;
+ * its exit code is written just before the session ends.
+ */
+const SCREEN_UNLISTED_GRACE_POLLS = 20;
+
+/**
+ * Whether an attached screen run is over.
+ * @param {boolean} listed - The session is in `screen -ls`
+ * @param {boolean} exitCodeReady - The exit-code sidecar has content (or no
+ *   sidecar is expected, as for a bare shell)
+ * @param {number} unlistedPolls - Consecutive polls without the session
+ * @returns {boolean}
+ */
+function isScreenRunFinished(listed, exitCodeReady, unlistedPolls) {
+  return (
+    !listed && (exitCodeReady || unlistedPolls >= SCREEN_UNLISTED_GRACE_POLLS)
+  );
+}
+
+/**
  * Run command in GNU Screen using detached mode with log capture.
  *
  * Uses a unified approach combining the `-L` flag with screenrc directives:
@@ -346,58 +368,64 @@ function runScreenWithLogCapture(
       const checkInterval = 100; // ms
       const maxWait = 300000; // 5 minutes max
       let waited = 0;
+      let unlistedPolls = 0;
+
+      const exitCodeReady = () => {
+        if (isBareShell) {
+          return true;
+        }
+        try {
+          return fs.readFileSync(exitCodeFile, 'utf8').trim() !== '';
+        } catch {
+          return false;
+        }
+      };
+
+      const finish = () => {
+        readAndDisplayOutput().then((output) => {
+          const exitCode = readExitCode();
+          cleanupTempFiles();
+          resolve({
+            success: exitCode === 0,
+            sessionName,
+            message: `Screen session "${sessionName}" exited with code ${exitCode}`,
+            exitCode,
+            output,
+          });
+        });
+      };
 
       const checkCompletion = () => {
+        let listed;
         try {
           // Check if session still exists
-          const sessions = execSync('screen -ls', {
+          listed = execSync('screen -ls', {
             encoding: 'utf8',
             stdio: ['pipe', 'pipe', 'pipe'],
-          });
-
-          if (!sessions.includes(sessionName)) {
-            // Session ended, read output and exit code
-            readAndDisplayOutput().then((output) => {
-              const exitCode = readExitCode();
-              cleanupTempFiles();
-              resolve({
-                success: exitCode === 0,
-                sessionName,
-                message: `Screen session "${sessionName}" exited with code ${exitCode}`,
-                exitCode,
-                output,
-              });
-            });
-            return;
-          }
-
-          waited += checkInterval;
-          if (waited >= maxWait) {
-            cleanupTempFiles();
-            resolve({
-              success: false,
-              sessionName,
-              message: `Screen session "${sessionName}" timed out after ${maxWait / 1000} seconds`,
-              exitCode: 1,
-            });
-            return;
-          }
-
-          setTimeout(checkCompletion, checkInterval);
+          }).includes(sessionName);
         } catch {
           // screen -ls failed, session probably ended
-          readAndDisplayOutput().then((output) => {
-            const exitCode = readExitCode();
-            cleanupTempFiles();
-            resolve({
-              success: exitCode === 0,
-              sessionName,
-              message: `Screen session "${sessionName}" exited with code ${exitCode}`,
-              exitCode,
-              output,
-            });
-          });
+          listed = false;
         }
+        unlistedPolls = listed ? 0 : unlistedPolls + 1;
+        if (isScreenRunFinished(listed, exitCodeReady(), unlistedPolls)) {
+          finish();
+          return;
+        }
+
+        waited += checkInterval;
+        if (waited >= maxWait) {
+          cleanupTempFiles();
+          resolve({
+            success: false,
+            sessionName,
+            message: `Screen session "${sessionName}" timed out after ${maxWait / 1000} seconds`,
+            exitCode: 1,
+          });
+          return;
+        }
+
+        setTimeout(checkCompletion, checkInterval);
       };
 
       // Start checking after a brief delay
@@ -522,7 +550,9 @@ function resetScreenVersionCache() {
 }
 
 module.exports = {
+  SCREEN_UNLISTED_GRACE_POLLS,
   getScreenVersion,
+  isScreenRunFinished,
   supportsLogfileOption,
   runScreenWithLogCapture,
   startDetachedScreenWithLogCapture,
