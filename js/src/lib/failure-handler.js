@@ -9,7 +9,11 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const { getTimestamp } = require('./isolation');
-const { sanitizeLogToTemp, StreamingSanitizer } = require('./log-sanitizer');
+const {
+  SanitizationError,
+  sanitizeLogToTemp,
+  sanitizeText,
+} = require('./log-sanitizer');
 
 /**
  * Handle command failure - detect repository, upload log, create issue
@@ -296,8 +300,12 @@ function uploadLog(logPath, options = {}) {
     }
 
     return null;
-  } catch {
-    console.log('Warning: Log preparation or upload failed; upload blocked.');
+  } catch (error) {
+    console.log(
+      error instanceof SanitizationError
+        ? `Warning: ${error.message}`
+        : 'Warning: Log preparation or upload failed; upload blocked.'
+    );
     return null;
   } finally {
     if (prepared) {
@@ -334,9 +342,7 @@ function canCreateIssue(owner, repo) {
  */
 function createIssue(repoInfo, fullCommand, exitCode, logUrl) {
   try {
-    fullCommand = new StreamingSanitizer()
-      .push(Buffer.from(fullCommand), true)
-      .toString();
+    fullCommand = sanitizeText(fullCommand);
     const title = `Command failed with exit code ${exitCode}: ${fullCommand.substring(0, 50)}${fullCommand.length > 50 ? '...' : ''}`;
 
     // Get runtime information

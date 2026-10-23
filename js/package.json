@@ -68,6 +68,7 @@
     ]
   },
   "dependencies": {
+    "@link-foundation/sensitive-data-sanitizer": "^0.12.0",
     "command-stream": "^0.9.4",
     "lino-objects-codec": "^0.4.0"
   },
