@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.29.4] - 2026-10-23
+
+Manual patch release.
+
 ## [0.29.3] - 2026-10-23
 
 Sanitize `--upload-log` logs and auto-reported issue text with the `sensitive-data-sanitizer` CLI from `@link-foundation/sensitive-data-sanitizer` (#250) instead of the built-in rules, which removed content that is not secret (#249): the rest of a line after `Authorization:`, every URL with a port, and words containing `sk-`. The CLI is found via `START_SENSITIVE_DATA_SANITIZER` or on PATH. A manual upload installs it with bun or npm if it is missing. Without it, an automatic upload is blocked with `Log sanitization failed (ERR_UNAVAILABLE); upload blocked.` Requires Node.js 22.13 or later.
