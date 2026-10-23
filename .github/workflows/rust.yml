@@ -275,11 +275,17 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Setup Node.js (Linux doc examples)
-        if: runner.os == 'Linux'
+      # Linux doc examples and the sanitizer CLI on every OS.
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '24.x'
+
+      # Log and issue sanitization runs the shared library CLI (issue #250);
+      # install the version the JavaScript package depends on.
+      - name: Install sensitive-data-sanitizer
+        shell: bash
+        run: npm install -g "@link-foundation/sensitive-data-sanitizer@$(node -p "require('./js/package.json').dependencies['@link-foundation/sensitive-data-sanitizer']")"
 
       - name: Cache cargo registry
         uses: actions/cache@v5
@@ -427,6 +433,12 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '24.x'
+
+      # Log and issue sanitization runs the shared library CLI (issue #250);
+      # install the version the JavaScript package depends on.
+      - name: Install sensitive-data-sanitizer
+        shell: bash
+        run: npm install -g "@link-foundation/sensitive-data-sanitizer@$(node -p "require('./js/package.json').dependencies['@link-foundation/sensitive-data-sanitizer']")"
 
       - name: Run coverage
         id: coverage

@@ -343,11 +343,20 @@ peak usage.
 
 `--upload-log` accepts either an execution UUID or an isolation session name. It
 looks up the stored `logPath`, installs `gh-upload-log` with Bun or npm if the
-uploader is missing, and uploads a private sanitized copy. GitHub, OpenAI,
-Anthropic, AWS and JWT credentials, Authorization values and secret environment
-values are redacted. The original log stays local. Sanitization failure stops the
-upload. Manual `--upload-log <id> --no-sanitize` explicitly uploads the original
-log; automatic reporting always sanitizes.
+uploader is missing, and uploads a private sanitized copy. Sanitization uses
+[`@link-foundation/sensitive-data-sanitizer`](https://github.com/link-foundation/sensitive-data-sanitizer),
+the library gh-upload-log and hive-mind share, in `--credentials-only` mode:
+tokens and keys, Authorization values, URL passwords, the values of
+credential-named environment variables and the tokens in the local `gh`
+configuration become `[REDACTED]`. Paths, endpoints, ports and the rest of each
+line stay as they were (#249). The JavaScript package bundles the library; the
+Rust binary runs `sensitive-data-sanitizer` from `PATH`, installing it with Bun
+or npm for `--upload-log`. `START_SENSITIVE_DATA_SANITIZER` selects another CLI
+path. The original log stays local. Sanitization failure, including a missing
+sanitizer or a log with NUL bytes, stops the upload with a value-free code such
+as `Log sanitization failed (ERR_BINARY); upload blocked.` Manual
+`--upload-log <id> --no-sanitize` explicitly uploads the original log; automatic
+reporting always sanitizes, and issue text is sanitized the same way.
 
 `--stop` and `--terminate` accept either the execution UUID or the isolation
 session/container name. `--stop` asks the backend to stop gracefully (CTRL+C for
