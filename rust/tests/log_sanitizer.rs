@@ -208,8 +208,12 @@ fn redacts_credentials_and_credential_named_environment_values() {
         ]
         .map(String::from),
     );
-    for secret in &secrets {
-        assert!(!output.contains(secret.as_str()), "leaked {}", &secret[..8]);
+    for (index, secret) in secrets.iter().enumerate() {
+        assert!(
+            !output.contains(secret.as_str()),
+            "leaked secret #{}",
+            index
+        );
     }
     for kept in [
         "Authorization: [REDACTED]\n",

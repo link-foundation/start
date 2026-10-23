@@ -118,8 +118,8 @@ describe('log sanitization', () => {
       input,
       testEnv({ START_TEST_SECRET: 'custom-secret-value' })
     ).toString();
-    for (const secret of credentials()) {
-      assert.ok(!output.includes(secret), `leaked ${secret.slice(0, 8)}`);
+    for (const [index, secret] of credentials().entries()) {
+      assert.ok(!output.includes(secret), `leaked secret #${index}`);
     }
     for (const kept of [
       'Authorization: [REDACTED]\n',
