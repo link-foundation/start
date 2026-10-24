@@ -44,7 +44,7 @@ env:
 jobs:
   link-checker:
     name: Check Links
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # Typical run: <1min with lychee cache. 10min prevents slow
     # external hosts or Wayback Machine probes from hanging the workflow.
     timeout-minutes: 10
@@ -54,14 +54,14 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       # `--cache` only writes .lycheecache into the workspace; without this
       # step every run starts cold and `--max-cache-age 1d` never applies.
       - name: Restore lychee cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: .lycheecache
           key: cache-lychee-${{ github.sha }}
@@ -164,10 +164,10 @@ jobs:
     name: Pipeline Status
     needs: [link-checker]
     if: always()
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
