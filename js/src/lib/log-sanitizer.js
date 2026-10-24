@@ -8,11 +8,10 @@
  * local gh hosts.yml (--gh-config). It streams the log from stdin, keeps
  * invalid UTF-8 bytes and writes a new private file atomically (--output).
  *
- * One rule stays here: the library masks an unquoted or single-quoted
- * `Authorization: <scheme> <value>` to the end of the line, which drops the
- * rest of a logged one-line JSON prompt (issue #249). The pre-pass below masks
- * only the scheme and its token first; the library keeps values that already
- * start with [REDACTED]. Remove it with sensitive-data-sanitizer#45.
+ * Since 0.12.1 the library masks only the scheme and token of an
+ * `Authorization: <scheme> <value>` header, so a logged one-line JSON prompt
+ * keeps the rest of its line (issue #249, sensitive-data-sanitizer#45); the
+ * pre-pass that did this here is gone (issue #253).
  */
 
 const fs = require('fs');
@@ -26,89 +25,6 @@ const PACKAGE = '@link-foundation/sensitive-data-sanitizer';
 const COMMAND = 'sensitive-data-sanitizer';
 const OVERRIDE = 'START_SENSITIVE_DATA_SANITIZER';
 const OPTIONS = ['--credentials-only', '--env-secrets', '--gh-config'];
-
-// The longest header and scheme prefix is 122 bytes.
-const HOLDBACK = 160;
-const HEADER =
-  /((?:Proxy-)?Authorization[ \t]{0,32}:[ \t]{0,32})(?:Bearer|Basic|Digest|token)[ \t]{1,32}/gi;
-// Shell expressions, placeholders and masked values are not credentials.
-const NOT_A_VALUE = '$<[{';
-
-function isValueByte(code) {
-  return (
-    code > 0x20 &&
-    code !== 0x22 &&
-    code !== 0x27 &&
-    code !== 0x2c &&
-    code !== 0x5c
-  );
-}
-
-function valueEnd(text, start) {
-  let end = start;
-  while (end < text.length && isValueByte(text.charCodeAt(end))) {
-    end++;
-  }
-  return end;
-}
-
-/**
- * Masks `Authorization: <scheme> <token>` as `Authorization: [REDACTED]`.
- * It works on bytes (latin1 maps each byte to one character), so invalid
- * UTF-8 passes through unchanged, and holds at most HOLDBACK pending bytes.
- */
-class AuthorizationHeaderMask {
-  constructor() {
-    this.pending = '';
-    this.inValue = false;
-    this.redactions = 0;
-  }
-
-  push(block, final = false) {
-    const text = this.pending + block.toString('latin1');
-    this.pending = '';
-    let output = '';
-    let offset = 0;
-    if (this.inValue) {
-      offset = valueEnd(text, 0);
-      if (offset === text.length && !final) {
-        return Buffer.alloc(0);
-      }
-      this.inValue = false;
-    }
-    HEADER.lastIndex = offset;
-    let match;
-    while ((match = HEADER.exec(text))) {
-      const valueStart = match.index + match[0].length;
-      if (valueStart === text.length && !final) {
-        output += text.slice(offset, match.index);
-        this.pending = text.slice(match.index);
-        return Buffer.from(output, 'latin1');
-      }
-      if (
-        valueStart === text.length ||
-        !isValueByte(text.charCodeAt(valueStart)) ||
-        NOT_A_VALUE.includes(text[valueStart])
-      ) {
-        continue;
-      }
-      output += text.slice(offset, match.index + match[1].length) + MARKER;
-      this.redactions++;
-      offset = valueEnd(text, valueStart);
-      if (offset === text.length && !final) {
-        this.inValue = true;
-        return Buffer.from(output, 'latin1');
-      }
-      HEADER.lastIndex = offset;
-    }
-    const safeEnd = final
-      ? text.length
-      : Math.max(offset, text.length - HOLDBACK);
-    output += text.slice(offset, safeEnd);
-    this.pending = text.slice(safeEnd);
-    return Buffer.from(output, 'latin1');
-  }
-}
 
 /** Value-free failure: `code` is a fixed ERR_* name, never log content. */
 class SanitizationError extends Error {
@@ -195,10 +111,9 @@ function runSanitizer(args, options, subject) {
  * @returns {string}
  */
 function sanitizeText(text, options = {}) {
-  const input = new AuthorizationHeaderMask().push(Buffer.from(text), true);
   const result = runSanitizer(
     ['redact', '-', ...OPTIONS],
-    { ...options, input },
+    { ...options, input: text },
     'Text'
   );
   return result.stdout.toString();
@@ -230,46 +145,6 @@ function countMarkers(filePath) {
   }
 }
 
-function createPrivateFile(filePath) {
-  const descriptor = fs.openSync(filePath, 'wx', 0o600);
-  if (process.platform !== 'win32') {
-    fs.fchmodSync(descriptor, 0o600);
-  }
-  return descriptor;
-}
-
-function maskAuthorizationHeaders(sourcePath, stagePath) {
-  const source = fs.openSync(sourcePath, 'r');
-  let stage;
-  try {
-    if (!fs.fstatSync(source).isFile()) {
-      throw new SanitizationError('ERR_SOURCE');
-    }
-    stage = createPrivateFile(stagePath);
-    const mask = new AuthorizationHeaderMask();
-    const buffer = Buffer.alloc(BLOCK_SIZE);
-    let bytes = 0;
-    for (;;) {
-      const length = fs.readSync(source, buffer, 0, BLOCK_SIZE, null);
-      const output = mask.push(buffer.subarray(0, length), length === 0);
-      if (output.length) {
-        fs.writeSync(stage, output);
-      }
-      if (length === 0) {
-        break;
-      }
-      bytes += length;
-    }
-    fs.fsyncSync(stage);
-    return bytes;
-  } finally {
-    fs.closeSync(source);
-    if (stage !== undefined) {
-      fs.closeSync(stage);
-    }
-  }
-}
-
 /**
  * Create a private sanitized copy of a log. The source is never modified;
  * any failure removes the copy and throws a value-free SanitizationError.
@@ -288,14 +163,18 @@ function sanitizeLogToTemp(sourcePath, options = {}) {
     if (process.platform !== 'win32') {
       fs.chmodSync(directory, 0o700);
     }
-    const stagePath = path.join(directory, 'authorization-masked.log');
     const target = path.join(directory, 'execution.log');
     code = 'ERR_SOURCE';
-    const bytes = maskAuthorizationHeaders(sourcePath, stagePath);
-    code = 'ERR_PRIVATE_FILE';
-    const input = fs.openSync(stagePath, 'r');
+    const input = fs.openSync(sourcePath, 'r');
+    let bytes;
     try {
-      const size = Math.max(1, fs.fstatSync(input).size);
+      const source = fs.fstatSync(input);
+      if (!source.isFile()) {
+        throw new SanitizationError('ERR_SOURCE');
+      }
+      bytes = source.size;
+      const size = Math.max(1, bytes);
+      code = 'ERR_PRIVATE_FILE';
       runSanitizer(
         [
           'redact',
@@ -326,7 +205,6 @@ function sanitizeLogToTemp(sourcePath, options = {}) {
         `Prepared private sanitized log: ${bytes} bytes scanned, ${Math.max(0, redactions)} redactions.`
       );
     }
-    fs.rmSync(stagePath, { force: true });
     return { path: target, cleanup };
   } catch (error) {
     cleanup();
@@ -341,7 +219,6 @@ function sanitizeLogToTemp(sourcePath, options = {}) {
 }
 
 module.exports = {
-  AuthorizationHeaderMask,
   BLOCK_SIZE,
   SanitizationError,
   resolveSanitizerCommand,

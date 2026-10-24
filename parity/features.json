@@ -2654,7 +2654,7 @@
         {
           "construct": "classes, Map/Set",
           "source": "js/src/lib/log-sanitizer.js",
-          "line": 60,
+          "line": 30,
           "issue": "https://github.com/link-foundation/meta-language/issues/210"
         },
         {

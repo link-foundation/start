@@ -76,7 +76,7 @@ file mode exit=2 seconds=61
 stdin mode exit=0 seconds=208
 ```
 
-1. Single-quoted and unquoted `Authorization` values are masked to the end of the line: the `context` rule and `src/detection.js:191`. start's pre-pass handles this. It is removable once the library is fixed.
+1. Single-quoted and unquoted `Authorization` values are masked to the end of the line: the `context` rule and `src/detection.js:191`. start's pre-pass handled this until sensitive-data-sanitizer 0.12.1 fixed it; issue #253 removed the pre-pass.
 2. File mode stops after 60 s (`workerTimeoutMs ?? 60000` in `src/stream.js`) with `ERR_WORKER`. start therefore streams the log through stdin, with `--max-bytes` set to the file size.
 3. A NUL byte blocks the whole log (`ERR_BINARY`). start fails closed and does not upload.
 4. `--env-secrets` takes values of names such as `*_AUTH_TRANSPORT`, so `HIVE_MIND_GIT_AUTH_TRANSPORT=github.com` masks every `github.com`. start's old rule used the same name pattern, so this is not new.

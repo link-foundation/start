@@ -1,6 +1,5 @@
 use start_command::log_sanitizer::{
-    find_sanitizer, sanitize_log_to_temp_with_env, sanitize_text_with_env, AuthorizationHeaderMask,
-    BLOCK_SIZE, OVERRIDE,
+    find_sanitizer, sanitize_log_to_temp_with_env, sanitize_text_with_env, BLOCK_SIZE, OVERRIDE,
 };
 use std::fs;
 use std::path::PathBuf;
@@ -78,17 +77,6 @@ fn sanitize_file(content: &[u8], env: Vec<(String, String)>) -> Vec<u8> {
     fs::read(&copy.path).unwrap()
 }
 
-fn mask(input: &[u8], size: usize) -> Vec<u8> {
-    let mut authorization = AuthorizationHeaderMask::new();
-    let mut output = Vec::new();
-    for block in input.chunks(size) {
-        output.extend(authorization.push(block, false));
-        assert!(authorization.pending_bytes() <= size + 160);
-    }
-    output.extend(authorization.push(&[], true));
-    output
-}
-
 // The three lines from issue #249, which the old rules truncated.
 const ISSUE_249_LINES: &[&str] = &[
     "Command: gate='/tmp/hive-mind-disk-baseline-0ce9e170-e6d3-494d-91e1-0d820245d34b'",
@@ -120,14 +108,16 @@ const AUTHORIZATION_CASES: &[(&str, &str)] = &[
         "Authorization: token $(gh auth token) and ${GITHUB_TOKEN}",
         "Authorization: token $(gh auth token) and ${GITHUB_TOKEN}",
     ),
+    // The library masks the scheme before a placeholder; nothing is lost.
     (
         "Authorization: Bearer <token>",
-        "Authorization: Bearer <token>",
+        "Authorization: [REDACTED] <token>",
     ),
 ];
 
 #[test]
-fn masks_only_the_authorization_scheme_and_token_at_every_block_size() {
+fn masks_only_the_authorization_scheme_and_token() {
+    let Some(env) = test_env(&[]) else { return };
     let input = AUTHORIZATION_CASES
         .iter()
         .map(|(line, _)| *line)
@@ -138,29 +128,23 @@ fn masks_only_the_authorization_scheme_and_token_at_every_block_size() {
         .map(|(_, line)| *line)
         .collect::<Vec<_>>()
         .join("\n");
-    for size in [1, 7, 31, 256, BLOCK_SIZE] {
-        assert_eq!(
-            String::from_utf8(mask(input.as_bytes(), size)).unwrap(),
-            expected
-        );
-    }
-    let Some(env) = test_env(&[]) else { return };
-    // The library itself masks the scheme before a placeholder; nothing is lost.
+    // sensitive-data-sanitizer 0.12.1 does this itself (#45), without the
+    // pre-pass start used to run (#253).
     assert_eq!(
-        String::from_utf8(sanitize_file(input.as_bytes(), env)).unwrap(),
-        expected.replace("Bearer <token>", "[REDACTED] <token>")
+        String::from_utf8(sanitize_file(input.as_bytes(), env.clone())).unwrap(),
+        expected
     );
+    assert_eq!(sanitize_text_with_env(&input, env).unwrap(), expected);
 }
 
 #[test]
-fn masks_long_authorization_tokens_across_blocks_with_bounded_memory() {
+fn masks_long_authorization_tokens_across_stream_blocks() {
+    let Some(env) = test_env(&[]) else { return };
     let input = format!(
         "Authorization: Bearer {} tail\nordinary\n",
         "a".repeat(200_000)
     );
     let expected = "Authorization: [REDACTED] tail\nordinary\n";
-    assert_eq!(mask(input.as_bytes(), BLOCK_SIZE), expected.as_bytes());
-    let Some(env) = test_env(&[]) else { return };
     assert_eq!(sanitize_file(input.as_bytes(), env), expected.as_bytes());
 }
 

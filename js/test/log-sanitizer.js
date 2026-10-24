@@ -6,7 +6,6 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const {
-  AuthorizationHeaderMask,
   SanitizationError,
   resolveSanitizerCommand,
   sanitizeLogToTemp,
@@ -57,17 +56,6 @@ function sanitizeFile(content, env = testEnv()) {
       copy.cleanup();
     }
   });
-}
-
-function mask(input, blockSize) {
-  const authorization = new AuthorizationHeaderMask();
-  const blocks = [];
-  for (let offset = 0; offset < input.length; offset += blockSize) {
-    blocks.push(authorization.push(input.subarray(offset, offset + blockSize)));
-    assert.ok(authorization.pending.length <= blockSize + 160);
-  }
-  blocks.push(authorization.push(Buffer.alloc(0), true));
-  return Buffer.concat(blocks).toString();
 }
 
 // The three lines from issue #249, which the old rules truncated.
@@ -154,27 +142,20 @@ describe('log sanitization', () => {
         'Authorization: token $(gh auth token) and ${GITHUB_TOKEN}',
         'Authorization: token $(gh auth token) and ${GITHUB_TOKEN}',
       ],
-      ['Authorization: Bearer <token>', 'Authorization: Bearer <token>'],
+      // The library masks the scheme before a placeholder; nothing is lost.
+      ['Authorization: Bearer <token>', 'Authorization: [REDACTED] <token>'],
     ];
+    // sensitive-data-sanitizer 0.12.1 does this itself (#45), without the
+    // pre-pass start used to run (#253).
     const input = cases.map(([line]) => line).join('\n');
     const expected = cases.map(([, line]) => line).join('\n');
-    for (const size of [1, 7, 31, 256, 65536]) {
-      assert.strictEqual(mask(Buffer.from(input), size), expected);
-    }
-    // The library itself masks the scheme before a placeholder; nothing is lost.
-    assert.strictEqual(
-      sanitizeFile(input).toString(),
-      expected.replace('Bearer <token>', '[REDACTED] <token>')
-    );
+    assert.strictEqual(sanitizeFile(input).toString(), expected);
+    assert.strictEqual(sanitizeText(input, { env: testEnv() }), expected);
   });
 
-  it('masks long Authorization tokens across blocks with bounded memory', () => {
+  it('masks long Authorization tokens across stream blocks', () => {
     const input = Buffer.from(
       `Authorization: Bearer ${'a'.repeat(200000)} tail\nordinary\n`
-    );
-    assert.strictEqual(
-      mask(input, 65536),
-      'Authorization: [REDACTED] tail\nordinary\n'
     );
     assert.strictEqual(
       sanitizeFile(input).toString(),
@@ -255,27 +236,15 @@ describe('log sanitization', () => {
     if (process.platform === 'win32') {
       return;
     }
-    const originalOpen = fs.openSync;
     const originalUmask = process.umask(0);
-    let creationChecked = false;
-    fs.openSync = (...args) => {
-      if (args[1] !== 'wx') {
-        return originalOpen(...args);
-      }
-      assert.strictEqual(
-        fs.statSync(path.dirname(args[0])).mode & 0o777,
-        0o700
-      );
-      const descriptor = originalOpen(...args);
-      assert.strictEqual(fs.fstatSync(descriptor).mode & 0o777, 0o600);
-      creationChecked = true;
-      return descriptor;
-    };
     try {
       withLog('ordinary output', (source) => {
         const copy = sanitizeLogToTemp(source, { env: testEnv() });
         try {
-          assert.ok(creationChecked);
+          assert.strictEqual(
+            fs.statSync(path.dirname(copy.path)).mode & 0o777,
+            0o700
+          );
           assert.strictEqual(fs.statSync(copy.path).mode & 0o777, 0o600);
           assert.strictEqual(
             fs.readFileSync(copy.path, 'utf8'),
@@ -286,7 +255,6 @@ describe('log sanitization', () => {
         }
       });
     } finally {
-      fs.openSync = originalOpen;
       process.umask(originalUmask);
     }
   });
@@ -376,13 +344,24 @@ describe('log sanitization', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sanitize-errors-'));
     const source = path.join(dir, 'source.log');
     fs.writeFileSync(source, 'ordinary log');
+    // A fake uploader, so a regression can never publish the log for real.
+    const uploaded = path.join(dir, 'uploaded');
+    fs.writeFileSync(
+      path.join(dir, 'gh-upload-log'),
+      `#!/bin/sh\ntouch "${uploaded}"\necho https://gist.github.com/test/id\n`,
+      { mode: 0o755 }
+    );
+    const originalPath = process.env.PATH;
+    process.env.PATH = `${dir}${path.delimiter}${originalPath}`;
     const { uploadLogPath } = require('../src/lib/log-uploader');
     const { uploadLog } = require('../src/lib/failure-handler');
     const messages = [];
     const originalLog = console.log;
     console.log = (message) => messages.push(message);
     try {
-      for (const method of ['readSync', 'writeSync', 'fsyncSync']) {
+      // The sanitizer child reads and writes the files itself; start only
+      // opens and checks the source.
+      for (const method of ['openSync', 'fstatSync']) {
         const original = fs[method];
         fs[method] = () => {
           throw new Error('sensitive error details');
@@ -409,8 +388,10 @@ describe('log sanitization', () => {
           'Warning: Log sanitization failed (ERR_SOURCE); upload blocked.'
         )
       );
+      assert.ok(!fs.existsSync(uploaded));
     } finally {
       console.log = originalLog;
+      process.env.PATH = originalPath;
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });

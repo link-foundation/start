@@ -7,15 +7,14 @@
 //! writes a new private file atomically (`--output`). Its error messages are
 //! value-free and only their `ERR_*` code is kept here.
 //!
-//! One rule stays here: the library masks an unquoted or single-quoted
-//! `Authorization: <scheme> <value>` to the end of the line, which drops the
-//! rest of a logged one-line JSON prompt (issue #249). The pre-pass below masks
-//! only the scheme and its token first; the library keeps values that already
-//! start with [REDACTED]. Remove it with sensitive-data-sanitizer#45.
+//! Since 0.12.1 the library masks only the scheme and token of an
+//! `Authorization: <scheme> <value>` header, so a logged one-line JSON prompt
+//! keeps the rest of its line (issue #249, sensitive-data-sanitizer#45); the
+//! pre-pass that did this here is gone (issue #253).
 
-use regex::bytes::{Regex, RegexBuilder};
+use regex::bytes::Regex;
 use std::ffi::OsString;
-use std::fs::{self, DirBuilder, File, OpenOptions};
+use std::fs::{self, DirBuilder, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -25,108 +24,10 @@ pub const BLOCK_SIZE: usize = 64 * 1024;
 const MARKER: &[u8] = b"[REDACTED]";
 const COMMAND: &str = "sensitive-data-sanitizer";
 /// The library version the JavaScript package depends on.
-pub const PACKAGE: &str = "@link-foundation/sensitive-data-sanitizer@^0.12.0";
+pub const PACKAGE: &str = "@link-foundation/sensitive-data-sanitizer@^0.12.1";
 /// Path of the library CLI to use instead of the one on PATH.
 pub const OVERRIDE: &str = "START_SENSITIVE_DATA_SANITIZER";
 const OPTIONS: [&str; 3] = ["--credentials-only", "--env-secrets", "--gh-config"];
-
-// The longest header and scheme prefix is 122 bytes.
-const HOLDBACK: usize = 160;
-// Shell expressions, placeholders and masked values are not credentials.
-const NOT_A_VALUE: &[u8] = b"$<[{";
-
-fn header() -> &'static Regex {
-    static HEADER: OnceLock<Regex> = OnceLock::new();
-    HEADER.get_or_init(|| {
-        RegexBuilder::new(
-            r"(?i)((?:Proxy-)?Authorization[ \t]{0,32}:[ \t]{0,32})(?:Bearer|Basic|Digest|token)[ \t]{1,32}",
-        )
-        .unicode(false)
-        .build()
-        .expect("static Authorization rule")
-    })
-}
-
-fn is_value_byte(byte: u8) -> bool {
-    byte > 0x20 && !b"\"',\\".contains(&byte)
-}
-
-fn value_end(text: &[u8], start: usize) -> usize {
-    start
-        + text[start..]
-            .iter()
-            .take_while(|byte| is_value_byte(**byte))
-            .count()
-}
-
-/// Masks `Authorization: <scheme> <token>` as `Authorization: [REDACTED]`
-/// byte-wise, so invalid UTF-8 passes through unchanged, holding at most
-/// HOLDBACK pending bytes.
-#[derive(Default)]
-pub struct AuthorizationHeaderMask {
-    pending: Vec<u8>,
-    in_value: bool,
-    pub redactions: u64,
-}
-
-impl AuthorizationHeaderMask {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn pending_bytes(&self) -> usize {
-        self.pending.len()
-    }
-
-    pub fn push(&mut self, block: &[u8], final_block: bool) -> Vec<u8> {
-        let mut text = std::mem::take(&mut self.pending);
-        text.extend_from_slice(block);
-        let mut output = Vec::new();
-        let mut offset = 0;
-        if self.in_value {
-            offset = value_end(&text, 0);
-            if offset == text.len() && !final_block {
-                return output;
-            }
-            self.in_value = false;
-        }
-        let mut search = offset;
-        while let Some(found) = header().captures_at(&text, search) {
-            let whole = found.get(0).expect("whole match");
-            let prefix_end = found.get(1).expect("header group").end();
-            let value_start = whole.end();
-            search = value_start;
-            if value_start == text.len() && !final_block {
-                output.extend_from_slice(&text[offset..whole.start()]);
-                self.pending = text[whole.start()..].to_vec();
-                return output;
-            }
-            if value_start == text.len()
-                || !is_value_byte(text[value_start])
-                || NOT_A_VALUE.contains(&text[value_start])
-            {
-                continue;
-            }
-            output.extend_from_slice(&text[offset..prefix_end]);
-            output.extend_from_slice(MARKER);
-            self.redactions += 1;
-            offset = value_end(&text, value_start);
-            if offset == text.len() && !final_block {
-                self.in_value = true;
-                return output;
-            }
-            search = offset;
-        }
-        let safe_end = if final_block {
-            text.len()
-        } else {
-            offset.max(text.len().saturating_sub(HOLDBACK))
-        };
-        output.extend_from_slice(&text[offset..safe_end]);
-        self.pending = text[safe_end..].to_vec();
-        output
-    }
-}
 
 /// Value-free failure message: `code` is a fixed ERR_* name, never content.
 fn blocked(code: &str, subject: &str) -> String {
@@ -267,7 +168,7 @@ fn sanitizer_command(env: &Environment, subject: &str) -> Result<Command, String
 
 fn text_with(text: &str, env: &Environment) -> Result<String, String> {
     let fail = |code: &str| blocked(code, "Text");
-    let input = AuthorizationHeaderMask::new().push(text.as_bytes(), true);
+    let input = text.as_bytes().to_vec();
     let mut child = sanitizer_command(env, "Text")?
         .args(OPTIONS)
         .stdin(Stdio::piped())
@@ -338,47 +239,6 @@ fn count_markers(path: &Path) -> std::io::Result<u64> {
     }
 }
 
-fn create_private_file(path: &Path) -> std::io::Result<File> {
-    let mut options = OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    let file = options.open(path)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        file.set_permissions(fs::Permissions::from_mode(0o600))?;
-    }
-    Ok(file)
-}
-
-fn mask_authorization_headers(source_path: &Path, stage_path: &Path) -> Result<u64, String> {
-    let failed = |_| blocked("ERR_SOURCE", "Log");
-    let mut source = File::open(source_path).map_err(failed)?;
-    if !source.metadata().map_err(failed)?.is_file() {
-        return Err(blocked("ERR_SOURCE", "Log"));
-    }
-    let mut stage = create_private_file(stage_path).map_err(failed)?;
-    let mut mask = AuthorizationHeaderMask::new();
-    let mut buffer = vec![0; BLOCK_SIZE];
-    let mut bytes = 0_u64;
-    loop {
-        let length = source.read(&mut buffer).map_err(failed)?;
-        stage
-            .write_all(&mask.push(&buffer[..length], length == 0))
-            .map_err(failed)?;
-        if length == 0 {
-            break;
-        }
-        bytes += length as u64;
-    }
-    stage.sync_all().map_err(failed)?;
-    Ok(bytes)
-}
-
 fn private_directory() -> Result<PathBuf, String> {
     let directory = std::env::temp_dir().join(format!("start-sanitized-{}", uuid::Uuid::new_v4()));
     let builder = DirBuilder::new();
@@ -403,19 +263,21 @@ fn log_with(source_path: &Path, env: &Environment, verbose: bool) -> Result<Prep
         directory,
     };
     let target = prepared.path.clone();
-    let stage_path = prepared.directory.join("authorization-masked.log");
-    let bytes = mask_authorization_headers(source_path, &stage_path)?;
-    let private_file = |_| blocked("ERR_PRIVATE_FILE", "Log");
-    let stage = File::open(&stage_path).map_err(private_file)?;
-    let size = stage.metadata().map_err(private_file)?.len().max(1);
+    let source_error = |_| blocked("ERR_SOURCE", "Log");
+    let source = File::open(source_path).map_err(source_error)?;
+    let metadata = source.metadata().map_err(source_error)?;
+    if !metadata.is_file() {
+        return Err(blocked("ERR_SOURCE", "Log"));
+    }
+    let bytes = metadata.len();
     let output = sanitizer_command(env, "Log")?
         .arg("--stream")
         .args(OPTIONS)
         .arg("--max-bytes")
-        .arg(size.to_string())
+        .arg(bytes.max(1).to_string())
         .arg("--output")
         .arg(&target)
-        .stdin(Stdio::from(stage))
+        .stdin(Stdio::from(source))
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .output()
@@ -443,7 +305,6 @@ fn log_with(source_path: &Path, env: &Environment, verbose: bool) -> Result<Prep
             bytes, redactions
         );
     }
-    let _ = fs::remove_file(&stage_path);
     Ok(prepared)
 }
 
