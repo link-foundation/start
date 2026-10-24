@@ -1,0 +1,44 @@
+Follow-up audit: 2026-10-24 UTC. Sources: authenticated GitHub REST API and npm/NuGet registries.
+
+{"html_url": "https://github.com/link-foundation/command-stream/issues/235", "title": "import { $ } loads 281 modules (ShellJS, execa, zx, Bun shell, terminal capture) and takes ~350 ms", "state": "closed", "closed_at": "2026-10-24T09:12:49Z", "updated_at": "2026-10-24T09:12:49Z", "comments": 0}
+{"html_url": "https://github.com/link-foundation/gh-upload-log/issues/55", "title": "Sanitize every upload with link-foundation/sensitive-data-sanitizer (today the file is uploaded as is, also with --public)", "state": "closed", "closed_at": "2026-10-24T06:48:28Z", "updated_at": "2026-10-24T06:48:28Z", "comments": 0}
+{"html_url": "https://github.com/link-foundation/gh-upload-log/issues/56", "title": "Release blocked since 0.11.0: npm publish of the renamed package gets E404 (trusted publishing has no package to trust)", "state": "closed", "closed_at": "2026-10-24T06:48:28Z", "updated_at": "2026-10-24T06:48:29Z", "comments": 0}
+{"html_url": "https://github.com/link-foundation/link-cli/issues/128", "title": "clink --import drops a backslash inside a quoted name ('x\\y' is stored as xy), so LiNo does not round-trip", "state": "closed", "closed_at": "2026-10-24T06:58:31Z", "updated_at": "2026-10-24T06:58:31Z", "comments": 0}
+{"html_url": "https://github.com/link-foundation/link-cli/issues/129", "title": "clink --import is not atomic: a malformed line exits 1 but keeps the links created from earlier lines", "state": "closed", "closed_at": "2026-10-24T07:18:22Z", "updated_at": "2026-10-24T07:18:22Z", "comments": 0}
+{"html_url": "https://github.com/link-foundation/link-cli/issues/130", "title": "A quoted number in a query is read as a link address: \"1\" resolves to address 1, \"0\" fails", "state": "closed", "closed_at": "2026-10-24T08:05:22Z", "updated_at": "2026-10-24T08:05:22Z", "comments": 0}
+{"html_url": "https://github.com/link-foundation/sensitive-data-sanitizer/issues/50", "title": "Authorization tokens end at \"]\" or \"}\" and swallow a following NUL: \"Bearer [REDACTED]\" becomes \"[REDACTED]]\"", "state": "closed", "closed_at": "2026-10-24T06:15:02Z", "updated_at": "2026-10-24T06:15:02Z", "comments": 0}
+{"html_url": "https://github.com/link-foundation/sensitive-data-sanitizer/issues/51", "title": "Dense credentials take quadratic time: every re2-wasm exec copies the whole view (256 KiB of ghp_ tokens: 72 s)", "state": "closed", "closed_at": "2026-10-24T06:15:03Z", "updated_at": "2026-10-24T06:15:03Z", "comments": 0}
+{"url": "https://api.github.com/repos/link-foundation/sensitive-data-sanitizer/releases/422556889", "html_url": "https://github.com/link-foundation/sensitive-data-sanitizer/releases/tag/v0.12.2", "tag_name": "v0.12.2", "tagName": null, "published_at": "2026-10-24T06:20:52Z", "publishedAt": null, "body": "Preserve Authorization placeholders, matching brackets and control-byte boundaries. Bound repeated WASM input copies when scanning dense credentials by continuing with the existing RE2JS engine.\n\n**Related Pull Request:** #53\n\n---\n\n[![npm version](https://img.shields.io/badge/npm-0.12.2-blue.svg)](https://www.npmjs.com/package/@link-foundation/sensitive-data-sanitizer/v/0.12.2)"}
+{"url": "https://api.github.com/repos/link-foundation/command-stream/releases/422803172", "html_url": "https://github.com/link-foundation/command-stream/releases/tag/rust-v1.12.0", "tag_name": "rust-v1.12.0", "tagName": null, "published_at": "2026-10-24T15:09:32Z", "publishedAt": null, "body": "[![Crates.io](https://img.shields.io/crates/v/command-stream?label=crates.io)](https://crates.io/crates/command-stream/1.12.0) [![Docs.rs](https://docs.rs/command-stream/badge.svg)](https://docs.rs/command-stream/1.12.0)\n\n### Added\n\n- Complete reusable command builders with environment layers and removal,\n  functional configuration and synchronous execution alongside async execution.\n  Preserve native environment key rules by applying changes in configuration order."}
+{"url": "https://github.com/link-foundation/link-cli/releases/tag/csharp-v4.0.6", "html_url": null, "tag_name": null, "tagName": "csharp-v4.0.6", "published_at": null, "publishedAt": "2026-10-24T11:03:56Z", "body": "[![NuGet](https://img.shields.io/nuget/v/clink?logo=nuget&label=NuGet)](https://www.nuget.org/packages/clink/4.0.6) [![NuGet Downloads](https://img.shields.io/nuget/dt/clink?logo=nuget&label=downloads)](https://www.nuget.org/packages/clink/4.0.6)\n[![NuGet](https://img.shields.io/nuget/v/Foundation.Data.Doublets.Cli?logo=nuget&label=NuGet)](https://www.nuget.org/packages/Foundation.Data.Doublets.Cli/4.0.6) [![NuGet Downloads](https://img.shields.io/nuget/dt/Foundation.Data.Doublets.Cli?logo=nuget&label=downloads)](https://www.nuget.org/packages/Foundation.Data.Doublets.Cli/4.0.6)\n\nHarden the C# release automation (issue #134): the release commit is rebased\nonto the latest main before any file is touched, a push that loses the race to\na concurrent release is rebased and retried while a repository-rule rejection\nfails fast with an explicit error, the tag is created only after the commit\nreached main and exactly that tag is pushed, git runs without a shell so\nrelease descriptions are passed verbatim, and CHANGELOG.md no longer gains an\nextra blank line on every release.\n\nThe NuGet and GitHub release lookups that decide whether to release now retry\nnetwork failures, 429 and 5xx with backoff and report the network cause, so a\nsingle dropped connection no longer fails the release.\n\nA changeset whose bump type cannot be parsed now fails the release with an\n\"Invalid changeset\" error naming the file. It used to be skipped with a\nwarning and then deleted, so its bump and description were silently lost.\n\n`LinksServer` no longer crashes the process when it shuts down right after\naccepting a connection. The worker used to get its stream while `Shutdown`\ndisposed the client, and `TcpClient` throws `ArgumentNullException` when that\nhappens midway; the stream is now taken in the accept loop, under the lock\n`Shutdown` holds.\n\nPackages: `clink`, `Foundation.Data.Doublets.Cli`"}
+
+npm view gh-upload-log version --json
+"0.10.1"
+
+npm view gh-upload-file version --json (exit 1)
+npm error code E404
+npm error 404 Not Found - GET https://registry.npmjs.org/gh-upload-file - Not found
+npm error 404
+npm error 404  The requested resource 'gh-upload-file@*' could not be found or you do not have permission to access it.
+npm error 404
+npm error 404 Note that you can also install from a
+npm error 404 tarball, folder, http url, or git url.
+{
+  "error": {
+    "code": "E404",
+    "summary": "Not Found - GET https://registry.npmjs.org/gh-upload-file - Not found",
+    "detail": "The requested resource 'gh-upload-file@*' could not be found or you do not have permission to access it.\n\nNote that you can also install from a\ntarball, folder, http url, or git url."
+  }
+}
+npm error A complete log of this run can be found in: /home/box/.npm/_logs/2026-10-24T18_37_08_585Z-debug-0.log
+
+
+Upstream release run: https://github.com/link-foundation/gh-upload-log/actions/runs/40084678223
+Raw log retained locally: ci-logs/upstream-upload-40084678223.log. Lines 598-601:
+Release Preflight	UNKNOWN STEP	2026-10-24T10:08:18.2994795Z   HAS_NPM_TOKEN: false
+Release Preflight	UNKNOWN STEP	2026-10-24T10:08:18.2995243Z ##[endgroup]
+Release Preflight	UNKNOWN STEP	2026-10-24T10:08:19.5185235Z ##[error]npm owner setup required for gh-upload-file: first publish each missing package with an authorized npm account (npm publish --access public, with 2FA), or add an NPM_TOKEN repository secret so the release job can bootstrap it, then configure its trusted publisher for link-foundation/gh-upload-log, workflow release.yml, allowing publication. Check gh-upload-log separately. See docs/npm-publishing.md. No version was bumped or published by this preflight.
+Release Preflight	UNKNOWN STEP	2026-10-24T10:08:19.8495056Z ##[error]Process completed with exit code 1.
+
+Delivery follow-up: https://github.com/link-foundation/gh-upload-log/issues/56#issuecomment-6388030716
+Issue #56 reopened after this metadata snapshot; delivery is still blocked.

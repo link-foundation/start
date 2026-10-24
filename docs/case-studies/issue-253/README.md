@@ -3,7 +3,13 @@
 Issue: <https://github.com/link-foundation/start/issues/253>
 Pull request: <https://github.com/link-foundation/start/pull/254>
 
-## Summary
+## Current follow-up
+
+The repeated audit upgrades the sanitizer to **0.12.2** and command-stream to **2.6.0**, adopts the lightweight core entry, and verifies the latest **clink 4.0.6**. New tests reproduce the previously reported sanitizer and import bugs and verify their published fixes. The latest freshness run still reports 190 checked, 0 stale. See [follow-up.md](follow-up.md) for the review requirements, recovery log, bounded before/after measurements and current upstream delivery evidence.
+
+The sections below preserve the original upgrade investigation, including the 0.12.1 findings. Their historical upstream status is superseded by the follow-up: sanitizer #50/#51, command-stream #235 and link-cli #128/#129/#130 have published fixes. Uploader publication remains blocked.
+
+## Original investigation summary
 
 The issue asks for three things. First, a CI rule that fails a pull request when any dependency is not its latest release. Second, a check that the latest `@link-foundation/sensitive-data-sanitizer`, and the other dependencies we control, have every feature start needs, with upstream reports for any gaps. Third, this case study.
 

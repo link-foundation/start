@@ -1,0 +1,6 @@
+64 KiB: 1089 ms; status=0; error=none
+Verified all 1425 credentials and every non-secret byte.
+128 KiB: 1335 ms; status=0; error=none
+Verified all 2850 credentials and every non-secret byte.
+256 KiB: 1948 ms; status=0; error=none
+Verified all 5699 credentials and every non-secret byte.

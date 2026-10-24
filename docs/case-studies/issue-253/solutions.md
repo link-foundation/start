@@ -45,21 +45,21 @@ The issue asks for the latest everywhere, so every entry the gate reported was u
 Options:
 
 - **(a) Keep start's own Authorization pre-pass and NUL workaround.** This duplicates the library and diverges from gh-upload-log and hive-mind.
-- **(b) Use 0.12.1's fixes directly and require that release.**
+- **(b) Use 0.12.2's fixes directly and require that release.**
 
 Chosen: (b).
 
 - The pre-pass is removed in JS and Rust, and `--allow-binary` is passed.
-- The Rust installer upgrades a sanitizer older than 0.12.1 before any upload.
+- The Rust installer upgrades a sanitizer older than 0.12.2 before any upload.
 - Tests in both languages keep the required release in sync.
-- The remaining library defects are reported upstream (#50, #51) with reproductions. They lose no secret, so they do not block the upgrade.
+- The library defects were reported upstream (#50, #51), reproduced in start tests, and their published fixes in 0.12.2 are now adopted. The bounded dense-log probe verifies both exact output and completion within its fixed deadline.
 
 ## R6: Dependencies we control
 
 | Dependency         | Finding                                                                       | Action                                                                                                                                     |
 | ------------------ | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | link-cli (clink)   | A quoted number is read as an address; the store had silently written nothing | Store fixed in start; link-cli#130 filed                                                                                                   |
-| command-stream     | `import { $ }` loads 281 modules                                              | command-stream#235 filed; start imports it lazily                                                                                          |
+| command-stream     | `import { $ }` loads 281 modules                                              | command-stream#235 filed and fixed upstream; start lazily imports the 2.6.0 core entry                                                     |
 | lino-objects-codec | New readable format; reads the old one                                        | Upgraded; fixtures for both formats                                                                                                        |
 | gh-upload-log      | Renamed package unpublished (#56); no upload-side sanitizing (#55)            | Already reported upstream; start sanitizes before uploading and keeps `gh-upload-log` 0.10.1. **Blocked** on the npm owner for the rename. |
 | meta-language      | Translator pin behind `main`                                                  | Pin bumped; the gate now checks it                                                                                                         |
@@ -67,3 +67,7 @@ Chosen: (b).
 ## R7 to R10: Case study
 
 The data is collected in [data/](data) and [upstream/](upstream). The scripts that produced it are in [experiments/issue-253](../../../experiments/issue-253). The analysis is in the [README](README.md), the requirements in [requirements.md](requirements.md) and the external facts in [online-research.md](online-research.md).
+
+## R12, R13: Follow-up review and recovery
+
+Repeated the audit rather than trusting the earlier green run. Added failing regressions before upgrading. Chose the published sanitizer fixes over another local pre-pass, and the published command-stream core entry over tolerating unrelated imports. Kept the record-scoped clink schema, because upstream numeric quoting fixes do not prevent equal-value collisions across records. Recovered the failed session and resumed from its clean branch state. The [follow-up](follow-up.md) records the exact evidence and verification plan. The uploader owner-authentication requirement remains external and unfinished; using an unpublished Git checkout was rejected in favor of the latest available npm release plus start's tested local sanitization.

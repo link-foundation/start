@@ -25,7 +25,7 @@ No single existing tool covers npm, crates, GitHub Actions, runner labels, runti
 - .NET: `https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/releases-index.json`.
 - GitHub releases and tags through the REST API, for actions, Bun, actionlint and `actions/runner-images`.
 
-## Facts about the dependencies
+## Original audit facts about the dependencies
 
 - **sensitive-data-sanitizer**
   - 0.12.0 was published 2026-10-23 19:08 UTC.
@@ -43,3 +43,11 @@ No single existing tool covers npm, crates, GitHub Actions, runner labels, runti
 - **actionlint**
   - 1.7.12 is the latest release.
   - rhysd/actionlint#682 (open) asks it to recognise the `ubuntu-26.04` runner label.
+
+## Follow-up facts verified online
+
+- [Sanitizer 0.12.2](https://github.com/link-foundation/sensitive-data-sanitizer/releases/tag/v0.12.2) fixes the two reports from this investigation. Its source recognizes explicit variable references, `<…>` and `[REDACTED]` as placeholders; arbitrary bracketed values are fully redacted.
+- [Command-stream changelog](https://github.com/link-foundation/command-stream/blob/main/js/CHANGELOG.md): 2.5.0 introduced `command-stream/core`; 2.6.0 is now npm latest. The lighter entry exports execution without compatibility layers and terminal/REPL features.
+- [NuGet clink](https://www.nuget.org/packages/clink/4.0.6) and its release metadata verify 4.0.6 is published. Import and quoted-number fixes are no longer merely closed reports.
+- [npm distribution tags](https://docs.npmjs.com/cli/v11/commands/npm-dist-tag/) define `latest` as the default install target. A merged Git commit or closed issue does not update this tag. Fresh npm queries and the upstream release preflight prove the uploader rename is still unavailable; see [raw evidence](data/upstream-followup.txt).
+- [Follow-up analysis](follow-up.md) maps these releases to actual start behavior and documents the bounded measurements.

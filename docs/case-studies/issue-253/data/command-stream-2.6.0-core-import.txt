@@ -1,0 +1,10 @@
+modules=73 ms=94
+61 311 KiB command-stream/
+5 7 KiB cross-spawn/lib
+1 3 KiB which/which.js
+1 1 KiB cross-spawn/index.js
+1 1 KiB isexe/index.js
+1 0 KiB isexe/mode.js
+1 0 KiB path-key/index.js
+1 0 KiB shebang-command/index.js
+1 0 KiB shebang-regex/index.js

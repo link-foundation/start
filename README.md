@@ -350,7 +350,7 @@ tokens and keys, Authorization values, URL passwords, the values of
 credential-named environment variables and the tokens in the local `gh`
 configuration become `[REDACTED]`. Paths, endpoints, ports and the rest of each
 line stay as they were (#249). The JavaScript package bundles the library; the
-Rust binary runs `sensitive-data-sanitizer` 0.12.1 or later from `PATH`,
+Rust binary runs `sensitive-data-sanitizer` 0.12.2 or later from `PATH`,
 installing or upgrading it with Bun or npm for `--upload-log`.
 `START_SENSITIVE_DATA_SANITIZER` selects another CLI path. The original log
 stays local. NUL bytes and invalid UTF-8 are kept as they are. Sanitization
