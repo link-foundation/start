@@ -87,7 +87,8 @@ describe('release-git (#211)', () => {
     await withRepo({ reject: true }, async () => {
       const result = await $`git push origin main`.run(quiet);
       expect(result.code).not.toBe(0);
-      expect(result.stderr).toContain('GH013');
+      // command-stream 2.x returns stderr as a readable snapshot (#253).
+      expect(String(result.stderr)).toContain('GH013');
     });
   });
 

@@ -367,13 +367,12 @@ describe('ExecutionStore', () => {
     const linoPath = path.join(TEST_APP_FOLDER, LINO_DB_FILE);
     expect(fs.existsSync(linoPath)).toBe(true);
 
-    // Read and verify content - lino format uses base64 encoding for strings
+    // lino-objects-codec 0.9 writes readable links notation (#253)
     const content = fs.readFileSync(linoPath, 'utf8');
     expect(content.length).toBeGreaterThan(0);
-    // Verify content has array structure
-    expect(content).toContain('(array');
-    // Verify PID is stored (as int)
-    expect(content).toContain('(int 12345)');
+    expect(content).toContain('command "echo hello"');
+    // Verify PID is stored as a bare integer
+    expect(content).toContain('pid 12345');
   });
 });
 
@@ -448,6 +447,29 @@ describe('ExecutionStore with lino-objects-codec', () => {
     const retrieved = store.get(record.uuid);
     expect(retrieved.command).toBe('echo "Hello 世界 🌍"');
     expect(retrieved.logPath).toBe('/tmp/unicode-日本語.log');
+  });
+
+  it('reads a store written by lino-objects-codec 0.4.0 and rewrites it readable (#253)', () => {
+    fs.mkdirSync(TEST_APP_FOLDER, { recursive: true });
+    fs.copyFileSync(
+      path.join(__dirname, 'fixtures/executions-lino-objects-codec-0.4.0.lino'),
+      path.join(TEST_APP_FOLDER, LINO_DB_FILE)
+    );
+    const uuid = '25300000-0000-4000-8000-000000000253';
+
+    const legacy = store.get(uuid);
+    expect(legacy.pid).toBe(4242);
+    expect(legacy.exitCode).toBe(0);
+    expect(legacy.command).toBe('echo "legacy store"');
+
+    store.save(new ExecutionRecord({ command: 'echo next' }));
+    const content = fs.readFileSync(
+      path.join(TEST_APP_FOLDER, LINO_DB_FILE),
+      'utf8'
+    );
+    expect(content).toContain('command "echo next"');
+    expect(content).not.toContain('(str ');
+    expect(store.get(uuid).command).toBe('echo "legacy store"');
   });
 });
 
