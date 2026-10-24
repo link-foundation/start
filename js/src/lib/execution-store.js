@@ -353,7 +353,7 @@ class ExecutionStore {
   }
 
   /**
-   * Build clink query for creating/updating a record.
+   * Convert a record's properties to clink links notation.
    *
    * The record is one link `(uuid: ExecutionRecord uuid)` plus one link per
    * property, `(uuid.key: uuid "key=value")`. Property links have the record
@@ -365,9 +365,9 @@ class ExecutionStore {
    * @param {ExecutionRecord} record
    * @returns {string}
    */
-  buildClinkCreateQuery(record) {
+  recordToLinksNotation(record) {
     const obj = record.toObject();
-    const links = [`(${record.uuid}: ExecutionRecord ${record.uuid})`];
+    const links = [];
 
     for (const [key, value] of Object.entries(obj)) {
       if (value !== null && value !== undefined) {
@@ -379,8 +379,12 @@ class ExecutionStore {
       }
     }
 
-    // Format: () ((link) (link) ...) - creates the links
-    return `() (${links.join(' ')})`;
+    return links.join(' ');
+  }
+
+  /** Build the create query using the same property notation as the public helper. */
+  buildClinkCreateQuery(record) {
+    return `() ((${record.uuid}: ExecutionRecord ${record.uuid}) ${this.recordToLinksNotation(record)})`;
   }
 
   /**

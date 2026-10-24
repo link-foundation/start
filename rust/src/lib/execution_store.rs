@@ -386,18 +386,15 @@ impl ExecutionStore {
         Ok(())
     }
 
-    /// Build clink query for creating/updating a record.
+    /// Convert a record's properties to clink links notation.
     ///
     /// The record is one link `(uuid: ExecutionRecord uuid)` plus one link per
     /// property, `(uuid.key: uuid "key=value")`. Property links have the record
     /// as their source, so records that share a value stay distinct links
     /// (doublets are deduplicated by source and target), and the `key=` prefix
     /// keeps a number from being read as a link address (issue #253).
-    pub fn build_clink_create_query(&self, record: &ExecutionRecord) -> String {
-        let mut links = vec![format!(
-            "({}: ExecutionRecord {})",
-            record.uuid, record.uuid
-        )];
+    pub fn record_to_links_notation(&self, record: &ExecutionRecord) -> String {
+        let mut links = Vec::new();
 
         if let Value::Object(map) = record.to_json() {
             for (key, value) in map {
@@ -419,7 +416,17 @@ impl ExecutionStore {
             }
         }
 
-        format!("() ({})", links.join(" "))
+        links.join(" ")
+    }
+
+    /// Build the create query with the same notation as the property helper.
+    pub fn build_clink_create_query(&self, record: &ExecutionRecord) -> String {
+        format!(
+            "() (({}: ExecutionRecord {}) {})",
+            record.uuid,
+            record.uuid,
+            self.record_to_links_notation(record)
+        )
     }
 
     /// Execute clink command, appending `extra_args` after `--db <path>`

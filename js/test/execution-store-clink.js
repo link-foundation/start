@@ -64,6 +64,11 @@ describe('ExecutionStore.buildClinkCreateQuery (#253)', () => {
         options: { isolated: 'docker' },
       });
       const query = store.buildClinkCreateQuery(record);
+      const properties = store.recordToLinksNotation(record);
+      expect(query).toBe(
+        `() ((${UUID}: ExecutionRecord ${UUID}) ${properties})`
+      );
+      expect(properties).not.toContain('ExecutionRecord');
 
       expect(countParens(query)).toBe(0);
       expect(query.startsWith(`() ((${UUID}: ExecutionRecord ${UUID}) `)).toBe(

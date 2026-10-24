@@ -111,6 +111,12 @@ fn create_query_is_one_balanced_group_with_record_scoped_links() {
     let mut rec = record(Some(UUID), "echo \"a\" (b)");
     rec.exit_code = Some(0);
     let query = store.build_clink_create_query(&rec);
+    let properties = store.record_to_links_notation(&rec);
+    assert_eq!(
+        query,
+        format!("() (({UUID}: ExecutionRecord {UUID}) {properties})")
+    );
+    assert!(!properties.contains("ExecutionRecord"));
 
     assert_eq!(paren_depth(&query), 0, "{}", query);
     assert!(query.starts_with(&format!("() (({UUID}: ExecutionRecord {UUID}) ")));
