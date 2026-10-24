@@ -1,0 +1,29 @@
+{
+  "url": "https://github.com/link-foundation/start/security/code-scanning/48",
+  "created_at": "2026-10-24T19:00:11Z",
+  "rule": "rust/cleartext-logging",
+  "severity": "high",
+  "instance": {
+    "ref": "refs/pull/254/merge",
+    "analysis_key": ".github/workflows/js.yml:rust-codeql",
+    "environment": "{}",
+    "category": ".github/workflows/js.yml:rust-codeql",
+    "state": "open",
+    "commit_sha": "12b5a7c2f95db1cd3e06c70118231fdbd5077b8d",
+    "message": {
+      "text": "This operation writes record.uuid to a log file.\nThis operation writes record.uuid to a log file.",
+      "markdown": "This operation writes [record.uuid](rust/src/lib/execution_store.rs#L426C13-L426C24) to a log file.\nThis operation writes [record.uuid](rust/src/lib/execution_store.rs#L427C13-L427C24) to a log file."
+    },
+    "location": {
+      "path": "rust/tests/regression_253.rs",
+      "start_line": 121,
+      "end_line": 121,
+      "start_column": 40,
+      "end_column": 51
+    },
+    "classifications": [
+      "test"
+    ]
+  },
+  "diagnosis": "Synthetic test fixture; assert_eq! may print the full record-derived query. Preserve equality through a boolean assertion and use fixed diagnostic messages. No CodeQL suppression or dismissal."
+}

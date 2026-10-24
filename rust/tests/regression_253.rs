@@ -112,13 +112,18 @@ fn create_query_is_one_balanced_group_with_record_scoped_links() {
     rec.exit_code = Some(0);
     let query = store.build_clink_create_query(&rec);
     let properties = store.record_to_links_notation(&rec);
-    assert_eq!(
-        query,
-        format!("() (({UUID}: ExecutionRecord {UUID}) {properties})")
+    // Keep record-derived query contents out of assertion failure logs.
+    assert!(
+        query == format!("() (({UUID}: ExecutionRecord {UUID}) {properties})"),
+        "create query must use the public property notation"
     );
     assert!(!properties.contains("ExecutionRecord"));
 
-    assert_eq!(paren_depth(&query), 0, "{}", query);
+    assert_eq!(
+        paren_depth(&query),
+        0,
+        "create query must balance parentheses"
+    );
     assert!(query.starts_with(&format!("() (({UUID}: ExecutionRecord {UUID}) ")));
     assert!(query.contains(&format!(
         "({UUID}.command: {UUID} \"command=echo \"\"a\"\" (b)\")"
@@ -146,7 +151,10 @@ fn links_database_saves_updates_and_deletes_records_that_share_values() {
     store.save(&first).unwrap();
     store.save(&second).unwrap();
     let consistency = store.verify_consistency();
-    assert!(consistency.errors.is_empty(), "{:?}", consistency.errors);
+    assert!(
+        consistency.errors.is_empty(),
+        "links consistency check failed"
+    );
     assert_eq!(consistency.links_count, 2);
 
     first.complete(3);
@@ -155,7 +163,7 @@ fn links_database_saves_updates_and_deletes_records_that_share_values() {
     let (a, b) = (&first.uuid, &second.uuid);
     assert!(
         links.contains(&format!("{a}.status: {a} status=executed")),
-        "{links}"
+        "updated record status is missing"
     );
     assert!(!links.contains(&format!("{a}.status: {a} status=executing")));
     assert!(links.contains(&format!("{b}.status: {b} status=executing")));
@@ -163,7 +171,10 @@ fn links_database_saves_updates_and_deletes_records_that_share_values() {
 
     assert!(store.delete(a).unwrap());
     let consistency = store.verify_consistency();
-    assert!(consistency.errors.is_empty(), "{:?}", consistency.errors);
+    assert!(
+        consistency.errors.is_empty(),
+        "links consistency check failed"
+    );
     assert_eq!(consistency.links_count, 1);
     let remaining = all_links(&store);
     assert!(!remaining.contains(&format!("{a}.")));
@@ -193,8 +204,8 @@ fn reads_a_store_written_by_lino_objects_codec_0_4_and_rewrites_it_readable() {
 
     store.save(&record(None, "echo next")).unwrap();
     let content = std::fs::read_to_string(dir.path().join("executions.lino")).unwrap();
-    assert!(content.contains("command \"echo next\""), "{content}");
-    assert!(!content.contains("(str "), "{content}");
+    assert!(content.contains("command \"echo next\""));
+    assert!(!content.contains("(str "));
     assert_eq!(store.get(uuid).unwrap().command, "echo \"legacy store\"");
 }
 

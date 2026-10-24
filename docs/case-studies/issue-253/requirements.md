@@ -23,7 +23,7 @@ Each requirement is quoted or paraphrased from the [issue text](data/issue-253.t
 
 ## External delivery not completed
 
-These items are blocked. They are tracked upstream and are not presented as done.
+The unpublished uploader remains blocked and is not presented as done. Published fixes are listed separately below.
 
 - **The renamed `gh-upload-file` package cannot be adopted.** gh-upload-log was renamed upstream, but no release after 0.10.1 was published, because the npm publish of the new name fails with E404 (gh-upload-log#56; fresh registry and release-preflight evidence is in [follow-up.md](follow-up.md)). Fixing that needs the npm account owner. start keeps installing `gh-upload-log`, and its latest published release (0.10.1) supports everything start calls.
 - **Published upstream fixes are now adopted:** sanitizer #50/#51 in 0.12.2 and command-stream #235 via the 2.6.0 core entry. link-cli #128/#129/#130 are fixed in published clink releases; real integration tests pass on 4.0.6. Their original reports remain archived as evidence.

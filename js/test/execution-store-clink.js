@@ -65,9 +65,10 @@ describe('ExecutionStore.buildClinkCreateQuery (#253)', () => {
       });
       const query = store.buildClinkCreateQuery(record);
       const properties = store.recordToLinksNotation(record);
-      expect(query).toBe(
-        `() ((${UUID}: ExecutionRecord ${UUID}) ${properties})`
-      );
+      // Keep record-derived query contents out of assertion failure logs.
+      expect(
+        query === `() ((${UUID}: ExecutionRecord ${UUID}) ${properties})`
+      ).toBe(true);
       expect(properties).not.toContain('ExecutionRecord');
 
       expect(countParens(query)).toBe(0);
