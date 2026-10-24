@@ -695,6 +695,32 @@ fn fails_a_pull_request_whose_cargo_lock_is_out_of_date() {
 }
 
 #[test]
+fn gates_pull_requests_on_every_dependency_being_its_latest_release() {
+    // Obsolete dependencies, sensitive-data-sanitizer among them, stayed in
+    // use unnoticed (issue #253).
+    let js_jobs = parse_jobs(&read_workflow("js.yml"));
+    let freshness = js_jobs
+        .iter()
+        .find(|job| job.name == "dependency-freshness")
+        .expect("js.yml has no dependency-freshness job");
+    assert!(freshness
+        .body
+        .contains("scripts/check-dependency-freshness.mjs --lockfiles\n"));
+    let status = js_jobs
+        .iter()
+        .find(|job| job.name == "pipeline-status")
+        .expect("js.yml has no pipeline-status job");
+    assert!(parse_needs(&status.body)
+        .unwrap_or_default()
+        .contains(&"dependency-freshness".to_string()));
+    let lint = parse_jobs(&read_workflow("rust.yml"))
+        .into_iter()
+        .find(|job| job.name == "lint")
+        .expect("rust.yml has no lint job");
+    assert!(lint.body.contains("cargo update --dry-run"));
+}
+
+#[test]
 fn rust_coverage_reports_a_failed_test_as_a_failed_test() {
     // Without pipefail a failing test reached the threshold check as an empty
     // value: "Coverage % is below the 50% threshold" (issue #234).

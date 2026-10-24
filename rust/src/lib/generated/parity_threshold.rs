@@ -1,4 +1,4 @@
-// Generated from scripts/parity-threshold.mjs by meta-language eb0574d5528babd3b4aadece81590d8e2230b99b.
+// Generated from scripts/parity-threshold.mjs by meta-language ec9f4efb0e9ef936114e09823981352f6db13700.
 // Do not edit: run node scripts/generate-rust.mjs.
 // meta-language:self-translation:v1 source=JavaScript target=Rust sha256=d79a96822fedd9b7b4c1b6ada97378bf8bf02ddb3826fa2eec8e85ee2af3e33b bytes=147
 

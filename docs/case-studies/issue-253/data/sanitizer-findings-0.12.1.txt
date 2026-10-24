@@ -1,0 +1,18 @@
+0.12.1
+## Closing brackets after an Authorization token stay behind
+Authorization: Bearer [REDACTED] already
+  -> Authorization: [REDACTED]] already
+Authorization: Bearer {{token}} x
+  -> Authorization: [REDACTED]}} x
+Authorization: Bearer <token> x
+  -> Authorization: [REDACTED] <token> x
+Authorization: Bearer $GITHUB_TOKEN x
+  -> Authorization: [REDACTED] x
+## A NUL byte right after an Authorization token is removed
+0000000   A   u   t   h   o   r   i   z   a   t   i   o   n   :       [
+0000020   R   E   D   A   C   T   E   D   ]       t   a   i   l  \n
+0000037
+## Dense tokens: time grows with the square of the input
+32 KiB of ghp_ tokens: 2101 ms
+64 KiB of ghp_ tokens: 6044 ms
+128 KiB of ghp_ tokens: 17739 ms

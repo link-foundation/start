@@ -247,8 +247,9 @@ mod snapshot_lock {
         let dir = tempfile::TempDir::new().unwrap();
         let path = dir.path().join("snapshot.lock");
         let held = hold_lock(&path, "task-a");
+        // The waiter polls for 1 s before it reads the holder's name.
         std::thread::spawn(move || {
-            std::thread::sleep(Duration::from_millis(1500));
+            std::thread::sleep(Duration::from_millis(3000));
             drop(held);
         });
         let lines = Mutex::new(Vec::<String>::new());

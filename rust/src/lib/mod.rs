@@ -148,8 +148,8 @@ pub use execution_resume_all::{
     ResumeAllAction, ResumeAllEntry,
 };
 pub use execution_store::{
-    is_clink_installed, CleanupOptions, CleanupResult, ExecutionRecord, ExecutionRecordOptions,
-    ExecutionStats, ExecutionStatus, ExecutionStore, ExecutionStoreOptions,
+    clink_reference, is_clink_installed, CleanupOptions, CleanupResult, ExecutionRecord,
+    ExecutionRecordOptions, ExecutionStats, ExecutionStatus, ExecutionStore, ExecutionStoreOptions,
 };
 pub use exit_reason::{
     describe_exit_code, describe_exit_code_str, detect_exit_reason, resolve_exit_reason,

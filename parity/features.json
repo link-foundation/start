@@ -882,7 +882,8 @@
         "tests": [
           "js/test/execution-store.js",
           "js/test/regression-207.js",
-          "js/test/regression-243.js"
+          "js/test/regression-243.js",
+          "js/test/execution-store-clink.js"
         ]
       },
       "rust": {
@@ -897,7 +898,8 @@
         "tests": [
           "rust/tests/execution_store.rs",
           "rust/tests/regression_207.rs",
-          "rust/tests/regression_243.rs"
+          "rust/tests/regression_243.rs",
+          "rust/tests/regression_253.rs"
         ]
       },
       "manualRust": [
@@ -2652,7 +2654,7 @@
         {
           "construct": "classes, Map/Set",
           "source": "js/src/lib/log-sanitizer.js",
-          "line": 60,
+          "line": 30,
           "issue": "https://github.com/link-foundation/meta-language/issues/210"
         },
         {

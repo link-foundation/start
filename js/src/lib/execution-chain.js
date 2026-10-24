@@ -21,7 +21,7 @@ const { executionAliases, hasUserNames } = require('./execution-identity');
 function buildChain(records, record) {
   const seen = new Set([record.uuid]);
   const chain = [record];
-  for (let cur = record; cur.continues; ) {
+  for (let cur = record; cur.continues;) {
     const prev = records.find((r) => r.uuid === cur.continues);
     if (!prev || seen.has(prev.uuid)) {
       break;
@@ -30,7 +30,7 @@ function buildChain(records, record) {
     chain.unshift(prev);
     cur = prev;
   }
-  for (let cur = record; ; ) {
+  for (let cur = record; ;) {
     const next = records
       .filter((r) => r.continues === cur.uuid && !seen.has(r.uuid))
       .sort((a, b) => Date.parse(b.startTime) - Date.parse(a.startTime))[0];

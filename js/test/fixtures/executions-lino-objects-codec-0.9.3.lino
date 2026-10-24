@@ -1,0 +1,26 @@
+(
+  (
+    uuid "25300000-0000-4000-8000-000000000930"
+    pid 4242
+    status "executed"
+    exitCode 0
+    command """echo "readable store" (with) \ odd chars 'q' 世界"""
+    logPath "/tmp/start-253-readable.log"
+    startTime "2026-10-01T00:00:00.000Z"
+    endTime "2026-10-01T00:00:01.000Z"
+    workingDirectory "/tmp"
+    shell "/bin/sh"
+    platform "linux"
+    options (
+      isolated "docker"
+      keepAlive false
+      nested (
+        list (
+          1
+          "two"
+          null
+        )
+      )
+    )
+  )
+)

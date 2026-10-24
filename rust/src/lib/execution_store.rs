@@ -239,6 +239,12 @@ pub struct ExecutionRecordOptions {
 
 pub use crate::store_lock::LockManager;
 
+/// Quote text as a clink reference: `"..."` with inner quotes doubled.
+/// clink 4.x rejects backslash escapes inside references.
+pub fn clink_reference(text: &str) -> String {
+    format!("\"{}\"", text.replace('"', "\"\""))
+}
+
 /// Check if clink is installed
 pub fn is_clink_installed() -> bool {
     Command::new("clink")
@@ -380,47 +386,49 @@ impl ExecutionStore {
         Ok(())
     }
 
-    /// Build clink query for creating/updating a record
-    fn build_clink_create_query(&self, record: &ExecutionRecord) -> String {
-        let obj = record.to_json();
-        let mut links = Vec::new();
-
-        // Create main record link
-        links.push(format!(
+    /// Build clink query for creating/updating a record.
+    ///
+    /// The record is one link `(uuid: ExecutionRecord uuid)` plus one link per
+    /// property, `(uuid.key: uuid "key=value")`. Property links have the record
+    /// as their source, so records that share a value stay distinct links
+    /// (doublets are deduplicated by source and target), and the `key=` prefix
+    /// keeps a number from being read as a link address (issue #253).
+    pub fn build_clink_create_query(&self, record: &ExecutionRecord) -> String {
+        let mut links = vec![format!(
             "({}: ExecutionRecord {})",
             record.uuid, record.uuid
-        ));
+        )];
 
-        // Create property links
-        if let Value::Object(map) = obj {
+        if let Value::Object(map) = record.to_json() {
             for (key, value) in map {
-                let escaped_value = match value {
+                let text = match value {
+                    Value::Null => continue,
                     Value::Object(_) | Value::Array(_) => {
                         serde_json::to_string(&value).unwrap_or_default()
                     }
                     Value::String(s) => s,
-                    Value::Null => "null".to_string(),
                     other => other.to_string(),
                 };
                 links.push(format!(
-                    "({}.{}: {} \"{}\")",
+                    "({}.{}: {} {})",
                     record.uuid,
                     key,
-                    key,
-                    escaped_value.replace('"', "\\\"")
+                    record.uuid,
+                    clink_reference(&format!("{}={}", key, text))
                 ));
             }
         }
 
-        format!("() (({})))", links.join(") ("))
+        format!("() ({})", links.join(" "))
     }
 
-    /// Execute clink command
-    fn exec_clink(&self, query: &str) -> Result<String, String> {
+    /// Execute clink command, appending `extra_args` after `--db <path>`
+    fn exec_clink(&self, query: &str, extra_args: &[&str]) -> Result<String, String> {
         match Command::new("clink")
             .arg(query)
             .arg("--db")
             .arg(&self.links_db_path)
+            .args(extra_args)
             .output()
         {
             Ok(output) => {
@@ -439,14 +447,20 @@ impl ExecutionStore {
         }
     }
 
-    /// Write a record to the links database using clink
-    fn write_links_record(&self, record: &ExecutionRecord) -> bool {
+    /// Write a record to the links database using clink; `is_new` skips
+    /// dropping the previous links
+    fn write_links_record(&self, record: &ExecutionRecord, is_new: bool) -> bool {
         if !self.use_links {
             return false;
         }
 
+        // Replace, not merge: drop the previous property links first. clink
+        // reports an error when the record has no links yet, which is harmless.
+        if !is_new {
+            let _ = self.exec_clink(&format!("(($id: {} $value)) ()", record.uuid), &[]);
+        }
         let query = self.build_clink_create_query(record);
-        match self.exec_clink(&query) {
+        match self.exec_clink(&query, &["--auto-create-missing-references"]) {
             Ok(_) => {
                 self.log(&format!("Wrote record {} to links database", record.uuid));
                 true
@@ -461,8 +475,9 @@ impl ExecutionStore {
             return false;
         }
 
-        let query = format!("(($id: {} $any)) ()", uuid);
-        self.exec_clink(&query).is_ok()
+        let _ = self.exec_clink(&format!("(($id: {} $value)) ()", uuid), &[]);
+        let query = format!("(({}: ExecutionRecord {})) ()", uuid, uuid);
+        self.exec_clink(&query, &[]).is_ok()
     }
 
     /// Save an execution record (creates or updates)
@@ -520,7 +535,7 @@ impl ExecutionStore {
 
         // Also write to links database if available
         if self.use_links {
-            self.write_links_record(record);
+            self.write_links_record(record, existing_index.is_none());
         }
 
         Ok(())
@@ -556,7 +571,7 @@ impl ExecutionStore {
         self.write_lino_records(&records)
             .map_err(|e| e.to_string())?;
         if self.use_links {
-            self.write_links_record(&updated);
+            self.write_links_record(&updated, false);
         }
         Ok(Some(updated))
     }
@@ -587,7 +602,7 @@ impl ExecutionStore {
         self.write_lino_records(&records)
             .map_err(|e| e.to_string())?;
         if self.use_links {
-            self.write_links_record(&updated);
+            self.write_links_record(&updated, false);
         }
         Ok(Some(updated))
     }
@@ -614,7 +629,7 @@ impl ExecutionStore {
             self.write_lino_records(&records)
                 .map_err(|e| e.to_string())?;
             if self.use_links {
-                self.write_links_record(record);
+                self.write_links_record(record, false);
             }
         }
         Ok(changed)
@@ -796,7 +811,11 @@ impl ExecutionStore {
         }
 
         // Query links database for all ExecutionRecord links
-        match self.exec_clink("((($id: ExecutionRecord $uuid)) (($id: ExecutionRecord $uuid)))") {
+        // Without --changes clink prints nothing for a read-only match
+        match self.exec_clink(
+            "((($id: ExecutionRecord $uuid)) (($id: ExecutionRecord $uuid)))",
+            &["--changes"],
+        ) {
             Ok(output) => {
                 // Count unique UUIDs in the output
                 let re = regex::Regex::new(r"ExecutionRecord\s+([a-f0-9-]{36})").unwrap();

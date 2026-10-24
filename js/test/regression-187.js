@@ -78,6 +78,8 @@ function fixture() {
 }
 
 const stopped = () => ({ alive: false, state: SessionState.STOPPED });
+// The snapshot preflight must not depend on the free disk of the test host.
+const plentyOfDisk = { freeBytes: () => 100 * 1024 ** 3 };
 const accepted = (_bin, args = []) => ({
   success: true,
   stdout: args.includes('--size')
@@ -102,6 +104,7 @@ describe('issue #187: explicit resume attempts', () => {
             ? () => ({ alive: false, state: SessionState.MISSING })
             : stopped,
         runner: accepted,
+        snapshotOptions: plentyOfDisk,
         runIsolated: () => ({ success: true, containerId: 'new-container' }),
         startWatcher: (_name, _policy, _log, _uuid, options) => {
           expect(options.recoverOnKill).toBe(mode !== 'docker-snapshot');
@@ -357,6 +360,7 @@ esac
       command: 'replacement',
       probe: stopped,
       runner: accepted,
+      snapshotOptions: plentyOfDisk,
       startWatcher: () => {},
     });
     expect(result.success).toBe(true);

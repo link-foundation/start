@@ -397,7 +397,6 @@ node scripts/check-test-parity.mjs
 start-command/
 ├── js/                        # JavaScript implementation
 ├── rust/                      # Rust implementation
-├── lib/                       # Shared library (lino-objects-codec)
 ├── scripts/                   # CI/CD and release scripts
 │   └── check-test-parity.mjs  # Rust/JS test count parity check
 ├── docs/
