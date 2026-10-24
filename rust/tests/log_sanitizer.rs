@@ -187,7 +187,11 @@ fn sanitizes_dense_credentials_without_losing_surrounding_bytes() {
     // Same finite log as the JS regression: about 256 KiB, 5700 secrets.
     let mut input = String::new();
     for index in 0..5700 {
-        let token = format!("{:x}", Sha256::digest(index.to_string().as_bytes()));
+        // sha2 0.11 returns a byte array without the old LowerHex implementation.
+        let token: String = Sha256::digest(index.to_string().as_bytes())
+            .iter()
+            .map(|byte| format!("{:02x}", byte))
+            .collect();
         input.push_str(&format!("ghp_{} keep\n", &token[..36]));
     }
     let output = sanitize_file(input.as_bytes(), env);

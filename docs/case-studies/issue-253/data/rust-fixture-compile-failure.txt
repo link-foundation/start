@@ -1,0 +1,56 @@
+Failed run: https://github.com/link-foundation/start/actions/runs/40122421292
+Head: ca4822ccc6831150c81194f9a2187b18058f0875
+Created: 2026-10-24T18:48:49Z
+
+Complete original logs retained in ci-logs/. Excerpts below have ANSI color codes removed.
+
+lint: ci-logs/rust-job-120958403020.log, lines 643-650
+643: 2026-10-24T18:56:58.2492619Z error[E0277]: the trait bound `Array<u8, UInt<UInt<UInt<UInt<_, B0>, B0>, B0>, B0>>: LowerHex` is not satisfied
+644: 2026-10-24T18:56:58.2493425Z    --> tests/log_sanitizer.rs:190:37
+645: 2026-10-24T18:56:58.2493809Z     |
+646: 2026-10-24T18:56:58.2495407Z 190 |         let token = format!("{:x}", Sha256::digest(index.to_string().as_bytes()));
+647: 2026-10-24T18:56:58.2497070Z     |                              ----   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `std::fmt::LowerHex` is not implemented for `Array<u8, UInt<UInt<UInt<UInt<UInt<_, B0>, B0>, B0>, B0>, B0>>`
+648: 2026-10-24T18:56:58.2498316Z     |                              |
+649: 2026-10-24T18:56:58.2498976Z     |                              required by this formatting parameter
+650: 2026-10-24T18:56:58.2499418Z     |
+
+coverage: ci-logs/rust-job-120958433253.log, lines 734-741
+734: 2026-10-24T18:57:28.8084647Z error[E0277]: the trait bound `Array<u8, UInt<UInt<UInt<UInt<_, B0>, B0>, B0>, B0>>: LowerHex` is not satisfied
+735: 2026-10-24T18:57:28.8922619Z    --> tests/log_sanitizer.rs:190:37
+736: 2026-10-24T18:57:28.8922945Z     |
+737: 2026-10-24T18:57:28.8923456Z 190 |         let token = format!("{:x}", Sha256::digest(index.to_string().as_bytes()));
+738: 2026-10-24T18:57:28.8924440Z     |                              ----   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `LowerHex` is not implemented for `Array<u8, UInt<UInt<UInt<UInt<UInt<_, B0>, B0>, B0>, B0>, B0>>`
+739: 2026-10-24T18:57:28.8925073Z     |                              |
+740: 2026-10-24T18:57:28.8925435Z     |                              required by this formatting parameter
+741: 2026-10-24T18:57:28.8925771Z     |
+
+macOS: ci-logs/rust-job-120958433326.log, lines 662-669
+662: 2026-10-24T18:57:11.4729860Z error[E0277]: the trait bound `Array<u8, UInt<UInt<UInt<UInt<_, B0>, B0>, B0>, B0>>: LowerHex` is not satisfied
+663: 2026-10-24T18:57:11.4730810Z    --> tests/log_sanitizer.rs:190:37
+664: 2026-10-24T18:57:11.4731320Z     |
+665: 2026-10-24T18:57:11.4733270Z 190 |         let token = format!("{:x}", Sha256::digest(index.to_string().as_bytes()));
+666: 2026-10-24T18:57:11.4734980Z     |                              ----   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `LowerHex` is not implemented for `Array<u8, UInt<UInt<UInt<UInt<UInt<_, B0>, B0>, B0>, B0>, B0>>`
+667: 2026-10-24T18:57:11.4735930Z     |                              |
+668: 2026-10-24T18:57:11.4736610Z     |                              required by this formatting parameter
+669: 2026-10-24T18:57:11.4737110Z     |
+
+Linux: ci-logs/rust-job-120958433359.log, lines 807-814
+807: 2026-10-24T18:57:16.4386905Z error[E0277]: the trait bound `Array<u8, UInt<UInt<UInt<UInt<_, B0>, B0>, B0>, B0>>: LowerHex` is not satisfied
+808: 2026-10-24T18:57:16.4387688Z    --> tests/log_sanitizer.rs:190:37
+809: 2026-10-24T18:57:16.4388215Z     |
+810: 2026-10-24T18:57:16.4389761Z 190 |         let token = format!("{:x}", Sha256::digest(index.to_string().as_bytes()));
+811: 2026-10-24T18:57:16.4391068Z     |                              ----   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `LowerHex` is not implemented for `Array<u8, UInt<UInt<UInt<UInt<UInt<_, B0>, B0>, B0>, B0>, B0>>`
+812: 2026-10-24T18:57:16.4391985Z     |                              |
+813: 2026-10-24T18:57:16.4392752Z     |                              required by this formatting parameter
+814: 2026-10-24T18:57:16.4393188Z     |
+
+Windows: ci-logs/rust-job-120958433370.log, lines 662-669
+662: 2026-10-24T18:58:01.4811494Z error[E0277]: the trait bound `Array<u8, UInt<UInt<UInt<UInt<_, B0>, B0>, B0>, B0>>: LowerHex` is not satisfied
+663: 2026-10-24T18:58:01.4812846Z    --> tests\log_sanitizer.rs:190:37
+664: 2026-10-24T18:58:01.4813442Z     |
+665: 2026-10-24T18:58:01.4815562Z 190 |         let token = format!("{:x}", Sha256::digest(index.to_string().as_bytes()));
+666: 2026-10-24T18:58:01.4818222Z     |                              ----   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `LowerHex` is not implemented for `Array<u8, UInt<UInt<UInt<UInt<UInt<_, B0>, B0>, B0>, B0>, B0>>`
+667: 2026-10-24T18:58:01.4819849Z     |                              |
+668: 2026-10-24T18:58:01.4820801Z     |                              required by this formatting parameter
+669: 2026-10-24T18:58:01.4821554Z     |
+

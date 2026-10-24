@@ -63,6 +63,12 @@ This release delivery remains **blocked and unfinished upstream**. start cannot 
 
 Run the entire JS lint/format/test stage locally, freshness including refreshed lockfiles, workflow guard, source/behavior parity inventory and real policy regeneration. Run Rust formatting locally; the same-commit CI Rust stage supplies clippy, all platform tests, audits, coverage and Rust CodeQL after JS passes. No independent Cargo build tree is started in the memory-limited container. Review the complete PR diff and current main ancestry, wait for every CI job, preserve failures if any and correct them together before another push.
 
+## First follow-up CI run and correction
+
+[Run 40122421292](https://github.com/link-foundation/start/actions/runs/40122421292) tested `ca4822c`, created at 18:48:49 UTC after the push. The entire JavaScript stage passed before Rust started. Rust lint, coverage and all three platform test jobs failed to compile the new dense-log fixture: `tests/log_sanitizer.rs:190` formatted a SHA-256 digest with `{:x}`, but sha2 0.11's byte-array return type no longer implements `LowerHex`. See the [job log excerpts with line numbers](data/rust-fixture-compile-failure.txt). Coverage's broken pipe and missing measurement follow from this compiler failure, not a second runtime defect.
+
+Every job was allowed to finish, and complete raw run/job logs were preserved in `ci-logs/` before the correction was pushed. Rust CodeQL and the other workflows passed. The correction uses the byte-by-byte `{:02x}` formatter already used in `rust/src/lib/store_decode_cache.rs`, preserving the exact SHA-256 token input shared with JavaScript. No runtime code, coverage threshold or timeout is changed. The final same-commit CI run verifies the corrected fixture along with the whole platform matrix.
+
 ## Local verification results
 
 - `cd js && bun run check && PATH="/tmp/issue-253-clink:$PATH" bun run test`: 1,572 pass, 1 explicit tmux skip, 0 fail (1,573 tests in 107 files, 350.26 s). The latest clink 4.0.6 was available throughout the final full run, including the save/update/delete/consistency and rename tests.
