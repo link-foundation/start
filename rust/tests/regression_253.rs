@@ -129,3 +129,54 @@ fn links_database_saves_updates_and_deletes_records_that_share_values() {
     assert!(!remaining.contains(&format!("{a}.")));
     assert!(remaining.contains(&format!("{b}.command")));
 }
+
+fn store_with_fixture(name: &str) -> (tempfile::TempDir, ExecutionStore) {
+    let (dir, store) = make_store(false);
+    std::fs::copy(
+        format!("{}/../js/test/fixtures/{name}", env!("CARGO_MANIFEST_DIR")),
+        dir.path().join("executions.lino"),
+    )
+    .unwrap();
+    (dir, store)
+}
+
+#[test]
+fn reads_a_store_written_by_lino_objects_codec_0_4_and_rewrites_it_readable() {
+    // lino-objects-codec 0.9 writes readable links notation; stores of every
+    // earlier start-command release are base64 `(str ...)` terms.
+    let (dir, store) = store_with_fixture("executions-lino-objects-codec-0.4.0.lino");
+    let uuid = "25300000-0000-4000-8000-000000000253";
+    let legacy = store.get(uuid).expect("legacy record");
+    assert_eq!(legacy.pid, Some(4242));
+    assert_eq!(legacy.exit_code, Some(0));
+    assert_eq!(legacy.command, "echo \"legacy store\"");
+
+    store.save(&record(None, "echo next")).unwrap();
+    let content = std::fs::read_to_string(dir.path().join("executions.lino")).unwrap();
+    assert!(content.contains("command \"echo next\""), "{content}");
+    assert!(!content.contains("(str "), "{content}");
+    assert_eq!(store.get(uuid).unwrap().command, "echo \"legacy store\"");
+}
+
+#[test]
+fn reads_a_readable_store_written_by_the_javascript_implementation() {
+    let (_dir, store) = store_with_fixture("executions-lino-objects-codec-0.9.3.lino");
+    let record = store
+        .get("25300000-0000-4000-8000-000000000930")
+        .expect("record written by JavaScript");
+    assert_eq!(record.pid, Some(4242));
+    assert_eq!(record.exit_code, Some(0));
+    assert_eq!(
+        record.command,
+        "echo \"readable store\" (with) \\ odd chars 'q' 世界"
+    );
+    assert_eq!(record.end_time.as_deref(), Some("2026-10-01T00:00:01.000Z"));
+    assert_eq!(
+        serde_json::Value::Object(record.options.into_iter().collect()),
+        serde_json::json!({
+            "isolated": "docker",
+            "keepAlive": false,
+            "nested": { "list": [1, "two", null] }
+        })
+    );
+}

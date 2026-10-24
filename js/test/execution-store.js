@@ -471,6 +471,28 @@ describe('ExecutionStore with lino-objects-codec', () => {
     expect(content).not.toContain('(str ');
     expect(store.get(uuid).command).toBe('echo "legacy store"');
   });
+
+  it('reads a readable store written by lino-objects-codec 0.9 (#253)', () => {
+    // rust/tests/regression_253.rs reads the same fixture
+    fs.mkdirSync(TEST_APP_FOLDER, { recursive: true });
+    fs.copyFileSync(
+      path.join(__dirname, 'fixtures/executions-lino-objects-codec-0.9.3.lino'),
+      path.join(TEST_APP_FOLDER, LINO_DB_FILE)
+    );
+
+    const record = store.get('25300000-0000-4000-8000-000000000930');
+    expect(record.pid).toBe(4242);
+    expect(record.exitCode).toBe(0);
+    expect(record.command).toBe(
+      `echo "readable store" (with) \\ odd chars 'q' 世界`
+    );
+    expect(record.endTime).toBe('2026-10-01T00:00:01.000Z');
+    expect(record.options).toEqual({
+      isolated: 'docker',
+      keepAlive: false,
+      nested: { list: [1, 'two', null] },
+    });
+  });
 });
 
 describe('ExecutionStore verifyConsistency', () => {
