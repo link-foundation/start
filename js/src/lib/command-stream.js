@@ -26,9 +26,22 @@ let commandStream = null;
  */
 async function getCommandStream() {
   if (!commandStream) {
-    commandStream = await import('command-stream');
+    // Execution needs no compatibility layers, terminal renderers or REPL.
+    commandStream = await import('command-stream/core');
   }
   return commandStream;
+}
+
+/**
+ * Text of a completed command's stdout or stderr. Since command-stream 2.x
+ * these are readable stream snapshots rather than strings, and an empty one
+ * is still truthy (#253).
+ *
+ * @param {unknown} output - result.stdout or result.stderr
+ * @returns {string}
+ */
+function outputText(output) {
+  return output === undefined || output === null ? '' : String(output);
 }
 
 /**
@@ -54,8 +67,8 @@ async function execCommand(command, options = {}) {
     const result = $cmd`${command}`.sync();
 
     return {
-      stdout: (result.stdout || '').trim(),
-      stderr: (result.stderr || '').trim(),
+      stdout: outputText(result.stdout).trim(),
+      stderr: outputText(result.stderr).trim(),
       code: resolveChildExitCode(result.code),
     };
   } catch (err) {
@@ -91,8 +104,8 @@ async function execCommandAsync(command, options = {}) {
     const result = await $cmd`${command}`;
 
     return {
-      stdout: (result.stdout || '').trim(),
-      stderr: (result.stderr || '').trim(),
+      stdout: outputText(result.stdout).trim(),
+      stderr: outputText(result.stderr).trim(),
       code: resolveChildExitCode(result.code),
     };
   } catch (err) {
@@ -250,6 +263,7 @@ async function runWithHandlers(command, handlers = {}, options = {}) {
 
 module.exports = {
   getCommandStream,
+  outputText,
   execCommand,
   execCommandAsync,
   commandExists,

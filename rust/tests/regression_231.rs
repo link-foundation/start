@@ -11,7 +11,8 @@ use start_command::execution_chain::{
 };
 use start_command::execution_identity::{execution_aliases, find_record, name_execution};
 use start_command::execution_store::{
-    ExecutionRecord, ExecutionRecordOptions, ExecutionStore, ExecutionStoreOptions,
+    is_clink_installed, ExecutionRecord, ExecutionRecordOptions, ExecutionStore,
+    ExecutionStoreOptions,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -167,6 +168,40 @@ fn rename_sets_the_display_name_and_keeps_the_old_one_resolving() {
         execution_aliases(&renamed),
         vec![A, "screen-a", "first", "second"]
     );
+}
+
+/// Issue #253: the rename used to reach only the lino store; clink 4.x
+/// rejected every links query the store built.
+#[test]
+fn rename_reaches_the_links_database() {
+    if !is_clink_installed() {
+        eprintln!("clink not installed; skipping");
+        return;
+    }
+    let box_ = Sandbox::new();
+    let store = ExecutionStore::with_options(ExecutionStoreOptions {
+        app_folder: Some(box_.root.path().join("app")),
+        use_links: Some(true),
+        verbose: false,
+    });
+    store
+        .save(&record(A, json!({ "sessionName": "screen-a" })))
+        .unwrap();
+    name_execution(Some(&store), A, "first", true).unwrap();
+    let links = Command::new("clink")
+        .arg("((($id: $s $t)) (($id: $s $t)))")
+        .arg("--db")
+        .arg(store.get_stats().links_db_path)
+        .arg("--changes")
+        .output()
+        .unwrap();
+    let links = text(&links.stdout);
+    assert!(
+        links.contains(&format!("{A}.options: {A} 'options=")),
+        "{links}"
+    );
+    assert!(links.contains("\"name\":\"first\""), "{links}");
+    assert!(store.verify_consistency().errors.is_empty());
 }
 
 #[test]

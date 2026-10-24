@@ -14,6 +14,7 @@
         ],
         "tests": [
           "js/test/cli.js",
+          "js/test/command-stream-log.js",
           "js/test/version.js",
           "js/test/regression-201.js",
           "js/test/regression-202.js",
@@ -30,6 +31,7 @@
         ],
         "tests": [
           "rust/tests/integration.rs",
+          "rust/tests/regression_253.rs",
           "rust/tests/signal_handler.rs",
           "rust/tests/regression_201.rs",
           "rust/tests/regression_202.rs",
@@ -882,7 +884,8 @@
         "tests": [
           "js/test/execution-store.js",
           "js/test/regression-207.js",
-          "js/test/regression-243.js"
+          "js/test/regression-243.js",
+          "js/test/execution-store-clink.js"
         ]
       },
       "rust": {
@@ -897,7 +900,8 @@
         "tests": [
           "rust/tests/execution_store.rs",
           "rust/tests/regression_207.rs",
-          "rust/tests/regression_243.rs"
+          "rust/tests/regression_243.rs",
+          "rust/tests/regression_253.rs"
         ]
       },
       "manualRust": [
@@ -2652,7 +2656,7 @@
         {
           "construct": "classes, Map/Set",
           "source": "js/src/lib/log-sanitizer.js",
-          "line": 60,
+          "line": 30,
           "issue": "https://github.com/link-foundation/meta-language/issues/210"
         },
         {

@@ -1,0 +1,24 @@
+error: js/package.json:71 npm @link-foundation/sensitive-data-sanitizer: declared ^0.12.1; js/package-lock.json resolves 0.12.1; js/bun.lock resolves 0.12.1; latest is 0.12.2
+error: js/package.json:72 npm command-stream: declared ^2.4.0; js/package-lock.json resolves 2.4.0; js/bun.lock resolves 2.4.0; latest is 2.6.0
+error: js/package-lock.json node_modules/@link-foundation/sensitive-data-sanitizer: 0.12.1 -> 0.12.2 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/package-lock.json node_modules/@peggyjs/from-mem: absent -> 3.1.3 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/package-lock.json node_modules/@peggyjs/from-mem/node_modules/semver: absent -> 7.7.4 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/package-lock.json node_modules/command-stream: 2.4.0 -> 2.6.0 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/package-lock.json node_modules/commander: absent -> 14.0.3 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/package-lock.json node_modules/execa: 10.1.0 -> 10.2.1 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/package-lock.json node_modules/meta-language: absent -> 0.46.0 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/package-lock.json node_modules/meta-language/node_modules/links-notation: absent -> 0.13.0 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/package-lock.json node_modules/peggy: absent -> 5.1.0 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/package-lock.json node_modules/source-map-generator: absent -> 2.0.6 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/bun.lock node_modules/@link-foundation/sensitive-data-sanitizer: 0.12.1 -> 0.12.2 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/bun.lock node_modules/@peggyjs/from-mem: absent -> 3.1.3 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/bun.lock node_modules/@peggyjs/from-mem/node_modules/semver: absent -> 7.7.4 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/bun.lock node_modules/command-stream: 2.4.0 -> 2.6.0 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/bun.lock node_modules/commander: absent -> 14.0.3 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/bun.lock node_modules/execa: 10.1.0 -> 10.2.1 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/bun.lock node_modules/meta-language: absent -> 0.46.0 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/bun.lock node_modules/meta-language/node_modules/links-notation: absent -> 0.13.0 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/bun.lock node_modules/peggy: absent -> 5.1.0 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+error: js/bun.lock node_modules/source-map-generator: absent -> 2.0.6 (run: cd js && npm update --package-lock-only && bun update --lockfile-only)
+Checked 190 dependencies: 22 stale or unverifiable, 0 blocked by open issues.
+Update them to the latest release, or add an open issue URL explaining the blocker (a comment on the line, or .github/dependency-blockers.json).

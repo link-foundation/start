@@ -1,0 +1,25 @@
+$ bun ../scripts/run-js-tests.mjs ./test/execution-store-clink.js
+bun test v1.4.3 (c6da4a4d3)
+
+test/execution-store-clink.js:
+(pass) clinkReference (#253) > quotes text and doubles inner quotes [0.20ms]
+62 |         pid: 4242,
+63 |         exitCode: 0,
+64 |         options: { isolated: 'docker' },
+65 |       });
+66 |       const query = store.buildClinkCreateQuery(record);
+67 |       const properties = store.recordToLinksNotation(record);
+                                    ^
+TypeError: store.recordToLinksNotation is not a function. (In 'store.recordToLinksNotation(record)', 'store.recordToLinksNotation' is undefined)
+      at <anonymous> (/tmp/gh-issue-solver-1792866364823/js/test/execution-store-clink.js:67:32)
+      at withStore (/tmp/gh-issue-solver-1792866364823/js/test/execution-store-clink.js:24:12)
+      at <anonymous> (/tmp/gh-issue-solver-1792866364823/js/test/execution-store-clink.js:58:5)
+(fail) ExecutionStore.buildClinkCreateQuery (#253) > builds one balanced create group with record-scoped property links [2.85ms]
+(skip) ExecutionStore links database with clink (#253) > saves, updates and deletes records that share values
+
+ 1 pass
+ 1 skip
+ 1 fail
+ 3 expect() calls
+Ran 3 tests across 1 file. [40.00ms]
+error: script "test" exited with code 1

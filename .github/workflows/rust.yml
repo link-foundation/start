@@ -57,16 +57,16 @@ jobs:
       group: check-rust-${{ github.ref }}-syntax-check
       cancel-in-progress: false
     name: Syntax Pre-Check (.mjs)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24.x'
 
@@ -85,7 +85,7 @@ jobs:
       group: check-rust-${{ github.ref }}-detect-changes
       cancel-in-progress: false
     name: Detect Changes
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     if: github.event_name != 'workflow_dispatch'
     outputs:
@@ -96,13 +96,13 @@ jobs:
       workflow-changed: ${{ steps.changes.outputs.workflow-changed }}
       any-rust-code-changed: ${{ steps.changes.outputs.any-rust-code-changed }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24.x'
 
@@ -121,11 +121,11 @@ jobs:
       group: check-rust-${{ github.ref }}-version-check
       cancel-in-progress: false
     name: Check for Manual Version Changes
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -160,12 +160,12 @@ jobs:
       group: check-rust-${{ github.ref }}-changelog
       cancel-in-progress: false
     name: Changelog Fragment Check
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     needs: [detect-changes]
     if: github.event_name == 'pull_request' && needs.detect-changes.outputs.any-rust-code-changed == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -206,28 +206,28 @@ jobs:
       group: check-rust-${{ github.ref }}-lint
       cancel-in-progress: false
     name: Lint and Format Check
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     needs: [detect-changes]
     if: ${{ !cancelled() }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # master @ 2026-10-09
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master @ 2026-10-24
         with:
           toolchain: stable
           components: rustfmt, clippy
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24.x'
 
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -239,6 +239,21 @@ jobs:
       - name: Check Cargo.lock matches Cargo.toml
         working-directory: rust
         run: cargo metadata --locked --format-version 1 > /dev/null
+
+      # Every crate in Cargo.lock, transitive ones included, must already be
+      # the newest release Cargo.toml allows (issue #253). Cargo.toml floors
+      # are checked by scripts/check-dependency-freshness.mjs in js.yml; like
+      # that gate, this one applies to pull requests only.
+      - name: Check Cargo.lock has the latest compatible crates
+        if: github.event_name == 'pull_request'
+        working-directory: rust
+        run: |
+          set -o pipefail
+          cargo update --dry-run 2>&1 | tee "$RUNNER_TEMP/cargo-update.txt"
+          if grep -Eq '^ *(Updating|Adding|Removing|Downgrading) [^ ]+ v[0-9]' "$RUNNER_TEMP/cargo-update.txt"; then
+            echo "::error file=rust/Cargo.lock::Cargo.lock is behind the latest compatible crates; run 'cargo update' in rust/"
+            exit 1
+          fi
 
       - name: Check formatting
         working-directory: rust
@@ -264,20 +279,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-15, windows-2025]
+        os: [ubuntu-26.04, macos-26, windows-2025]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # master @ 2026-10-09
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master @ 2026-10-24
         with:
           toolchain: stable
 
       # Linux doc examples and the sanitizer CLI on every OS.
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24.x'
 
@@ -290,8 +305,21 @@ jobs:
           npm ci --omit=dev --ignore-scripts --no-audit --no-fund
           echo "$GITHUB_WORKSPACE/js/node_modules/.bin" >> "$GITHUB_PATH"
 
+      # The links database tests run clink for real (issue #253)
+      - name: Setup .NET for clink (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install clink (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          dotnet tool install --global clink
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -357,18 +385,18 @@ jobs:
       group: check-rust-${{ github.ref }}-test-parity
       cancel-in-progress: false
     name: Feature Parity and Test Count Signal
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     needs: [detect-changes]
     if: ${{ !cancelled() }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24.x'
 
@@ -387,24 +415,24 @@ jobs:
       group: check-rust-${{ github.ref }}-coverage
       cancel-in-progress: false
     name: Code Coverage (Rust, Linux only)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     env:
       TARPAULIN_VERSION: 0.37.5
     needs: [detect-changes, changelog]
     if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changelog.result == 'success' || needs.changelog.result == 'skipped') }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # master @ 2026-10-09
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master @ 2026-10-24
         with:
           toolchain: stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -414,7 +442,7 @@ jobs:
       # The version is in the key: an unversioned key kept one binary forever
       # and an uncached install picked whatever release was latest (issue #234).
       - name: Cache cargo-tarpaulin binary
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cargo/bin/cargo-tarpaulin
           key: ${{ runner.os }}-cargo-tarpaulin-bin-${{ env.TARPAULIN_VERSION }}
@@ -433,7 +461,7 @@ jobs:
           bash scripts/prepare-docker-test-images.sh
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24.x'
 
@@ -470,22 +498,22 @@ jobs:
       group: check-rust-${{ github.ref }}-build
       cancel-in-progress: false
     name: Build Package
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     needs: [lint, test]
     if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.lint.result == 'success' && needs.test.result == 'success' }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # master @ 2026-10-09
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master @ 2026-10-24
         with:
           toolchain: stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -541,7 +569,7 @@ jobs:
       needs.cargo-audit.result == 'success' &&
       needs.rust-codeql.result == 'success' }}
     environment: release-main
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
       contents: write
@@ -551,19 +579,19 @@ jobs:
       # Writer job: the checkout credentials are what pushes the version
       # commit/tag back to main, so `persist-credentials: false` (applied to
       # every read-only checkout in this file) must not be set here.
-      - uses: actions/checkout@v6 # zizmor: ignore[artipacked] -- writer job: pushes with these credentials
+      - uses: actions/checkout@v7 # zizmor: ignore[artipacked] -- writer job: pushes with these credentials
         with:
           fetch-depth: 0
           ssh-key: ${{ secrets.START_RELEASE_SSH_KEY }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # master @ 2026-10-09
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master @ 2026-10-24
         with:
           toolchain: stable
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24.x'
 
@@ -618,7 +646,7 @@ jobs:
       - name: Authenticate with crates.io (trusted publishing)
         id: crates_auth
         if: steps.check.outputs.should_release == 'true'
-        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+        uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6
         # Trusted publishing first; the publish step falls back to the token secret.
         continue-on-error: true
 
@@ -708,7 +736,7 @@ jobs:
       needs.cargo-audit.result == 'success' &&
       needs.rust-codeql.result == 'success' }}
     environment: release-main
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
       contents: write
@@ -718,19 +746,19 @@ jobs:
       # Writer job: the checkout credentials are what pushes the version
       # commit/tag back to main, so `persist-credentials: false` (applied to
       # every read-only checkout in this file) must not be set here.
-      - uses: actions/checkout@v6 # zizmor: ignore[artipacked] -- writer job: pushes with these credentials
+      - uses: actions/checkout@v7 # zizmor: ignore[artipacked] -- writer job: pushes with these credentials
         with:
           fetch-depth: 0
           ssh-key: ${{ secrets.START_RELEASE_SSH_KEY }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # master @ 2026-10-09
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master @ 2026-10-24
         with:
           toolchain: stable
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24.x'
 
@@ -768,7 +796,7 @@ jobs:
       - name: Authenticate with crates.io (trusted publishing)
         id: crates_auth
         if: steps.version.outputs.version_committed == 'true' || steps.version.outputs.already_released == 'true'
-        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+        uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6
         # Trusted publishing first; the publish step falls back to the token secret.
         continue-on-error: true
 
@@ -823,7 +851,7 @@ jobs:
 
   cargo-audit:
     name: Cargo Audit
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     concurrency:
       group: check-rust-${{ github.ref }}-cargo-audit
@@ -831,11 +859,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4
+      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
         with:
           tool: cargo-audit@0.22.2
 
@@ -845,7 +873,7 @@ jobs:
 
   rust-codeql:
     name: CodeQL (Rust)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     concurrency:
       group: check-rust-${{ github.ref }}-codeql-rust
@@ -855,7 +883,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -894,10 +922,10 @@ jobs:
       - cargo-audit
       - rust-codeql
     if: always()
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 

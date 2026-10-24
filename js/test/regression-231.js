@@ -12,6 +12,7 @@ const { parseArgs } = require('../src/lib/args-parser');
 const {
   ExecutionStore,
   ExecutionRecord,
+  isClinkInstalled,
 } = require('../src/lib/execution-store');
 const {
   executionAliases,
@@ -125,6 +126,25 @@ describe('issue #231: execution names', () => {
       'second',
     ]);
   });
+
+  // Issue #253: the rename used to reach only the lino store; clink 4.x
+  // rejected every links query the store built.
+  it.skipIf(!isClinkInstalled())(
+    '--rename reaches the links database',
+    () => {
+      const { store } = sandbox();
+      store.save(record(A, { sessionName: 'screen-a' }));
+      nameExecution(store, A, 'first', { rename: true });
+      const links = store.execClink('((($id: $s $t)) (($id: $s $t)))', [
+        '--changes',
+      ]).output;
+      expect(links).toContain(
+        `${A}.options: ${A} 'options={"sessionName":"screen-a","name":"first"}'`
+      );
+      expect(store.verifyConsistency().errors).toEqual([]);
+    },
+    30000
+  );
 
   it('a UUID-shaped alias resolves like any other name', () => {
     const { store } = sandbox();

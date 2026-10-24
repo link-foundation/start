@@ -5,8 +5,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { createHash } = require('node:crypto');
 const {
-  AuthorizationHeaderMask,
   SanitizationError,
   resolveSanitizerCommand,
   sanitizeLogToTemp,
@@ -59,17 +59,6 @@ function sanitizeFile(content, env = testEnv()) {
   });
 }
 
-function mask(input, blockSize) {
-  const authorization = new AuthorizationHeaderMask();
-  const blocks = [];
-  for (let offset = 0; offset < input.length; offset += blockSize) {
-    blocks.push(authorization.push(input.subarray(offset, offset + blockSize)));
-    assert.ok(authorization.pending.length <= blockSize + 160);
-  }
-  blocks.push(authorization.push(Buffer.alloc(0), true));
-  return Buffer.concat(blocks).toString();
-}
-
 // The three lines from issue #249, which the old rules truncated.
 const ISSUE_249_LINES = [
   "Command: gate='/tmp/hive-mind-disk-baseline-0ce9e170-e6d3-494d-91e1-0d820245d34b'",
@@ -98,6 +87,30 @@ function credentials() {
 }
 
 describe('log sanitization', () => {
+  it('requires the sanitizer release the Rust installer asks for', () => {
+    // An older CLI rejects --allow-binary (ERR_ARGUMENT), so the bundled
+    // dependency and the Rust installer and version check agree.
+    const range =
+      require('../package.json').dependencies[
+        '@link-foundation/sensitive-data-sanitizer'
+      ];
+    const rust = fs.readFileSync(
+      path.join(__dirname, '../../rust/src/lib/log_sanitizer.rs'),
+      'utf8'
+    );
+    const [, major, minor, patch] = range.match(/^\^(\d+)\.(\d+)\.(\d+)$/);
+    assert.ok(
+      rust.includes(
+        `PACKAGE: &str = "@link-foundation/sensitive-data-sanitizer@${range}";`
+      )
+    );
+    assert.ok(
+      rust.includes(
+        `MINIMUM_VERSION: (u64, u64, u64) = (${major}, ${minor}, ${patch});`
+      )
+    );
+  });
+
   it('keeps every line from issue #249 and public account details', () => {
     const input = `${ISSUE_249_LINES.join('\n')}\n`;
     assert.strictEqual(sanitizeFile(input).toString(), input);
@@ -154,35 +167,87 @@ describe('log sanitization', () => {
         'Authorization: token $(gh auth token) and ${GITHUB_TOKEN}',
         'Authorization: token $(gh auth token) and ${GITHUB_TOKEN}',
       ],
+      // Since 0.12.2, placeholders and their scheme remain unchanged.
       ['Authorization: Bearer <token>', 'Authorization: Bearer <token>'],
     ];
+    // sensitive-data-sanitizer 0.12.1 does this itself (#45), without the
+    // pre-pass start used to run (#253).
     const input = cases.map(([line]) => line).join('\n');
     const expected = cases.map(([, line]) => line).join('\n');
-    for (const size of [1, 7, 31, 256, 65536]) {
-      assert.strictEqual(mask(Buffer.from(input), size), expected);
-    }
-    // The library itself masks the scheme before a placeholder; nothing is lost.
-    assert.strictEqual(
-      sanitizeFile(input).toString(),
-      expected.replace('Bearer <token>', '[REDACTED] <token>')
-    );
+    assert.strictEqual(sanitizeFile(input).toString(), expected);
+    assert.strictEqual(sanitizeText(input, { env: testEnv() }), expected);
   });
 
-  it('masks long Authorization tokens across blocks with bounded memory', () => {
+  it('masks long Authorization tokens across stream blocks', () => {
     const input = Buffer.from(
       `Authorization: Bearer ${'a'.repeat(200000)} tail\nordinary\n`
     );
     assert.strictEqual(
-      mask(input, 65536),
-      'Authorization: [REDACTED] tail\nordinary\n'
-    );
-    assert.strictEqual(
       sanitizeFile(input).toString(),
       'Authorization: [REDACTED] tail\nordinary\n'
     );
   });
 
-  it('preserves invalid UTF-8 bytes and line endings', () => {
+  it('preserves Authorization placeholders and control bytes when sanitizing twice (#253)', () => {
+    const input = [
+      'Authorization: Bearer [REDACTED] already',
+      'Authorization: Bearer {{token}} x',
+      'Authorization: Bearer <token> x',
+      'Authorization: Bearer $GITHUB_TOKEN x',
+      'Authorization: Bearer abc\0 tail',
+      'Authorization: Bearer abc\x1b[0m tail',
+      '{"header":"Authorization: Bearer ab[c]d","next":"keep"}',
+    ].join('\n');
+    const expected = [
+      'Authorization: Bearer [REDACTED] already',
+      // Arbitrary bracketed values are credentials; known references above
+      // stay intact, but every bracket of this value must be removed (#50).
+      'Authorization: [REDACTED] x',
+      'Authorization: Bearer <token> x',
+      'Authorization: Bearer $GITHUB_TOKEN x',
+      'Authorization: [REDACTED]\0 tail',
+      'Authorization: [REDACTED]\x1b[0m tail',
+      '{"header":"Authorization: [REDACTED]","next":"keep"}',
+    ].join('\n');
+    const output = sanitizeFile(input);
+    assert.strictEqual(output.toString(), expected);
+    assert.deepStrictEqual(sanitizeFile(output), output);
+  });
+
+  it(
+    'sanitizes dense credentials within a bounded process (#253, sanitizer #51)',
+    { timeout: 25000 },
+    () => {
+      const count = 5700;
+      const input = Array.from({ length: count }, (_, index) => {
+        const token = createHash('sha256').update(String(index)).digest('hex');
+        return `gh${'p_'}${token.slice(0, 36)} keep\n`;
+      }).join('');
+      const { command, args } = resolveSanitizerCommand({});
+      const output = execFileSync(
+        command,
+        [
+          '--max-old-space-size=384',
+          ...args,
+          'redact',
+          '-',
+          '--stream',
+          '--credentials-only',
+          '--allow-binary',
+        ],
+        {
+          input,
+          env: testEnv(),
+          timeout: 20000,
+          killSignal: 'SIGKILL',
+          maxBuffer: 1024 * 1024,
+        }
+      );
+      assert.strictEqual(output.toString(), '[REDACTED] keep\n'.repeat(count));
+    }
+  );
+
+  it('preserves invalid UTF-8 bytes, NUL bytes and line endings', () => {
     const input = Buffer.concat([
       Buffer.from('bad '),
       Buffer.from([0xff, 0xfe, 0xc3]),
@@ -195,6 +260,12 @@ describe('log sanitization', () => {
     ]);
     assert.deepStrictEqual(sanitizeFile(input), expected);
     assert.deepStrictEqual(sanitizeFile(Buffer.alloc(0)), Buffer.alloc(0));
+    // --allow-binary: a NUL byte in a terminal transcript no longer blocks
+    // the upload with ERR_BINARY (#253), and credentials next to it are masked.
+    assert.strictEqual(
+      sanitizeFile(`line\0one gh${'p_'}${'x'.repeat(36)}\0two\n`).toString(),
+      'line\0one [REDACTED]\0two\n'
+    );
   });
 
   it('sanitizes issue text with the same rules', () => {
@@ -255,27 +326,15 @@ describe('log sanitization', () => {
     if (process.platform === 'win32') {
       return;
     }
-    const originalOpen = fs.openSync;
     const originalUmask = process.umask(0);
-    let creationChecked = false;
-    fs.openSync = (...args) => {
-      if (args[1] !== 'wx') {
-        return originalOpen(...args);
-      }
-      assert.strictEqual(
-        fs.statSync(path.dirname(args[0])).mode & 0o777,
-        0o700
-      );
-      const descriptor = originalOpen(...args);
-      assert.strictEqual(fs.fstatSync(descriptor).mode & 0o777, 0o600);
-      creationChecked = true;
-      return descriptor;
-    };
     try {
       withLog('ordinary output', (source) => {
         const copy = sanitizeLogToTemp(source, { env: testEnv() });
         try {
-          assert.ok(creationChecked);
+          assert.strictEqual(
+            fs.statSync(path.dirname(copy.path)).mode & 0o777,
+            0o700
+          );
           assert.strictEqual(fs.statSync(copy.path).mode & 0o777, 0o600);
           assert.strictEqual(
             fs.readFileSync(copy.path, 'utf8'),
@@ -286,7 +345,6 @@ describe('log sanitization', () => {
         }
       });
     } finally {
-      fs.openSync = originalOpen;
       process.umask(originalUmask);
     }
   });
@@ -323,9 +381,7 @@ describe('log sanitization', () => {
     };
     assert.match(attempt('/does-not-exist').message, /\(ERR_SOURCE\)/);
     assert.match(attempt(os.tmpdir()).message, /\(ERR_SOURCE\)/);
-    withLog('secret\0binary', (source, dir) => {
-      // The library rejects NUL bytes rather than guessing at binary content.
-      assert.strictEqual(attempt(source).code, 'ERR_BINARY');
+    withLog('ordinary log', (source, dir) => {
       assert.strictEqual(
         attempt(
           source,
@@ -376,13 +432,24 @@ describe('log sanitization', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sanitize-errors-'));
     const source = path.join(dir, 'source.log');
     fs.writeFileSync(source, 'ordinary log');
+    // A fake uploader, so a regression can never publish the log for real.
+    const uploaded = path.join(dir, 'uploaded');
+    fs.writeFileSync(
+      path.join(dir, 'gh-upload-log'),
+      `#!/bin/sh\ntouch "${uploaded}"\necho https://gist.github.com/test/id\n`,
+      { mode: 0o755 }
+    );
+    const originalPath = process.env.PATH;
+    process.env.PATH = `${dir}${path.delimiter}${originalPath}`;
     const { uploadLogPath } = require('../src/lib/log-uploader');
     const { uploadLog } = require('../src/lib/failure-handler');
     const messages = [];
     const originalLog = console.log;
     console.log = (message) => messages.push(message);
     try {
-      for (const method of ['readSync', 'writeSync', 'fsyncSync']) {
+      // The sanitizer child reads and writes the files itself; start only
+      // opens and checks the source.
+      for (const method of ['openSync', 'fstatSync']) {
         const original = fs[method];
         fs[method] = () => {
           throw new Error('sensitive error details');
@@ -409,8 +476,10 @@ describe('log sanitization', () => {
           'Warning: Log sanitization failed (ERR_SOURCE); upload blocked.'
         )
       );
+      assert.ok(!fs.existsSync(uploaded));
     } finally {
       console.log = originalLog;
+      process.env.PATH = originalPath;
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });

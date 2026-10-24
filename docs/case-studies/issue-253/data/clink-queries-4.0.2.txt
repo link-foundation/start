@@ -1,0 +1,63 @@
+4.0.2+7f5dc4b4fd76c4b09ea783db81f801cc757cb4fb
+## start-command <= 0.39.2
+### nested groups, no --auto-create-missing-references
+Error: Query error: Invalid reference to non-existent link 'ExecutionRecord' in substitution pattern. Link 'ExecutionRecord' does not exist and will not be created by this operation. Use --auto-create-missing-references to create missing references as point links.
+exit: 1
+### backslash-escaped JSON value
+Error: Parse error: Syntax error at line 1, column 67: unexpected ":"
+1 | () ((9d6d33e1-ac5b-402f-9699-cc650386d835.options: options "{\"a\":1}"))
+  |                                                                   ^
+exit: 1
+### quoted number is read as a link address
+Error: Query error: Cannot ensure unsupported link address 0. Only non-zero internal references in the supported range can be created.
+exit: 1
+### shared (status executing) link: second record takes the name
+() ((executing: executing executing))
+() ((status: status status))
+() ((7082d164-763f-494f-a04b-0f372e49f96f.status: status executing))
+exit: 0
+### state
+(executing: executing executing)
+(status: status status)
+(7082d164-763f-494f-a04b-0f372e49f96f.status: status executing)
+exit: 0
+## record-scoped schema
+### create
+() ((ExecutionRecord: ExecutionRecord ExecutionRecord))
+() ((exitCode=0: exitCode=0 exitCode=0))
+() (('options={"a":1}': 'options={"a":1}' 'options={"a":1}'))
+() ((status=executing: status=executing status=executing))
+() ((9d6d33e1-ac5b-402f-9699-cc650386d835: ExecutionRecord 9d6d33e1-ac5b-402f-9699-cc650386d835))
+() ((9d6d33e1-ac5b-402f-9699-cc650386d835.status: 9d6d33e1-ac5b-402f-9699-cc650386d835 status=executing))
+() ((9d6d33e1-ac5b-402f-9699-cc650386d835.options: 9d6d33e1-ac5b-402f-9699-cc650386d835 'options={"a":1}'))
+() ((9d6d33e1-ac5b-402f-9699-cc650386d835.exitCode: 9d6d33e1-ac5b-402f-9699-cc650386d835 exitCode=0))
+exit: 0
+### second record with the same values
+exit: 0
+### update, step 1: drop the property links
+((6: 9d6d33e1-ac5b-402f-9699-cc650386d835 status=executing)) ()
+((7: 9d6d33e1-ac5b-402f-9699-cc650386d835 'options={"a":1}')) ()
+((8: 9d6d33e1-ac5b-402f-9699-cc650386d835 exitCode=0)) ()
+exit: 0
+### update, step 2: create the new ones
+exit: 0
+### verify query
+((ExecutionRecord: ExecutionRecord ExecutionRecord)) ((ExecutionRecord: ExecutionRecord ExecutionRecord))
+((9d6d33e1-ac5b-402f-9699-cc650386d835: ExecutionRecord 9d6d33e1-ac5b-402f-9699-cc650386d835)) ((9d6d33e1-ac5b-402f-9699-cc650386d835: ExecutionRecord 9d6d33e1-ac5b-402f-9699-cc650386d835))
+((7082d164-763f-494f-a04b-0f372e49f96f: ExecutionRecord 7082d164-763f-494f-a04b-0f372e49f96f)) ((7082d164-763f-494f-a04b-0f372e49f96f: ExecutionRecord 7082d164-763f-494f-a04b-0f372e49f96f))
+exit: 0
+### delete: property links, then the record link
+exit: 0
+### delete record link
+exit: 0
+### state
+(ExecutionRecord: ExecutionRecord ExecutionRecord)
+(exitCode=0: exitCode=0 exitCode=0)
+('options={"a":1}': 'options={"a":1}' 'options={"a":1}')
+(status=executing: status=executing status=executing)
+(status=executed: status=executed status=executed)
+(exitCode=3: exitCode=3 exitCode=3)
+(7082d164-763f-494f-a04b-0f372e49f96f: ExecutionRecord 7082d164-763f-494f-a04b-0f372e49f96f)
+(7082d164-763f-494f-a04b-0f372e49f96f.status: 7082d164-763f-494f-a04b-0f372e49f96f status=executing)
+(7082d164-763f-494f-a04b-0f372e49f96f.options: 7082d164-763f-494f-a04b-0f372e49f96f 'options={"a":1}')
+exit: 0

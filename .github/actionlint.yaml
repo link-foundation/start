@@ -1,7 +1,10 @@
-# Runner labels that GitHub provides but actionlint 1.7.7 does not yet know
-# about. They are real hosted runners, so the "unknown label" reports are
-# false positives; listing them here keeps the workflows check meaningful.
+# Runner labels that GitHub provides but actionlint 1.7.12 (the latest
+# release) does not yet know about. They are real hosted runners, so the
+# "unknown label" reports are false positives; listing them here keeps the
+# workflows check meaningful. ubuntu-26.04 is tracked upstream in
+# https://github.com/rhysd/actionlint/issues/682.
 self-hosted-runner:
   labels:
     - macos-15-intel
     - windows-11-arm
+    - ubuntu-26.04

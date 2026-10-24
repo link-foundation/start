@@ -1,0 +1,48 @@
+$ bun ../scripts/run-js-tests.mjs ./test/log-sanitizer.js --test-name-pattern "preserves Authorization placeholders"
+bun test v1.4.3 (c6da4a4d3)
+
+test/log-sanitizer.js:
+205 |       'Authorization: [REDACTED]\0 tail',
+206 |       'Authorization: [REDACTED]\x1b[0m tail',
+207 |       '{"header":"Authorization: [REDACTED]","next":"keep"}',
+208 |     ].join('\n');
+209 |     const output = sanitizeFile(input);
+210 |     assert.strictEqual(output.toString(), expected);
+                 ^
+AssertionError: Expected values to be strictly equal:
++ actual - expected
+
++ 'Authorization: [REDACTED]] already\n' +
++   'Authorization: [REDACTED]}} x\n' +
++   'Authorization: [REDACTED] <token> x\n' +
++   'Authorization: [REDACTED] x\n' +
++   'Authorization: [REDACTED] tail\n' +
++   'Authorization: [REDACTED] tail\n' +
++   '{"header":"Authorization: [REDACTED]]d","next":"keep"}'
+- 'Authorization: Bearer [REDACTED] already\n' +
+-   'Authorization: Bearer {{token}} x\n' +
+-   'Authorization: Bearer <token> x\n' +
+-   'Authorization: Bearer $GITHUB_TOKEN x\n' +
+-   'Authorization: [REDACTED]\x00 tail\n' +
+-   'Authorization: [REDACTED]\x1B[0m tail\n' +
+-   '{"header":"Authorization: [REDACTED]","next":"keep"}'
+
+ generatedMessage: true,
+     actual: "Authorization: [REDACTED]] already\nAuthorization: [REDACTED]}} x\nAuthorization: [REDACTED] <token> x\nAuthorization: [REDACTED] x\nAuthorization: [REDACTED] tail\nAuthorization: [REDACTED] tail\n{\"header\":\"Authorization: [REDACTED]]d\",\"next\":\"keep\"}",
+   expected: "Authorization: Bearer [REDACTED] already\nAuthorization: Bearer {{token}} x\nAuthorization: Bearer <token> x\nAuthorization: Bearer $GITHUB_TOKEN x\nAuthorization: [REDACTED]\u0000 tail\nAuthorization: [REDACTED]\u001B[0m tail\n{\"header\":\"Authorization: [REDACTED]\",\"next\":\"keep\"}",
+   operator: "strictEqual",
+       diff: "simple",
+       code: "ERR_ASSERTION"
+
+      at /tmp/gh-issue-solver-1792866364823/js/test/log-sanitizer.js:210:12
+      at run (node:async_hooks:144:29)
+      at node:test:1445:26
+      at executeTestNode (node:test:1448:45)
+      at node:test:1591:20
+(fail) log sanitization > preserves Authorization placeholders and control bytes when sanitizing twice (#253) [616.25ms]
+
+ 0 pass
+ 14 filtered out
+ 1 fail
+Ran 1 test across 1 file. [685.00ms]
+error: script "test" exited with code 1

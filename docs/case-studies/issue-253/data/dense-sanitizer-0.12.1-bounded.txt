@@ -1,0 +1,5 @@
+64 KiB: 4840 ms; status=0; error=none
+Verified all 1425 credentials and every non-secret byte.
+128 KiB: 15809 ms; status=0; error=none
+Verified all 2850 credentials and every non-secret byte.
+256 KiB: 20049 ms; status=null; error=ETIMEDOUT

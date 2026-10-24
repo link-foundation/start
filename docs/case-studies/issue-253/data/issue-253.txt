@@ -1,0 +1,12 @@
+Make sure we use latest version of https://github.com/link-foundation/sensitive-data-sanitizer and all other dependencies
+2026-10-23T22:53:10Z
+konard
+Double check that our CI/CD has a rule to enforce on each new pull request for all our dependencies to be fully updated to the latest versions, so it is impossible to keep using obsolete versions with new features missing.
+
+Also double check latest version of https://github.com/link-foundation/sensitive-data-sanitizer has all the features we need, and if it does not report issues.
+
+The same for all our other dependencies (especially ones we control).
+
+We need to collect data related about the issue to this repository, make sure we compile that data to `./docs/case-studies/issue-{id}` folder, and use it to do deep case study analysis (also make sure to search online for additional facts and data), list of each and all requirements from the issue, and propose possible solutions and solution plans for each requirement (we should also check known existing components/libraries, that solve similar problem or can help in solutions).
+
+Please plan and execute everything in this single pull request, you have unlimited time and context, as context auto-compacts and you can continue indefinitely, until each and every requirement fully addressed, and everything is totally done.

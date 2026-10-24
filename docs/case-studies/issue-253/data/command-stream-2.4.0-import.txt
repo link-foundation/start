@@ -1,0 +1,16 @@
+modules=281 ms=339
+125 745 KiB command-stream/
+109 276 KiB execa/lib
+1 178 KiB @xterm/headless
+9 11 KiB get-stream/source
+2 10 KiB signal-exit/dist
+5 7 KiB cross-spawn/lib
+1 7 KiB figures/index.js
+1 6 KiB @sindresorhus/merge-streams
+4 6 KiB human-signals/build
+1 5 KiB which-command/index.js
+1 4 KiB pretty-ms/index.js
+1 4 KiB yoctocolors/base.js
+1 3 KiB which/which.js
+3 2 KiB @sec-ant/readable-stream
+1 1 KiB npm-run-path/index.js

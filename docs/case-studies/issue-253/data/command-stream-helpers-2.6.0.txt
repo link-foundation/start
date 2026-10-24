@@ -1,0 +1,3 @@
+execCommand {"stdout":"helper-253","stderr":"","code":0}
+execCommandAsync {"stdout":"helper-253","stderr":"","code":0}
+Both execution helpers preserve streams and exit 7; runner, handlers, existence, path and version helpers passed.

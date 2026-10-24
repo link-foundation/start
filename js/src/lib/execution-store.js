@@ -246,6 +246,16 @@ class ExecutionRecord {
 }
 
 /**
+ * Quote text as a clink reference: `"..."` with inner quotes doubled.
+ * clink 4.x rejects backslash escapes inside references.
+ * @param {string} text
+ * @returns {string}
+ */
+function clinkReference(text) {
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+/**
  * Check if clink is installed
  * @returns {boolean}
  */
@@ -343,70 +353,69 @@ class ExecutionStore {
   }
 
   /**
-   * Convert execution record to clink links notation format
-   * Uses string aliases for readable IDs
+   * Convert a record's properties to clink links notation.
+   *
+   * The record is one link `(uuid: ExecutionRecord uuid)` plus one link per
+   * property, `(uuid.key: uuid "key=value")`. Property links have the record
+   * as their source, so two records that share a value (both `executing`) are
+   * still distinct links: doublets are deduplicated by (source, target), and a
+   * shared `(status executing)` link would carry only one record's name. The
+   * `key=` prefix keeps the target from being a bare number, which clink 4.x
+   * reads as a link address even when quoted (issue #253).
    * @param {ExecutionRecord} record
    * @returns {string}
    */
   recordToLinksNotation(record) {
-    // Using clink's string alias feature for readable identifiers
-    // Format: (uuid: uuid-value) (pid: pid-value) etc.
-    const obj = record.toObject();
-    const parts = [];
-
-    for (const [key, value] of Object.entries(obj)) {
-      if (value !== null && value !== undefined) {
-        // Escape value properly for links notation
-        const escapedValue =
-          typeof value === 'object' ? JSON.stringify(value) : String(value);
-        parts.push(`(${record.uuid}.${key}: ${key} "${escapedValue}")`);
-      }
-    }
-
-    return parts.join(' ');
-  }
-
-  /**
-   * Build clink query for creating/updating a record
-   * @param {ExecutionRecord} record
-   * @returns {string}
-   */
-  buildClinkCreateQuery(record) {
     const obj = record.toObject();
     const links = [];
 
-    // Create main record link
-    links.push(`(${record.uuid}: ExecutionRecord ${record.uuid})`);
-
-    // Create property links
     for (const [key, value] of Object.entries(obj)) {
       if (value !== null && value !== undefined) {
-        const escapedValue =
+        const text =
           typeof value === 'object' ? JSON.stringify(value) : String(value);
-        // Using format: (uuid.property: property "value")
-        links.push(`(${record.uuid}.${key}: ${key} "${escapedValue}")`);
+        links.push(
+          `(${record.uuid}.${key}: ${record.uuid} ${clinkReference(`${key}=${text}`)})`
+        );
       }
     }
 
-    // Format: () ((links)) - creates new links
-    return `() ((${links.join(') (')}))`;
+    return links.join(' ');
+  }
+
+  /** Build the create query using the same property notation as the public helper. */
+  buildClinkCreateQuery(record) {
+    return `() ((${record.uuid}: ExecutionRecord ${record.uuid}) ${this.recordToLinksNotation(record)})`;
+  }
+
+  /**
+   * Build clink query deleting every property link of a record
+   * @param {string} uuid
+   * @returns {string}
+   */
+  buildClinkDeletePropertiesQuery(uuid) {
+    return `(($id: ${uuid} $value)) ()`;
   }
 
   /**
    * Execute clink command
    * @param {string} query
+   * @param {string[]} [extraArgs] - flags appended after `--db <path>`
    * @returns {{success: boolean, output: string}}
    */
-  execClink(query) {
+  execClink(query, extraArgs = []) {
     try {
       // The query embeds record values verbatim; a shell string would let a
       // single quote in any of them break out of the argument
       // (CodeQL js/shell-command-constructed-from-input, issue #168).
-      const result = execFileSync('clink', [query, '--db', this.linksDbPath], {
-        encoding: 'utf8',
-        timeout: 10000,
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
+      const result = execFileSync(
+        'clink',
+        [query, '--db', this.linksDbPath, ...extraArgs],
+        {
+          encoding: 'utf8',
+          timeout: 10000,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        }
+      );
       return { success: true, output: result };
     } catch (err) {
       this.log(`Clink error: ${err.message}`);
@@ -417,15 +426,22 @@ class ExecutionStore {
   /**
    * Write a record to the links database using clink
    * @param {ExecutionRecord} record
+   * @param {{isNew?: boolean}} [options] - isNew skips dropping old links
    * @returns {boolean}
    */
-  writeLinksRecord(record) {
+  writeLinksRecord(record, { isNew = false } = {}) {
     if (!this.useLinks) {
       return false;
     }
 
-    const query = this.buildClinkCreateQuery(record);
-    const result = this.execClink(query);
+    // Replace, not merge: drop the previous property links first. clink
+    // reports an error when the record has no links yet, which is harmless.
+    if (!isNew) {
+      this.execClink(this.buildClinkDeletePropertiesQuery(record.uuid));
+    }
+    const result = this.execClink(this.buildClinkCreateQuery(record), [
+      '--auto-create-missing-references',
+    ]);
 
     if (result.success) {
       this.log(`Wrote record ${record.uuid} to links database`);
@@ -444,9 +460,8 @@ class ExecutionStore {
       return false;
     }
 
-    // Delete all links with this UUID prefix
-    const query = `(($id: ${uuid} $any)) ()`;
-    const result = this.execClink(query);
+    this.execClink(this.buildClinkDeletePropertiesQuery(uuid));
+    const result = this.execClink(`((${uuid}: ExecutionRecord ${uuid})) ()`);
     return result.success;
   }
 
@@ -492,7 +507,7 @@ class ExecutionStore {
 
       // Also write to links database if available
       if (this.useLinks) {
-        this.writeLinksRecord(record);
+        this.writeLinksRecord(record, { isNew: existingIndex < 0 });
       }
 
       return true;
@@ -810,8 +825,10 @@ class ExecutionStore {
 
     // Query links database for all ExecutionRecord links
     try {
+      // Without --changes clink prints nothing for a read-only match
       const queryResult = this.execClink(
-        `((($id: ExecutionRecord $uuid)) (($id: ExecutionRecord $uuid)))`
+        `((($id: ExecutionRecord $uuid)) (($id: ExecutionRecord $uuid)))`,
+        ['--changes']
       );
 
       if (queryResult.success) {
@@ -928,6 +945,7 @@ module.exports = {
   ExecutionStatus,
   LockManager,
   isClinkInstalled,
+  clinkReference,
   DEFAULT_APP_FOLDER,
   LINO_DB_FILE,
   LINKS_DB_FILE,

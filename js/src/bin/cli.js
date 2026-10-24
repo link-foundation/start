@@ -814,7 +814,7 @@ async function runDirectWithCommandStream(
   sessionId
 ) {
   // Lazy load command-stream
-  const { getCommandStream } = require('../lib/command-stream');
+  const { getCommandStream, outputText } = require('../lib/command-stream');
   const { $, raw } = await getCommandStream();
 
   // Get the command name (first word of the actual command to execute)
@@ -921,11 +921,13 @@ async function runDirectWithCommandStream(
     }
 
     // Collect output for log
-    if (result.stdout) {
-      appendLogFile(logFilePath, result.stdout);
+    const stdout = outputText(result.stdout);
+    const stderr = outputText(result.stderr);
+    if (stdout) {
+      appendLogFile(logFilePath, stdout);
     }
-    if (result.stderr) {
-      appendLogFile(logFilePath, result.stderr);
+    if (stderr) {
+      appendLogFile(logFilePath, stderr);
     }
   } catch (err) {
     exitCode = err.code || 1;

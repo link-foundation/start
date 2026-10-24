@@ -59,6 +59,8 @@ afterEach(() => {
 const SAFETY = require.resolve('../src/lib/docker-snapshot-safety');
 
 /** Hold the snapshot lock in another process for `holdMs`. */
+// A waiter polls for 1 s before it reads the holder's name, so tests that
+// expect the name hold the lock well past that, even on a slow runner.
 async function holdLockElsewhere(lockPath, holder, holdMs) {
   const ready = `${lockPath}.ready`;
   const child = spawn(
@@ -264,7 +266,7 @@ describe('issue #224 item 1: waiting for the snapshot lock', () => {
 
   it('waits for the holder with --snapshot-wait and says so once', async () => {
     const lockPath = path.join(makeTempDir('lock-224-'), 'snapshot.lock');
-    await holdLockElsewhere(lockPath, 'task-a', 1500);
+    await holdLockElsewhere(lockPath, 'task-a', 3000);
     const lines = [];
     const started = Date.now();
     const lock = acquireSnapshotLock({
@@ -307,7 +309,7 @@ describe('issue #224 item 1: waiting for the snapshot lock', () => {
 
   it('serializes two concurrent CLI resumes instead of failing the second', async () => {
     const lockPath = path.join(makeTempDir('lock-224-'), 'snapshot.lock');
-    await holdLockElsewhere(lockPath, 'task-a', 1200);
+    await holdLockElsewhere(lockPath, 'task-a', 3000);
     const { store } = snapshotRecord();
     const calls = [];
     const lines = [];

@@ -1,0 +1,132 @@
+warning: js/package.json:71 npm @link-foundation/sensitive-data-sanitizer: declared ^0.12.0; js/package-lock.json resolves 0.12.0; js/bun.lock resolves 0.12.0; latest is 0.12.1
+warning: js/package.json:72 npm command-stream: declared ^0.9.4; js/package-lock.json resolves 0.9.5; js/bun.lock resolves 0.9.4; latest is 2.4.0
+warning: js/package.json:73 npm lino-objects-codec: declared ^0.4.0; js/package-lock.json resolves 0.4.0; js/bun.lock resolves 0.4.0; latest is 0.9.3
+warning: js/package.json:52 npm eslint: declared ^10.3.0; js/package-lock.json resolves 10.9.1; js/bun.lock resolves 10.3.0; latest is 10.13.0
+warning: js/package.json:54 npm eslint-plugin-prettier: declared ^5.5.5; js/package-lock.json resolves 5.5.6; js/bun.lock resolves 5.5.5; latest is 5.5.7
+warning: js/package.json:56 npm lint-staged: declared ^17.0.4; js/package-lock.json resolves 17.4.1; js/bun.lock resolves 17.0.4; latest is 17.6.0
+warning: js/package.json:57 npm prettier: declared ^3.8.3; js/package-lock.json resolves 3.9.6; js/bun.lock resolves 3.8.3; latest is 3.9.10
+warning: js/package.json:77 npm flatted: declared ^3.4.2; js/bun.lock resolves 3.4.2; latest is 3.4.4
+warning: js/package.json:78 npm js-yaml: declared ^4.3.2; js/package-lock.json resolves nothing; js/bun.lock resolves nothing; latest is 5.5.0
+warning: rust/Cargo.toml:22 crate chrono: declared 0.4; latest is 0.4.45
+warning: rust/Cargo.toml:23 crate dirs: declared 6; rust/Cargo.lock resolves 6.0.0; latest is 7.0.0
+warning: rust/Cargo.toml:24 crate regex: declared 1; rust/Cargo.lock resolves 1.12.4; latest is 1.13.1
+warning: rust/Cargo.toml:25 crate serde: declared 1; rust/Cargo.lock resolves 1.0.228; latest is 1.0.229
+warning: rust/Cargo.toml:26 crate serde_json: declared 1; rust/Cargo.lock resolves 1.0.150; latest is 1.0.154
+warning: rust/Cargo.toml:27 crate uuid: declared 1; rust/Cargo.lock resolves 1.23.4; latest is 1.29.0
+warning: rust/Cargo.toml:28 crate lino-objects-codec: declared 0.2.1; rust/Cargo.lock resolves 0.2.1; latest is 0.9.2
+warning: rust/Cargo.toml:29 crate sha2: declared 0.10; rust/Cargo.lock resolves 0.10.9; latest is 0.11.1
+warning: rust/Cargo.toml:32 crate libc: declared 0.2; rust/Cargo.lock resolves 0.2.186; latest is 0.2.191
+warning: rust/Cargo.toml:35 crate tempfile: declared 3; latest is 3.27.0
+warning: .github/workflows/js.yml:65 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/js.yml:68 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/js.yml:74 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/js.yml:93 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/js.yml:104 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/js.yml:110 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/js.yml:129 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/js.yml:133 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/js.yml:175 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/js.yml:180 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/js.yml:216 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/js.yml:221 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/js.yml:269 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/js.yml:269 runner macos-15: uses macos-15; latest is macos-26
+warning: .github/workflows/js.yml:271 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/js.yml:290 action actions/setup-dotnet: uses v5; latest is v6.0.0
+warning: .github/workflows/js.yml:292 dotnet dotnet: declared 8.0.x; latest is 10.0
+warning: .github/workflows/js.yml:300 action actions/setup-dotnet: uses v5; latest is v6.0.0
+warning: .github/workflows/js.yml:302 dotnet dotnet: declared 8.0.x; latest is 10.0
+warning: .github/workflows/js.yml:479 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/js.yml:484 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/js.yml:543 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/js.yml:555 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/js.yml:566 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/js.yml:663 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/js.yml:675 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/js.yml:686 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/js.yml:754 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/js.yml:763 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/js.yml:781 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/js.yml:817 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/js.yml:823 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/js.yml:827 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/js.yml:830 action oven-sh/setup-bun: commit pin needs a `# vX.Y.Z` comment naming its release; latest is v2.2.0
+warning: .github/workflows/js.yml:865 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/js.yml:868 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/links.yml:47 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/links.yml:57 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/links.yml:64 action actions/cache: uses v5; latest is v6.1.0
+warning: .github/workflows/links.yml:167 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/links.yml:170 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/rust.yml:60 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/rust.yml:63 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/rust.yml:69 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/rust.yml:88 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/rust.yml:99 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/rust.yml:105 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/rust.yml:124 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/rust.yml:128 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/rust.yml:163 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/rust.yml:168 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/rust.yml:209 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/rust.yml:214 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/rust.yml:219 action dtolnay/rust-toolchain: pinned e2a55d2ffb04f378e9626c28d38b36d230d1e12f; latest is master 683b588c487a69d01f6c6ddf40f036ff682cc2c8
+warning: .github/workflows/rust.yml:225 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/rust.yml:230 action actions/cache: uses v5; latest is v6.1.0
+warning: .github/workflows/rust.yml:267 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/rust.yml:267 runner macos-15: uses macos-15; latest is macos-26
+warning: .github/workflows/rust.yml:269 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/rust.yml:274 action dtolnay/rust-toolchain: pinned e2a55d2ffb04f378e9626c28d38b36d230d1e12f; latest is master 683b588c487a69d01f6c6ddf40f036ff682cc2c8
+warning: .github/workflows/rust.yml:280 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/rust.yml:294 action actions/cache: uses v5; latest is v6.1.0
+warning: .github/workflows/rust.yml:360 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/rust.yml:365 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/rust.yml:371 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/rust.yml:390 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/rust.yml:397 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/rust.yml:402 action dtolnay/rust-toolchain: pinned e2a55d2ffb04f378e9626c28d38b36d230d1e12f; latest is master 683b588c487a69d01f6c6ddf40f036ff682cc2c8
+warning: .github/workflows/rust.yml:407 action actions/cache: uses v5; latest is v6.1.0
+warning: .github/workflows/rust.yml:417 action actions/cache: uses v5; latest is v6.1.0
+warning: .github/workflows/rust.yml:436 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/rust.yml:473 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/rust.yml:478 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/rust.yml:483 action dtolnay/rust-toolchain: pinned e2a55d2ffb04f378e9626c28d38b36d230d1e12f; latest is master 683b588c487a69d01f6c6ddf40f036ff682cc2c8
+warning: .github/workflows/rust.yml:488 action actions/cache: uses v5; latest is v6.1.0
+warning: .github/workflows/rust.yml:544 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/rust.yml:554 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/rust.yml:561 action dtolnay/rust-toolchain: pinned e2a55d2ffb04f378e9626c28d38b36d230d1e12f; latest is master 683b588c487a69d01f6c6ddf40f036ff682cc2c8
+warning: .github/workflows/rust.yml:566 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/rust.yml:621 action rust-lang/crates-io-auth-action: pinned v1.0.5; latest is v1.0.6 (3268eb413133e2960fa4ae0e963ca76380c54cd9)
+warning: .github/workflows/rust.yml:711 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/rust.yml:721 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/rust.yml:728 action dtolnay/rust-toolchain: pinned e2a55d2ffb04f378e9626c28d38b36d230d1e12f; latest is master 683b588c487a69d01f6c6ddf40f036ff682cc2c8
+warning: .github/workflows/rust.yml:733 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/rust.yml:771 action rust-lang/crates-io-auth-action: pinned v1.0.5; latest is v1.0.6 (3268eb413133e2960fa4ae0e963ca76380c54cd9)
+warning: .github/workflows/rust.yml:826 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/rust.yml:834 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/rust.yml:838 action taiki-e/install-action: pinned v2.87.4; latest is v2.87.31 (1e29709c0ec63babbe8f266397a465f29a825f91)
+warning: .github/workflows/rust.yml:848 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/rust.yml:858 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/rust.yml:897 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/rust.yml:900 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/security.yml:31 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/security.yml:39 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/security.yml:43 action actions/setup-node: uses v6; latest is v7.1.0
+warning: .github/workflows/security.yml:55 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/security.yml:69 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/security.yml:90 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/security.yml:99 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/security.yml:138 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/security.yml:146 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/security.yml:158 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/security.yml:161 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/workflows.yml:38 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/workflows.yml:44 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/workflows.yml:54 pypi pyflakes: declared 3.4.0; latest is 4.0.3
+warning: .github/workflows/workflows.yml:67 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/workflows.yml:73 action actions/checkout: uses v6; latest is v7.0.1
+warning: .github/workflows/workflows.yml:79 action zizmorcore/zizmor-action: uses v0.6.4; latest is v0.8.0
+warning: .github/workflows/workflows.yml:100 runner ubuntu-24.04: uses ubuntu-24.04; latest is ubuntu-26.04
+warning: .github/workflows/workflows.yml:103 action actions/checkout: uses v6; latest is v7.0.1
+warning: parity/translation.json:3 git https://github.com/link-foundation/meta-language.git: revision eb0574d5528babd3b4aadece81590d8e2230b99b; latest is ec9f4efb0e9ef936114e09823981352f6db13700
+Checked 183 dependencies: 131 stale or unverifiable, 0 blocked by open issues.

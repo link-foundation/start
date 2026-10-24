@@ -1,6 +1,7 @@
+use sha2::{Digest, Sha256};
 use start_command::log_sanitizer::{
-    find_sanitizer, sanitize_log_to_temp_with_env, sanitize_text_with_env, AuthorizationHeaderMask,
-    BLOCK_SIZE, OVERRIDE,
+    find_sanitizer, parse_version, sanitize_log_to_temp_with_env, sanitize_text_with_env,
+    BLOCK_SIZE, MINIMUM_VERSION, OVERRIDE, PACKAGE,
 };
 use std::fs;
 use std::path::PathBuf;
@@ -78,17 +79,6 @@ fn sanitize_file(content: &[u8], env: Vec<(String, String)>) -> Vec<u8> {
     fs::read(&copy.path).unwrap()
 }
 
-fn mask(input: &[u8], size: usize) -> Vec<u8> {
-    let mut authorization = AuthorizationHeaderMask::new();
-    let mut output = Vec::new();
-    for block in input.chunks(size) {
-        output.extend(authorization.push(block, false));
-        assert!(authorization.pending_bytes() <= size + 160);
-    }
-    output.extend(authorization.push(&[], true));
-    output
-}
-
 // The three lines from issue #249, which the old rules truncated.
 const ISSUE_249_LINES: &[&str] = &[
     "Command: gate='/tmp/hive-mind-disk-baseline-0ce9e170-e6d3-494d-91e1-0d820245d34b'",
@@ -120,6 +110,7 @@ const AUTHORIZATION_CASES: &[(&str, &str)] = &[
         "Authorization: token $(gh auth token) and ${GITHUB_TOKEN}",
         "Authorization: token $(gh auth token) and ${GITHUB_TOKEN}",
     ),
+    // Since 0.12.2, placeholders and their scheme remain unchanged.
     (
         "Authorization: Bearer <token>",
         "Authorization: Bearer <token>",
@@ -127,7 +118,8 @@ const AUTHORIZATION_CASES: &[(&str, &str)] = &[
 ];
 
 #[test]
-fn masks_only_the_authorization_scheme_and_token_at_every_block_size() {
+fn masks_only_the_authorization_scheme_and_token() {
+    let Some(env) = test_env(&[]) else { return };
     let input = AUTHORIZATION_CASES
         .iter()
         .map(|(line, _)| *line)
@@ -138,30 +130,96 @@ fn masks_only_the_authorization_scheme_and_token_at_every_block_size() {
         .map(|(_, line)| *line)
         .collect::<Vec<_>>()
         .join("\n");
-    for size in [1, 7, 31, 256, BLOCK_SIZE] {
-        assert_eq!(
-            String::from_utf8(mask(input.as_bytes(), size)).unwrap(),
-            expected
-        );
-    }
-    let Some(env) = test_env(&[]) else { return };
-    // The library itself masks the scheme before a placeholder; nothing is lost.
+    // sensitive-data-sanitizer 0.12.1 does this itself (#45), without the
+    // pre-pass start used to run (#253).
     assert_eq!(
-        String::from_utf8(sanitize_file(input.as_bytes(), env)).unwrap(),
-        expected.replace("Bearer <token>", "[REDACTED] <token>")
+        String::from_utf8(sanitize_file(input.as_bytes(), env.clone())).unwrap(),
+        expected
     );
+    assert_eq!(sanitize_text_with_env(&input, env).unwrap(), expected);
 }
 
 #[test]
-fn masks_long_authorization_tokens_across_blocks_with_bounded_memory() {
+fn masks_long_authorization_tokens_across_stream_blocks() {
+    let Some(env) = test_env(&[]) else { return };
     let input = format!(
         "Authorization: Bearer {} tail\nordinary\n",
         "a".repeat(200_000)
     );
     let expected = "Authorization: [REDACTED] tail\nordinary\n";
-    assert_eq!(mask(input.as_bytes(), BLOCK_SIZE), expected.as_bytes());
-    let Some(env) = test_env(&[]) else { return };
     assert_eq!(sanitize_file(input.as_bytes(), env), expected.as_bytes());
+}
+
+#[test]
+fn preserves_authorization_placeholders_and_control_bytes_when_sanitizing_twice() {
+    let Some(env) = test_env(&[]) else { return };
+    let input = [
+        "Authorization: Bearer [REDACTED] already",
+        "Authorization: Bearer {{token}} x",
+        "Authorization: Bearer <token> x",
+        "Authorization: Bearer $GITHUB_TOKEN x",
+        "Authorization: Bearer abc\0 tail",
+        "Authorization: Bearer abc\x1b[0m tail",
+        r#"{"header":"Authorization: Bearer ab[c]d","next":"keep"}"#,
+    ]
+    .join("\n");
+    let expected = [
+        "Authorization: Bearer [REDACTED] already",
+        // Arbitrary bracketed credentials are removed in full (#50).
+        "Authorization: [REDACTED] x",
+        "Authorization: Bearer <token> x",
+        "Authorization: Bearer $GITHUB_TOKEN x",
+        "Authorization: [REDACTED]\0 tail",
+        "Authorization: [REDACTED]\x1b[0m tail",
+        r#"{"header":"Authorization: [REDACTED]","next":"keep"}"#,
+    ]
+    .join("\n");
+    let output = sanitize_file(input.as_bytes(), env.clone());
+    assert_eq!(output, expected.as_bytes());
+    assert_eq!(sanitize_file(&output, env), output);
+}
+
+#[test]
+fn sanitizes_dense_credentials_without_losing_surrounding_bytes() {
+    let Some(env) = test_env(&[("NODE_OPTIONS", "--max-old-space-size=384")]) else {
+        return;
+    };
+    // Same finite log as the JS regression: about 256 KiB, 5700 secrets.
+    let mut input = String::new();
+    for index in 0..5700 {
+        // sha2 0.11 returns a byte array without the old LowerHex implementation.
+        let token: String = Sha256::digest(index.to_string().as_bytes())
+            .iter()
+            .map(|byte| format!("{:02x}", byte))
+            .collect();
+        input.push_str(&format!("ghp_{} keep\n", &token[..36]));
+    }
+    let output = sanitize_file(input.as_bytes(), env);
+    let expected = "[REDACTED] keep\n".repeat(5700);
+    // Keep failures value-free and avoid printing an entire credential log.
+    assert_eq!(Sha256::digest(&output), Sha256::digest(expected.as_bytes()));
+}
+
+#[test]
+fn requires_the_sanitizer_release_the_javascript_package_bundles() {
+    assert_eq!(parse_version("0.12.2\n"), Some((0, 12, 2)));
+    assert_eq!(parse_version("1.2.3-beta.1"), Some((1, 2, 3)));
+    assert_eq!(parse_version("unknown"), None);
+    // An older CLI on PATH rejects --allow-binary (ERR_ARGUMENT), so the
+    // installer, the version check and the JavaScript dependency agree.
+    let (major, minor, patch) = MINIMUM_VERSION;
+    let range = format!("^{}.{}.{}", major, minor, patch);
+    assert_eq!(
+        PACKAGE,
+        format!("@link-foundation/sensitive-data-sanitizer@{}", range)
+    );
+    let manifest =
+        fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../js/package.json"))
+            .unwrap();
+    assert!(manifest.contains(&format!(
+        "\"@link-foundation/sensitive-data-sanitizer\": \"{}\"",
+        range
+    )));
 }
 
 #[test]
@@ -227,13 +285,20 @@ fn redacts_credentials_and_credential_named_environment_values() {
 }
 
 #[test]
-fn preserves_invalid_utf8_line_endings_and_empty_logs() {
+fn preserves_invalid_utf8_nul_bytes_line_endings_and_empty_logs() {
     let Some(env) = test_env(&[]) else { return };
     let mut input = b"bad \xff\xfe\xc3 ".to_vec();
     input.extend(format!("gh{}{}\r\nnext\rend", "p_", "x".repeat(36)).bytes());
     assert_eq!(
         sanitize_file(&input, env.clone()),
         b"bad \xff\xfe\xc3 [REDACTED]\r\nnext\rend"
+    );
+    // --allow-binary: a NUL byte in a terminal transcript no longer blocks
+    // the upload with ERR_BINARY (#253), and credentials next to it are masked.
+    let input = format!("line\0one gh{}{}\0two\n", "p_", "x".repeat(36));
+    assert_eq!(
+        sanitize_file(input.as_bytes(), env.clone()),
+        b"line\0one [REDACTED]\0two\n"
     );
     assert!(sanitize_file(b"", env).is_empty());
 }
@@ -308,10 +373,8 @@ fn fails_closed_with_value_free_codes() {
         message("ERR_SOURCE")
     );
     assert_eq!(attempt(dir.path(), env.clone()), message("ERR_SOURCE"));
-    let source = dir.path().join("binary.log");
-    fs::write(&source, b"secret\0binary").unwrap();
-    // The library rejects NUL bytes rather than guessing at binary content.
-    assert_eq!(attempt(&source, env.clone()), message("ERR_BINARY"));
+    let source = dir.path().join("source.log");
+    fs::write(&source, b"ordinary log").unwrap();
     let missing = dir.path().join("missing-sanitizer");
     let unavailable = test_env(&[(OVERRIDE, missing.to_str().unwrap())]).unwrap();
     assert_eq!(
@@ -441,6 +504,68 @@ fn both_upload_paths_use_private_sanitized_copies_and_manual_optout_is_explicit(
             );
         }
     }
+}
+
+#[cfg(unix)]
+#[test]
+fn manual_upload_replaces_a_sanitizer_older_than_the_minimum_version() {
+    use std::os::unix::fs::PermissionsExt;
+    use std::process::Command;
+    let Some(real) = sanitizer() else { return };
+    let dir = tempfile::tempdir().unwrap();
+    let write = |name: &str, script: &str| {
+        let file = dir.path().join(name);
+        fs::write(&file, script).unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o755)).unwrap();
+    };
+    // 0.12.0 rejects --allow-binary with ERR_ARGUMENT.
+    write(
+        "sensitive-data-sanitizer",
+        "#!/bin/sh\n[ \"$1\" = --version ] && echo 0.12.0 && exit 0\necho 'Sanitization failed (ERR_ARGUMENT).' >&2\nexit 2\n",
+    );
+    // A fake bun "installs" the current release over the old one.
+    write(
+        "bun",
+        "#!/bin/sh\n[ \"$1\" = --version ] && echo 1.0.0 && exit 0\nprintf '%s\\n' \"$@\" > \"$CAPTURE_INSTALL\"\nprintf '#!/bin/sh\\nexec \"%s\" \"$@\"\\n' \"$REAL_SANITIZER\" > \"$(dirname \"$0\")/sensitive-data-sanitizer\"\n",
+    );
+    write(
+        "gh-upload-log",
+        "#!/bin/sh\ncat \"$1\" > \"$CAPTURE_LOG\"\necho https://gist.github.com/test/id\n",
+    );
+    let path = format!(
+        "{}:{}",
+        dir.path().display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+    let mut env = test_env(&[("PATH", &path)]).unwrap();
+    env.retain(|(name, _)| name != OVERRIDE);
+    let source = dir.path().join("source.log");
+    fs::write(&source, format!("line\0gh{}{}\n", "p_", "x".repeat(36))).unwrap();
+    let output = Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "upload_child", "--nocapture"])
+        .env_clear()
+        .envs(env)
+        .env("SANITIZER_UPLOAD_KIND", "manual")
+        .env("SANITIZER_SOURCE_LOG", &source)
+        .env("REAL_SANITIZER", real)
+        .env("CAPTURE_INSTALL", dir.path().join("install"))
+        .env("CAPTURE_LOG", dir.path().join("uploaded"))
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(output.status.success(), "{}", stdout);
+    assert!(stdout.contains(&format!(
+        "sensitive-data-sanitizer is older than the required version; installing with: bun install -g {}",
+        PACKAGE
+    )));
+    assert_eq!(
+        fs::read_to_string(dir.path().join("install")).unwrap(),
+        format!("install\n-g\n{}\n", PACKAGE)
+    );
+    assert_eq!(
+        fs::read_to_string(dir.path().join("uploaded")).unwrap(),
+        "line\0[REDACTED]\n"
+    );
 }
 
 #[test]

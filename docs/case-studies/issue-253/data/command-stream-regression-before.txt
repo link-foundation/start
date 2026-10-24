@@ -1,0 +1,144 @@
+$ bun ../scripts/run-js-tests.mjs ./test/command-stream-log.js --test-name-pattern "loads execution"
+bun test v1.4.3 (c6da4a4d3)
+
+test/command-stream-log.js:
+36 |          assert.deepEqual(extras, []);`,
+37 |       ],
+38 |       { encoding: 'utf8', timeout: 30000 }
+39 |     );
+40 |     expect(result.error).toBeUndefined();
+41 |     expect(result.stderr).toBe('');
+                               ^
+error: expect(received).toBe(expected)
+
+- ""
++ "node:internal/modules/run_main:111
++     triggerUncaughtException(
++     ^
++ 
++ AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ + actual - expected
++ 
++ + [
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/index.mjs',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/runtime.cjs',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/index.cjs',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/shell.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/terminal-capture.mjs',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/terminal-artifacts.mjs',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/terminal-pty.mjs',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/terminal-events.mjs',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/terminal-text.mjs',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/terminal-buffer.mjs',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/rust-repl.mjs',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/common.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/glob.cjs',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/glob-safety.cjs',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/cat.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/cd.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/chmod.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/cmd.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/cp.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/dirs.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/echo.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/exec.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/tempdir.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/pwd.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/exec-child.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/find.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/ls.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/grep.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/head.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/ln.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/mkdir.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/mv.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/rm.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/popd.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/pushd.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/sed.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/set.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/sort.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/tail.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/test.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/to.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/toEnd.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/touch.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/uniq.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/which.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/error.js',
++ +   'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/errorCode.js'
++ + ]
++ - []
++ 
++     at file:///tmp/gh-issue-solver-1792866364823/js/[eval1]:12:17 {
++   generatedMessage: true,
++   code: 'ERR_ASSERTION',
++   actual: [
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/index.mjs',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/runtime.cjs',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/index.cjs',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/shell.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/terminal-capture.mjs',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/terminal-artifacts.mjs',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/terminal-pty.mjs',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/terminal-events.mjs',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/terminal-text.mjs',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/terminal-buffer.mjs',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/rust-repl.mjs',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/common.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/glob.cjs',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/glob-safety.cjs',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/cat.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/cd.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/chmod.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/cmd.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/cp.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/dirs.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/echo.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/exec.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/tempdir.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/pwd.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/exec-child.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/find.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/ls.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/grep.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/head.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/ln.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/mkdir.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/mv.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/rm.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/popd.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/pushd.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/sed.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/set.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/sort.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/tail.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/test.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/to.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/toEnd.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/touch.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/uniq.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/which.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/error.js',
++     'file:///tmp/gh-issue-solver-1792866364823/js/node_modules/command-stream/src/shelljs/vendor/src/errorCode.js'
++   ],
++   expected: [],
++   operator: 'deepStrictEqual',
++   diff: 'simple'
++ }
++ 
++ Node.js v26.12.1
++ "
+
+- Expected  - 1
++ Received  + 117
+
+      at <anonymous> (/tmp/gh-issue-solver-1792866364823/js/test/command-stream-log.js:41:27)
+(fail) --use-command-stream log (#253) > loads execution without compatibility and terminal modules [438.02ms]
+
+ 0 pass
+ 1 filtered out
+ 1 fail
+ 2 expect() calls
+Ran 1 test across 1 file. [461.00ms]
+error: script "test" exited with code 1
