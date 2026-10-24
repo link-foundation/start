@@ -180,6 +180,8 @@ function sanitizeLogToTemp(sourcePath, options = {}) {
           'redact',
           '-',
           '--stream',
+          // A NUL byte in a terminal transcript must not block the upload.
+          '--allow-binary',
           ...OPTIONS,
           '--max-bytes',
           String(size),

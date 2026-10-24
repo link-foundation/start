@@ -86,6 +86,30 @@ function credentials() {
 }
 
 describe('log sanitization', () => {
+  it('requires the sanitizer release the Rust installer asks for', () => {
+    // An older CLI rejects --allow-binary (ERR_ARGUMENT), so the bundled
+    // dependency and the Rust installer and version check agree.
+    const range =
+      require('../package.json').dependencies[
+        '@link-foundation/sensitive-data-sanitizer'
+      ];
+    const rust = fs.readFileSync(
+      path.join(__dirname, '../../rust/src/lib/log_sanitizer.rs'),
+      'utf8'
+    );
+    const [, major, minor, patch] = range.match(/^\^(\d+)\.(\d+)\.(\d+)$/);
+    assert.ok(
+      rust.includes(
+        `PACKAGE: &str = "@link-foundation/sensitive-data-sanitizer@${range}";`
+      )
+    );
+    assert.ok(
+      rust.includes(
+        `MINIMUM_VERSION: (u64, u64, u64) = (${major}, ${minor}, ${patch});`
+      )
+    );
+  });
+
   it('keeps every line from issue #249 and public account details', () => {
     const input = `${ISSUE_249_LINES.join('\n')}\n`;
     assert.strictEqual(sanitizeFile(input).toString(), input);
@@ -163,7 +187,7 @@ describe('log sanitization', () => {
     );
   });
 
-  it('preserves invalid UTF-8 bytes and line endings', () => {
+  it('preserves invalid UTF-8 bytes, NUL bytes and line endings', () => {
     const input = Buffer.concat([
       Buffer.from('bad '),
       Buffer.from([0xff, 0xfe, 0xc3]),
@@ -176,6 +200,12 @@ describe('log sanitization', () => {
     ]);
     assert.deepStrictEqual(sanitizeFile(input), expected);
     assert.deepStrictEqual(sanitizeFile(Buffer.alloc(0)), Buffer.alloc(0));
+    // --allow-binary: a NUL byte in a terminal transcript no longer blocks
+    // the upload with ERR_BINARY (#253), and credentials next to it are masked.
+    assert.strictEqual(
+      sanitizeFile(`line\0one gh${'p_'}${'x'.repeat(36)}\0two\n`).toString(),
+      'line\0one [REDACTED]\0two\n'
+    );
   });
 
   it('sanitizes issue text with the same rules', () => {
@@ -291,9 +321,7 @@ describe('log sanitization', () => {
     };
     assert.match(attempt('/does-not-exist').message, /\(ERR_SOURCE\)/);
     assert.match(attempt(os.tmpdir()).message, /\(ERR_SOURCE\)/);
-    withLog('secret\0binary', (source, dir) => {
-      // The library rejects NUL bytes rather than guessing at binary content.
-      assert.strictEqual(attempt(source).code, 'ERR_BINARY');
+    withLog('ordinary log', (source, dir) => {
       assert.strictEqual(
         attempt(
           source,

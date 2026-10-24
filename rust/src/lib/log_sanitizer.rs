@@ -25,6 +25,8 @@ const MARKER: &[u8] = b"[REDACTED]";
 const COMMAND: &str = "sensitive-data-sanitizer";
 /// The library version the JavaScript package depends on.
 pub const PACKAGE: &str = "@link-foundation/sensitive-data-sanitizer@^0.12.1";
+/// The oldest release with every option used here (`--allow-binary`).
+pub const MINIMUM_VERSION: (u64, u64, u64) = (0, 12, 1);
 /// Path of the library CLI to use instead of the one on PATH.
 pub const OVERRIDE: &str = "START_SENSITIVE_DATA_SANITIZER";
 const OPTIONS: [&str; 3] = ["--credentials-only", "--env-secrets", "--gh-config"];
@@ -111,11 +113,48 @@ pub fn find_sanitizer() -> Option<PathBuf> {
     resolve(&Environment::Inherit)
 }
 
-/// Install the library CLI with an available JavaScript package manager.
+/// `major.minor.patch` from `--version` output such as `0.12.1`.
+pub fn parse_version(text: &str) -> Option<(u64, u64, u64)> {
+    let mut parts = text.trim().split(['.', '-', '+']);
+    let mut next = || parts.next()?.parse().ok();
+    Some((next()?, next()?, next()?))
+}
+
+fn version_of(program: &Path) -> Option<(u64, u64, u64)> {
+    let output = Command::new(program)
+        .arg("--version")
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    parse_version(&String::from_utf8_lossy(&output.stdout))
+}
+
+/// A CLI that understands every option used here; an explicit override is
+/// used as it is.
+fn current_sanitizer() -> bool {
+    if std::env::var_os(OVERRIDE).is_some_and(|value| !value.is_empty()) {
+        return true;
+    }
+    find_sanitizer()
+        .and_then(|program| version_of(&program))
+        .is_some_and(|version| version >= MINIMUM_VERSION)
+}
+
+/// Install the library CLI with an available JavaScript package manager when
+/// it is missing or older than MINIMUM_VERSION.
 pub fn ensure_sanitizer_available() -> Result<(), String> {
-    if find_sanitizer().is_some() {
+    if current_sanitizer() {
         return Ok(());
     }
+    let state = if find_sanitizer().is_some() {
+        "is older than the required version"
+    } else {
+        "not found"
+    };
     let npm = if cfg!(windows) { "npm.cmd" } else { "npm" };
     for command in ["bun", npm] {
         let available = Command::new(command)
@@ -130,8 +169,9 @@ pub fn ensure_sanitizer_available() -> Result<(), String> {
         }
         let args = ["install", "-g", PACKAGE];
         println!(
-            "{} not found; installing with: {} {}",
+            "{} {}; installing with: {} {}",
             COMMAND,
+            state,
             command,
             args.join(" ")
         );
@@ -140,13 +180,14 @@ pub fn ensure_sanitizer_available() -> Result<(), String> {
             .status()
             .map(|status| status.success())
             .unwrap_or(false);
-        if installed && find_sanitizer().is_some() {
+        if installed && current_sanitizer() {
             return Ok(());
         }
     }
+    let (major, minor, patch) = MINIMUM_VERSION;
     Err(format!(
-        "{} is not installed and automatic installation did not make it available on PATH.",
-        COMMAND
+        "{} {}.{}.{} or later is not installed and automatic installation did not make it available on PATH.",
+        COMMAND, major, minor, patch
     ))
 }
 
@@ -272,6 +313,8 @@ fn log_with(source_path: &Path, env: &Environment, verbose: bool) -> Result<Prep
     let bytes = metadata.len();
     let output = sanitizer_command(env, "Log")?
         .arg("--stream")
+        // A NUL byte in a terminal transcript must not block the upload.
+        .arg("--allow-binary")
         .args(OPTIONS)
         .arg("--max-bytes")
         .arg(bytes.max(1).to_string())
