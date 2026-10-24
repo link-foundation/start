@@ -570,7 +570,7 @@ export function createRegistry({
   return {
     async npm(name) {
       const data = await json(
-        `https://registry.npmjs.org/${name.replace('/', '%2F')}/latest`
+        `https://registry.npmjs.org/${name.replaceAll('/', '%2F')}/latest`
       );
       return data.version;
     },
