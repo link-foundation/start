@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.31.0] - 2026-10-24
+
+Manual minor release.
+
 ## [0.30.0] - 2026-10-24
 
 Upgrade every crate to its latest release: `lino-objects-codec` 0.9.2, `dirs` 7, `sha2` 0.11, `chrono`, `regex`, `serde`, `serde_json`, `uuid`, `libc`, `tempfile`. CI now rejects pull requests whose `Cargo.lock` is behind (#253).
