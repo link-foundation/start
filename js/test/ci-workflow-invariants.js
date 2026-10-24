@@ -504,6 +504,24 @@ describe('CI workflow invariants', () => {
     assert.match(lint.body, /cargo metadata --locked/);
   });
 
+  it('gates pull requests on every dependency being its latest release', () => {
+    // Obsolete dependencies, sensitive-data-sanitizer among them, stayed in
+    // use unnoticed (issue #253).
+    const jsJobs = parseJobs(readWorkflow('js.yml'));
+    const freshness = jsJobs.find((job) => job.name === 'dependency-freshness');
+    assert.ok(freshness, 'js.yml has no dependency-freshness job');
+    assert.match(
+      freshness.body,
+      /scripts\/check-dependency-freshness\.mjs --lockfiles\n/
+    );
+    const status = jsJobs.find((job) => job.name === 'pipeline-status');
+    assert.ok(parseNeeds(status.body).includes('dependency-freshness'));
+    const lint = parseJobs(readWorkflow('rust.yml')).find(
+      (job) => job.name === 'lint'
+    );
+    assert.match(lint.body, /cargo update --dry-run/);
+  });
+
   it('reports a failed Rust test as a failed test, not low coverage', () => {
     // Without pipefail a failing test reached the threshold check as an empty
     // value: "Coverage % is below the 50% threshold" (issue #234).

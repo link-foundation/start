@@ -240,6 +240,21 @@ jobs:
         working-directory: rust
         run: cargo metadata --locked --format-version 1 > /dev/null
 
+      # Every crate in Cargo.lock, transitive ones included, must already be
+      # the newest release Cargo.toml allows (issue #253). Cargo.toml floors
+      # are checked by scripts/check-dependency-freshness.mjs in js.yml; like
+      # that gate, this one applies to pull requests only.
+      - name: Check Cargo.lock has the latest compatible crates
+        if: github.event_name == 'pull_request'
+        working-directory: rust
+        run: |
+          set -o pipefail
+          cargo update --dry-run 2>&1 | tee "$RUNNER_TEMP/cargo-update.txt"
+          if grep -Eq '^ *(Updating|Adding|Removing|Downgrading) [^ ]+ v[0-9]' "$RUNNER_TEMP/cargo-update.txt"; then
+            echo "::error file=rust/Cargo.lock::Cargo.lock is behind the latest compatible crates; run 'cargo update' in rust/"
+            exit 1
+          fi
+
       - name: Check formatting
         working-directory: rust
         run: cargo fmt --all -- --check
