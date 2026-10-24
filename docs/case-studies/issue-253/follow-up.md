@@ -43,6 +43,8 @@ Raw output: [before](data/dense-sanitizer-0.12.1-bounded.txt), [after](data/dens
 
 Command-stream #235 is addressed by the core entry introduced in [2.5.0](https://github.com/link-foundation/command-stream/blob/main/js/CHANGELOG.md), also present in 2.6.0. The same module hook measured **281 modules / 339 ms** for the old full import and **73 modules / 94 ms** for the new core import. Raw output: [before](data/command-stream-2.4.0-import.txt), [after](data/command-stream-2.6.0-core-import.txt). The regression asserts absence of unrelated module families instead of a host-dependent time threshold. Lazy loading still avoids this work unless the command-stream option is used. The full dependency remains installed; the core entry reduces loading cost, not installation size.
 
+A finite [adapter compatibility probe](../../../experiments/issue-253/command-stream-helpers.cjs) also checks both execution helpers, captured stdout/stderr with exit code 7, streaming callbacks, the process runner, command discovery, path lookup and version lookup. All assertions pass on 2.6.0: [raw output](data/command-stream-helpers-2.6.0.txt).
+
 The latest clink [4.0.6](https://github.com/link-foundation/link-cli/releases/tag/csharp-v4.0.6) preserves the corrected record-scoped queries: [probe output](data/clink-queries-4.0.6.txt). The original numeric-reference bug is fixed upstream, but a record-scoped `key=value` link is still needed so records with equal values do not share property links. Reverting the schema after the upstream fix would reintroduce that collision.
 
 ## Compatibility caught in the final diff review
