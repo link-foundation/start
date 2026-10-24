@@ -24,9 +24,9 @@ pub const BLOCK_SIZE: usize = 64 * 1024;
 const MARKER: &[u8] = b"[REDACTED]";
 const COMMAND: &str = "sensitive-data-sanitizer";
 /// The library version the JavaScript package depends on.
-pub const PACKAGE: &str = "@link-foundation/sensitive-data-sanitizer@^0.12.1";
-/// The oldest release with every option used here (`--allow-binary`).
-pub const MINIMUM_VERSION: (u64, u64, u64) = (0, 12, 1);
+pub const PACKAGE: &str = "@link-foundation/sensitive-data-sanitizer@^0.12.2";
+/// Requires control-byte preservation, placeholders and bounded dense scanning.
+pub const MINIMUM_VERSION: (u64, u64, u64) = (0, 12, 2);
 /// Path of the library CLI to use instead of the one on PATH.
 pub const OVERRIDE: &str = "START_SENSITIVE_DATA_SANITIZER";
 const OPTIONS: [&str; 3] = ["--credentials-only", "--env-secrets", "--gh-config"];

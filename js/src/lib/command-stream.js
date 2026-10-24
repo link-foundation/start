@@ -26,7 +26,8 @@ let commandStream = null;
  */
 async function getCommandStream() {
   if (!commandStream) {
-    commandStream = await import('command-stream');
+    // Execution needs no compatibility layers, terminal renderers or REPL.
+    commandStream = await import('command-stream/core');
   }
   return commandStream;
 }

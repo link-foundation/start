@@ -1,3 +1,4 @@
+use sha2::{Digest, Sha256};
 use start_command::log_sanitizer::{
     find_sanitizer, parse_version, sanitize_log_to_temp_with_env, sanitize_text_with_env,
     BLOCK_SIZE, MINIMUM_VERSION, OVERRIDE, PACKAGE,
@@ -109,10 +110,10 @@ const AUTHORIZATION_CASES: &[(&str, &str)] = &[
         "Authorization: token $(gh auth token) and ${GITHUB_TOKEN}",
         "Authorization: token $(gh auth token) and ${GITHUB_TOKEN}",
     ),
-    // The library masks the scheme before a placeholder; nothing is lost.
+    // Since 0.12.2, placeholders and their scheme remain unchanged.
     (
         "Authorization: Bearer <token>",
-        "Authorization: [REDACTED] <token>",
+        "Authorization: Bearer <token>",
     ),
 ];
 
@@ -150,8 +151,54 @@ fn masks_long_authorization_tokens_across_stream_blocks() {
 }
 
 #[test]
+fn preserves_authorization_placeholders_and_control_bytes_when_sanitizing_twice() {
+    let Some(env) = test_env(&[]) else { return };
+    let input = [
+        "Authorization: Bearer [REDACTED] already",
+        "Authorization: Bearer {{token}} x",
+        "Authorization: Bearer <token> x",
+        "Authorization: Bearer $GITHUB_TOKEN x",
+        "Authorization: Bearer abc\0 tail",
+        "Authorization: Bearer abc\x1b[0m tail",
+        r#"{"header":"Authorization: Bearer ab[c]d","next":"keep"}"#,
+    ]
+    .join("\n");
+    let expected = [
+        "Authorization: Bearer [REDACTED] already",
+        // Arbitrary bracketed credentials are removed in full (#50).
+        "Authorization: [REDACTED] x",
+        "Authorization: Bearer <token> x",
+        "Authorization: Bearer $GITHUB_TOKEN x",
+        "Authorization: [REDACTED]\0 tail",
+        "Authorization: [REDACTED]\x1b[0m tail",
+        r#"{"header":"Authorization: [REDACTED]","next":"keep"}"#,
+    ]
+    .join("\n");
+    let output = sanitize_file(input.as_bytes(), env.clone());
+    assert_eq!(output, expected.as_bytes());
+    assert_eq!(sanitize_file(&output, env), output);
+}
+
+#[test]
+fn sanitizes_dense_credentials_without_losing_surrounding_bytes() {
+    let Some(env) = test_env(&[("NODE_OPTIONS", "--max-old-space-size=384")]) else {
+        return;
+    };
+    // Same finite log as the JS regression: about 256 KiB, 5700 secrets.
+    let mut input = String::new();
+    for index in 0..5700 {
+        let token = format!("{:x}", Sha256::digest(index.to_string().as_bytes()));
+        input.push_str(&format!("ghp_{} keep\n", &token[..36]));
+    }
+    let output = sanitize_file(input.as_bytes(), env);
+    let expected = "[REDACTED] keep\n".repeat(5700);
+    // Keep failures value-free and avoid printing an entire credential log.
+    assert_eq!(Sha256::digest(&output), Sha256::digest(expected.as_bytes()));
+}
+
+#[test]
 fn requires_the_sanitizer_release_the_javascript_package_bundles() {
-    assert_eq!(parse_version("0.12.1\n"), Some((0, 12, 1)));
+    assert_eq!(parse_version("0.12.2\n"), Some((0, 12, 2)));
     assert_eq!(parse_version("1.2.3-beta.1"), Some((1, 2, 3)));
     assert_eq!(parse_version("unknown"), None);
     // An older CLI on PATH rejects --allow-binary (ERR_ARGUMENT), so the

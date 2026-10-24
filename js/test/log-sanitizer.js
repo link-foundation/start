@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { createHash } = require('node:crypto');
 const {
   SanitizationError,
   resolveSanitizerCommand,
@@ -166,8 +167,8 @@ describe('log sanitization', () => {
         'Authorization: token $(gh auth token) and ${GITHUB_TOKEN}',
         'Authorization: token $(gh auth token) and ${GITHUB_TOKEN}',
       ],
-      // The library masks the scheme before a placeholder; nothing is lost.
-      ['Authorization: Bearer <token>', 'Authorization: [REDACTED] <token>'],
+      // Since 0.12.2, placeholders and their scheme remain unchanged.
+      ['Authorization: Bearer <token>', 'Authorization: Bearer <token>'],
     ];
     // sensitive-data-sanitizer 0.12.1 does this itself (#45), without the
     // pre-pass start used to run (#253).
@@ -186,6 +187,65 @@ describe('log sanitization', () => {
       'Authorization: [REDACTED] tail\nordinary\n'
     );
   });
+
+  it('preserves Authorization placeholders and control bytes when sanitizing twice (#253)', () => {
+    const input = [
+      'Authorization: Bearer [REDACTED] already',
+      'Authorization: Bearer {{token}} x',
+      'Authorization: Bearer <token> x',
+      'Authorization: Bearer $GITHUB_TOKEN x',
+      'Authorization: Bearer abc\0 tail',
+      'Authorization: Bearer abc\x1b[0m tail',
+      '{"header":"Authorization: Bearer ab[c]d","next":"keep"}',
+    ].join('\n');
+    const expected = [
+      'Authorization: Bearer [REDACTED] already',
+      // Arbitrary bracketed values are credentials; known references above
+      // stay intact, but every bracket of this value must be removed (#50).
+      'Authorization: [REDACTED] x',
+      'Authorization: Bearer <token> x',
+      'Authorization: Bearer $GITHUB_TOKEN x',
+      'Authorization: [REDACTED]\0 tail',
+      'Authorization: [REDACTED]\x1b[0m tail',
+      '{"header":"Authorization: [REDACTED]","next":"keep"}',
+    ].join('\n');
+    const output = sanitizeFile(input);
+    assert.strictEqual(output.toString(), expected);
+    assert.deepStrictEqual(sanitizeFile(output), output);
+  });
+
+  it(
+    'sanitizes dense credentials within a bounded process (#253, sanitizer #51)',
+    { timeout: 25000 },
+    () => {
+      const count = 5700;
+      const input = Array.from({ length: count }, (_, index) => {
+        const token = createHash('sha256').update(String(index)).digest('hex');
+        return `gh${'p_'}${token.slice(0, 36)} keep\n`;
+      }).join('');
+      const { command, args } = resolveSanitizerCommand({});
+      const output = execFileSync(
+        command,
+        [
+          '--max-old-space-size=384',
+          ...args,
+          'redact',
+          '-',
+          '--stream',
+          '--credentials-only',
+          '--allow-binary',
+        ],
+        {
+          input,
+          env: testEnv(),
+          timeout: 20000,
+          killSignal: 'SIGKILL',
+          maxBuffer: 1024 * 1024,
+        }
+      );
+      assert.strictEqual(output.toString(), '[REDACTED] keep\n'.repeat(count));
+    }
+  );
 
   it('preserves invalid UTF-8 bytes, NUL bytes and line endings', () => {
     const input = Buffer.concat([

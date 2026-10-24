@@ -8,10 +8,40 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 const CLI = path.join(__dirname, '../src/bin/cli.js');
 
 describe('--use-command-stream log (#253)', () => {
+  it('loads execution without compatibility and terminal modules', () => {
+    const wrapper = pathToFileURL(
+      path.join(__dirname, '../src/lib/command-stream.js')
+    ).href;
+    const result = spawnSync(
+      'node',
+      [
+        '--input-type=module',
+        '-e',
+        `import { registerHooks } from 'node:module';
+         import assert from 'node:assert/strict';
+         const extras = [];
+         registerHooks({ load(url, context, next) {
+           if (/command-stream\\/src\\/(shelljs|terminal|rust-repl)/.test(url)) extras.push(url);
+           return next(url, context);
+         }});
+         const { default: wrapper } = await import(${JSON.stringify(wrapper)});
+         const core = await wrapper.getCommandStream();
+         assert.equal(typeof core.$, 'function');
+         assert.equal(typeof core.ProcessRunner, 'function');
+         assert.deepEqual(extras, []);`,
+      ],
+      { encoding: 'utf8', timeout: 30000 }
+    );
+    expect(result.error).toBeUndefined();
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+  });
+
   it.skipIf(process.platform === 'win32')(
     'writes stdout and stderr to the log file',
     () => {

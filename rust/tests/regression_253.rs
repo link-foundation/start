@@ -12,6 +12,40 @@ use std::process::Command;
 
 const UUID: &str = "4df9d19e-da50-4a7b-9e97-2c4f15b35a88";
 
+#[test]
+#[cfg(unix)]
+fn command_stream_mode_keeps_stdout_and_stderr_in_the_log() {
+    // Rust uses its native runner for this flag. Keep the observable contract
+    // alongside JavaScript's lightweight command-stream/core integration.
+    let root = tempfile::tempdir().unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_start"))
+        .args([
+            "--use-command-stream",
+            "--",
+            "sh",
+            "-c",
+            "echo out-253; echo err-253 >&2",
+        ])
+        .env("START_APP_FOLDER", root.path().join("app"))
+        .env("START_LOG_DIR", root.path().join("logs"))
+        .env("START_DISABLE_AUTO_ISSUE", "1")
+        .env("START_DISABLE_LOG_UPLOAD", "1")
+        .env_remove("START_EXECUTION_ID")
+        .env_remove("START_ATTEMPT")
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{output:?}");
+    let log = std::fs::read_dir(root.path().join("logs/direct"))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let content = std::fs::read_to_string(log).unwrap();
+    assert!(content.contains("out-253\n"), "{content}");
+    assert!(content.contains("err-253\n"), "{content}");
+}
+
 fn make_store(use_links: bool) -> (tempfile::TempDir, ExecutionStore) {
     let temp_dir = tempfile::TempDir::new().unwrap();
     let store = ExecutionStore::with_options(ExecutionStoreOptions {

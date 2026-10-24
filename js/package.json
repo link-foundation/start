@@ -68,8 +68,8 @@
     ]
   },
   "dependencies": {
-    "@link-foundation/sensitive-data-sanitizer": "^0.12.1",
-    "command-stream": "^2.4.0",
+    "@link-foundation/sensitive-data-sanitizer": "^0.12.2",
+    "command-stream": "^2.6.0",
     "lino-objects-codec": "^0.9.3"
   },
   "overrides": {
