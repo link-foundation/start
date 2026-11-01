@@ -85,9 +85,7 @@
         "status": "completed",
         "exitCode": 2,
         "message": "finished; the last tool call exited with 2",
-        "remainingObligations": [
-          "the last tool call failed"
-        ]
+        "remainingObligations": ["the last tool call failed"]
       }
     },
     {
@@ -216,9 +214,7 @@
         "status": "completed",
         "exitCode": 2,
         "message": "finished; the last tool call exited with 2",
-        "remainingObligations": [
-          "the last tool call failed"
-        ]
+        "remainingObligations": ["the last tool call failed"]
       }
     },
     {
@@ -735,9 +731,7 @@
         "status": "unsupported",
         "exitCode": 65,
         "message": "Formal AI did not understand the request; no tool ran",
-        "remainingObligations": [
-          "rephrase the request or perform it manually"
-        ]
+        "remainingObligations": ["rephrase the request or perform it manually"]
       }
     },
     {
