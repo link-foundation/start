@@ -672,16 +672,17 @@ mod tests {
                 .expect("must fail");
             assert!(error.contains(message), "{} !~ {}", error, message);
         }
-        let runtime = start_runtime(
+        let runtime = match start_runtime(
             &env(&[
                 ("START_FORMAL_AI_URL", "http://127.0.0.1:9/"),
                 ("START_FORMAL_AI_ALLOW_UNVERIFIED", "1"),
             ]),
             &bounds,
             &never,
-        )
-        .ok()
-        .expect("unverified URL allowed");
+        ) {
+            Ok(runtime) => runtime,
+            Err(error) => panic!("unverified URL must be allowed: {}", error),
+        };
         assert_eq!(runtime.base_url, "http://127.0.0.1:9");
     }
 }

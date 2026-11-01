@@ -9,7 +9,9 @@
 
 use super::*;
 use crate::formal_ai_client::{ClientError, Completion, CompletionClient, HttpClient};
-use crate::formal_ai_policy::formal_ai_policy_cases::{populate, receipt_fixture};
+#[cfg(unix)]
+use crate::formal_ai_policy::formal_ai_policy_cases::populate;
+use crate::formal_ai_policy::formal_ai_policy_cases::receipt_fixture;
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
 use std::fs;
