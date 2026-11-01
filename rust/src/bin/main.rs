@@ -29,6 +29,7 @@ use start_command::{
         ExecutionRecord, ExecutionRecordOptions, ExecutionStore, ExecutionStoreOptions,
     },
     failure_handler::{handle_failure, Config as FailureConfig},
+    formal_ai_cli::{request_text, run_formal_ai_cli, CliOptions},
     get_timestamp,
     isolation::{run_as_isolated_user, run_isolated, IsolationOptions},
     launch_identity::{
@@ -44,6 +45,7 @@ use start_command::{
         create_isolated_user, delete_user, get_current_user_groups, has_sudo_access,
         CreateIsolatedUserOptions, DeleteUserOptions,
     },
+    version_info::print_version,
     LogHeaderParams,
 };
 use start_command::{eprintln, println};
@@ -224,6 +226,22 @@ fn main() {
         process::exit(1);
     }
 
+    // A --use-formal-ai request is only ever read by Formal AI (issue #255).
+    if wrapper_options.use_formal_ai {
+        let cwd = env::current_dir().unwrap_or_default();
+        let store = config.create_execution_store();
+        let get_env = |name: &str| env::var(name).ok();
+        process::exit(run_formal_ai_cli(&CliOptions {
+            request: &request_text(&parsed.raw_command),
+            session_id: &session_id,
+            launch: &launch,
+            store: store.as_ref(),
+            verbose: config.verbose,
+            cwd: &cwd,
+            get_env: &get_env,
+        }));
+    }
+
     // Process through substitution engine (unless disabled)
     let mut command = parsed_command.clone();
     let mut substitution_result = None;
@@ -270,89 +288,6 @@ fn main() {
             &launch,
         );
     }
-}
-
-/// Print version information
-fn print_version(verbose: bool) {
-    let version = env!("CARGO_PKG_VERSION");
-    println!("start-command version: {} (Rust)", version);
-    println!();
-
-    println!("OS: {}", std::env::consts::OS);
-    println!("Architecture: {}", std::env::consts::ARCH);
-    println!();
-
-    // Check for installed isolation tools
-    println!("Isolation tools:");
-
-    if verbose {
-        println!("[verbose] Checking isolation tools...");
-    }
-
-    // Check screen
-    if let Some(version) = get_tool_version("screen", "-v", verbose) {
-        println!("  screen: {}", version);
-    } else {
-        println!("  screen: not installed");
-    }
-
-    // Check tmux
-    if let Some(version) = get_tool_version("tmux", "-V", verbose) {
-        println!("  tmux: {}", version);
-    } else {
-        println!("  tmux: not installed");
-    }
-
-    // Check docker
-    if let Some(version) = get_tool_version("docker", "--version", verbose) {
-        println!("  docker: {}", version);
-    } else {
-        println!("  docker: not installed");
-    }
-}
-
-/// Get version of an installed tool
-fn get_tool_version(tool_name: &str, version_flag: &str, verbose: bool) -> Option<String> {
-    let which_cmd = if cfg!(windows) { "where" } else { "which" };
-
-    // Check if tool exists
-    let exists = Command::new(which_cmd)
-        .arg(tool_name)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false);
-
-    if !exists {
-        if verbose {
-            println!("[verbose] {}: not found in PATH", tool_name);
-        }
-        return None;
-    }
-
-    // Get version
-    let output = Command::new(tool_name).arg(version_flag).output().ok()?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let combined = format!("{}{}", stdout, stderr).trim().to_string();
-
-    if verbose {
-        println!(
-            "[verbose] {} {}: exit={}, output=\"{}\"",
-            tool_name,
-            version_flag,
-            output.status.code().unwrap_or(-1),
-            &combined[..100.min(combined.len())]
-        );
-    }
-
-    if combined.is_empty() {
-        return None;
-    }
-
-    combined.lines().next().map(String::from)
 }
 
 /// Run command with isolation

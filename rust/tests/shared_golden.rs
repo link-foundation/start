@@ -104,7 +104,7 @@ fn cli_parsing_matches_shared_goldens() {
             "snapshotSizeHint": options.snapshot.size_hint, "snapshotPrepare": options.snapshot.prepare,
             "removeOriginal": options.remove_original, "cleanup": options.cleanup,
             "cleanupDryRun": options.cleanup_dry_run, "cleanupTarget": options.cleanup_target,
-            "init": options.init});
+            "init": options.init, "useFormalAi": options.use_formal_ai});
         for (key, expected) in fixture["options"].as_object().unwrap() {
             assert_eq!(&observed[key], expected, "{}: {}", fixture["name"], key);
         }

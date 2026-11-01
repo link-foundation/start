@@ -27,7 +27,8 @@
           "rust/src/lib/mod.rs",
           "rust/src/lib/usage.rs",
           "rust/src/lib/atty.rs",
-          "rust/src/lib/signal_handler.rs"
+          "rust/src/lib/signal_handler.rs",
+          "rust/src/lib/version_info.rs"
         ],
         "tests": [
           "rust/tests/integration.rs",
@@ -97,6 +98,20 @@
         },
         {
           "path": "rust/src/lib/signal_handler.rs",
+          "reason": "Native filesystem/process adapter for cli; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/version_info.rs",
           "reason": "Native filesystem/process adapter for cli; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
           "blockers": [
             "https://github.com/link-foundation/meta-language/issues/222",
@@ -2670,6 +2685,156 @@
           "source": "js/src/lib/failure-handler.js",
           "line": 95,
           "issue": "https://github.com/link-foundation/meta-language/issues/212"
+        }
+      ]
+    },
+    {
+      "id": "formal-ai",
+      "javascript": {
+        "implementation": [
+          "js/src/lib/formal-ai.js",
+          "js/src/lib/formal-ai-cli.js",
+          "js/src/lib/formal-ai-client.js",
+          "js/src/lib/formal-ai-policy.js",
+          "js/src/lib/formal-ai-runtime.js",
+          "js/src/lib/formal-ai-tool.js"
+        ],
+        "tests": [
+          "js/test/regression-255-policy.js",
+          "js/test/regression-255-loop.js",
+          "js/test/regression-255-cli.js",
+          "js/test/regression-255-e2e.js"
+        ]
+      },
+      "rust": {
+        "implementation": [
+          "rust/src/lib/formal_ai.rs",
+          "rust/src/lib/formal_ai_cli.rs",
+          "rust/src/lib/formal_ai_client.rs",
+          "rust/src/lib/formal_ai_policy.rs",
+          "rust/src/lib/formal_ai_runtime.rs",
+          "rust/src/lib/formal_ai_tool.rs",
+          "rust/src/lib/formal_ai_cases.rs",
+          "rust/src/lib/formal_ai_policy_cases.rs"
+        ],
+        "tests": [
+          "rust/tests/regression_255.rs",
+          "rust/src/lib/formal_ai_cases.rs",
+          "rust/src/lib/formal_ai_policy_cases.rs"
+        ]
+      },
+      "manualRust": [
+        {
+          "path": "rust/src/lib/formal_ai.rs",
+          "reason": "Typed native representation and control flow for formal-ai; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/formal_ai_cli.rs",
+          "reason": "Native filesystem/process adapter for formal-ai; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/formal_ai_client.rs",
+          "reason": "Native filesystem/process adapter for formal-ai; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/formal_ai_policy.rs",
+          "reason": "Native filesystem/process adapter for formal-ai; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/formal_ai_runtime.rs",
+          "reason": "Native filesystem/process adapter for formal-ai; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/formal_ai_tool.rs",
+          "reason": "Native filesystem/process adapter for formal-ai; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/formal_ai_cases.rs",
+          "reason": "Native filesystem/process adapter for formal-ai; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/formal_ai_policy_cases.rs",
+          "reason": "Native filesystem/process adapter for formal-ai; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
         }
       ]
     },

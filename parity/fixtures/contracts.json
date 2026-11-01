@@ -277,6 +277,55 @@
         "resume": "fixture-session",
         "memoryReservation": "32m"
       }
+    },
+    {
+      "name": "--use-formal-ai request text (issue #255)",
+      "argv": [
+        "--use-formal-ai",
+        "--",
+        "print",
+        "list",
+        "--isolated",
+        "--help"
+      ],
+      "command": "print list --isolated --help",
+      "rawCommand": [
+        "print",
+        "list",
+        "--isolated",
+        "--help"
+      ],
+      "options": {
+        "useFormalAi": true,
+        "isolated": null,
+        "detached": false
+      }
+    },
+    {
+      "name": "--use-formal-ai with --isolated (issue #255)",
+      "argv": [
+        "--use-formal-ai",
+        "--isolated",
+        "docker",
+        "--",
+        "ls"
+      ],
+      "error": "--use-formal-ai cannot be combined with --isolated"
+    },
+    {
+      "name": "--use-formal-ai is off by default (issue #255)",
+      "argv": [
+        "ls",
+        "--use-formal-ai"
+      ],
+      "command": "ls --use-formal-ai",
+      "rawCommand": [
+        "ls",
+        "--use-formal-ai"
+      ],
+      "options": {
+        "useFormalAi": false
+      }
     }
   ],
   "isolation-arguments": [

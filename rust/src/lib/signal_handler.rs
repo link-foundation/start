@@ -13,6 +13,15 @@ use crate::execution_store::{ExecutionRecord, ExecutionStore};
 static SIGNAL_RECEIVED: AtomicBool = AtomicBool::new(false);
 static SIGNAL_EXIT_CODE: AtomicI32 = AtomicI32::new(0);
 static CURRENT_EXECUTION: Mutex<Option<(ExecutionRecord, ExecutionStore)>> = Mutex::new(None);
+// When set, a signal only records its exit code; the running code polls
+// `was_signal_received()` and finishes itself (`--use-formal-ai`, issue #255,
+// which must stop its tool's process group and its runtime before exiting).
+static DEFERRED: AtomicBool = AtomicBool::new(false);
+
+/// Make signals only record their exit code (true) or exit at once (false).
+pub fn set_deferred_signals(deferred: bool) {
+    DEFERRED.store(deferred, Ordering::SeqCst);
+}
 
 /// Check if a signal has been received
 #[allow(dead_code)]
@@ -56,6 +65,9 @@ extern "C" fn signal_handler(sig: i32) {
     let exit_code = 128 + sig;
     SIGNAL_EXIT_CODE.store(exit_code, Ordering::SeqCst);
     SIGNAL_RECEIVED.store(true, Ordering::SeqCst);
+    if DEFERRED.load(Ordering::SeqCst) {
+        return;
+    }
 
     // Try to clean up the current execution record
     cleanup_execution_on_signal(sig, exit_code);

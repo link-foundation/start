@@ -223,7 +223,9 @@ if (!isQueryMode && (!parsedCommand || parsedCommand.trim() === '')) {
 let command = parsedCommand;
 let substitutionResult = null;
 
-if (!config.disableSubstitutions && parsedCommand && parsedCommand.trim()) {
+// A --use-formal-ai request is only ever read by Formal AI (issue #255).
+const useFormalAi = wrapperOptions.useFormalAi;
+if (!config.disableSubstitutions && !useFormalAi && parsedCommand?.trim()) {
   substitutionResult = processCommand(parsedCommand, {
     customLinoPath: config.substitutionsPath,
     verbose: config.verbose,
@@ -269,6 +271,14 @@ let launch = null;
   } catch (error) {
     console.error(`Error: ${error.message}`);
     process.exit(1);
+  }
+  if (useFormalAi) {
+    const { requestText, runFormalAiCli } = require('../lib/formal-ai-cli');
+    const request = requestText(parsedArgs.rawCommand);
+    const store = getExecutionStore();
+    process.exit(
+      await runFormalAiCli({ request, sessionId, launch, store, config })
+    );
   }
 
   if (wrapperOptions.isolated === 'docker') {

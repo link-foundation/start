@@ -1,0 +1,132 @@
+### $ --use-formal-ai -- print list of files in current directory
+│ session   ab23612b-8732-4432-8eb4-ecfe71b7bbe8
+│ start     2026-11-01 15:53:05.714
+│
+$ --use-formal-ai -- print list of files in current directory
+
+README.md
+a b.txt
+docs
+notes.txt
+sub dir
+ünï cødé.md
+
+✓
+│ finish    2026-11-01 15:53:12.028
+│ duration  6.314s
+│ exit      0
+│
+│ log       /tmp/start-formal-ai-demo.F88x5f/logs/direct/ab23612b-8732-4432-8eb4-ecfe71b7bbe8.log
+│ session   ab23612b-8732-4432-8eb4-ecfe71b7bbe8
+stderr: [formal-ai] runtime: formal-ai 0.355.27 (4d57ec7bda82, js server js/server/main.mjs, node v26.13.0)
+stderr: [formal-ai] effects: read-only
+stderr: [formal-ai] $ ls
+stderr: [formal-ai] The `ls` command completed. Output:
+stderr: [formal-ai]
+stderr: [formal-ai] ```text
+stderr: [formal-ai] README.md
+stderr: [formal-ai] a b.txt
+stderr: [formal-ai] docs
+stderr: [formal-ai] notes.txt
+stderr: [formal-ai] sub dir
+stderr: [formal-ai] ünï cødé.md
+stderr: [formal-ai] ```
+stderr: [formal-ai] completed: finished after 1 tool call(s); no file changed
+### exit status: 0
+### listing matches an independent ls -1A
+### fixture unchanged (names, types, sizes and mtimes)
+### evidence from /tmp/start-formal-ai-demo.F88x5f/logs/direct/ab23612b-8732-4432-8eb4-ecfe71b7bbe8.log
+=== Formal AI Evidence ===
+{
+  "schema": "start-formal-ai-evidence/1",
+  "sessionId": "ab23612b-8732-4432-8eb4-ecfe71b7bbe8",
+  "runtime": {
+    "source": "checkout",
+    "root": "/tmp/formal-ai-0.355.27",
+    "entry": "js/server/main.mjs",
+    "version": "0.355.27",
+    "engineVersion": "0.352.1",
+    "commit": "4d57ec7bda82f23da1de73e67fea6ce1f62b2c0c",
+    "dirty": false,
+    "node": "node",
+    "nodeVersion": "v26.13.0",
+    "memory": "private",
+    "port": 41775
+  },
+  "request": "print list of files in current directory",
+  "cwd": "/tmp/start-formal-ai-demo.F88x5f/fixture",
+  "effectsMode": "read-only",
+  "bounds": {
+    "maxSteps": 8,
+    "maxRetries": 1,
+    "timeoutMs": 120000,
+    "toolTimeoutMs": 30000,
+    "startupTimeoutMs": 30000,
+    "maxOutputBytes": 65536,
+    "maxRequestChars": 4096,
+    "maxMemoryMb": 1024,
+    "maxFingerprintEntries": 5000,
+    "effects": "read-only"
+  },
+  "steps": [
+    {
+      "kind": "response",
+      "turn": 1,
+      "finishReason": "tool_calls",
+      "handler": null,
+      "content": "Let me run the requested command to get that for you.",
+      "toolCalls": [
+        "ls"
+      ]
+    },
+    {
+      "kind": "tool",
+      "command": "ls",
+      "argv": [
+        "ls"
+      ],
+      "decision": "allowed",
+      "effect": "read",
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 9,
+      "truncated": false,
+      "spawnError": null,
+      "stdout": "README.md\na b.txt\ndocs\nnotes.txt\nsub dir\nünï cødé.md\n",
+      "stderr": "",
+      "effects": {
+        "added": [],
+        "removed": [],
+        "changed": [],
+        "complete": true
+      }
+    },
+    {
+      "kind": "response",
+      "turn": 2,
+      "finishReason": "stop",
+      "handler": null,
+      "content": "The `ls` command completed. Output:\n\n```text\nREADME.md\na b.txt\ndocs\nnotes.txt\nsub dir\nünï cødé.md\n```",
+      "toolCalls": []
+    }
+  ],
+  "effects": {
+    "added": [],
+    "removed": [],
+    "changed": [],
+    "complete": true
+  },
+  "outcome": {
+    "status": "completed",
+    "exitCode": 0,
+    "message": "finished after 1 tool call(s); no file changed",
+    "remainingObligations": []
+  },
+  "formalAiRequests": 2,
+  "durationMs": 6314
+}
+
+==================================================
+Finished: 2026-11-01 15:53:12.028
+Exit Code: 0

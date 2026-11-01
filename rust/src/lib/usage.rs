@@ -58,6 +58,7 @@ Options:
   --keep-container-on-fail  Remove successful docker containers, keep failed or OOM-killed ones
   --shell <shell>       Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
   --use-command-stream  Use command-stream library for execution (experimental)
+  --use-formal-ai       Perform a natural-language request through Formal AI (experimental)
   --status <id>         Show status of execution by UUID or session name (--output-format: links-notation|json|text)
   --list                List all tracked executions (--output-format: links-notation|json|text)
   --running             With --list, only report executions that are still running
@@ -118,6 +119,7 @@ Examples:
   start -i docker -d --on-kill-resume 3 --on-kill-resume-delay 30-90 -- cargo test
   start --cleanup-dry-run
   start --cleanup
+  start --use-formal-ai -- print list of files in current directory
 
 Features:
   - Logs all output to temporary directory

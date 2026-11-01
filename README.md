@@ -99,6 +99,25 @@ $ install requests python package               # -> pip install requests
 
 If no pattern matches, the command is executed as-is.
 
+### Natural Language Tasks with Formal AI (experimental)
+
+`--use-formal-ai` sends a request to a local
+[Formal AI](https://github.com/link-assistant/formal-ai) runtime. Formal AI
+chooses the tool calls, and start runs them without a shell, under a
+read-only effect policy and within strict limits:
+
+```bash
+git clone https://github.com/link-assistant/formal-ai.git ~/formal-ai
+export START_FORMAL_AI_ROOT=~/formal-ai
+$ --use-formal-ai -- print list of files in current directory
+```
+
+The mode is opt-in and never falls back to aliases, a shell or an LLM. Without
+a qualified runtime (Formal AI 0.355.27 or newer), it exits `69` and runs
+nothing. Each run writes evidence to its log, and the log is never uploaded.
+See [docs/formal-ai.md](docs/formal-ai.md) for the supported tools, exit
+statuses, resource controls and examples.
+
 ## Features
 
 ### Natural Language Aliases (Links Notation)
@@ -853,8 +872,7 @@ opts one launch out. The default stays off, so a command that supervises its
 own children keeps today's behaviour. One visible difference: `--stop` sends
 `SIGTERM`, which tini passes on. A command that does not handle `SIGTERM` then
 ends at once with exit code 143. Without `--init` the kernel drops that signal
-for PID 1, so Docker kills the container after its grace period, with exit code
-137.
+for PID 1, so Docker kills the container after its grace period, with exit code 137.
 
 ```bash
 $ -i docker --init -d --image alpine:3.23 -- my-long-running-task
@@ -927,16 +945,16 @@ bun install -g gh-upload-log
 
 The following environment variables can be used to customize behavior:
 
-| Variable                      | Description                                                    |
-| ----------------------------- | -------------------------------------------------------------- |
-| `START_DISABLE_AUTO_ISSUE`    | Set to `1` or `true` to disable automatic issue creation       |
-| `START_DISABLE_LOG_UPLOAD`    | Set to `1` or `true` to disable log upload                     |
-| `START_LOG_DIR`               | Custom directory for log files (defaults to OS temp directory) |
-| `START_VERBOSE`               | Set to `1` or `true` for verbose output                        |
-| `START_DISABLE_SUBSTITUTIONS` | Set to `1` or `true` to disable pattern matching/aliases       |
-| `START_SUBSTITUTIONS_PATH`    | Custom path to substitutions.lino file                         |
+| Variable                                       | Description                                                                                    |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `START_DISABLE_AUTO_ISSUE`                     | Set to `1` or `true` to disable automatic issue creation                                       |
+| `START_DISABLE_LOG_UPLOAD`                     | Set to `1` or `true` to disable log upload                                                     |
+| `START_LOG_DIR`                                | Custom directory for log files (defaults to OS temp directory)                                 |
+| `START_VERBOSE`                                | Set to `1` or `true` for verbose output                                                        |
+| `START_DISABLE_SUBSTITUTIONS`                  | Set to `1` or `true` to disable pattern matching/aliases                                       |
+| `START_SUBSTITUTIONS_PATH`                     | Custom path to substitutions.lino file                                                         |
 | `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS` | Docker cgroup sample interval in positive whole seconds (default `5`); `off` disables sampling |
-| `START_COMMAND_DOCKER_INIT`   | Set to `1` or `true` to launch every docker task with `--init` (`--no-init` overrides it) |
+| `START_COMMAND_DOCKER_INIT`                    | Set to `1` or `true` to launch every docker task with `--init` (`--no-init` overrides it)      |
 
 Example:
 

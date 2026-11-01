@@ -63,6 +63,9 @@ describe('shared JavaScript and Rust golden contracts', () => {
       assert.equal(parsed.command, fixture.command);
       assert.deepEqual(parsed.rawCommand, fixture.rawCommand);
       for (const [key, value] of Object.entries(fixture.options)) {
+        // Rust observes an explicit option list (rust/tests/shared_golden.rs),
+        // so a fixture may only name options both editions define (#255).
+        assert.ok(key in parsed.wrapperOptions, `unknown option ${key}`);
         assert.deepEqual(parsed.wrapperOptions[key], value, key);
       }
       if (fixture.dockerResourceLimits) {

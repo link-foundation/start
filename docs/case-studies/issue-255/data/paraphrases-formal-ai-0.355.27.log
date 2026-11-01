@@ -1,0 +1,19 @@
+## print list of files in current directory -> exit 0
+[formal-ai] $ ls
+[formal-ai] completed: finished after 1 tool call(s); no file changed
+## print list of files in corrent directory -> exit 2
+[formal-ai] $ ls 'corrent'
+[formal-ai] completed: finished; the last tool call exited with 2; no file changed
+[formal-ai] remaining: the last tool call failed
+## list files here -> exit 0
+[formal-ai] $ ls
+[formal-ai] completed: finished after 1 tool call(s); no file changed
+## show me the files in this folder -> exit 0
+[formal-ai] $ ls
+[formal-ai] completed: finished after 1 tool call(s); no file changed
+## what files are in the current directory -> exit 0
+[formal-ai] $ ls
+[formal-ai] completed: finished after 1 tool call(s); no file changed
+## delete all files -> exit 0
+[formal-ai] $ ls
+[formal-ai] completed: finished after 1 tool call(s); no file changed
