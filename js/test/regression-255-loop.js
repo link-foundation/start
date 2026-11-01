@@ -268,6 +268,9 @@ describe('--use-formal-ai refusals and unsupported requests (#255)', () => {
     for (const request of [
       'book me a flight to Paris',
       'an request nobody recorded',
+      // Request text never reaches an inherited method of the stand-in.
+      'constructor',
+      'toString',
     ]) {
       const result = await run(request);
       expect(result.outcome.status).toBe('unsupported');

@@ -33,44 +33,51 @@ function toolCall(command, id = `call_${Math.random().toString(16).slice(2)}`) {
 
 const answer = (content) => ({ role: 'assistant', content });
 
-/** SYNTHETIC scenarios: request -> (assistantTurns, messages) -> message|status */
-const SYNTHETIC = {
-  // Never stops asking for more reads: exhausts the step budget.
-  'synthetic: loop forever': () => toolCall('pwd'),
-  // A tool start must not run.
-  'synthetic: call an unknown tool': () => ({
-    role: 'assistant',
-    content: '',
-    tool_calls: [
-      {
-        id: 'call_x',
-        type: 'function',
-        function: { name: 'python', arguments: '{"code":"1"}' },
-      },
-    ],
-  }),
-  // A long-running read (a fake `cat` from the test PATH sleeps).
-  'synthetic: read slowly': (turns) =>
-    turns === 0 ? toolCall('cat slow.txt') : answer('done'),
-  // A tool that does not exist on PATH.
-  'synthetic: run a missing tool': (turns) =>
-    turns === 0 ? toolCall('tree') : answer('The `tree` command failed.'),
-  // Writes outside the observed workspace.
-  'synthetic: overwrite without looking': () => toolCall('touch README.md'),
-  'synthetic: write outside': () => toolCall('touch ../escape.txt'),
-  // A server error on every request.
-  'synthetic: server error': () => 500,
-  // A write that claims success but leaves no trace (fake `mkdir` on PATH).
-  'synthetic: unverified mkdir': (turns) =>
-    turns === 0 ? toolCall('test ! -e out') : toolCall('mkdir out'),
-};
+/**
+ * SYNTHETIC scenarios: request -> (assistantTurns, messages) -> message|status.
+ * A Map, so request text such as `constructor` or `toString` never reaches an
+ * inherited Object.prototype method.
+ */
+const SYNTHETIC = new Map(
+  Object.entries({
+    // Never stops asking for more reads: exhausts the step budget.
+    'synthetic: loop forever': () => toolCall('pwd'),
+    // A tool start must not run.
+    'synthetic: call an unknown tool': () => ({
+      role: 'assistant',
+      content: '',
+      tool_calls: [
+        {
+          id: 'call_x',
+          type: 'function',
+          function: { name: 'python', arguments: '{"code":"1"}' },
+        },
+      ],
+    }),
+    // A long-running read (a fake `cat` from the test PATH sleeps).
+    'synthetic: read slowly': (turns) =>
+      turns === 0 ? toolCall('cat slow.txt') : answer('done'),
+    // A tool that does not exist on PATH.
+    'synthetic: run a missing tool': (turns) =>
+      turns === 0 ? toolCall('tree') : answer('The `tree` command failed.'),
+    // Writes outside the observed workspace.
+    'synthetic: overwrite without looking': () => toolCall('touch README.md'),
+    'synthetic: write outside': () => toolCall('touch ../escape.txt'),
+    // A server error on every request.
+    'synthetic: server error': () => 500,
+    // A write that claims success but leaves no trace (fake `mkdir` on PATH).
+    'synthetic: unverified mkdir': (turns) =>
+      turns === 0 ? toolCall('test ! -e out') : toolCall('mkdir out'),
+  })
+);
 
 function reply(body) {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const request = (messages.find((m) => m.role === 'user') || {}).content || '';
   const turns = messages.filter((m) => m.role === 'assistant').length;
-  if (SYNTHETIC[request]) {
-    return SYNTHETIC[request](turns, messages);
+  const scenario = SYNTHETIC.get(request);
+  if (scenario) {
+    return scenario(turns, messages);
   }
   const receipt = receipts.find((r) => r.request === request);
   if (receipt && receipt.responses[turns]) {
