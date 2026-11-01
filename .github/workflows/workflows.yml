@@ -51,7 +51,7 @@ jobs:
       - name: Install native actionlint and Pyflakes
         run: |
           command -v shellcheck
-          python -m pip install --user pyflakes==4.0.3
+          python -m pip install --user pyflakes==4.1.0
           bash scripts/install-actionlint.sh "$RUNNER_TEMP/actionlint-bin"
           echo "$RUNNER_TEMP/actionlint-bin" >> "$GITHUB_PATH"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"

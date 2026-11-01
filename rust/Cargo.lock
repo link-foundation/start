@@ -289,9 +289,9 @@ dependencies = [
 
 [[package]]
 name = "lino-objects-codec"
-version = "0.9.2"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40411ca24d58f0b82ccf837b15f9ded7f2f29ed8daec37482d850b23eab2c3dc"
+checksum = "dcaeffb8d4a7dbcaad338ea6e84242c4b786ebce803ea8d8675403490f734389"
 dependencies = [
  "base64",
  "links-notation",
