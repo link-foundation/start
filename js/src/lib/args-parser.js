@@ -27,6 +27,7 @@
  * --keep-container-on-fail         Remove successful docker containers, keep failed or OOM-killed ones
  * --shell <shell>                  Shell to use in isolation environments: auto, bash, zsh, sh (default: auto)
  * --use-command-stream             Use command-stream library for command execution (experimental)
+ * --use-formal-ai                  Perform a natural-language request through Formal AI (experimental)
  * --verbose                        Enable verbose/debug output (sets START_VERBOSE=1)
  * --status <uuid>                  Show status of a previous command execution by UUID
  * --list [--running]               List all (or only running) tracked command executions
@@ -55,6 +56,7 @@ const { parseSequence, isSequence } = require('./sequence-parser');
 const { buildCommandString } = require('./shell-utils');
 const {
   VALID_OUTPUT_FORMATS,
+  activeQueryModes,
   createQueryOptionDefaults,
   parseQueryOption,
   validateQueryOptions,
@@ -220,6 +222,7 @@ function parseArgs(args) {
     keepContainerOnFail: false, // Keep docker container filesystem when command fails or OOM-kills
     shell: 'auto', // Shell to use in isolation environments: auto, bash, zsh, sh
     useCommandStream: false, // Use command-stream library for command execution
+    useFormalAi: false, // Natural-language request performed through Formal AI (issue #255)
     ...createQueryOptionDefaults(),
     ...snapshotResumeOptions.createSnapshotOptionDefaults(),
     ...launchIdentityOptions.createLaunchIdentityOptionDefaults(),
@@ -557,6 +560,11 @@ function parseOption(args, index, options) {
     return 1;
   }
 
+  if (arg === '--use-formal-ai') {
+    options.useFormalAi = true;
+    return 1;
+  }
+
   // --verbose (enable verbose/debug output, sets START_VERBOSE env var)
   if (arg === '--verbose') {
     process.env.START_VERBOSE = '1';
@@ -849,6 +857,7 @@ function validateOptions(options) {
   snapshotResumeOptions.validate(options);
   validateQueryOptions(options);
   launchIdentityOptions.validate(options);
+  validateFormalAi(options);
 
   // Validate shell option
   if (options.shell !== null && options.shell !== undefined) {
@@ -866,6 +875,30 @@ function validateOptions(options) {
         `Invalid session ID: "${options.sessionId}". Session ID must be a valid UUID v4.`
       );
     }
+  }
+}
+
+/**
+ * `--use-formal-ai` runs its tool calls directly in the current directory;
+ * other execution modes would change where and how they run (issue #255).
+ * @param {object} options - Parsed options
+ * @throws {Error} When combined with an unsupported option
+ */
+function validateFormalAi(options) {
+  if (!options.useFormalAi) {
+    return;
+  }
+  const conflicts = [
+    ...(options.isolated !== null ? ['--isolated'] : []),
+    ...(options.user ? ['--isolated-user'] : []),
+    ...(options.detached ? ['--detached'] : []),
+    ...(options.useCommandStream ? ['--use-command-stream'] : []),
+    ...activeQueryModes(options),
+  ];
+  if (conflicts.length) {
+    throw new Error(
+      `--use-formal-ai cannot be combined with ${conflicts.join(', ')} (experimental mode, see docs/formal-ai.md)`
+    );
   }
 }
 
