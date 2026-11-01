@@ -35,10 +35,11 @@ const answer = (content) => ({ role: 'assistant', content });
 
 /**
  * SYNTHETIC scenarios: request -> (assistantTurns, messages) -> message|status.
- * A Map, so request text such as `constructor` or `toString` never reaches an
- * inherited Object.prototype method.
+ * A constant list matched by string equality: request text only selects among
+ * these entries and is never used as a property key, so `constructor`,
+ * `toString` and similar names reach the "did not understand" reply.
  */
-const SYNTHETIC = new Map(
+const SYNTHETIC = Object.freeze(
   Object.entries({
     // Never stops asking for more reads: exhausts the step budget.
     'synthetic: loop forever': () => toolCall('pwd'),
@@ -75,9 +76,10 @@ function reply(body) {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const request = (messages.find((m) => m.role === 'user') || {}).content || '';
   const turns = messages.filter((m) => m.role === 'assistant').length;
-  const scenario = SYNTHETIC.get(request);
+  const scenario = SYNTHETIC.find(([name]) => name === request);
   if (scenario) {
-    return scenario(turns, messages);
+    const [, respond] = scenario;
+    return respond(turns, messages);
   }
   const receipt = receipts.find((r) => r.request === request);
   if (receipt && receipt.responses[turns]) {
