@@ -22,6 +22,19 @@ function preview(text) {
     : text;
 }
 
+/** Observed working-directory changes, in words. */
+function describeEffects(effects) {
+  const parts = ['added', 'removed', 'changed']
+    .filter((key) => effects[key].length)
+    .map((key) => {
+      const names = effects[key];
+      const more = names.length > 10 ? ` and ${names.length - 10} more` : '';
+      return `${key} ${names.slice(0, 10).join(', ')}${more}`;
+    });
+  const text = parts.length ? parts.join('; ') : 'no file changed';
+  return effects.complete ? text : `${text} (fingerprint incomplete)`;
+}
+
 /**
  * Run one request to completion.
  * @param {object} options
@@ -133,12 +146,16 @@ async function runFormalAiTask(options) {
       if (lastExit === null) {
         return finish('answered', 0, 'Formal AI answered without tools');
       }
+      // The status reports what the tools did, not what Formal AI claims:
+      // a run of reads is never presented as a completed change.
+      const status =
+        lastExit === 0
+          ? `finished after ${toolCalls} tool call(s)`
+          : `finished; the last tool call exited with ${lastExit}`;
       return finish(
         'completed',
         lastExit,
-        lastExit === 0
-          ? `finished after ${toolCalls} tool call(s)`
-          : `finished; the last tool call exited with ${lastExit}`,
+        `${status}; ${describeEffects(evidence.effects)}`,
         lastExit === 0 ? [] : ['the last tool call failed']
       );
     }
@@ -309,4 +326,4 @@ async function runCall({
   };
 }
 
-module.exports = { SIGNAL_EXIT, runFormalAiTask };
+module.exports = { SIGNAL_EXIT, describeEffects, runFormalAiTask };

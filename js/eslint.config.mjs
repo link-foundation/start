@@ -60,6 +60,36 @@ export default [
     },
   },
   {
+    // CommonJS test fixtures and helpers (.cjs): the test runner collects
+    // every .js/.mjs file under test/, so non-test modules there use .cjs.
+    files: ['**/*.cjs'],
+    plugins: {
+      prettier: prettierPlugin,
+    },
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'commonjs',
+      globals: {
+        require: 'readonly',
+        module: 'readonly',
+        exports: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        console: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+      },
+    },
+    rules: {
+      'prettier/prettier': 'error',
+      eqeqeq: ['error', 'always'],
+      curly: ['error', 'all'],
+      'no-var': 'error',
+      'prefer-const': 'error',
+      'prefer-template': 'error',
+    },
+  },
+  {
     // ES module files (.mjs)
     files: ['**/*.mjs'],
     plugins: {
@@ -112,6 +142,7 @@ export default [
     files: [
       'test/**/*.js',
       'test/**/*.mjs',
+      'test/**/*.cjs',
       'tests/**/*.js',
       'experiments/**/*.js',
     ],
