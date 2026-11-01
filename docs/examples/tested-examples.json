@@ -156,6 +156,38 @@
         },
         "reason": "Resource enforcement requires usable daemon cgroup controllers. Dedicated JS/Rust regression suites validate resolution and command ordering, and the finite real-Docker probe checks enforcement where supported."
       }
+    },
+    {
+      "id": "formal-ai-request",
+      "title": "Experimental --use-formal-ai request (issue #255)",
+      "references": [
+        {
+          "file": "README.md",
+          "text": "$ --use-formal-ai -- print list of files in current directory"
+        },
+        {
+          "file": "docs/formal-ai.md",
+          "text": "$ --use-formal-ai -- print list of files in current directory"
+        }
+      ],
+      "parseOnly": {
+        "argv": [
+          "--use-formal-ai",
+          "--",
+          "print",
+          "list",
+          "of",
+          "files",
+          "in",
+          "current",
+          "directory"
+        ],
+        "expected": {
+          "useFormalAi": true,
+          "command": "print list of files in current directory"
+        },
+        "reason": "A real run needs a Formal AI checkout, so CI checks that the documented request is parsed as request text. examples/formal-ai-list-files.sh and the opt-in js/test/regression-255-e2e.js cover real runs."
+      }
     }
   ]
 }
