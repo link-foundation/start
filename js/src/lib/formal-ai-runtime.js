@@ -213,9 +213,11 @@ function startRuntime({ env = process.env, bounds }) {
     );
   }
   if (url) {
-    if (!/^https?:\/\//.test(url)) {
+    // Plain http:// only, like the Rust edition: the runtime is a local
+    // loopback service and start ships no TLS client for it.
+    if (!/^http:\/\//.test(url)) {
       throw new RuntimeUnavailableError(
-        `START_FORMAL_AI_URL must be an http(s) URL, got "${url}"`
+        `START_FORMAL_AI_URL must be an http:// URL, got "${url}"`
       );
     }
     const identity = { source: 'url', url: url.replace(/\/+$/, '') };

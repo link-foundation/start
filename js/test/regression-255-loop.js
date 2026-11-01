@@ -101,31 +101,43 @@ async function run(request, options = {}) {
 
 const lines = (text) => text.split('\n').filter(Boolean).sort();
 
+// A captured status, allowing for BSD `ls` (exit 1 where GNU exits 2).
+const sameStatus = (expected, actual) =>
+  expected === actual ||
+  (expected === 2 && typeof actual === 'number' && actual !== 0);
+
 describe('--use-formal-ai receipts (#255)', () => {
-  it('every captured request replays to its captured outcome', async () => {
-    for (const receipt of receipts) {
-      const result = await run(receipt.request, {
-        bounds: { effects: receipt.effects },
-      });
-      expect({
-        request: receipt.request,
-        effects: receipt.effects,
-        status: result.outcome.status,
-        exitCode: result.outcome.exitCode,
-        tools: result.tools.map((t) => [
-          t.command,
-          t.decision,
-          t.exitCode ?? null,
-        ]),
-      }).toEqual({
-        request: receipt.request,
-        effects: receipt.effects,
-        status: receipt.outcome.status,
-        exitCode: receipt.outcome.exitCode,
-        tools: receipt.tools.map((t) => [t.command, t.decision, t.exitCode]),
-      });
+  // The receipts ran real POSIX tools (ls, cat, find, wc, test, mkdir).
+  it.skipIf(!posix)(
+    'every captured request replays to its captured outcome',
+    async () => {
+      for (const receipt of receipts) {
+        const result = await run(receipt.request, {
+          bounds: { effects: receipt.effects },
+        });
+        // Same status as captured, except GNU's 2 may be BSD's 1.
+        const status = (expected, actual) =>
+          sameStatus(expected, actual) ? expected : actual;
+        expect({
+          request: receipt.request,
+          effects: receipt.effects,
+          status: result.outcome.status,
+          exitCode: status(receipt.outcome.exitCode, result.outcome.exitCode),
+          tools: result.tools.map((t, i) => [
+            t.command,
+            t.decision,
+            status(receipt.tools[i]?.exitCode, t.exitCode ?? null),
+          ]),
+        }).toEqual({
+          request: receipt.request,
+          effects: receipt.effects,
+          status: receipt.outcome.status,
+          exitCode: receipt.outcome.exitCode,
+          tools: receipt.tools.map((t) => [t.command, t.decision, t.exitCode]),
+        });
+      }
     }
-  });
+  );
 });
 
 describe('--use-formal-ai reads (#255)', () => {
@@ -193,8 +205,10 @@ describe('--use-formal-ai reads (#255)', () => {
       ]) {
         const result = await run(request);
         expect(result.outcome.status).toBe('completed');
-        expect(result.outcome.exitCode).toBe(2);
-        expect(result.outcome.message).toContain('exited with 2');
+        const code = result.tools[0].exitCode;
+        expect(code).not.toBe(0);
+        expect(result.outcome.exitCode).toBe(code);
+        expect(result.outcome.message).toContain(`exited with ${code}`);
         expect(result.outcome.remainingObligations).toEqual([
           'the last tool call failed',
         ]);

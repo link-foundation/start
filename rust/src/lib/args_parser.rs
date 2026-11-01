@@ -142,6 +142,8 @@ pub struct WrapperOptions {
     pub shell: String,
     /// Use command-stream library for command execution
     pub use_command_stream: bool,
+    /// Natural-language request performed through Formal AI (issue #255)
+    pub use_formal_ai: bool,
     /// UUID to query status for
     pub status: Option<String>,
     /// List all tracked execution records
@@ -228,6 +230,7 @@ impl Default for WrapperOptions {
             keep_container_on_fail: false,
             shell: "auto".to_string(),
             use_command_stream: false,
+            use_formal_ai: false,
             status: None,
             list: false,
             running: false,
@@ -643,6 +646,11 @@ fn parse_option(
         return Ok(1);
     }
 
+    if arg == "--use-formal-ai" {
+        options.use_formal_ai = true;
+        return Ok(1);
+    }
+
     // --session-id or --session-name (alias) <uuid>
     if arg == "--session-id" || arg == "--session-name" {
         if index + 1 < args.len() && !args[index + 1].starts_with('-') {
@@ -857,6 +865,7 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
     // Query/control option combinations (--status, --attach, --resume, ...)
     validate_query_options(options)?;
     crate::launch_identity_options::validate(options)?;
+    crate::formal_ai_cli::validate_options(options)?;
     crate::docker_resource_options::validate(options)?;
     crate::docker_init_option::validate(options)?;
     crate::cpu_penalty::validate(options)?;

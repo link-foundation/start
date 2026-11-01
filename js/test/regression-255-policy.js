@@ -425,6 +425,7 @@ describe('--use-formal-ai runtime qualification (#255)', () => {
       {},
       { START_FORMAL_AI_ROOT: '/nonexistent/formal-ai' },
       { START_FORMAL_AI_URL: 'ftp://x' },
+      { START_FORMAL_AI_URL: 'https://x' },
       { START_FORMAL_AI_URL: 'http://x', START_FORMAL_AI_ROOT: '/r' },
     ]) {
       expect(() => runtimeLib.startRuntime({ env, bounds })).toThrow(
