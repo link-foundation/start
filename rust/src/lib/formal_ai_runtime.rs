@@ -680,7 +680,6 @@ mod tests {
             &bounds,
             &never,
         )
-        .ok()
         .expect("unverified URL allowed");
         assert_eq!(runtime.base_url, "http://127.0.0.1:9");
     }
