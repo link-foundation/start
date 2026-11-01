@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.33.0] - 2026-11-01
+
+Manual minor release.
+
 ## [0.32.0] - 2026-11-01
 
 Added the experimental `--use-formal-ai` mode (#255), mirroring the JavaScript edition: `$ --use-formal-ai -- <request>` sends a natural-language request to a qualified local Formal AI runtime and runs the tool calls it chooses. These calls are limited to a small read-only tool set, need explicit opt-in for workspace changes, and are bounded. The mode never falls back to aliases, a shell or an LLM, and it writes inspectable evidence to the log.
