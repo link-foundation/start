@@ -111,7 +111,10 @@ truthfully.
 
 - **"corrent" typo:** blocked upstream. `print list of files in corrent directory`
   will list the directory once link-assistant/formal-ai#1501 is fixed. Until
-  then, start exits with `ls`'s real status (`2`).
+  then, start exits with `ls`'s real status (`2`). The same probe against
+  Formal AI `main` at `116e8604` (the only commit after the v0.355.27 tag as of
+  2026-11-01) still runs `ls 'corrent'`
+  (`data/paraphrases-formal-ai-main-116e8604.log`).
 - **Released CLI:** verifying the option in a released CLI can only happen after
   this PR is merged and published. The changeset (`minor`) and the Rust
   changelog fragment trigger that release.
