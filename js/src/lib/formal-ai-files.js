@@ -188,7 +188,8 @@ function evaluateFileCall(tool, args, context) {
 }
 
 const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
-const decoder = new TextDecoder('utf-8', { fatal: true });
+// ignoreBOM keeps a byte order mark in the text, so an edit writes it back.
+const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
 class FileToolError extends Error {}
 

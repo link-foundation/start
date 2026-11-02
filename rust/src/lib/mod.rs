@@ -77,6 +77,7 @@ pub mod failure_handler;
 pub mod formal_ai;
 pub mod formal_ai_cli;
 pub mod formal_ai_client;
+pub mod formal_ai_files;
 pub mod formal_ai_policy;
 pub mod formal_ai_runtime;
 pub mod formal_ai_tool;

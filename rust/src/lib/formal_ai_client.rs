@@ -1,8 +1,13 @@
 //! Minimal client of the OpenAI-compatible agent-mode endpoint of Formal AI
 //! (`POST /api/openai/v1/chat/completions`), used by `--use-formal-ai`
-//! (issue #255). Mirrors js/src/lib/formal-ai-client.js. Only the `bash`
-//! function tool is offered: Formal AI picks the command, start decides
-//! whether and how it runs.
+//! (issue #255). Mirrors js/src/lib/formal-ai-client.js. It offers the
+//! `bash` tool and the structured `read` tool, plus `edit` and `write` when
+//! workspace changes are allowed (issue #258): Formal AI picks the call, start
+//! decides whether and how it runs.
+//!
+//! An HTTP error keeps a bounded, sanitized excerpt of its body (the error
+//! type, message and a preview) and the attempt count, so a failing runtime
+//! names its cause (issue #257).
 //!
 //! The runtime is always a loopback `http://` server, so a small blocking
 //! HTTP/1.1 client over `std::net` is enough; it polls for cancellation and
@@ -12,16 +17,21 @@ use std::io::{Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};
 use std::time::{Duration, Instant};
 
+use regex::Regex;
 use serde_json::{json, Value};
 
+use crate::formal_ai_files::{describe_file_call, file_tool, normalize_file_args, FileArgs};
 use crate::formal_ai_policy::{EXIT_BUDGET, EXIT_PROTOCOL, EXIT_UNAVAILABLE};
 
 pub const API_PREFIX: &str = "/api/openai/v1";
-pub const TOOL_NAMES: [&str; 3] = ["bash", "shell", "run_command"];
+/// Names Formal AI may use for the bash tool.
+pub const BASH_NAMES: [&str; 3] = ["bash", "shell", "run_command"];
+/// Every tool name start accepts.
+pub const TOOL_NAMES: [&str; 6] = ["bash", "shell", "run_command", "read", "edit", "write"];
 const MAX_RESPONSE_BYTES: usize = 16 * 1024 * 1024;
 const POLL: Duration = Duration::from_millis(100);
 
-/// The only tool offered to Formal AI.
+/// The bash tool offered to Formal AI.
 pub fn bash_tool() -> Value {
     json!({
         "type": "function",
@@ -37,12 +47,28 @@ pub fn bash_tool() -> Value {
     })
 }
 
+/// Tools offered to Formal AI: the change tools only when the effect mode
+/// allows changes, so the advertised contract matches the policy.
+pub fn offered_tools(effects: &str) -> Vec<Value> {
+    let names: &[&str] = if effects == "workspace-write" {
+        &["read", "edit", "write"]
+    } else {
+        &["read"]
+    };
+    std::iter::once(bash_tool())
+        .chain(names.iter().map(|name| file_tool(name)))
+        .collect()
+}
+
 /// A failed exchange with Formal AI and the exit status it maps to.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClientError {
     pub message: String,
     pub exit_code: i32,
     pub cancelled: bool,
+    /// Sanitized, bounded diagnostics (HTTP status, error type and message,
+    /// body preview, attempts) the evidence keeps (issue #257).
+    pub details: Option<Value>,
 }
 
 impl ClientError {
@@ -55,16 +81,194 @@ impl ClientError {
             message: message.into(),
             exit_code,
             cancelled: false,
+            details: None,
         }
+    }
+
+    pub fn with_details(mut self, details: Value) -> Self {
+        self.details = Some(details);
+        self
     }
 }
 
+const PREVIEW_CHARS: usize = 500;
+const MESSAGE_CHARS: usize = 300;
+const REDACTED: &str = "[REDACTED]";
+
+fn sanitizers() -> &'static [(Regex, &'static str); 4] {
+    static PATTERNS: std::sync::OnceLock<[(Regex, &'static str); 4]> = std::sync::OnceLock::new();
+    PATTERNS.get_or_init(|| {
+        let compile = |pattern: &str| Regex::new(pattern).expect("valid sanitizer pattern");
+        [
+            (
+                compile(r#"(?i)((?:proxy-)?authorization["']?\s*[:=]\s*["']?)[^"'\r\n,;}]*"#),
+                "${1}[REDACTED]",
+            ),
+            (
+                compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]{4,}"),
+                "${1} [REDACTED]",
+            ),
+            (
+                compile(
+                    r#"(?i)((?:api[_-]?key|access[_-]?token|token|secret|password|passwd)["']?\s*[:=]\s*["']?)[^"'\s,;}]+"#,
+                ),
+                "${1}[REDACTED]",
+            ),
+            (compile(r"[\x00-\x1f\x7f]+"), " "),
+        ]
+    })
+}
+
+/// One line of untrusted diagnostic text, bounded and without credentials:
+/// known secrets, authorization headers, bearer or basic credentials and
+/// credential-named fields are masked, and control characters become spaces.
+pub fn sanitize_diagnostic(text: &str, limit: usize, secrets: &[&str]) -> String {
+    let mut clean = text.to_string();
+    for secret in secrets.iter().filter(|secret| !secret.is_empty()) {
+        clean = clean.replace(secret, REDACTED);
+    }
+    for (pattern, replacement) in sanitizers() {
+        clean = pattern.replace_all(&clean, *replacement).to_string();
+    }
+    let clean = clean.trim();
+    let count = clean.chars().count();
+    if count > limit {
+        format!(
+            "{}… [{} more chars]",
+            clean.chars().take(limit).collect::<String>(),
+            count - limit
+        )
+    } else {
+        clean.to_string()
+    }
+}
+
+/// Structured diagnostics of an HTTP error response: httpStatus, errorType,
+/// errorMessage, bodyPreview and bodyChars (same keys as JavaScript).
+pub fn http_error_details(status: u16, text: &str, secrets: &[&str]) -> Value {
+    let body: Value = serde_json::from_str(text).unwrap_or(Value::Null);
+    let error = body.get("error").unwrap_or(&Value::Null);
+    let (kind, message) = if error.is_object() {
+        (
+            error.get("type").and_then(Value::as_str),
+            error.get("message").and_then(Value::as_str),
+        )
+    } else if let Some(text) = error.as_str() {
+        (None, Some(text))
+    } else {
+        (None, body.get("message").and_then(Value::as_str))
+    };
+    json!({
+        "httpStatus": status,
+        "errorType": kind.map(|kind| sanitize_diagnostic(kind, 100, secrets)),
+        "errorMessage": message.map(|message| sanitize_diagnostic(message, MESSAGE_CHARS, secrets)),
+        "bodyPreview": sanitize_diagnostic(text, PREVIEW_CHARS, secrets),
+        "bodyChars": text.encode_utf16().count(),
+    })
+}
+
+/// `Formal AI returned HTTP <status>: [<type>: ]<message or preview>`.
+pub fn http_error_message(details: &Value) -> String {
+    let text = |key: &str| details[key].as_str().filter(|text| !text.is_empty());
+    let cause = match (text("errorType"), text("errorMessage")) {
+        (Some(kind), Some(message)) => format!("{}: {}", kind, message),
+        (None, Some(message)) => message.to_string(),
+        _ => {
+            let preview: String = text("bodyPreview")
+                .unwrap_or("")
+                .chars()
+                .take(MESSAGE_CHARS)
+                .collect();
+            if preview.is_empty() {
+                "(empty body)".to_string()
+            } else {
+                preview
+            }
+        }
+    };
+    format!(
+        "Formal AI returned HTTP {}: {}",
+        details["httpStatus"], cause
+    )
+}
+
+/// Known structured gaps Formal AI answers instead of claiming success.
+pub const GAP_SCHEMAS: [(&str, &[&str]); 2] = [
+    (
+        "workspace-edit-capability-gap/v1",
+        &["EditToolUnavailable", "ReadToolUnavailable"],
+    ),
+    (
+        "workspace-change-verification-gap/v1",
+        &["VerificationRunToolUnavailable"],
+    ),
+];
+const CAPABILITIES: [&str; 6] = ["read", "edit", "multi_edit", "write", "run", "bash"];
+
+/// Recognize a final answer that is exactly a known Formal AI capability
+/// gap: {schema, target, reason, missingCapabilities, complete, verified}.
+/// Only the runtime's own answer counts: text that a tool result in this run
+/// contained (file data echoed back) is never taken as a gap.
+pub fn recognize_capability_gap(content: &str, messages: &[Value]) -> Option<Value> {
+    let text = content.trim();
+    if !text.starts_with('{') || !text.ends_with('}') {
+        return None;
+    }
+    let gap: Value = serde_json::from_str(text).ok()?;
+    let schema = gap.get("schema").and_then(Value::as_str)?;
+    let (_, reasons) = GAP_SCHEMAS.iter().find(|(name, _)| *name == schema)?;
+    let reason = gap.get("reason").and_then(Value::as_str)?;
+    let target = gap.get("target").and_then(Value::as_str)?;
+    let missing = match gap.get("missingCapabilities") {
+        None => Vec::new(),
+        Some(value) => value.as_array()?.clone(),
+    };
+    let known = missing
+        .iter()
+        .all(|c| c.as_str().is_some_and(|c| CAPABILITIES.contains(&c)));
+    if !reasons.contains(&reason)
+        || gap.get("complete") != Some(&Value::Bool(false))
+        || gap.get("verified") != Some(&Value::Bool(false))
+        || target.trim().is_empty()
+        || !known
+    {
+        return None;
+    }
+    let echoed = messages.iter().any(|m| {
+        m["role"] == "tool"
+            && match &m["content"] {
+                Value::String(content) => content.contains(text),
+                Value::Null => false,
+                other => other.to_string().contains(text),
+            }
+    });
+    if echoed {
+        return None;
+    }
+    Some(json!({
+        "schema": schema,
+        "target": target,
+        "reason": reason,
+        "missingCapabilities": missing,
+        "complete": false,
+        "verified": false,
+    }))
+}
+
 /// One tool call Formal AI asked for.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct ToolCall {
     pub id: Option<String>,
+    /// Name Formal AI used.
     pub name: String,
+    /// "bash", or the file tool "read", "edit" or "write".
+    pub tool: String,
+    /// The bash command, or a one-line rendering of a file call.
     pub command: String,
+    /// Raw JSON arguments of a file call, sent back unchanged.
+    pub arguments: String,
+    /// Normalized arguments of a file call.
+    pub args: Option<FileArgs>,
 }
 
 /// One chat completion, normalized for the task loop.
@@ -124,6 +328,25 @@ pub fn parse_completion(body: &Value) -> Result<Completion, ClientError> {
             let args: Value = serde_json::from_str(raw).map_err(|_| {
                 ClientError::protocol(format!("Formal AI sent non-JSON arguments for {}", name))
             })?;
+            let id = call
+                .get("id")
+                .and_then(Value::as_str)
+                .filter(|id| !id.is_empty())
+                .map(str::to_string);
+            if !BASH_NAMES.contains(&name) {
+                let normalized = normalize_file_args(name, &args).map_err(|problem| {
+                    ClientError::protocol(format!("Formal AI called {}", problem))
+                })?;
+                tool_calls.push(ToolCall {
+                    id,
+                    name: name.to_string(),
+                    tool: name.to_string(),
+                    command: describe_file_call(name, &normalized),
+                    arguments: raw.to_string(),
+                    args: Some(normalized),
+                });
+                continue;
+            }
             let command = args
                 .get("command")
                 .filter(|v| !v.is_null())
@@ -134,13 +357,11 @@ pub fn parse_completion(body: &Value) -> Result<Completion, ClientError> {
                     ClientError::protocol(format!("Formal AI called {} without a command", name))
                 })?;
             tool_calls.push(ToolCall {
-                id: call
-                    .get("id")
-                    .and_then(Value::as_str)
-                    .filter(|id| !id.is_empty())
-                    .map(str::to_string),
+                id,
                 name: name.to_string(),
+                tool: "bash".to_string(),
                 command: command.to_string(),
+                ..ToolCall::default()
             });
         }
     }
@@ -390,16 +611,26 @@ pub struct HttpClient {
     pub max_retries: u64,
     pub deadline: Instant,
     pub requests: u64,
+    /// Tools offered with every request (offered_tools() of the effect mode).
+    pub tools: Vec<Value>,
 }
 
 impl HttpClient {
+    /// A client offering the read-only tools; see with_tools().
     pub fn new(base_url: &str, max_retries: u64, deadline: Instant) -> Self {
         Self {
             base_url: base_url.to_string(),
             max_retries,
             deadline,
             requests: 0,
+            tools: offered_tools("read-only"),
         }
+    }
+
+    /// Offer these tools instead (e.g. offered_tools(&bounds.effects)).
+    pub fn with_tools(mut self, tools: Vec<Value>) -> Self {
+        self.tools = tools;
+        self
     }
 }
 
@@ -419,16 +650,18 @@ impl CompletionClient for HttpClient {
         let body = json!({
             "model": "formal-ai",
             "messages": messages,
-            "tools": [bash_tool()],
+            "tools": self.tools,
         })
         .to_string();
         let mut last_error = ClientError::protocol("Formal AI was not asked");
+        let mut attempts: u64 = 0;
         for _ in 0..=self.max_retries {
             let remaining = self.deadline.saturating_duration_since(Instant::now());
             if remaining.is_zero() {
                 return Err(budget_error());
             }
             self.requests += 1;
+            attempts += 1;
             let path = "/chat/completions";
             let full = format!("{}{}", API_PREFIX, path);
             match http_request(
@@ -440,17 +673,18 @@ impl CompletionClient for HttpClient {
                 cancel,
             ) {
                 Ok((status, text)) => {
-                    if status >= 500 {
-                        last_error =
-                            ClientError::protocol(format!("Formal AI returned HTTP {}", status));
-                        continue;
-                    }
                     if !(200..300).contains(&status) {
-                        let shown: String = text.chars().take(300).collect();
-                        return Err(ClientError::protocol(format!(
-                            "Formal AI returned HTTP {}: {}",
-                            status, shown
-                        )));
+                        let mut details = http_error_details(status, &text, &[]);
+                        details["attempts"] = json!(attempts);
+                        let error = ClientError::protocol(http_error_message(&details))
+                            .with_details(details);
+                        // A server error may be transient: retry it within
+                        // the bounds, keeping the latest diagnostics.
+                        if status >= 500 {
+                            last_error = error;
+                            continue;
+                        }
+                        return Err(error);
                     }
                     let parsed: Value = serde_json::from_str(&text).map_err(|_| {
                         ClientError::protocol("Formal AI returned a non-JSON response")
@@ -464,19 +698,23 @@ impl CompletionClient for HttpClient {
                 }
                 Err(HttpError::Timeout) => return Err(budget_error()),
                 Err(HttpError::Io(message)) => {
+                    let cause = sanitize_diagnostic(&message, MESSAGE_CHARS, &[]);
                     last_error = ClientError::with_code(
-                        format!("Formal AI request failed: {}", message),
+                        format!("Formal AI request failed: {}", cause),
                         EXIT_UNAVAILABLE,
-                    );
+                    )
+                    .with_details(json!({ "cause": cause, "attempts": attempts }));
                 }
             }
         }
-        if self.max_retries > 0 {
-            let plural = if self.max_retries == 1 { "y" } else { "ies" };
-            last_error.message = format!(
-                "{} (after {} retr{})",
-                last_error.message, self.max_retries, plural
-            );
+        let retries = attempts.saturating_sub(1);
+        if retries > 0 {
+            let plural = if retries == 1 { "y" } else { "ies" };
+            last_error.message =
+                format!("{} (after {} retr{})", last_error.message, retries, plural);
+        }
+        if let Some(details) = last_error.details.as_mut() {
+            details["attempts"] = json!(attempts);
         }
         Err(last_error)
     }
@@ -505,7 +743,9 @@ mod tests {
             vec![ToolCall {
                 id: Some("c1".to_string()),
                 name: "bash".to_string(),
-                command: "ls".to_string()
+                tool: "bash".to_string(),
+                command: "ls".to_string(),
+                ..ToolCall::default()
             }]
         );
     }
@@ -603,3 +843,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "formal_ai_client_cases.rs"]
+mod formal_ai_client_cases;

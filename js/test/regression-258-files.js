@@ -212,6 +212,23 @@ describe('edit (#258)', () => {
     expect(fs.readdirSync(cwd).sort()).toEqual(['a.js', 'sub']);
   });
 
+  it('keeps a byte order mark', () => {
+    const cwd = workspace({ 'bom.txt': '\ufefffirst\nsecond\n' });
+    const ctx = context(cwd);
+    expect(call('read', { path: 'bom.txt' }, ctx).result).toBe(
+      '\ufefffirst\nsecond\n'
+    );
+    const receipt = call(
+      'edit',
+      { path: 'bom.txt', old_string: 'second', new_string: '2nd' },
+      ctx
+    );
+    expect(receipt.exitCode).toBe(0);
+    expect(fs.readFileSync(path.join(cwd, 'bom.txt'))).toEqual(
+      Buffer.from('\ufefffirst\n2nd\n', 'utf8')
+    );
+  });
+
   it('refuses ambiguous, missing, empty and no-op replacements', () => {
     const cwd = workspace();
     const ctx = context(cwd);

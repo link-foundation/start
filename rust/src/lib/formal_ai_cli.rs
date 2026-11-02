@@ -16,7 +16,7 @@ use crate::args_parser::WrapperOptions;
 use crate::args_parser_queries::active_query_modes;
 use crate::execution_store::{ExecutionRecord, ExecutionRecordOptions, ExecutionStore};
 use crate::formal_ai::{run_formal_ai_task, Outcome, TaskOptions};
-use crate::formal_ai_client::{CompletionClient, HttpClient};
+use crate::formal_ai_client::{offered_tools, CompletionClient, HttpClient};
 use crate::formal_ai_policy::{resolve_bounds_with, EXIT_CONFIG, EXIT_UNAVAILABLE, EXIT_USAGE};
 use crate::formal_ai_runtime::{describe_identity, start_runtime};
 use crate::isolation::{append_log_file, get_timestamp};
@@ -221,7 +221,8 @@ pub fn run_formal_ai_cli(options: &CliOptions<'_>) -> i32 {
         note(text);
         append_log_file(&log_path, &format!("{} {}\n", PREFIX, text));
     };
-    let mut client = HttpClient::new(&runtime.base_url, bounds.max_retries, deadline);
+    let mut client = HttpClient::new(&runtime.base_url, bounds.max_retries, deadline)
+        .with_tools(offered_tools(&bounds.effects));
     let task = panic::catch_unwind(AssertUnwindSafe(|| {
         run_formal_ai_task(
             &TaskOptions {
