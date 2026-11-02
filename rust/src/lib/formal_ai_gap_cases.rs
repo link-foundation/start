@@ -6,7 +6,9 @@
 
 use super::*;
 use crate::formal_ai_client::bash_tool;
-use crate::formal_ai_files::{normalize_file_args, sha256_hex};
+use crate::formal_ai_files::normalize_file_args;
+#[cfg(unix)]
+use crate::formal_ai_files::sha256_hex;
 
 const ISSUE_EDIT: &str = "In snippet.mjs, replace the before label declaration with the after label declaration, preserving all other content.";
 const LITERAL_EDIT: &str = "In snippet.mjs, replace «const label = \"before\";» with «const label = \"after\";». Preserve all other content.";
