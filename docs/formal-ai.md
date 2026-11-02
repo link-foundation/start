@@ -27,9 +27,9 @@ and Rust (`cargo`).
 - **There is no fallback.** If no qualified runtime is available, start exits
   `69` and prints
   `No command was run: --use-formal-ai never falls back to aliases, a shell or an LLM.`
-- **Formal AI decides and start executes.** Every tool call is a command line
-  that start tokenizes itself, using POSIX quoting rules, and runs as an argv
-  vector without a shell. The call runs in the current directory with start's
+- **Formal AI decides and start executes.** Every `bash` tool call is a
+  command line that start tokenizes itself, using POSIX quoting rules, and
+  runs as an argv vector without a shell. The call runs in the current directory with start's
   usual `START_*` environment, its own process group, no stdin and the
   per-tool limits listed below. Its stdout and stderr stream to the terminal.
 - **The status is real.** A finished task exits with the status of its last
@@ -59,6 +59,68 @@ call runs:
 - any path outside the working directory, including absolute paths, `..` and
   symlinks that lead out of it.
 
+### File tools
+
+`bash` cannot change the text of a file: it has no redirects, no interpreters
+and no editors. start therefore also offers Formal AI three structured tools.
+start reads and writes the one named file itself, so it never runs an
+interpreter (#258):
+
+| Tool    | Offered                | Arguments                                                    | Effect                                                                               |
+| ------- | ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `read`  | always                 | `path`                                                       | the exact UTF-8 text of a regular file; it observes the file                         |
+| `edit`  | `workspace-write` mode | `path`, `old_string`, `new_string`, `replace_all` (optional) | replaces one literal occurrence (every one with `replace_all`) in a file read before |
+| `write` | `workspace-write` mode | `path`, `content`                                            | replaces an observed file, or creates one in an observed directory                   |
+
+- The paths follow the `bash` policy: nothing outside the working directory,
+  no `~`, and no symlinks that lead out of it.
+- `edit` refuses an `old_string` that is missing or ambiguous, an empty one,
+  and a no-op. Nothing changes in those cases, and the call exits `1` with the
+  reason.
+- A file that changed since start read it is not overwritten. Formal AI must
+  read it again first.
+- The new text is written atomically, keeping the file mode. Comments,
+  whitespace, line endings, a byte order mark and every unrelated byte stay
+  as they were. The file is then read back, and the step records its byte
+  count, the hashes before and after (`previousSha256`, `sha256`), the
+  number of replacements, the effects and the verification.
+- Files larger than `START_FORMAL_AI_MAX_FILE_BYTES` and files that are not
+  valid UTF-8 are refused.
+- Formal AI's argument aliases (`filePath`, `file_path`, `oldString`,
+  `old_str`, `newString`, `replaceAll` and similar) are accepted. Conflicting
+  or malformed arguments end the run with `70`.
+
+### Capability gaps
+
+When Formal AI cannot do a task with the tools it was offered, it may answer
+with a capability-gap record instead of a tool call, for example:
+
+```json
+{
+  "complete": false,
+  "missingCapabilities": ["read", "edit"],
+  "reason": "EditToolUnavailable",
+  "schema": "workspace-edit-capability-gap/v1",
+  "target": "snippet.mjs",
+  "verified": false
+}
+```
+
+start recognizes only the known schemas, `workspace-edit-capability-gap/v1`
+and `workspace-change-verification-gap/v1`. The record must be the whole
+answer, `complete` and `verified` must both be `false`, the target must be
+non-empty, and the missing capabilities must come from `read`, `edit`,
+`multi_edit`, `write`, `run` and `bash`. A record that only repeats tool
+output does not count. Such an answer becomes the outcome `capability-gap`
+with exit `65`, for example
+`Formal AI reported a capability gap for snippet.mjs (EditToolUnavailable; missing read, edit); nothing was verified as done`.
+The remaining obligations say that the change was not made or not verified.
+In read-only mode, when an edit or write tool is missing, they also say to set
+`START_FORMAL_AI_EFFECTS=workspace-write`. Any other answer, such as a reply to
+a question, still exits `0`.
+
+### Change rules
+
 Changes must also follow these rules:
 
 - **Observe before editing.** A change may only name targets that an earlier
@@ -70,7 +132,7 @@ Changes must also follow these rules:
   `START_FORMAL_AI_MAX_FINGERPRINT_ENTRIES`). Every added, removed or changed
   path is recorded, including any change made during a read-only call.
 - **Verify by readback.** After a change exits with `0`, start reads its
-  targets back. If they are missing (or still present after `rm`/`rmdir`/`mv`),
+  targets back. An `edit` or `write` must leave exactly the text it wrote. If they are missing (or still present after `rm`/`rmdir`/`mv`),
   the run fails with `70` (`unverified`).
 
 ### Exit statuses
@@ -80,9 +142,9 @@ Changes must also follow these rules:
 | status of the last tool call | the task finished (`0` when that call succeeded)                                                                                                                                       |
 | `0`                          | Formal AI answered without running a tool                                                                                                                                              |
 | `64`                         | empty or overlong request, or an option that cannot be combined (`--isolated`, `--isolated-user`, `--detached`, `--use-command-stream`, `--status`/`--list` and the other query modes) |
-| `65`                         | Formal AI did not understand the request; no tool ran                                                                                                                                  |
+| `65`                         | Formal AI did not understand the request, or reported a capability gap; nothing was verified as done                                                                                   |
 | `69`                         | no qualified Formal AI runtime; nothing ran                                                                                                                                            |
-| `70`                         | malformed Formal AI response, or a change that failed its readback                                                                                                                     |
+| `70`                         | malformed Formal AI response, a Formal AI HTTP error (its cause is kept), or a change that failed its readback                                                                         |
 | `77`                         | a tool call was refused by the effect policy                                                                                                                                           |
 | `78`                         | invalid `START_FORMAL_AI_*` value                                                                                                                                                      |
 | `124`                        | a step, time, tool or retry budget was exhausted                                                                                                                                       |
@@ -101,6 +163,37 @@ the result truthfully, so some requests end with a real but unhelpful status:
 
 These limits were reported upstream in link-assistant/formal-ai; see
 [the case study](case-studies/issue-255/README.md).
+
+With Formal AI 0.355.29 and the file tools (#258):
+
+- `In snippet.mjs, replace «const label = "before";» with «const label = "after";». Preserve all other content.`
+  in `workspace-write` mode runs `read snippet.mjs`, `edit snippet.mjs` and
+  `sha256sum -- snippet.mjs`. It changes only that line and exits `0`.
+- The same request in read-only mode is a capability gap (`65`, missing
+  `edit`). Its obligations point to `START_FORMAL_AI_EFFECTS=workspace-write`.
+- The looser wording `replace the before label declaration with the after label declaration`
+  reads the file, then calls `edit` with text that does not occur in it. start
+  reports `the last tool call exited with 1; no file changed`, and the file is
+  untouched.
+- `What is 2 + 2?` is answered and exits `0`.
+
+### Formal AI HTTP errors
+
+When the runtime answers with an HTTP error, start keeps a sanitized, bounded
+cause. 5xx responses are retried up to `START_FORMAL_AI_MAX_RETRIES` times;
+4xx responses are not retried. The run exits `70` with, for example:
+
+```text
+Formal AI returned HTTP 500: formal_ai_error: Aborted(Error: LocalProductWasmForbidden). Build with -sASSERTIONS for more info. (after 1 retry)
+```
+
+The evidence outcome gains `diagnostics`: `httpStatus`, `errorType` (at most
+100 characters), `errorMessage` (300), `bodyPreview` (500), `bodyChars` and
+`attempts`. Before anything is recorded, start masks the bearer token it sent,
+authorization headers, bearer and basic credentials, and fields named like
+`api_key`, `token`, `secret` or `password`, and replaces control characters.
+Request headers and the environment are never recorded. There is still no
+fallback (#257).
 
 ## Installing and resolving the runtime
 
@@ -150,6 +243,7 @@ Every run prints the identity it used, for example:
 | `START_FORMAL_AI_MAX_REQUEST_CHARS`       | `4096`      | request length                                               |
 | `START_FORMAL_AI_MAX_MEMORY_MB`           | `1024`      | heap of the spawned Formal AI server                         |
 | `START_FORMAL_AI_MAX_FINGERPRINT_ENTRIES` | `5000`      | paths compared before and after each call                    |
+| `START_FORMAL_AI_MAX_FILE_BYTES`          | `1048576`   | file size for `read`, `edit` and `write` (1–16777216)        |
 | `START_FORMAL_AI_EFFECTS`                 | `read-only` | `read-only` or `workspace-write`                             |
 
 ## Logs and evidence
@@ -166,9 +260,11 @@ that contains:
   the tool calls it asked for;
 - every tool decision, as allowed or refused with the reason, argv, exit
   status, signal, timeout, duration, output previews, file effects and
-  readback verification;
+  readback verification. File tools record the tool, path, byte count,
+  hashes and replacements instead of an argv;
 - the summed effects;
-- the outcome: status, exit status, message and remaining obligations;
+- the outcome: status, exit status, message and remaining obligations, plus
+  `diagnostics` for a Formal AI HTTP error and `gap` for a capability gap;
 - the number of Formal AI requests and the duration.
 
 The evidence is privacy-conscious:
@@ -195,9 +291,21 @@ output previews.
   START_FORMAL_AI_ROOT=~/formal-ai examples/formal-ai-list-files.sh
   ```
 
-- The offline tests replay receipts recorded from Formal AI 0.355.27, so they
-  need no runtime. They are `js/test/regression-255-*.js` and
-  `rust/tests/regression_255.rs`.
+- [`examples/formal-ai-edit-file.sh`](../examples/formal-ai-edit-file.sh)
+  runs the #258 demo against an isolated fixture. It runs a literal edit
+  (read, edit and readback, changing only the declaration line), the same
+  edit in read-only mode (capability gap, `65`), a read and a question:
+
+  ```bash
+  START_FORMAL_AI_ROOT=~/formal-ai examples/formal-ai-edit-file.sh
+  ```
+
+- The offline tests replay receipts recorded from Formal AI 0.355.27 and
+  0.355.29, so they need no runtime. They are `js/test/regression-255-*.js`,
+  `js/test/regression-257.js`, `js/test/regression-258*.js`,
+  `rust/tests/regression_255.rs` and the `formal_ai_*_cases.rs` unit tests.
+  [`experiments/issue-258/capture-receipts.cjs`](../experiments/issue-258/capture-receipts.cjs)
+  re-records the #258 receipts from a real runtime.
 - The real end-to-end test is opt-in:
 
   ```bash

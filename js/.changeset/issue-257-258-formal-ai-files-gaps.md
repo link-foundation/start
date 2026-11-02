@@ -1,0 +1,9 @@
+---
+'start-command': minor
+---
+
+`--use-formal-ai`: keep the cause of Formal AI server errors, offer structured file tools, and report capability gaps as incomplete (#257, #258, #259).
+
+- **Server errors (#257):** an HTTP error from the Formal AI runtime now keeps its sanitized, bounded cause: the error type (100 chars), the message (300), a body preview (500), the body length and the number of attempts. The cause appears in the final message (`Formal AI returned HTTP 500: formal_ai_error: Aborted(...) (after 1 retry)`) and under `outcome.diagnostics` in the evidence. Authorization values, credentials, control characters and the environment are never recorded. There is still no fallback, the exit status is still 70, and 4xx responses are not retried.
+- **File tools (#258):** next to `bash`, Formal AI is offered a structured `read` tool, plus `edit` (one literal replacement) and `write` (replace a file it has read) in `START_FORMAL_AI_EFFECTS=workspace-write` mode. The tools follow the workspace path policy: no paths outside the working directory, and a change only to a file read in the same task that has not changed since. They keep comments, whitespace, line endings, a byte order mark, the file mode and all unrelated content. Each change is checked by reading the file back, and the evidence records its hashes and effects. Files over `START_FORMAL_AI_MAX_FILE_BYTES` (1 MiB by default, at most 16 MiB) are refused, and interpreters are still not offered.
+- **Capability gaps (#258):** an answer that matches one of Formal AI's known capability-gap records (`workspace-edit-capability-gap/v1` or `workspace-change-verification-gap/v1`, with `complete` and `verified` both `false`) is now reported as `capability-gap` with exit 65. Its remaining obligations are kept. Plain answers to questions still exit 0.
