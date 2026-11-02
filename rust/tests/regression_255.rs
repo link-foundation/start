@@ -521,7 +521,9 @@ mod cli {
         );
         assert_eq!(snapshot(sandbox.cwd.path()), before);
 
-        // The request went to Formal AI verbatim, with only the bash tool.
+        // The request went to Formal AI verbatim, with the bash tool and, since
+        // issue #258, the structured read tool (edit and write need
+        // workspace-write).
         let requests = runtime.requests();
         assert_eq!(
             requests[0]["messages"],
@@ -533,7 +535,7 @@ mod cli {
             .iter()
             .filter_map(|t| t["function"]["name"].as_str())
             .collect();
-        assert_eq!(tools, ["bash"]);
+        assert_eq!(tools, ["bash", "read"]);
 
         let log = sandbox.log();
         assert!(log.contains("Mode: --use-formal-ai (experimental)"));

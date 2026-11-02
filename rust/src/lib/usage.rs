@@ -120,6 +120,8 @@ Examples:
   start --cleanup-dry-run
   start --cleanup
   start --use-formal-ai -- print list of files in current directory
+  start --use-formal-ai -- show contents of README.md
+  START_FORMAL_AI_EFFECTS=workspace-write start --use-formal-ai -- "In a.js, replace «x» with «y»."
 
 Features:
   - Logs all output to temporary directory

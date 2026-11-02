@@ -1,0 +1,431 @@
+{
+  "source": "captured from Formal AI 0.355.29 (982a7ffcb05d039292712ec9fe33bdbd645ed569) js agent mode by experiments/issue-258/capture-receipts.cjs",
+  "capturedAt": "2026-11-02",
+  "fixture": {
+    "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
+  },
+  "receipts": [
+    {
+      "request": "In snippet.mjs, replace the before label declaration with the after label declaration, preserving all other content.",
+      "effects": "workspace-write",
+      "offered": ["bash"],
+      "responses": [
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "{\"complete\":false,\"missingCapabilities\":[\"read\",\"edit\"],\"reason\":\"EditToolUnavailable\",\"schema\":\"workspace-edit-capability-gap/v1\",\"target\":\"snippet.mjs\",\"verified\":false}"
+          }
+        }
+      ],
+      "tools": [],
+      "outcome": {
+        "status": "capability-gap",
+        "exitCode": 65,
+        "message": "Formal AI reported a capability gap for snippet.mjs (EditToolUnavailable; missing read, edit); nothing was verified as done",
+        "remainingObligations": [
+          "the requested change to snippet.mjs was not made or not verified"
+        ],
+        "gap": {
+          "schema": "workspace-edit-capability-gap/v1",
+          "target": "snippet.mjs",
+          "reason": "EditToolUnavailable",
+          "missingCapabilities": ["read", "edit"],
+          "complete": false,
+          "verified": false
+        }
+      },
+      "after": {
+        "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
+      }
+    },
+    {
+      "request": "In snippet.mjs, replace the before label declaration with the after label declaration, preserving all other content.",
+      "effects": "read-only",
+      "offered": ["bash", "read"],
+      "responses": [
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "{\"complete\":false,\"missingCapabilities\":[\"edit\"],\"reason\":\"EditToolUnavailable\",\"schema\":\"workspace-edit-capability-gap/v1\",\"target\":\"snippet.mjs\",\"verified\":false}"
+          }
+        }
+      ],
+      "tools": [],
+      "outcome": {
+        "status": "capability-gap",
+        "exitCode": 65,
+        "message": "Formal AI reported a capability gap for snippet.mjs (EditToolUnavailable; missing edit); nothing was verified as done",
+        "remainingObligations": [
+          "the requested change to snippet.mjs was not made or not verified",
+          "set START_FORMAL_AI_EFFECTS=workspace-write to offer the edit and write tools"
+        ],
+        "gap": {
+          "schema": "workspace-edit-capability-gap/v1",
+          "target": "snippet.mjs",
+          "reason": "EditToolUnavailable",
+          "missingCapabilities": ["edit"],
+          "complete": false,
+          "verified": false
+        }
+      },
+      "after": {
+        "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
+      }
+    },
+    {
+      "request": "In snippet.mjs, replace the before label declaration with the after label declaration, preserving all other content.",
+      "effects": "workspace-write",
+      "offered": ["bash", "read", "edit", "write"],
+      "responses": [
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me open snippet.mjs and read what it says.",
+            "tool_calls": [
+              {
+                "id": "call_3a9e6d58f61cf7c6",
+                "type": "function",
+                "function": {
+                  "name": "read",
+                  "arguments": "{\"path\":\"snippet.mjs\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me update snippet.mjs for you.",
+            "tool_calls": [
+              {
+                "id": "call_21c111ddfe563da7",
+                "type": "function",
+                "function": {
+                  "name": "edit",
+                  "arguments": "{\"new_string\":\"the after label declaration, preserving all other content\",\"old_string\":\"the before label declaration\",\"path\":\"snippet.mjs\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "The command failed: snippet.mjs: old_string was not found; nothing changed"
+          }
+        }
+      ],
+      "tools": [
+        {
+          "tool": "read",
+          "command": "read snippet.mjs",
+          "decision": "allowed",
+          "exitCode": 0
+        },
+        {
+          "tool": "edit",
+          "command": "edit snippet.mjs",
+          "decision": "allowed",
+          "exitCode": 1
+        }
+      ],
+      "outcome": {
+        "status": "completed",
+        "exitCode": 1,
+        "message": "finished; the last tool call exited with 1; no file changed",
+        "remainingObligations": ["the last tool call failed"]
+      },
+      "after": {
+        "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
+      }
+    },
+    {
+      "request": "In snippet.mjs, replace «const label = \"before\";» with «const label = \"after\";». Preserve all other content.",
+      "effects": "workspace-write",
+      "offered": ["bash"],
+      "responses": [
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "{\"complete\":false,\"missingCapabilities\":[\"read\",\"edit\"],\"reason\":\"EditToolUnavailable\",\"schema\":\"workspace-edit-capability-gap/v1\",\"target\":\"snippet.mjs\",\"verified\":false}"
+          }
+        }
+      ],
+      "tools": [],
+      "outcome": {
+        "status": "capability-gap",
+        "exitCode": 65,
+        "message": "Formal AI reported a capability gap for snippet.mjs (EditToolUnavailable; missing read, edit); nothing was verified as done",
+        "remainingObligations": [
+          "the requested change to snippet.mjs was not made or not verified"
+        ],
+        "gap": {
+          "schema": "workspace-edit-capability-gap/v1",
+          "target": "snippet.mjs",
+          "reason": "EditToolUnavailable",
+          "missingCapabilities": ["read", "edit"],
+          "complete": false,
+          "verified": false
+        }
+      },
+      "after": {
+        "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
+      }
+    },
+    {
+      "request": "In snippet.mjs, replace «const label = \"before\";» with «const label = \"after\";». Preserve all other content.",
+      "effects": "read-only",
+      "offered": ["bash", "read"],
+      "responses": [
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me open snippet.mjs and read what it says.",
+            "tool_calls": [
+              {
+                "id": "call_af1eccb805c65251",
+                "type": "function",
+                "function": {
+                  "name": "read",
+                  "arguments": "{\"path\":\"snippet.mjs\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "{\"complete\":false,\"missingCapabilities\":[\"edit\"],\"reason\":\"EditToolUnavailable\",\"schema\":\"workspace-edit-capability-gap/v1\",\"target\":\"snippet.mjs\",\"verified\":false}"
+          }
+        }
+      ],
+      "tools": [
+        {
+          "tool": "read",
+          "command": "read snippet.mjs",
+          "decision": "allowed",
+          "exitCode": 0
+        }
+      ],
+      "outcome": {
+        "status": "capability-gap",
+        "exitCode": 65,
+        "message": "Formal AI reported a capability gap for snippet.mjs (EditToolUnavailable; missing edit); nothing was verified as done",
+        "remainingObligations": [
+          "the requested change to snippet.mjs was not made or not verified",
+          "set START_FORMAL_AI_EFFECTS=workspace-write to offer the edit and write tools"
+        ],
+        "gap": {
+          "schema": "workspace-edit-capability-gap/v1",
+          "target": "snippet.mjs",
+          "reason": "EditToolUnavailable",
+          "missingCapabilities": ["edit"],
+          "complete": false,
+          "verified": false
+        }
+      },
+      "after": {
+        "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
+      }
+    },
+    {
+      "request": "In snippet.mjs, replace «const label = \"before\";» with «const label = \"after\";». Preserve all other content.",
+      "effects": "workspace-write",
+      "offered": ["bash", "read", "edit", "write"],
+      "responses": [
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me open snippet.mjs and read what it says.",
+            "tool_calls": [
+              {
+                "id": "call_af1eccb805c65251",
+                "type": "function",
+                "function": {
+                  "name": "read",
+                  "arguments": "{\"path\":\"snippet.mjs\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me update snippet.mjs for you.",
+            "tool_calls": [
+              {
+                "id": "call_8867a0cbe9d10d83",
+                "type": "function",
+                "function": {
+                  "name": "edit",
+                  "arguments": "{\"new_string\":\"const label = \\\"after\\\";\",\"old_string\":\"const label = \\\"before\\\";\",\"path\":\"snippet.mjs\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me run the requested command to get that for you.",
+            "tool_calls": [
+              {
+                "id": "call_410bede5ab85d847",
+                "type": "function",
+                "function": {
+                  "name": "bash",
+                  "arguments": "{\"command\":\"sha256sum -- snippet.mjs\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "obligation_49c9d049437c0075\n  record_type \"obligation_gap\"\n  clause \"Preserve all other content.\"\n  span_start \"85\"\n  span_end \"112\"\n  reason \"no_artifact_in_clause\""
+          }
+        }
+      ],
+      "tools": [
+        {
+          "tool": "read",
+          "command": "read snippet.mjs",
+          "decision": "allowed",
+          "exitCode": 0
+        },
+        {
+          "tool": "edit",
+          "command": "edit snippet.mjs",
+          "decision": "allowed",
+          "exitCode": 0
+        },
+        {
+          "command": "sha256sum -- snippet.mjs",
+          "decision": "allowed",
+          "exitCode": 0
+        }
+      ],
+      "outcome": {
+        "status": "completed",
+        "exitCode": 0,
+        "message": "finished after 3 tool call(s); changed snippet.mjs",
+        "remainingObligations": []
+      },
+      "after": {
+        "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"after\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
+      }
+    },
+    {
+      "request": "show contents of snippet.mjs",
+      "effects": "read-only",
+      "offered": ["bash", "read"],
+      "responses": [
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me open snippet.mjs and read what it says.",
+            "tool_calls": [
+              {
+                "id": "call_83b2d12da8280765",
+                "type": "function",
+                "function": {
+                  "name": "read",
+                  "arguments": "{\"path\":\"snippet.mjs\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "Contents of `snippet.mjs`:\n\n```text\n// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n```"
+          }
+        }
+      ],
+      "tools": [
+        {
+          "tool": "read",
+          "command": "read snippet.mjs",
+          "decision": "allowed",
+          "exitCode": 0
+        }
+      ],
+      "outcome": {
+        "status": "completed",
+        "exitCode": 0,
+        "message": "finished after 1 tool call(s); no file changed",
+        "remainingObligations": []
+      },
+      "after": {
+        "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
+      }
+    },
+    {
+      "request": "What is 2 + 2?",
+      "effects": "read-only",
+      "offered": ["bash", "read"],
+      "responses": [
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "2 + 2 = 4"
+          }
+        }
+      ],
+      "tools": [],
+      "outcome": {
+        "status": "answered",
+        "exitCode": 0,
+        "message": "Formal AI answered without tools",
+        "remainingObligations": []
+      },
+      "after": {
+        "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
+      }
+    },
+    {
+      "request": "What is 2 + 2?",
+      "effects": "read-only",
+      "offered": ["bash"],
+      "responses": [
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "2 + 2 = 4"
+          }
+        }
+      ],
+      "tools": [],
+      "outcome": {
+        "status": "answered",
+        "exitCode": 0,
+        "message": "Formal AI answered without tools",
+        "remainingObligations": []
+      },
+      "after": {
+        "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
+      }
+    }
+  ]
+}

@@ -2,13 +2,16 @@
 //! stand-in that replays the receipts captured from the real runtime
 //! (js/test/fixtures/formal-ai/receipts.json) plus synthetic failure
 //! scenarios. Mirrors js/test/regression-255-loop.js. Real tools run in
-//! temporary directories; the only socket is a loopback one.
+//! temporary directories; the only socket is a loopback one. The cases of
+//! issues #257 and #258 (formal_ai_gap_cases.rs) reuse this stand-in.
 
 // Several helpers serve only the tests that need real POSIX tools.
 #![cfg_attr(not(unix), allow(dead_code))]
 
 use super::*;
-use crate::formal_ai_client::{ClientError, Completion, CompletionClient, HttpClient};
+use crate::formal_ai_client::{
+    offered_tools, ClientError, Completion, CompletionClient, HttpClient,
+};
 #[cfg(unix)]
 use crate::formal_ai_policy::formal_ai_policy_cases::populate;
 use crate::formal_ai_policy::formal_ai_policy_cases::receipt_fixture;
@@ -36,6 +39,22 @@ fn receipts() -> &'static Vec<Value> {
     })
 }
 
+/// Receipts of issue #258, answered only to the tool names they offered.
+fn edit_receipts() -> &'static Value {
+    static RECEIPTS: OnceLock<Value> = OnceLock::new();
+    RECEIPTS.get_or_init(|| {
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../js/test/fixtures/formal-ai/receipts-258.json"
+        );
+        let text = fs::read_to_string(path).expect("receipts-258.json is readable");
+        serde_json::from_str(&text).expect("receipts-258.json is JSON")
+    })
+}
+
+/// The HTTP 500 body a released start discarded (issue #257).
+const CAPTURED_500: &str = r#"{"error":{"message":"Aborted(Error: LocalProductWasmForbidden). Build with -sASSERTIONS for more info.","type":"formal_ai_error"}}"#;
+
 fn tool_call(command: &str) -> Value {
     json!({
         "role": "assistant",
@@ -55,14 +74,15 @@ fn answer(content: &str) -> Value {
     json!({ "role": "assistant", "content": content })
 }
 
-/// A reply of the stand-in: a message, or an HTTP error status.
+/// A reply of the stand-in: a message, or an HTTP error status and body.
 enum Reply {
     Message(Value),
-    Status(u16),
+    Status(u16, String),
 }
 
-/// Same replies as js/test/fixtures/formal-ai/replay.cjs.
-fn reply(messages: &[Value]) -> Reply {
+/// Same replies as js/test/fixtures/formal-ai/replay.cjs; `offered` is the
+/// comma-joined names of the tools the request offered.
+fn reply(messages: &[Value], offered: &str) -> Reply {
     let request = messages
         .iter()
         .find(|m| m["role"] == "user")
@@ -87,14 +107,45 @@ fn reply(messages: &[Value]) -> Reply {
         "synthetic: run a missing tool" => answer("The `tree` command failed."),
         "synthetic: overwrite without looking" => tool_call("touch README.md"),
         "synthetic: write outside" => tool_call("touch ../escape.txt"),
-        "synthetic: server error" => return Reply::Status(500),
+        "synthetic: server error" => {
+            return Reply::Status(500, json!({ "error": "synthetic failure" }).to_string())
+        }
+        "synthetic: server error (captured #257)" => {
+            return Reply::Status(500, CAPTURED_500.to_string())
+        }
+        "synthetic: server error with secrets" => {
+            let text = json!({ "error": {
+                "type": "upstream_error",
+                "message": "proxy refused Authorization: Bearer sk-test-0123456789\u{7} api_key=sk-live-abcdef",
+            }});
+            return Reply::Status(503, text.to_string());
+        }
         "synthetic: unverified mkdir" if first => tool_call("test ! -e out"),
         "synthetic: unverified mkdir" => tool_call("mkdir out"),
-        _ => receipts()
-            .iter()
-            .find(|r| r["request"] == request)
+        _ => edit_receipts()["receipts"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|r| {
+                r["request"] == request
+                    && r["offered"]
+                        .as_array()
+                        .map(|names| {
+                            let names: Vec<&str> = names.iter().filter_map(Value::as_str).collect();
+                            names.join(",")
+                        })
+                        .as_deref()
+                        == Some(offered)
+            })
             .map(|r| r["responses"][turns]["message"].clone())
             .filter(|m| !m.is_null())
+            .or_else(|| {
+                receipts()
+                    .iter()
+                    .find(|r| r["request"] == request)
+                    .map(|r| r["responses"][turns]["message"].clone())
+                    .filter(|m| !m.is_null())
+            })
             .unwrap_or_else(|| {
                 json!({
                     "role": "assistant",
@@ -150,8 +201,17 @@ fn serve(mut stream: TcpStream) {
     } else if first.starts_with("POST ") && first.contains("/chat/completions ") {
         let body: Value = serde_json::from_slice(&buf[end..end + length]).unwrap_or(Value::Null);
         let messages = body["messages"].as_array().cloned().unwrap_or_default();
-        match reply(&messages) {
-            Reply::Status(code) => (code, json!({ "error": "synthetic failure" })),
+        let offered: Vec<&str> = body["tools"]
+            .as_array()
+            .map(|tools| {
+                tools
+                    .iter()
+                    .filter_map(|t| t["function"]["name"].as_str())
+                    .collect()
+            })
+            .unwrap_or_default();
+        match reply(&messages, &offered.join(",")) {
+            Reply::Status(code, text) => (code, Value::String(text)),
             Reply::Message(message) => {
                 let finish = if message.get("tool_calls").is_some() {
                     "tool_calls"
@@ -170,7 +230,10 @@ fn serve(mut stream: TcpStream) {
     } else {
         (404, json!({ "error": "not found" }))
     };
-    let text = payload.to_string();
+    let text = match payload {
+        Value::String(text) => text,
+        payload => payload.to_string(),
+    };
     let response = format!(
         "HTTP/1.1 {} Fake\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
         status,
@@ -277,6 +340,8 @@ struct Opts<'a> {
     max_retries: Option<u64>,
     max_output_bytes: Option<u64>,
     tool_timeout_ms: Option<u64>,
+    /// Tools to offer instead of those of the effect mode.
+    tools: Option<Vec<Value>>,
     env: Vec<(String, String)>,
     expired: bool,
     /// Cancel with this exit status 100 ms after this note.
@@ -337,7 +402,11 @@ fn run(request: &str, opts: Opts<'_>) -> Run {
         _ => None,
     };
     let mut client = Recording {
-        inner: HttpClient::new(server_url(), bounds.max_retries, deadline),
+        inner: HttpClient::new(server_url(), bounds.max_retries, deadline).with_tools(
+            opts.tools
+                .clone()
+                .unwrap_or_else(|| offered_tools(&bounds.effects)),
+        ),
         sent: Vec::new(),
     };
     let before = snapshot(&cwd);
@@ -704,9 +773,10 @@ fn reports_a_failing_runtime_after_bounded_retries() {
     assert_eq!(result.outcome.exit_code, EXIT_PROTOCOL);
     assert_eq!(
         result.outcome.message,
-        "Formal AI returned HTTP 500 (after 2 retries)"
+        "Formal AI returned HTTP 500: synthetic failure (after 2 retries)"
     );
     assert_eq!(result.requests, 3);
+    assert_eq!(result.outcome.diagnostics.as_ref().unwrap()["attempts"], 3);
     assert_eq!(
         result.outcome.remaining,
         vec!["Formal AI did not complete the task"]
@@ -867,3 +937,6 @@ fn maps_signal_names_to_exit_statuses() {
     let long = "x".repeat(PREVIEW_CHARS + 5);
     assert!(preview(&long).ends_with("… [5 more chars]"));
 }
+
+#[path = "formal_ai_gap_cases.rs"]
+mod formal_ai_gap_cases;

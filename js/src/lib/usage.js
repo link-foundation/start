@@ -105,7 +105,9 @@ Examples:
   $ -i docker -d --on-kill-resume 3 --recovery-command 'solve --resume' -- solve
   $ -i docker -d --on-kill-resume 3 --on-kill-resume-delay 30-90 -- cargo test
   $ --use-command-stream echo "Hello"      # Use command-stream library
-  $ --use-formal-ai -- print list of files in current directory`);
+  $ --use-formal-ai -- print list of files in current directory
+  $ --use-formal-ai -- show contents of README.md
+  START_FORMAL_AI_EFFECTS=workspace-write $ --use-formal-ai -- "In a.js, replace «x» with «y»."`);
   console.log('');
   console.log('Piping with $:');
   console.log('  echo "hi" | $ agent       # Preferred - pipe TO $ command');

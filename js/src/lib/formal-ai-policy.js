@@ -15,9 +15,9 @@ const path = require('path');
 /** Exit statuses of the mode; a finished task keeps its last tool's status. */
 const EXIT = Object.freeze({
   USAGE: 64, // request text or option combination rejected
-  UNSUPPORTED: 65, // Formal AI reported that it did not understand the task
+  UNSUPPORTED: 65, // Formal AI did not understand the task or reported a capability gap
   UNAVAILABLE: 69, // no qualified Formal AI runtime could be resolved
-  PROTOCOL: 70, // malformed response, unknown tool or unverified effect
+  PROTOCOL: 70, // malformed or 5xx response, unknown tool or unverified effect
   REFUSED: 77, // a tool call was refused by the effect policy
   CONFIG: 78, // invalid START_FORMAL_AI_* bound
   BUDGET: 124, // step, tool, time or retry budget exhausted
@@ -37,6 +37,11 @@ const BOUND_DEFAULTS = Object.freeze({
   maxOutputBytes: {
     env: 'START_FORMAL_AI_MAX_OUTPUT_BYTES',
     value: 64 * 1024,
+    max: 16 * 1024 * 1024,
+  },
+  maxFileBytes: {
+    env: 'START_FORMAL_AI_MAX_FILE_BYTES',
+    value: 1024 * 1024,
     max: 16 * 1024 * 1024,
   },
   maxRequestChars: { env: 'START_FORMAL_AI_MAX_REQUEST_CHARS', value: 4096 },
@@ -265,6 +270,8 @@ function operands(tokens) {
 
 /**
  * Normalized workspace-relative path of an operand, or null outside it.
+ * It uses `/` on every platform, like the fingerprint, so observations,
+ * messages and evidence are the same on Windows.
  * @param {string} cwd - Working directory
  * @param {string} operand - Operand text
  * @returns {string|null}
@@ -275,7 +282,7 @@ function workspacePath(cwd, operand) {
   if (!isInside(root, resolved)) {
     return null;
   }
-  return path.relative(root, resolved) || '.';
+  return path.relative(root, resolved).split(path.sep).join('/') || '.';
 }
 
 /**

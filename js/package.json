@@ -70,7 +70,7 @@
   "dependencies": {
     "@link-foundation/sensitive-data-sanitizer": "^0.12.2",
     "command-stream": "^2.6.0",
-    "lino-objects-codec": "^0.9.4"
+    "lino-objects-codec": "^0.9.5"
   },
   "overrides": {
     "brace-expansion": "^5.0.12",

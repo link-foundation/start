@@ -16,11 +16,11 @@ use serde_json::{json, Value};
 
 /// Request text or option combination rejected.
 pub const EXIT_USAGE: i32 = 64;
-/// Formal AI reported that it did not understand the task.
+/// Formal AI did not understand the task or reported a capability gap.
 pub const EXIT_UNSUPPORTED: i32 = 65;
 /// No qualified Formal AI runtime could be resolved.
 pub const EXIT_UNAVAILABLE: i32 = 69;
-/// Malformed response, unknown tool or unverified effect.
+/// Malformed or 5xx response, unknown tool or unverified effect.
 pub const EXIT_PROTOCOL: i32 = 70;
 /// A tool call was refused by the effect policy.
 pub const EXIT_REFUSED: i32 = 77;
@@ -40,7 +40,7 @@ pub struct BoundSpec {
     pub max: Option<u64>,
 }
 
-pub const BOUND_DEFAULTS: [BoundSpec; 9] = [
+pub const BOUND_DEFAULTS: [BoundSpec; 10] = [
     BoundSpec {
         key: "maxSteps",
         env: "START_FORMAL_AI_MAX_STEPS",
@@ -84,6 +84,13 @@ pub const BOUND_DEFAULTS: [BoundSpec; 9] = [
         max: Some(16 * 1024 * 1024),
     },
     BoundSpec {
+        key: "maxFileBytes",
+        env: "START_FORMAL_AI_MAX_FILE_BYTES",
+        value: 1024 * 1024,
+        min: 1,
+        max: Some(16 * 1024 * 1024),
+    },
+    BoundSpec {
         key: "maxRequestChars",
         env: "START_FORMAL_AI_MAX_REQUEST_CHARS",
         value: 4096,
@@ -115,6 +122,8 @@ pub struct Bounds {
     pub tool_timeout_ms: u64,
     pub startup_timeout_ms: u64,
     pub max_output_bytes: u64,
+    /// Largest file the read, edit and write tools handle (issue #258).
+    pub max_file_bytes: u64,
     pub max_request_chars: u64,
     pub max_memory_mb: u64,
     pub max_fingerprint_entries: u64,
@@ -137,6 +146,7 @@ impl Bounds {
             "toolTimeoutMs": self.tool_timeout_ms,
             "startupTimeoutMs": self.startup_timeout_ms,
             "maxOutputBytes": self.max_output_bytes,
+            "maxFileBytes": self.max_file_bytes,
             "maxRequestChars": self.max_request_chars,
             "maxMemoryMb": self.max_memory_mb,
             "maxFingerprintEntries": self.max_fingerprint_entries,
@@ -200,6 +210,7 @@ pub fn resolve_bounds_with(get: impl Fn(&str) -> Option<String>) -> Result<Bound
         tool_timeout_ms: values["toolTimeoutMs"],
         startup_timeout_ms: values["startupTimeoutMs"],
         max_output_bytes: values["maxOutputBytes"],
+        max_file_bytes: values["maxFileBytes"],
         max_request_chars: values["maxRequestChars"],
         max_memory_mb: values["maxMemoryMb"],
         max_fingerprint_entries: values["maxFingerprintEntries"],
@@ -411,11 +422,17 @@ pub fn operands(tokens: &[String]) -> Vec<String> {
 }
 
 /// Normalized workspace-relative path of an operand, or None outside it.
+/// It uses `/` on every platform, like the fingerprint, so observations,
+/// messages and evidence are the same on Windows.
 pub fn workspace_path(cwd: &Path, operand: &str) -> Option<String> {
     let root = fs::canonicalize(cwd).unwrap_or_else(|_| cwd.to_path_buf());
     let resolved = real_target(&normalize(&cwd.join(operand)));
     let relative = resolved.strip_prefix(&root).ok()?;
-    let text = relative.to_string_lossy().to_string();
+    let text = relative
+        .components()
+        .map(|part| part.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/");
     Some(if text.is_empty() {
         ".".to_string()
     } else {
@@ -423,7 +440,8 @@ pub fn workspace_path(cwd: &Path, operand: &str) -> Option<String> {
     })
 }
 
-fn parent_of(target: &str) -> String {
+/// Directory of a workspace-relative path ("." at the top).
+pub fn parent_of(target: &str) -> String {
     match Path::new(target).parent() {
         Some(parent) if !parent.as_os_str().is_empty() => parent.to_string_lossy().to_string(),
         _ => ".".to_string(),
@@ -437,6 +455,8 @@ pub struct PolicyContext {
     pub effects: String,
     pub observed: BTreeSet<String>,
     pub observed_dirs: BTreeSet<String>,
+    /// SHA-256 of each file as start last read or wrote it (issue #258).
+    pub contents: BTreeMap<String, String>,
 }
 
 impl PolicyContext {

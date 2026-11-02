@@ -340,7 +340,7 @@ describe('--use-formal-ai protocol (#255)', () => {
     ).toEqual({
       content: 'x',
       finishReason: 'tool_calls',
-      toolCalls: [{ id: 'c1', name: 'bash', command: 'ls' }],
+      toolCalls: [{ id: 'c1', name: 'bash', tool: 'bash', command: 'ls' }],
       handler: null,
     });
     expect(
