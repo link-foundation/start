@@ -8,9 +8,7 @@
     {
       "request": "In snippet.mjs, replace the before label declaration with the after label declaration, preserving all other content.",
       "effects": "workspace-write",
-      "offered": [
-        "bash"
-      ],
+      "offered": ["bash"],
       "responses": [
         {
           "finish_reason": "stop",
@@ -32,10 +30,7 @@
           "schema": "workspace-edit-capability-gap/v1",
           "target": "snippet.mjs",
           "reason": "EditToolUnavailable",
-          "missingCapabilities": [
-            "read",
-            "edit"
-          ],
+          "missingCapabilities": ["read", "edit"],
           "complete": false,
           "verified": false
         }
@@ -47,10 +42,7 @@
     {
       "request": "In snippet.mjs, replace the before label declaration with the after label declaration, preserving all other content.",
       "effects": "read-only",
-      "offered": [
-        "bash",
-        "read"
-      ],
+      "offered": ["bash", "read"],
       "responses": [
         {
           "finish_reason": "stop",
@@ -73,9 +65,7 @@
           "schema": "workspace-edit-capability-gap/v1",
           "target": "snippet.mjs",
           "reason": "EditToolUnavailable",
-          "missingCapabilities": [
-            "edit"
-          ],
+          "missingCapabilities": ["edit"],
           "complete": false,
           "verified": false
         }
@@ -87,12 +77,7 @@
     {
       "request": "In snippet.mjs, replace the before label declaration with the after label declaration, preserving all other content.",
       "effects": "workspace-write",
-      "offered": [
-        "bash",
-        "read",
-        "edit",
-        "write"
-      ],
+      "offered": ["bash", "read", "edit", "write"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -154,9 +139,7 @@
         "status": "completed",
         "exitCode": 1,
         "message": "finished; the last tool call exited with 1; no file changed",
-        "remainingObligations": [
-          "the last tool call failed"
-        ]
+        "remainingObligations": ["the last tool call failed"]
       },
       "after": {
         "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
@@ -165,9 +148,7 @@
     {
       "request": "In snippet.mjs, replace «const label = \"before\";» with «const label = \"after\";». Preserve all other content.",
       "effects": "workspace-write",
-      "offered": [
-        "bash"
-      ],
+      "offered": ["bash"],
       "responses": [
         {
           "finish_reason": "stop",
@@ -189,10 +170,7 @@
           "schema": "workspace-edit-capability-gap/v1",
           "target": "snippet.mjs",
           "reason": "EditToolUnavailable",
-          "missingCapabilities": [
-            "read",
-            "edit"
-          ],
+          "missingCapabilities": ["read", "edit"],
           "complete": false,
           "verified": false
         }
@@ -204,10 +182,7 @@
     {
       "request": "In snippet.mjs, replace «const label = \"before\";» with «const label = \"after\";». Preserve all other content.",
       "effects": "read-only",
-      "offered": [
-        "bash",
-        "read"
-      ],
+      "offered": ["bash", "read"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -254,9 +229,7 @@
           "schema": "workspace-edit-capability-gap/v1",
           "target": "snippet.mjs",
           "reason": "EditToolUnavailable",
-          "missingCapabilities": [
-            "edit"
-          ],
+          "missingCapabilities": ["edit"],
           "complete": false,
           "verified": false
         }
@@ -268,12 +241,7 @@
     {
       "request": "In snippet.mjs, replace «const label = \"before\";» with «const label = \"after\";». Preserve all other content.",
       "effects": "workspace-write",
-      "offered": [
-        "bash",
-        "read",
-        "edit",
-        "write"
-      ],
+      "offered": ["bash", "read", "edit", "write"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -366,10 +334,7 @@
     {
       "request": "show contents of snippet.mjs",
       "effects": "read-only",
-      "offered": [
-        "bash",
-        "read"
-      ],
+      "offered": ["bash", "read"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -417,10 +382,7 @@
     {
       "request": "What is 2 + 2?",
       "effects": "read-only",
-      "offered": [
-        "bash",
-        "read"
-      ],
+      "offered": ["bash", "read"],
       "responses": [
         {
           "finish_reason": "stop",
@@ -444,9 +406,7 @@
     {
       "request": "What is 2 + 2?",
       "effects": "read-only",
-      "offered": [
-        "bash"
-      ],
+      "offered": ["bash"],
       "responses": [
         {
           "finish_reason": "stop",
