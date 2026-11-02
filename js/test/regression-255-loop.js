@@ -339,8 +339,13 @@ describe('--use-formal-ai refusals and unsupported requests (#255)', () => {
     expect(result.outcome.status).toBe('protocol-error');
     expect(result.outcome.exitCode).toBe(EXIT.PROTOCOL);
     expect(result.outcome.message).toBe(
-      'Formal AI returned HTTP 500 (after 2 retries)'
+      'Formal AI returned HTTP 500: synthetic failure (after 2 retries)'
     );
+    expect(result.outcome.diagnostics).toMatchObject({
+      httpStatus: 500,
+      errorMessage: 'synthetic failure',
+      attempts: 3,
+    });
     expect(result.requests).toBe(3);
   });
 });

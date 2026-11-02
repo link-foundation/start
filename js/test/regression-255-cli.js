@@ -177,12 +177,14 @@ describe.skipIf(!posix)('--use-formal-ai end to end (#255)', () => {
     );
     expect(result.after).toEqual(result.before);
 
-    // The request went to Formal AI verbatim, with only the bash tool.
+    // The request went to Formal AI verbatim; read-only mode offers bash and
+    // the structured read tool, never the change tools (#258).
     expect(result.requests[0].messages).toEqual([
       { role: 'user', content: 'print list of files in current directory' },
     ]);
     expect(result.requests[0].tools.map((t) => t.function.name)).toEqual([
       'bash',
+      'read',
     ]);
 
     const log = readLog(result.root);

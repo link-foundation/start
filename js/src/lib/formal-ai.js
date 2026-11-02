@@ -7,10 +7,14 @@
  * and keeps evidence of what actually happened. The run ends when Formal AI
  * gives its final answer, says it did not understand, or a bound, refusal,
  * protocol error or cancellation stops it, and the exit status says which.
+ * A final answer that is a known capability gap (issue #258) is reported as
+ * incomplete with its obligations, never as an answer.
  */
 
 const policy = require('./formal-ai-policy');
 const { formatToolResult, runTool } = require('./formal-ai-tool');
+const files = require('./formal-ai-files');
+const { recognizeCapabilityGap } = require('./formal-ai-client');
 
 const { EXIT } = policy;
 const PREVIEW_CHARS = 2000;
@@ -68,13 +72,15 @@ async function runFormalAiTask(options) {
     effects: bounds.effects,
     observed: new Set(),
     observedDirs: new Set(),
+    contents: new Map(),
   };
-  const finish = (status, exitCode, message, remaining = []) => {
+  const finish = (status, exitCode, message, remaining = [], extra = {}) => {
     evidence.outcome = {
       status,
       exitCode,
       message,
       remainingObligations: remaining,
+      ...extra,
     };
     return evidence;
   };
@@ -119,9 +125,15 @@ async function runFormalAiTask(options) {
           : error.exitCode === EXIT.UNAVAILABLE
             ? 'unavailable'
             : 'protocol-error';
-      return finish(status, error.exitCode || EXIT.PROTOCOL, error.message, [
-        'Formal AI did not complete the task',
-      ]);
+      // The cause and attempt count of a runtime failure stay in the
+      // evidence (issue #257); they are sanitized and bounded by the client.
+      return finish(
+        status,
+        error.exitCode || EXIT.PROTOCOL,
+        error.message,
+        ['Formal AI did not complete the task'],
+        error.details ? { diagnostics: { ...error.details } } : {}
+      );
     }
     evidence.steps.push({
       kind: 'response',
@@ -134,6 +146,16 @@ async function runFormalAiTask(options) {
     if (!response.toolCalls.length) {
       if (response.content) {
         note(response.content);
+      }
+      const gap = recognizeCapabilityGap(response.content, messages);
+      if (gap) {
+        return finish(
+          'capability-gap',
+          EXIT.UNSUPPORTED,
+          describeGap(gap),
+          gapObligations(gap, bounds.effects),
+          { gap }
+        );
       }
       if (response.handler === 'unknown' && toolCalls === 0) {
         return finish(
@@ -167,7 +189,10 @@ async function runFormalAiTask(options) {
         type: 'function',
         function: {
           name: call.name,
-          arguments: JSON.stringify({ command: call.command }),
+          arguments:
+            call.tool === 'bash'
+              ? JSON.stringify({ command: call.command })
+              : call.arguments,
         },
       })),
     });
@@ -215,7 +240,139 @@ async function runFormalAiTask(options) {
   );
 }
 
-async function runCall({
+/** Capability gap, in words. */
+function describeGap(gap) {
+  const missing = gap.missingCapabilities.length
+    ? `; missing ${gap.missingCapabilities.join(', ')}`
+    : '';
+  return `Formal AI reported a capability gap for ${gap.target} (${gap.reason}${missing}); nothing was verified as done`;
+}
+
+function gapObligations(gap, effects) {
+  const obligations = [
+    `the requested change to ${gap.target} was not made or not verified`,
+  ];
+  const changes = ['edit', 'write', 'multi_edit'];
+  if (
+    effects !== 'workspace-write' &&
+    gap.missingCapabilities.some((c) => changes.includes(c))
+  ) {
+    obligations.push(
+      'set START_FORMAL_AI_EFFECTS=workspace-write to offer the edit and write tools'
+    );
+  }
+  return obligations;
+}
+
+function runCall(options) {
+  return options.call.tool === 'bash'
+    ? runBashCall(options)
+    : runFileToolCall(options);
+}
+
+/** Record a call's working-directory diff in its step and the run. */
+function recordEffects(step, diff, evidence) {
+  step.effects = diff;
+  for (const key of ['added', 'removed', 'changed']) {
+    evidence.effects[key].push(...diff[key]);
+  }
+  evidence.effects.complete = evidence.effects.complete && diff.complete;
+}
+
+/** A structured read, edit or write call (issue #258). */
+function runFileToolCall({ call, context, cwd, bounds, io, note, evidence }) {
+  const decision = files.evaluateFileCall(call.tool, call.args, context);
+  const step = {
+    kind: 'tool',
+    tool: call.tool,
+    command: call.command,
+    path: call.args.path,
+  };
+  evidence.steps.push(step);
+  if (!decision.allowed) {
+    step.decision = 'refused';
+    step.reason = decision.reason;
+    note(`refused \`${call.command}\`: ${decision.reason}`);
+    return {
+      stop: [
+        'refused',
+        EXIT.REFUSED,
+        `refused \`${call.command}\`: ${decision.reason}`,
+        ['the refused call did not run; nothing after it ran either'],
+      ],
+    };
+  }
+  Object.assign(step, {
+    decision: 'allowed',
+    effect: decision.kind,
+    target: decision.target,
+  });
+  note(call.command);
+  const started = Date.now();
+  const before = policy.fingerprint(cwd, bounds.maxFingerprintEntries);
+  const receipt = files.runFileCall(
+    call.tool,
+    call.args,
+    decision,
+    context,
+    bounds
+  );
+  const diff = policy.diffFingerprints(
+    before,
+    policy.fingerprint(cwd, bounds.maxFingerprintEntries)
+  );
+  Object.assign(step, {
+    exitCode: receipt.exitCode,
+    durationMs: Date.now() - started,
+    ...(receipt.error ? { error: receipt.error } : {}),
+    ...(receipt.bytes !== undefined ? { bytes: receipt.bytes } : {}),
+    ...(receipt.sha256 ? { sha256: receipt.sha256 } : {}),
+    ...(receipt.previousSha256
+      ? { previousSha256: receipt.previousSha256 }
+      : {}),
+    ...(receipt.replacements ? { replacements: receipt.replacements } : {}),
+  });
+  recordEffects(step, diff, evidence);
+  if (receipt.error) {
+    note(`${call.tool} failed: ${receipt.error}`);
+  } else if (call.tool === 'read') {
+    mirrorRead(receipt.text, bounds, io, note);
+    if (policy.hasEffects(diff)) {
+      step.unexpectedEffects = true;
+    }
+  } else {
+    step.verification = receipt.verification;
+    if (!receipt.verification.verified) {
+      return {
+        stop: [
+          'unverified',
+          EXIT.PROTOCOL,
+          `\`${call.command}\` wrote the file but ${receipt.verification.detail}`,
+          ['the change could not be confirmed by readback'],
+        ],
+      };
+    }
+    note(receipt.verification.detail);
+  }
+  return { exitCode: receipt.exitCode, result: receipt.result };
+}
+
+/** Show what a read returned, like the stdout of `cat`, within the output cap. */
+function mirrorRead(text, bounds, io, note) {
+  if (!io.stdout || !text) {
+    return;
+  }
+  const bytes = Buffer.from(text, 'utf8');
+  const shown = bytes.subarray(0, bounds.maxOutputBytes).toString('utf8');
+  io.stdout.write(shown.endsWith('\n') ? shown : `${shown}\n`);
+  if (bytes.length > bounds.maxOutputBytes) {
+    note(
+      `output truncated at START_FORMAL_AI_MAX_OUTPUT_BYTES=${bounds.maxOutputBytes}`
+    );
+  }
+}
+
+async function runBashCall({
   call,
   context,
   cwd,
@@ -275,12 +432,8 @@ async function runCall({
     spawnError: receipt.spawnError,
     stdout: preview(receipt.stdout),
     stderr: preview(receipt.stderr),
-    effects: diff,
   });
-  for (const key of ['added', 'removed', 'changed']) {
-    evidence.effects[key].push(...diff[key]);
-  }
-  evidence.effects.complete = evidence.effects.complete && diff.complete;
+  recordEffects(step, diff, evidence);
   if (receipt.truncated) {
     note(
       `output truncated at START_FORMAL_AI_MAX_OUTPUT_BYTES=${bounds.maxOutputBytes}`
