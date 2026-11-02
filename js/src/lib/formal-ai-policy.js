@@ -270,6 +270,8 @@ function operands(tokens) {
 
 /**
  * Normalized workspace-relative path of an operand, or null outside it.
+ * It uses `/` on every platform, like the fingerprint, so observations,
+ * messages and evidence are the same on Windows.
  * @param {string} cwd - Working directory
  * @param {string} operand - Operand text
  * @returns {string|null}
@@ -280,7 +282,7 @@ function workspacePath(cwd, operand) {
   if (!isInside(root, resolved)) {
     return null;
   }
-  return path.relative(root, resolved) || '.';
+  return path.relative(root, resolved).split(path.sep).join('/') || '.';
 }
 
 /**

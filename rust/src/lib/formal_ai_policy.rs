@@ -422,11 +422,17 @@ pub fn operands(tokens: &[String]) -> Vec<String> {
 }
 
 /// Normalized workspace-relative path of an operand, or None outside it.
+/// It uses `/` on every platform, like the fingerprint, so observations,
+/// messages and evidence are the same on Windows.
 pub fn workspace_path(cwd: &Path, operand: &str) -> Option<String> {
     let root = fs::canonicalize(cwd).unwrap_or_else(|_| cwd.to_path_buf());
     let resolved = real_target(&normalize(&cwd.join(operand)));
     let relative = resolved.strip_prefix(&root).ok()?;
-    let text = relative.to_string_lossy().to_string();
+    let text = relative
+        .components()
+        .map(|part| part.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/");
     Some(if text.is_empty() {
         ".".to_string()
     } else {
