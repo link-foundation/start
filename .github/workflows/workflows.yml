@@ -76,7 +76,7 @@ jobs:
 
       # Annotations instead of SARIF: code scanning is not guaranteed to be
       # enabled on forks, and the job should fail loudly either way.
-      - uses: zizmorcore/zizmor-action@v0.8.0
+      - uses: zizmorcore/zizmor-action@v0.8.1
         with:
           advanced-security: false
           annotations: true
