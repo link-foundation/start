@@ -208,7 +208,9 @@ async function main() {
       2
     )}\n`
   );
-  process.stderr.write(`wrote ${OUT}\n`);
+  process.stderr.write(
+    `wrote ${OUT}; format it with: cd js && npx prettier --write ${path.relative(path.join(__dirname, '..', '..', 'js'), OUT)}\n`
+  );
 }
 
 main().catch((error) => {

@@ -12,6 +12,10 @@
  * `Authorization: <scheme> <value>` header, so a logged one-line JSON prompt
  * keeps the rest of its line (issue #249, sensitive-data-sanitizer#45); the
  * pre-pass that did this here is gone (issue #253).
+ *
+ * The package depends on ^0.13.0, the current release flagged by the
+ * dependency freshness check; the Rust installer and its version check
+ * require the same release (rust/src/lib/log_sanitizer.rs).
  */
 
 const fs = require('fs');

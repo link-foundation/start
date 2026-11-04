@@ -11,6 +11,10 @@
 //! `Authorization: <scheme> <value>` header, so a logged one-line JSON prompt
 //! keeps the rest of its line (issue #249, sensitive-data-sanitizer#45); the
 //! pre-pass that did this here is gone (issue #253).
+//!
+//! The JavaScript package depends on ^0.13.0, the current release flagged by
+//! the dependency freshness check; [`PACKAGE`] and [`MINIMUM_VERSION`] require
+//! the same release (js/src/lib/log-sanitizer.js).
 
 use regex::bytes::Regex;
 use std::ffi::OsString;
