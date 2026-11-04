@@ -2725,7 +2725,8 @@
           "rust/src/lib/formal_ai_client_cases.rs",
           "rust/src/lib/formal_ai_files_cases.rs",
           "rust/src/lib/formal_ai_gap_cases.rs",
-          "rust/src/lib/formal_ai_261_cases.rs"
+          "rust/src/lib/formal_ai_261_cases.rs",
+          "rust/src/lib/formal_ai_261_loop_cases.rs"
         ],
         "tests": [
           "rust/tests/regression_255.rs",
@@ -2734,7 +2735,8 @@
           "rust/src/lib/formal_ai_client_cases.rs",
           "rust/src/lib/formal_ai_files_cases.rs",
           "rust/src/lib/formal_ai_gap_cases.rs",
-          "rust/src/lib/formal_ai_261_cases.rs"
+          "rust/src/lib/formal_ai_261_cases.rs",
+          "rust/src/lib/formal_ai_261_loop_cases.rs"
         ]
       },
       "manualRust": [
@@ -2908,6 +2910,20 @@
         },
         {
           "path": "rust/src/lib/formal_ai_261_cases.rs",
+          "reason": "Native filesystem/process adapter for formal-ai; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
+            "https://github.com/link-foundation/meta-language/issues/204",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/formal_ai_261_loop_cases.rs",
           "reason": "Native filesystem/process adapter for formal-ai; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
           "blockers": [
             "https://github.com/link-foundation/meta-language/issues/222",

@@ -9,7 +9,8 @@
  * byte for byte, so comments, whitespace and unrelated content survive.
  *
  * - read: the exact UTF-8 text of a regular file, bounded by
- *   START_FORMAL_AI_MAX_FILE_BYTES; it observes the file for later changes.
+ *   START_FORMAL_AI_MAX_FILE_BYTES, as the numbered frame Formal AI decodes
+ *   back to that text (#261); it observes the file for later changes.
  * - edit: replaces one literal occurrence of old_string (or every one with
  *   replace_all) in a file read before, atomically, then reads it back.
  * - write: replaces an observed file, or creates one in an observed
