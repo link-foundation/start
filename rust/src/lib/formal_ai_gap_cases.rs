@@ -202,7 +202,10 @@ fn reads_edits_and_reads_back_preserving_all_other_bytes() {
             "clause": "Preserve all other content.",
         }))
     );
-    assert_eq!(result.evidence["outcome"]["gapRecord"]["schema"], "obligation_gap");
+    assert_eq!(
+        result.evidence["outcome"]["gapRecord"]["schema"],
+        "obligation_gap"
+    );
     assert_eq!(edit.text, edited());
     let [read, change, check] = &result.tools[..] else {
         panic!("expected three tool calls: {:?}", result.tools);
