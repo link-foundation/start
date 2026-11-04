@@ -30,6 +30,7 @@ const {
   recognizeCapabilityGap,
 } = require('../src/lib/formal-ai-client');
 const { runFormalAiTask } = require('../src/lib/formal-ai');
+const { readFrame } = require('../src/lib/formal-ai-files');
 const { createFakeServer, edits } = require('./fixtures/formal-ai/replay.cjs');
 const {
   CLI,
@@ -273,11 +274,22 @@ describe('structured file tools against captured receipts (#258)', () => {
     'reads, edits and reads back, preserving all other bytes',
     async () => {
       const result = await run(LITERAL_EDIT, { effects: 'workspace-write' });
+      // start verified the edit byte for byte, but Formal AI's final answer
+      // is a gap for the clause "Preserve all other content.": that is never
+      // reported as done (#261).
       expect(result.outcome).toMatchObject({
-        status: 'completed',
-        exitCode: 0,
-        message: 'finished after 3 tool call(s); changed snippet.mjs',
-        remainingObligations: [],
+        status: 'incomplete',
+        exitCode: EXIT.UNSUPPORTED,
+        message:
+          'Formal AI reported obligation_gap (no_artifact_in_clause) for the clause "Preserve all other content."; nothing was verified as done by Formal AI; changed snippet.mjs',
+        remainingObligations: [
+          'Formal AI did not confirm the requested change',
+        ],
+        gapRecord: {
+          schema: 'obligation_gap',
+          reason: 'no_artifact_in_clause',
+          clause: 'Preserve all other content.',
+        },
       });
       expect(result.text).toBe(EDITED);
       const [read, edit, check] = result.tools;
@@ -304,9 +316,9 @@ describe('structured file tools against captured receipts (#258)', () => {
         command: 'sha256sum -- snippet.mjs',
         exitCode: 0,
       });
-      // Formal AI received the exact file text and the readback hash.
+      // Formal AI received the exact file text (framed) and the readback hash.
       const toolMessages = result.sent[3].filter((m) => m.role === 'tool');
-      expect(toolMessages[0].content).toBe(ORIGINAL);
+      expect(toolMessages[0].content).toBe(readFrame(ORIGINAL));
       expect(toolMessages[2].content).toContain(edit.sha256);
       expect(result.evidence.effects).toMatchObject({
         changed: ['snippet.mjs'],
@@ -398,7 +410,7 @@ describe('edit requests through the CLI (#258)', () => {
     const result = cli(LITERAL_EDIT, {
       START_FORMAL_AI_EFFECTS: 'workspace-write',
     });
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(EXIT.UNSUPPORTED);
     expect(result.text).toBe(EDITED);
     expect(result.stderr).toContain('[formal-ai] edit snippet.mjs');
     expect(result.stderr).toContain(
@@ -411,8 +423,9 @@ describe('edit requests through the CLI (#258)', () => {
       'write',
     ]);
     expect(result.evidence.outcome).toMatchObject({
-      status: 'completed',
-      exitCode: 0,
+      status: 'incomplete',
+      exitCode: EXIT.UNSUPPORTED,
+      gapRecord: { schema: 'obligation_gap' },
     });
   });
 

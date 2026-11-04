@@ -210,7 +210,10 @@ fn reads_the_exact_text_and_records_the_observation() {
     let mut context = PolicyContext::new(dir.path(), "read-only");
     let receipt = read("./a.js", &mut context);
     assert_eq!(receipt.exit_code, 0);
-    assert_eq!(receipt.result, TEXT);
+    // Formal AI binds the numbered whole-file frame as the Read (#261).
+    assert_eq!(receipt.result, read_frame(TEXT));
+    assert_eq!(read_frame_text(&receipt.result).as_deref(), Some(TEXT));
+    assert_eq!(receipt.text.as_deref(), Some(TEXT));
     assert_eq!(receipt.bytes, Some(TEXT.len() as u64));
     assert!(context.observed.contains("a.js"));
     assert_eq!(context.contents.get("a.js"), receipt.sha256.as_ref());
@@ -276,7 +279,19 @@ fn edits_one_literal_occurrence_preserving_every_other_byte_and_the_mode() {
     .receipt();
     let expected = TEXT.replacen("const b = 2;", "const b = $&3;", 1);
     assert_eq!(receipt.exit_code, 0);
-    assert_eq!(receipt.result, "");
+    let result: Value = serde_json::from_str(&receipt.result).unwrap();
+    assert_eq!(
+        result,
+        json!({
+            "ok": true,
+            "path": "a.js",
+            "tool": "edit",
+            "preimage": { "sha256": sha256_hex(TEXT.as_bytes()), "bytes": TEXT.len() },
+            "postimage": { "sha256": sha256_hex(expected.as_bytes()), "bytes": expected.len() },
+            "replacements": 1,
+            "verified": true,
+        })
+    );
     assert_eq!(receipt.replacements, Some(1));
     assert_eq!(receipt.previous_sha256, before.sha256);
     assert_eq!(receipt.sha256, Some(sha256_hex(expected.as_bytes())));
@@ -310,8 +325,8 @@ fn keeps_a_byte_order_mark() {
     fs::write(cwd.join("bom.txt"), "\u{feff}first\nsecond\n").unwrap();
     let mut context = PolicyContext::new(cwd, "workspace-write");
     assert_eq!(
-        read("bom.txt", &mut context).result,
-        "\u{feff}first\nsecond\n"
+        read("bom.txt", &mut context).text.as_deref(),
+        Some("\u{feff}first\nsecond\n")
     );
     let receipt = call(
         "edit",

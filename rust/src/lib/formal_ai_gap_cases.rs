@@ -181,11 +181,30 @@ fn every_captured_edit_request_replays_to_its_captured_outcome_and_text() {
 fn reads_edits_and_reads_back_preserving_all_other_bytes() {
     let edit = run_edit(LITERAL_EDIT, "workspace-write", None);
     let result = &edit.result;
-    assert_eq!(result.outcome.status, "completed");
-    assert_eq!(result.outcome.exit_code, 0);
+    // start verified the edit byte for byte, but Formal AI's final answer is
+    // a gap for the clause "Preserve all other content.": that is never
+    // reported as done (#261).
+    assert_eq!(result.outcome.status, "incomplete");
+    assert_eq!(result.outcome.exit_code, EXIT_UNSUPPORTED);
     assert_eq!(
         result.outcome.message,
-        "finished after 3 tool call(s); changed snippet.mjs"
+        "Formal AI reported obligation_gap (no_artifact_in_clause) for the clause \"Preserve all other content.\"; nothing was verified as done by Formal AI; changed snippet.mjs"
+    );
+    assert_eq!(
+        result.outcome.remaining,
+        vec!["Formal AI did not confirm the requested change"]
+    );
+    assert_eq!(
+        result.outcome.gap_record,
+        Some(json!({
+            "schema": "obligation_gap",
+            "reason": "no_artifact_in_clause",
+            "clause": "Preserve all other content.",
+        }))
+    );
+    assert_eq!(
+        result.evidence["outcome"]["gapRecord"]["schema"],
+        "obligation_gap"
     );
     assert_eq!(edit.text, edited());
     let [read, change, check] = &result.tools[..] else {
@@ -208,11 +227,14 @@ fn reads_edits_and_reads_back_preserving_all_other_bytes() {
     );
     assert_eq!(check["command"], "sha256sum -- snippet.mjs");
     assert_eq!(check["exitCode"], 0);
-    // Formal AI received the exact file text, the raw edit arguments and the
-    // readback hash.
+    // Formal AI received the exact file text (framed), the raw edit
+    // arguments and the readback hash.
     let last = &result.sent[3];
     let tool_messages: Vec<&Value> = last.iter().filter(|m| m["role"] == "tool").collect();
-    assert_eq!(tool_messages[0]["content"], original());
+    assert_eq!(
+        tool_messages[0]["content"],
+        crate::formal_ai_files::read_frame(&original())
+    );
     assert!(tool_messages[2]["content"]
         .as_str()
         .unwrap()
@@ -261,7 +283,10 @@ fn shows_a_file_through_the_read_tool_without_changing_it() {
     );
     let commands: Vec<&Value> = result.tools.iter().map(|t| &t["command"]).collect();
     assert_eq!(commands, [&json!("read snippet.mjs")]);
-    assert_eq!(result.sent[1][2]["content"], original());
+    assert_eq!(
+        result.sent[1][2]["content"],
+        crate::formal_ai_files::read_frame(&original())
+    );
     assert_eq!(edit.text, original());
     assert_eq!(result.after, result.before);
 }
@@ -384,11 +409,25 @@ fn reports_a_failed_edit_with_its_real_status_and_no_change() {
         ],
         "workspace-write",
     );
+    // The failure stays unresolved with its original error (#261).
     assert_eq!(
         (outcome.status.as_str(), outcome.exit_code),
-        ("completed", 1)
+        ("incomplete", 1)
     );
-    assert_eq!(outcome.remaining, vec!["the last tool call failed"]);
+    assert_eq!(
+        outcome.remaining,
+        vec!["`edit snippet.mjs` failed: snippet.mjs: old_string was not found; nothing changed"]
+    );
+    assert_eq!(
+        outcome.failures,
+        vec![json!({
+            "command": "edit snippet.mjs",
+            "tool": "edit",
+            "target": "snippet.mjs",
+            "exitCode": 1,
+            "error": "snippet.mjs: old_string was not found; nothing changed",
+        })]
+    );
     assert!(unchanged);
 }
 
@@ -400,7 +439,7 @@ fn describes_gaps_and_their_obligations() {
         "missingCapabilities": [],
     });
     assert_eq!(
-        describe_gap(&gap),
+        describe_gap(&gap, &EffectDiff::default()),
         "Formal AI reported a capability gap for a.js (VerificationRunToolUnavailable); nothing was verified as done"
     );
     assert_eq!(

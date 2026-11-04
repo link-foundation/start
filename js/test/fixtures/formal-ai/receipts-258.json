@@ -1,6 +1,6 @@
 {
-  "source": "captured from Formal AI 0.355.29 (982a7ffcb05d039292712ec9fe33bdbd645ed569) js agent mode by experiments/issue-258/capture-receipts.cjs",
-  "capturedAt": "2026-11-02",
+  "source": "captured from Formal AI 0.355.32 (08ca27d1ee0560fb56450ad798f3a79c684404ed) js agent mode by experiments/issue-258/capture-receipts.cjs",
+  "capturedAt": "2026-11-04",
   "fixture": {
     "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
   },
@@ -136,10 +136,21 @@
         }
       ],
       "outcome": {
-        "status": "completed",
+        "status": "incomplete",
         "exitCode": 1,
-        "message": "finished; the last tool call exited with 1; no file changed",
-        "remainingObligations": ["the last tool call failed"]
+        "message": "`edit snippet.mjs` failed (snippet.mjs: old_string was not found; nothing changed) and no later call resolved it; no file changed",
+        "remainingObligations": [
+          "`edit snippet.mjs` failed: snippet.mjs: old_string was not found; nothing changed"
+        ],
+        "failures": [
+          {
+            "command": "edit snippet.mjs",
+            "tool": "edit",
+            "target": "snippet.mjs",
+            "exitCode": 1,
+            "error": "snippet.mjs: old_string was not found; nothing changed"
+          }
+        ]
       },
       "after": {
         "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
@@ -322,10 +333,17 @@
         }
       ],
       "outcome": {
-        "status": "completed",
-        "exitCode": 0,
-        "message": "finished after 3 tool call(s); changed snippet.mjs",
-        "remainingObligations": []
+        "status": "incomplete",
+        "exitCode": 65,
+        "message": "Formal AI reported obligation_gap (no_artifact_in_clause) for the clause \"Preserve all other content.\"; nothing was verified as done by Formal AI; changed snippet.mjs",
+        "remainingObligations": [
+          "Formal AI did not confirm the requested change"
+        ],
+        "gapRecord": {
+          "schema": "obligation_gap",
+          "reason": "no_artifact_in_clause",
+          "clause": "Preserve all other content."
+        }
       },
       "after": {
         "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"after\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"

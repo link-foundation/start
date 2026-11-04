@@ -15,6 +15,7 @@ const { API_PREFIX } = require('./formal-ai-runtime');
 const {
   FILE_TOOLS,
   describeFileCall,
+  echoedByTool,
   normalizeFileArgs,
 } = require('./formal-ai-files');
 
@@ -144,7 +145,12 @@ const GAP_SCHEMAS = Object.freeze({
     'EditToolUnavailable',
     'ReadToolUnavailable',
   ],
-  'workspace-change-verification-gap/v1': ['VerificationRunToolUnavailable'],
+  // SourcePreimageUnavailable: Formal AI could not bind the complete Read
+  // before its edit to the change (issue #261).
+  'workspace-change-verification-gap/v1': [
+    'VerificationRunToolUnavailable',
+    'SourcePreimageUnavailable',
+  ],
 });
 const CAPABILITIES = new Set([
   'read',
@@ -196,10 +202,7 @@ function recognizeCapabilityGap(content, messages = []) {
   ) {
     return null;
   }
-  const echoed = messages.some(
-    (m) => m && m.role === 'tool' && String(m.content || '').includes(text)
-  );
-  if (echoed) {
+  if (echoedByTool(text, messages)) {
     return null;
   }
   return {

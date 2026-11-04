@@ -198,9 +198,14 @@ pub const GAP_SCHEMAS: [(&str, &[&str]); 2] = [
         "workspace-edit-capability-gap/v1",
         &["EditToolUnavailable", "ReadToolUnavailable"],
     ),
+    // SourcePreimageUnavailable: Formal AI could not bind the complete Read
+    // before its edit to the change (issue #261).
     (
         "workspace-change-verification-gap/v1",
-        &["VerificationRunToolUnavailable"],
+        &[
+            "VerificationRunToolUnavailable",
+            "SourcePreimageUnavailable",
+        ],
     ),
 ];
 const CAPABILITIES: [&str; 6] = ["read", "edit", "multi_edit", "write", "run", "bash"];
@@ -234,15 +239,7 @@ pub fn recognize_capability_gap(content: &str, messages: &[Value]) -> Option<Val
     {
         return None;
     }
-    let echoed = messages.iter().any(|m| {
-        m["role"] == "tool"
-            && match &m["content"] {
-                Value::String(content) => content.contains(text),
-                Value::Null => false,
-                other => other.to_string().contains(text),
-            }
-    });
-    if echoed {
+    if crate::formal_ai_files::echoed_by_tool(text, messages) {
         return None;
     }
     Some(json!({

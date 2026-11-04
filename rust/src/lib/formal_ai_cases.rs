@@ -52,6 +52,19 @@ fn edit_receipts() -> &'static Value {
     })
 }
 
+/// Held-out receipts of issue #261, answered like those of #258.
+fn held_out_receipts() -> &'static Value {
+    static RECEIPTS: OnceLock<Value> = OnceLock::new();
+    RECEIPTS.get_or_init(|| {
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../js/test/fixtures/formal-ai/receipts-261.json"
+        );
+        let text = fs::read_to_string(path).expect("receipts-261.json is readable");
+        serde_json::from_str(&text).expect("receipts-261.json is JSON")
+    })
+}
+
 /// The HTTP 500 body a released start discarded (issue #257).
 const CAPTURED_500: &str = r#"{"error":{"message":"Aborted(Error: LocalProductWasmForbidden). Build with -sASSERTIONS for more info.","type":"formal_ai_error"}}"#;
 
@@ -126,6 +139,12 @@ fn reply(messages: &[Value], offered: &str) -> Reply {
             .as_array()
             .into_iter()
             .flatten()
+            .chain(
+                held_out_receipts()["receipts"]
+                    .as_array()
+                    .into_iter()
+                    .flatten(),
+            )
             .find(|r| {
                 r["request"] == request
                     && r["offered"]
@@ -940,3 +959,6 @@ fn maps_signal_names_to_exit_statuses() {
 
 #[path = "formal_ai_gap_cases.rs"]
 mod formal_ai_gap_cases;
+
+#[path = "formal_ai_261_cases.rs"]
+mod formal_ai_261_cases;

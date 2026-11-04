@@ -1,0 +1,589 @@
+{
+  "source": "captured from Formal AI 0.355.32 (08ca27d1ee0560fb56450ad798f3a79c684404ed) js agent mode by experiments/issue-261/capture-receipts.cjs",
+  "capturedAt": "2026-11-04",
+  "receipts": [
+    {
+      "name": "issue reproduction",
+      "request": "In draft.txt, replace «draft» with «verified».",
+      "effects": "workspace-write",
+      "files": {
+        "draft.txt": "draft\n",
+        "verified-source.txt": "verified\n"
+      },
+      "links": {},
+      "offered": ["bash", "read", "edit", "write"],
+      "responses": [
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me open draft.txt and read what it says.",
+            "tool_calls": [
+              {
+                "id": "call_2c33961d84b9a31d",
+                "type": "function",
+                "function": {
+                  "name": "read",
+                  "arguments": "{\"path\":\"draft.txt\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me update draft.txt for you.",
+            "tool_calls": [
+              {
+                "id": "call_7469658d98e59005",
+                "type": "function",
+                "function": {
+                  "name": "edit",
+                  "arguments": "{\"new_string\":\"verified\",\"old_string\":\"draft\",\"path\":\"draft.txt\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me run the requested command to get that for you.",
+            "tool_calls": [
+              {
+                "id": "call_b3ddcc9ecf22728b",
+                "type": "function",
+                "function": {
+                  "name": "bash",
+                  "arguments": "{\"command\":\"sha256sum -- draft.txt\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "Replaced `draft` with `verified` in `draft.txt` and observed the result."
+          }
+        }
+      ],
+      "tools": [
+        {
+          "tool": "read",
+          "command": "read draft.txt",
+          "decision": "allowed",
+          "exitCode": 0
+        },
+        {
+          "tool": "edit",
+          "command": "edit draft.txt",
+          "decision": "allowed",
+          "exitCode": 0
+        },
+        {
+          "tool": "bash",
+          "command": "sha256sum -- draft.txt",
+          "decision": "allowed",
+          "exitCode": 0
+        }
+      ],
+      "outcome": {
+        "status": "completed",
+        "exitCode": 0,
+        "message": "finished after 3 tool call(s); changed draft.txt",
+        "remainingObligations": []
+      },
+      "after": {
+        "draft.txt": "verified\n",
+        "verified-source.txt": "verified\n"
+      }
+    },
+    {
+      "name": "issue reproduction, read-only",
+      "request": "In draft.txt, replace «draft» with «verified».",
+      "effects": "read-only",
+      "files": {
+        "draft.txt": "draft\n",
+        "verified-source.txt": "verified\n"
+      },
+      "links": {},
+      "offered": ["bash", "read"],
+      "responses": [
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me open draft.txt and read what it says.",
+            "tool_calls": [
+              {
+                "id": "call_2c33961d84b9a31d",
+                "type": "function",
+                "function": {
+                  "name": "read",
+                  "arguments": "{\"path\":\"draft.txt\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "{\"complete\":false,\"missingCapabilities\":[\"edit\"],\"reason\":\"EditToolUnavailable\",\"schema\":\"workspace-edit-capability-gap/v1\",\"target\":\"draft.txt\",\"verified\":false}"
+          }
+        }
+      ],
+      "tools": [
+        {
+          "tool": "read",
+          "command": "read draft.txt",
+          "decision": "allowed",
+          "exitCode": 0
+        }
+      ],
+      "outcome": {
+        "status": "capability-gap",
+        "exitCode": 65,
+        "message": "Formal AI reported a capability gap for draft.txt (EditToolUnavailable; missing edit); nothing was verified as done",
+        "remainingObligations": [
+          "the requested change to draft.txt was not made or not verified",
+          "set START_FORMAL_AI_EFFECTS=workspace-write to offer the edit and write tools"
+        ],
+        "gap": {
+          "schema": "workspace-edit-capability-gap/v1",
+          "target": "draft.txt",
+          "reason": "EditToolUnavailable",
+          "missingCapabilities": ["edit"],
+          "complete": false,
+          "verified": false
+        }
+      },
+      "after": {
+        "draft.txt": "draft\n",
+        "verified-source.txt": "verified\n"
+      }
+    },
+    {
+      "name": "mismatched OLD",
+      "request": "In mismatch.txt, replace «drafted» with «verified».",
+      "effects": "workspace-write",
+      "files": {
+        "mismatch.txt": "draft\n",
+        "verified-source.txt": "verified\n"
+      },
+      "links": {},
+      "offered": ["bash", "read", "edit", "write"],
+      "responses": [
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me open mismatch.txt and read what it says.",
+            "tool_calls": [
+              {
+                "id": "call_fd4368a9e9ad0e50",
+                "type": "function",
+                "function": {
+                  "name": "read",
+                  "arguments": "{\"path\":\"mismatch.txt\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "`drafted` does not occur in `mismatch.txt`, so nothing was changed."
+          }
+        }
+      ],
+      "tools": [
+        {
+          "tool": "read",
+          "command": "read mismatch.txt",
+          "decision": "allowed",
+          "exitCode": 0
+        }
+      ],
+      "outcome": {
+        "status": "completed",
+        "exitCode": 0,
+        "message": "finished after 1 tool call(s); no file changed",
+        "remainingObligations": []
+      },
+      "after": {
+        "mismatch.txt": "draft\n",
+        "verified-source.txt": "verified\n"
+      }
+    },
+    {
+      "name": "repeated occurrences",
+      "request": "In twice.txt, replace «draft» with «verified».",
+      "effects": "workspace-write",
+      "files": {
+        "twice.txt": "draft one\ndraft two\n"
+      },
+      "links": {},
+      "offered": ["bash", "read", "edit", "write"],
+      "responses": [
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me open twice.txt and read what it says.",
+            "tool_calls": [
+              {
+                "id": "call_08ec81c4f930c1cd",
+                "type": "function",
+                "function": {
+                  "name": "read",
+                  "arguments": "{\"path\":\"twice.txt\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me run the requested command to get that for you.",
+            "tool_calls": [
+              {
+                "id": "call_c93ac09bdb199918",
+                "type": "function",
+                "function": {
+                  "name": "bash",
+                  "arguments": "{\"command\":\"perl -pi -e 's/draft/verified/g' -- twice.txt\"}"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "tools": [
+        {
+          "tool": "read",
+          "command": "read twice.txt",
+          "decision": "allowed",
+          "exitCode": 0
+        },
+        {
+          "tool": "bash",
+          "command": "perl -pi -e 's/draft/verified/g' -- twice.txt",
+          "decision": "refused",
+          "exitCode": null
+        }
+      ],
+      "outcome": {
+        "status": "refused",
+        "exitCode": 77,
+        "message": "refused `perl -pi -e 's/draft/verified/g' -- twice.txt`: program \"perl\" is not in the supported tool set",
+        "remainingObligations": [
+          "the refused call did not run; nothing after it ran either"
+        ]
+      },
+      "after": {
+        "twice.txt": "draft one\ndraft two\n"
+      }
+    },
+    {
+      "name": "Unicode and CRLF",
+      "request": "In unicode.txt, replace «café» with «naïve».",
+      "effects": "workspace-write",
+      "files": {
+        "unicode.txt": "Ünïcödé café ☕\r\nsecond line 🙂\r\nno final newline"
+      },
+      "links": {},
+      "offered": ["bash", "read", "edit", "write"],
+      "responses": [
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me open unicode.txt and read what it says.",
+            "tool_calls": [
+              {
+                "id": "call_751c11cbd746b338",
+                "type": "function",
+                "function": {
+                  "name": "read",
+                  "arguments": "{\"path\":\"unicode.txt\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me update unicode.txt for you.",
+            "tool_calls": [
+              {
+                "id": "call_68431c4da851607b",
+                "type": "function",
+                "function": {
+                  "name": "edit",
+                  "arguments": "{\"new_string\":\"naïve\",\"old_string\":\"café\",\"path\":\"unicode.txt\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me run the requested command to get that for you.",
+            "tool_calls": [
+              {
+                "id": "call_b1f11e74e8e7bd46",
+                "type": "function",
+                "function": {
+                  "name": "bash",
+                  "arguments": "{\"command\":\"sha256sum -- unicode.txt\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "Replaced `café` with `naïve` in `unicode.txt` and observed the result."
+          }
+        }
+      ],
+      "tools": [
+        {
+          "tool": "read",
+          "command": "read unicode.txt",
+          "decision": "allowed",
+          "exitCode": 0
+        },
+        {
+          "tool": "edit",
+          "command": "edit unicode.txt",
+          "decision": "allowed",
+          "exitCode": 0
+        },
+        {
+          "tool": "bash",
+          "command": "sha256sum -- unicode.txt",
+          "decision": "allowed",
+          "exitCode": 0
+        }
+      ],
+      "outcome": {
+        "status": "completed",
+        "exitCode": 0,
+        "message": "finished after 3 tool call(s); changed unicode.txt",
+        "remainingObligations": []
+      },
+      "after": {
+        "unicode.txt": "Ünïcödé naïve ☕\r\nsecond line 🙂\r\nno final newline"
+      }
+    },
+    {
+      "name": "symlinked path",
+      "request": "In link.txt, replace «draft» with «verified».",
+      "effects": "workspace-write",
+      "files": {
+        "real.txt": "draft\n"
+      },
+      "links": {
+        "link.txt": "real.txt"
+      },
+      "offered": ["bash", "read", "edit", "write"],
+      "responses": [
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me open link.txt and read what it says.",
+            "tool_calls": [
+              {
+                "id": "call_f1b2a529ea88b28d",
+                "type": "function",
+                "function": {
+                  "name": "read",
+                  "arguments": "{\"path\":\"link.txt\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me update link.txt for you.",
+            "tool_calls": [
+              {
+                "id": "call_f4e6366385e51cc7",
+                "type": "function",
+                "function": {
+                  "name": "edit",
+                  "arguments": "{\"new_string\":\"verified\",\"old_string\":\"draft\",\"path\":\"link.txt\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me run the requested command to get that for you.",
+            "tool_calls": [
+              {
+                "id": "call_0e57dc5d4eebde9b",
+                "type": "function",
+                "function": {
+                  "name": "bash",
+                  "arguments": "{\"command\":\"sha256sum -- link.txt\"}"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "Replaced `draft` with `verified` in `link.txt` and observed the result."
+          }
+        }
+      ],
+      "tools": [
+        {
+          "tool": "read",
+          "command": "read link.txt",
+          "decision": "allowed",
+          "exitCode": 0
+        },
+        {
+          "tool": "edit",
+          "command": "edit link.txt",
+          "decision": "allowed",
+          "exitCode": 0
+        },
+        {
+          "tool": "bash",
+          "command": "sha256sum -- link.txt",
+          "decision": "allowed",
+          "exitCode": 0
+        }
+      ],
+      "outcome": {
+        "status": "completed",
+        "exitCode": 0,
+        "message": "finished after 3 tool call(s); changed real.txt",
+        "remainingObligations": []
+      },
+      "after": {
+        "real.txt": "verified\n"
+      }
+    },
+    {
+      "name": "symlink leaving the workspace",
+      "request": "In escape.txt, replace «draft» with «verified».",
+      "effects": "workspace-write",
+      "files": {
+        "../outside.txt": "draft\n"
+      },
+      "links": {
+        "escape.txt": "../outside.txt"
+      },
+      "offered": ["bash", "read", "edit", "write"],
+      "responses": [
+        {
+          "finish_reason": "tool_calls",
+          "message": {
+            "role": "assistant",
+            "content": "Let me open escape.txt and read what it says.",
+            "tool_calls": [
+              {
+                "id": "call_f63acc2df7065c9f",
+                "type": "function",
+                "function": {
+                  "name": "read",
+                  "arguments": "{\"path\":\"escape.txt\"}"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "tools": [
+        {
+          "tool": "read",
+          "command": "read escape.txt",
+          "decision": "refused",
+          "exitCode": null
+        }
+      ],
+      "outcome": {
+        "status": "refused",
+        "exitCode": 77,
+        "message": "refused `read escape.txt`: \"escape.txt\" is outside the working directory",
+        "remainingObligations": [
+          "the refused call did not run; nothing after it ran either"
+        ]
+      },
+      "after": {
+        "../outside.txt": "draft\n"
+      }
+    },
+    {
+      "name": "foreign path",
+      "request": "In ../outside.txt, replace «draft» with «verified».",
+      "effects": "workspace-write",
+      "files": {
+        "draft.txt": "draft\n",
+        "verified-source.txt": "verified\n",
+        "../outside.txt": "draft\n"
+      },
+      "links": {},
+      "offered": ["bash", "read", "edit", "write"],
+      "responses": [
+        {
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "obligation_7d79209116af07c0\n  record_type \"obligation_gap\"\n  clause \"In .\"\n  span_start \"0\"\n  span_end \"4\"\n  reason \"no_artifact_in_clause\""
+          }
+        }
+      ],
+      "tools": [],
+      "outcome": {
+        "status": "incomplete",
+        "exitCode": 65,
+        "message": "Formal AI reported obligation_gap (no_artifact_in_clause) for the clause \"In .\"; nothing was verified as done by Formal AI; no file changed",
+        "remainingObligations": [
+          "Formal AI did not confirm the requested change"
+        ],
+        "gapRecord": {
+          "schema": "obligation_gap",
+          "reason": "no_artifact_in_clause",
+          "clause": "In ."
+        }
+      },
+      "after": {
+        "draft.txt": "draft\n",
+        "verified-source.txt": "verified\n",
+        "../outside.txt": "draft\n"
+      }
+    }
+  ]
+}

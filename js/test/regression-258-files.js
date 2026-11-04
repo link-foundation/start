@@ -11,6 +11,7 @@ const {
   EXIT,
 } = require('../src/lib/formal-ai-policy');
 const files = require('../src/lib/formal-ai-files');
+const { readFrame, readFrameText } = files;
 const { runFormalAiTask } = require('../src/lib/formal-ai');
 const {
   cleanup,
@@ -144,11 +145,14 @@ describe('read (#258)', () => {
     const cwd = workspace();
     const ctx = context(cwd, 'read-only');
     const receipt = call('read', { path: './a.js' }, ctx);
+    // Formal AI binds a read as complete only in its numbered frame (#261).
     expect(receipt).toMatchObject({
       exitCode: 0,
-      result: TEXT,
+      text: TEXT,
+      result: readFrame(TEXT),
       bytes: Buffer.byteLength(TEXT),
     });
+    expect(readFrameText(receipt.result)).toBe(TEXT);
     expect(ctx.observed.has('a.js')).toBe(true);
     expect(ctx.contents.get('a.js')).toBe(receipt.sha256);
   });
@@ -198,9 +202,15 @@ describe('edit (#258)', () => {
     );
     expect(receipt).toMatchObject({
       exitCode: 0,
-      result: '',
       replacements: 1,
       verification: { verified: true },
+    });
+    expect(JSON.parse(receipt.result)).toMatchObject({
+      ok: true,
+      path: 'a.js',
+      tool: 'edit',
+      replacements: 1,
+      verified: true,
     });
     expect(fs.readFileSync(file, 'utf8')).toBe(
       TEXT.replace('const b = 2;', () => 'const b = $&3;')
@@ -215,7 +225,7 @@ describe('edit (#258)', () => {
   it('keeps a byte order mark', () => {
     const cwd = workspace({ 'bom.txt': '\ufefffirst\nsecond\n' });
     const ctx = context(cwd);
-    expect(call('read', { path: 'bom.txt' }, ctx).result).toBe(
+    expect(call('read', { path: 'bom.txt' }, ctx).text).toBe(
       '\ufefffirst\nsecond\n'
     );
     const receipt = call(
@@ -420,10 +430,22 @@ describe('file tools in the task loop (#258)', () => {
       },
       { content: 'The edit failed.' },
     ]);
+    // The failure stays unresolved with its original error (#261).
     expect(result.evidence.outcome).toMatchObject({
-      status: 'completed',
+      status: 'incomplete',
       exitCode: 1,
-      remainingObligations: ['the last tool call failed'],
+      remainingObligations: [
+        '`edit a.js` failed: a.js: old_string was not found; nothing changed',
+      ],
+      failures: [
+        {
+          command: 'edit a.js',
+          tool: 'edit',
+          target: 'a.js',
+          exitCode: 1,
+          error: 'a.js: old_string was not found; nothing changed',
+        },
+      ],
     });
     expect(result.after).toEqual(result.before);
   });
