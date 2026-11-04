@@ -312,13 +312,7 @@ pub fn unrecognized_gap_record(content: &str, messages: &[Value]) -> Option<Valu
     {
         return None;
     }
-    let echoed = messages.iter().any(|message| {
-        message["role"] == "tool"
-            && message["content"]
-                .as_str()
-                .is_some_and(|c| c.contains(text))
-    });
-    if echoed {
+    if crate::formal_ai_files::echoed_by_tool(text, messages) {
         return None;
     }
     let mut out = json!({ "schema": schema });

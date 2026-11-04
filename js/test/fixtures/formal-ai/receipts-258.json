@@ -8,9 +8,7 @@
     {
       "request": "In snippet.mjs, replace the before label declaration with the after label declaration, preserving all other content.",
       "effects": "workspace-write",
-      "offered": [
-        "bash"
-      ],
+      "offered": ["bash"],
       "responses": [
         {
           "finish_reason": "stop",
@@ -32,10 +30,7 @@
           "schema": "workspace-edit-capability-gap/v1",
           "target": "snippet.mjs",
           "reason": "EditToolUnavailable",
-          "missingCapabilities": [
-            "read",
-            "edit"
-          ],
+          "missingCapabilities": ["read", "edit"],
           "complete": false,
           "verified": false
         }
@@ -47,10 +42,7 @@
     {
       "request": "In snippet.mjs, replace the before label declaration with the after label declaration, preserving all other content.",
       "effects": "read-only",
-      "offered": [
-        "bash",
-        "read"
-      ],
+      "offered": ["bash", "read"],
       "responses": [
         {
           "finish_reason": "stop",
@@ -73,9 +65,7 @@
           "schema": "workspace-edit-capability-gap/v1",
           "target": "snippet.mjs",
           "reason": "EditToolUnavailable",
-          "missingCapabilities": [
-            "edit"
-          ],
+          "missingCapabilities": ["edit"],
           "complete": false,
           "verified": false
         }
@@ -87,12 +77,7 @@
     {
       "request": "In snippet.mjs, replace the before label declaration with the after label declaration, preserving all other content.",
       "effects": "workspace-write",
-      "offered": [
-        "bash",
-        "read",
-        "edit",
-        "write"
-      ],
+      "offered": ["bash", "read", "edit", "write"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -174,9 +159,7 @@
     {
       "request": "In snippet.mjs, replace «const label = \"before\";» with «const label = \"after\";». Preserve all other content.",
       "effects": "workspace-write",
-      "offered": [
-        "bash"
-      ],
+      "offered": ["bash"],
       "responses": [
         {
           "finish_reason": "stop",
@@ -198,10 +181,7 @@
           "schema": "workspace-edit-capability-gap/v1",
           "target": "snippet.mjs",
           "reason": "EditToolUnavailable",
-          "missingCapabilities": [
-            "read",
-            "edit"
-          ],
+          "missingCapabilities": ["read", "edit"],
           "complete": false,
           "verified": false
         }
@@ -213,10 +193,7 @@
     {
       "request": "In snippet.mjs, replace «const label = \"before\";» with «const label = \"after\";». Preserve all other content.",
       "effects": "read-only",
-      "offered": [
-        "bash",
-        "read"
-      ],
+      "offered": ["bash", "read"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -263,9 +240,7 @@
           "schema": "workspace-edit-capability-gap/v1",
           "target": "snippet.mjs",
           "reason": "EditToolUnavailable",
-          "missingCapabilities": [
-            "edit"
-          ],
+          "missingCapabilities": ["edit"],
           "complete": false,
           "verified": false
         }
@@ -277,12 +252,7 @@
     {
       "request": "In snippet.mjs, replace «const label = \"before\";» with «const label = \"after\";». Preserve all other content.",
       "effects": "workspace-write",
-      "offered": [
-        "bash",
-        "read",
-        "edit",
-        "write"
-      ],
+      "offered": ["bash", "read", "edit", "write"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -382,10 +352,7 @@
     {
       "request": "show contents of snippet.mjs",
       "effects": "read-only",
-      "offered": [
-        "bash",
-        "read"
-      ],
+      "offered": ["bash", "read"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -433,10 +400,7 @@
     {
       "request": "What is 2 + 2?",
       "effects": "read-only",
-      "offered": [
-        "bash",
-        "read"
-      ],
+      "offered": ["bash", "read"],
       "responses": [
         {
           "finish_reason": "stop",
@@ -460,9 +424,7 @@
     {
       "request": "What is 2 + 2?",
       "effects": "read-only",
-      "offered": [
-        "bash"
-      ],
+      "offered": ["bash"],
       "responses": [
         {
           "finish_reason": "stop",

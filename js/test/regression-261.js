@@ -703,11 +703,37 @@ describe('unresolved failures in the task loop (#261)', () => {
       const other = await loop([readDraft, { content }]);
       expect(other.outcome.status).toBe('completed');
     }
-    const echoed = await loop([readDraft, { content: 'x' }], {
+    // A record or gap the read tool returned from a file, numbered in the
+    // read frame, is file data, not Formal AI's answer.
+    const echoed = await loop([readDraft, { content: record }], {
       ...REPRO,
       'draft.txt': `${record}\n`,
     });
     expect(echoed.outcome.status).toBe('completed');
+    const gap = JSON.stringify(
+      {
+        schema: 'workspace-change-verification-gap/v1',
+        target: 'draft.txt',
+        reason: 'SourcePreimageUnavailable',
+        complete: false,
+        verified: false,
+      },
+      null,
+      2
+    );
+    const echoedGap = await loop([readDraft, { content: gap }], {
+      ...REPRO,
+      'draft.txt': `${gap}\n`,
+    });
+    expect(echoedGap.outcome.status).toBe('completed');
+    expect(
+      files.echoedByTool(record, [
+        { role: 'tool', content: files.readFrame(`${record}\n`) },
+      ])
+    ).toBe(true);
+    expect(
+      files.echoedByTool(record, [{ role: 'user', content: record }])
+    ).toBe(false);
   });
 });
 

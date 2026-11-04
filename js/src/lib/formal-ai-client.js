@@ -15,6 +15,7 @@ const { API_PREFIX } = require('./formal-ai-runtime');
 const {
   FILE_TOOLS,
   describeFileCall,
+  echoedByTool,
   normalizeFileArgs,
 } = require('./formal-ai-files');
 
@@ -201,10 +202,7 @@ function recognizeCapabilityGap(content, messages = []) {
   ) {
     return null;
   }
-  const echoed = messages.some(
-    (m) => m && m.role === 'tool' && String(m.content || '').includes(text)
-  );
-  if (echoed) {
+  if (echoedByTool(text, messages)) {
     return null;
   }
   return {

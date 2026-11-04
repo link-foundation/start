@@ -239,15 +239,7 @@ pub fn recognize_capability_gap(content: &str, messages: &[Value]) -> Option<Val
     {
         return None;
     }
-    let echoed = messages.iter().any(|m| {
-        m["role"] == "tool"
-            && match &m["content"] {
-                Value::String(content) => content.contains(text),
-                Value::Null => false,
-                other => other.to_string().contains(text),
-            }
-    });
-    if echoed {
+    if crate::formal_ai_files::echoed_by_tool(text, messages) {
         return None;
     }
     Some(json!({

@@ -196,7 +196,7 @@ mod cli {
     /// The reply of the offline stand-in: the recorded response number k of
     /// the receipt (k = assistant turns so far), a synthetic scenario, or the
     /// runtime's "did not understand" reply. Mirrors replay.cjs.
-    fn reply(messages: &[Value]) -> Value {
+    fn reply(messages: &[Value], offered: &str) -> Value {
         let request = messages
             .iter()
             .find(|m| m["role"] == "user")
@@ -209,6 +209,26 @@ mod cli {
             } else {
                 json!({ "role": "assistant", "content": "done" })
             };
+        }
+        // Held-out edits of issue #261, answered only to the tools they offered.
+        let held_out: Value = serde_json::from_str(include_str!(
+            "../../js/test/fixtures/formal-ai/receipts-261.json"
+        ))
+        .unwrap();
+        let edit = held_out["receipts"].as_array().unwrap().iter().find(|r| {
+            let names: Vec<&str> = r["offered"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter_map(Value::as_str)
+                .collect();
+            r["request"] == request && names.join(",") == offered
+        });
+        if let Some(message) = edit
+            .and_then(|r| r["responses"].get(turns))
+            .map(|r| r["message"].clone())
+        {
+            return message;
         }
         let receipts: Value = serde_json::from_str(include_str!(
             "../../js/test/fixtures/formal-ai/receipts.json"
@@ -262,7 +282,16 @@ mod cli {
                     serde_json::from_slice(&buf[end..end + length]).unwrap_or(Value::Null);
                 requests.lock().unwrap().push(body.clone());
                 let messages = body["messages"].as_array().cloned().unwrap_or_default();
-                let message = reply(&messages);
+                let offered: Vec<&str> = body["tools"]
+                    .as_array()
+                    .map(|tools| {
+                        tools
+                            .iter()
+                            .filter_map(|t| t["function"]["name"].as_str())
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                let message = reply(&messages, &offered.join(","));
                 let finish = if message.get("tool_calls").is_some() {
                     "tool_calls"
                 } else {
@@ -679,5 +708,47 @@ mod cli {
         assert_eq!(evidence["outcome"]["status"], "cancelled");
         assert_eq!(evidence["outcome"]["exitCode"], 143);
         assert!(started.elapsed() < Duration::from_secs(25));
+    }
+
+    /// Issue #261: the synthetic reproduction exits 0 with the exact bytes.
+    /// Mirrors "the reproduction through the CLI" of js/test/regression-261.js.
+    #[test]
+    fn edits_the_issue_261_reproduction_with_a_bound_verified_edit() {
+        let runtime = FakeRuntime::start();
+        let sandbox = Sandbox::new();
+        let cwd = sandbox.cwd.path();
+        fs::write(cwd.join("draft.txt"), "draft\n").unwrap();
+        fs::write(cwd.join("verified-source.txt"), "verified\n").unwrap();
+        let before = snapshot(cwd);
+        let mut env = runtime.env();
+        env.extend(vars(&[("START_FORMAL_AI_EFFECTS", "workspace-write")]));
+        let output = sandbox.run("In draft.txt, replace «draft» with «verified».", &env);
+        let stderr = text(&output.stderr);
+        assert_eq!(output.status.code(), Some(0), "{}", stderr);
+        assert_eq!(fs::read(cwd.join("draft.txt")).unwrap(), b"verified\n");
+        let after = snapshot(cwd);
+        assert_eq!(after["verified-source.txt"], before["verified-source.txt"]);
+        assert!(
+            stderr.contains(
+                "[formal-ai] readback confirmed edit draft.txt (9 bytes; 1 replacement(s); every other byte unchanged)"
+            ),
+            "{}",
+            stderr
+        );
+        let requests = runtime.requests();
+        let read = requests[1]["messages"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|m| m["role"] == "tool")
+            .cloned()
+            .unwrap();
+        assert_eq!(
+            read["content"],
+            "<file>\n00001| draft\n00002| \n\n(End of file - total 2 lines)\n</file>"
+        );
+        let evidence = evidence(&sandbox.log());
+        assert_eq!(evidence["outcome"]["status"], "completed");
+        assert_eq!(evidence["outcome"]["exitCode"], 0);
     }
 }

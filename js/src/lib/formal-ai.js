@@ -381,14 +381,7 @@ function unrecognizedGapRecord(content, messages) {
   ) {
     return null;
   }
-  const text = String(content).trim();
-  const echoed = messages.some(
-    (m) =>
-      m.role === 'tool' &&
-      typeof m.content === 'string' &&
-      m.content.includes(text)
-  );
-  if (echoed) {
+  if (files.echoedByTool(String(content).trim(), messages)) {
     return null;
   }
   return {

@@ -580,6 +580,23 @@ pub fn read_frame_text(frame: &str) -> Option<String> {
     Some(out.join("\n"))
 }
 
+/// Whether a tool result of the conversation already contained `text`, as
+/// sent or as the file text of a read frame (whose lines carry numbers): an
+/// answer that only echoes file data back is not Formal AI's own (#261).
+pub fn echoed_by_tool(text: &str, messages: &[Value]) -> bool {
+    messages.iter().any(|m| {
+        if m["role"] != "tool" {
+            return false;
+        }
+        let content = match &m["content"] {
+            Value::String(content) => content.clone(),
+            Value::Null => String::new(),
+            other => other.to_string(),
+        };
+        content.contains(text) || read_frame_text(&content).is_some_and(|t| t.contains(text))
+    })
+}
+
 /// What an approved file call did.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct FileReceipt {

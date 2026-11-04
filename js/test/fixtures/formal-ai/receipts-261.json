@@ -11,12 +11,7 @@
         "verified-source.txt": "verified\n"
       },
       "links": {},
-      "offered": [
-        "bash",
-        "read",
-        "edit",
-        "write"
-      ],
+      "offered": ["bash", "read", "edit", "write"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -117,10 +112,7 @@
         "verified-source.txt": "verified\n"
       },
       "links": {},
-      "offered": [
-        "bash",
-        "read"
-      ],
+      "offered": ["bash", "read"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -167,9 +159,7 @@
           "schema": "workspace-edit-capability-gap/v1",
           "target": "draft.txt",
           "reason": "EditToolUnavailable",
-          "missingCapabilities": [
-            "edit"
-          ],
+          "missingCapabilities": ["edit"],
           "complete": false,
           "verified": false
         }
@@ -188,12 +178,7 @@
         "verified-source.txt": "verified\n"
       },
       "links": {},
-      "offered": [
-        "bash",
-        "read",
-        "edit",
-        "write"
-      ],
+      "offered": ["bash", "read", "edit", "write"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -247,12 +232,7 @@
         "twice.txt": "draft one\ndraft two\n"
       },
       "links": {},
-      "offered": [
-        "bash",
-        "read",
-        "edit",
-        "write"
-      ],
+      "offered": ["bash", "read", "edit", "write"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -323,12 +303,7 @@
         "unicode.txt": "Ünïcödé café ☕\r\nsecond line 🙂\r\nno final newline"
       },
       "links": {},
-      "offered": [
-        "bash",
-        "read",
-        "edit",
-        "write"
-      ],
+      "offered": ["bash", "read", "edit", "write"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -429,12 +404,7 @@
       "links": {
         "link.txt": "real.txt"
       },
-      "offered": [
-        "bash",
-        "read",
-        "edit",
-        "write"
-      ],
+      "offered": ["bash", "read", "edit", "write"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -535,12 +505,7 @@
       "links": {
         "escape.txt": "../outside.txt"
       },
-      "offered": [
-        "bash",
-        "read",
-        "edit",
-        "write"
-      ],
+      "offered": ["bash", "read", "edit", "write"],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -590,12 +555,7 @@
         "../outside.txt": "draft\n"
       },
       "links": {},
-      "offered": [
-        "bash",
-        "read",
-        "edit",
-        "write"
-      ],
+      "offered": ["bash", "read", "edit", "write"],
       "responses": [
         {
           "finish_reason": "stop",

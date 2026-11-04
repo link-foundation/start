@@ -480,6 +480,26 @@ function readFrameText(frame) {
 }
 
 /**
+ * Whether a tool result of the conversation already contained `text`, as
+ * sent or as the file text of a read frame (whose lines carry numbers): an
+ * answer that only echoes file data back is not Formal AI's own (#261).
+ * @param {string} text - Trimmed answer
+ * @param {object[]} messages - Conversation so far
+ * @returns {boolean}
+ */
+function echoedByTool(text, messages) {
+  return messages.some((m) => {
+    if (!m || m.role !== 'tool') {
+      return false;
+    }
+    const content = String(m.content ?? '');
+    return (
+      content.includes(text) || (readFrameText(content) ?? '').includes(text)
+    );
+  });
+}
+
+/**
  * Run an approved file tool call.
  *
  * A change is bound to the complete bytes of the target that this task last
@@ -761,6 +781,7 @@ function changeResult(receipt, verified) {
 module.exports = {
   FILE_TOOLS,
   describeFileCall,
+  echoedByTool,
   evaluateFileCall,
   normalizeFileArgs,
   readFrame,
