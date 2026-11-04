@@ -198,9 +198,14 @@ pub const GAP_SCHEMAS: [(&str, &[&str]); 2] = [
         "workspace-edit-capability-gap/v1",
         &["EditToolUnavailable", "ReadToolUnavailable"],
     ),
+    // SourcePreimageUnavailable: Formal AI could not bind the complete Read
+    // before its edit to the change (issue #261).
     (
         "workspace-change-verification-gap/v1",
-        &["VerificationRunToolUnavailable"],
+        &[
+            "VerificationRunToolUnavailable",
+            "SourcePreimageUnavailable",
+        ],
     ),
 ];
 const CAPABILITIES: [&str; 6] = ["read", "edit", "multi_edit", "write", "run", "bash"];

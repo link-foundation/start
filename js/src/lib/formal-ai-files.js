@@ -430,25 +430,6 @@ function verifyMutation(preimage, readback, matches, oldBytes, newBytes) {
 const digest = (bytes) => ({ sha256: sha256(bytes), bytes: bytes.length });
 
 /**
- * Run an approved file tool call.
- *
- * A change is bound to the complete bytes of the target that this task last
- * read with the read tool (or wrote and verified): the edit is applied to
- * those bytes only, the target is checked to still hold them just before the
- * new file takes its place, and the readback is verified byte for byte
- * against the mutation receipt (edit) or the whole intended text (write).
- * @param {string} tool - read, edit or write
- * @param {object} args - normalizeFileArgs() result
- * @param {object} decision - evaluateFileCall() result
- * @param {object} context - Loop context; `contents` maps paths to the sha256
- *   of the complete bytes start last read or verified; optional
- *   `beforeReplace(file)` and `afterReplace(file)` hooks run just before the
- *   guard and just before the readback (tests)
- * @param {object} bounds - {maxFileBytes}
- * @returns {object} Receipt {exitCode, result, error?, bytes?, sha256?,
- *   previousSha256?, replacements?, mutation?, verification?}
- */
-/**
  * The complete text of a read as the numbered frame Formal AI binds as a
  * whole-file Read (#261): one `NNNNN| line` per `\n`-separated line and a
  * trailer with the line count. Formal AI decodes it back to exactly `text`
@@ -498,6 +479,25 @@ function readFrameText(frame) {
   return out.join('\n');
 }
 
+/**
+ * Run an approved file tool call.
+ *
+ * A change is bound to the complete bytes of the target that this task last
+ * read with the read tool (or wrote and verified): the edit is applied to
+ * those bytes only, the target is checked to still hold them just before the
+ * new file takes its place, and the readback is verified byte for byte
+ * against the mutation receipt (edit) or the whole intended text (write).
+ * @param {string} tool - read, edit or write
+ * @param {object} args - normalizeFileArgs() result
+ * @param {object} decision - evaluateFileCall() result
+ * @param {object} context - Loop context; `contents` maps paths to the sha256
+ *   of the complete bytes start last read or verified; optional
+ *   `beforeReplace(file)` and `afterReplace(file)` hooks run just before the
+ *   guard and just before the readback (tests)
+ * @param {object} bounds - {maxFileBytes}
+ * @returns {object} Receipt {exitCode, result, error?, bytes?, sha256?,
+ *   previousSha256?, replacements?, mutation?, verification?}
+ */
 function runFileCall(tool, args, decision, context, bounds) {
   const file = path.join(fs.realpathSync(context.cwd), decision.target);
   const { target } = decision;

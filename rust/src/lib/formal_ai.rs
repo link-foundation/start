@@ -11,6 +11,11 @@
 //! A final answer that is a known capability gap (issue #258) is reported as
 //! incomplete with a nonzero exit, and structured read, edit and write calls
 //! run under the same workspace policy as bash commands.
+//!
+//! A failed change stays unresolved until the same typed tool changes the same
+//! target and its readback is verified (issue #261): a later read, a copy over
+//! the file or Formal AI's final answer does not resolve it, and the run then
+//! ends `incomplete` with the original failure and its exit status.
 
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -107,6 +112,10 @@ pub struct Outcome {
     pub diagnostics: Option<Value>,
     /// The capability gap Formal AI reported (issue #258).
     pub gap: Option<Value>,
+    /// Failed calls no later verified call resolved (issue #261).
+    pub failures: Vec<Value>,
+    /// A gap record Formal AI answered with that start does not know (#261).
+    pub gap_record: Option<Value>,
 }
 
 impl Outcome {
@@ -123,6 +132,8 @@ impl Outcome {
             remaining: remaining.iter().map(|s| s.to_string()).collect(),
             diagnostics: None,
             gap: None,
+            failures: Vec::new(),
+            gap_record: None,
         }
     }
 
@@ -136,15 +147,23 @@ impl Outcome {
         if let Some(diagnostics) = &self.diagnostics {
             out["diagnostics"] = diagnostics.clone();
         }
+        if !self.failures.is_empty() {
+            out["failures"] = json!(self.failures);
+        }
         if let Some(gap) = &self.gap {
             out["gap"] = gap.clone();
+        }
+        if let Some(record) = &self.gap_record {
+            out["gapRecord"] = record.clone();
         }
         out
     }
 }
 
-/// Capability gap, in words.
-pub fn describe_gap(gap: &Value) -> String {
+/// Capability gap, in words. When tools changed the working directory, the
+/// message keeps what start observed: Formal AI's gap still means the task is
+/// not confirmed, whatever start verified on its own (#261).
+pub fn describe_gap(gap: &Value, effects: &EffectDiff) -> String {
     let missing: Vec<&str> = gap["missingCapabilities"]
         .as_array()
         .map(|items| items.iter().filter_map(Value::as_str).collect())
@@ -154,12 +173,161 @@ pub fn describe_gap(gap: &Value) -> String {
     } else {
         format!("; missing {}", missing.join(", "))
     };
-    format!(
-        "Formal AI reported a capability gap for {} ({}{}); nothing was verified as done",
+    let head = format!(
+        "Formal AI reported a capability gap for {} ({}{})",
         gap["target"].as_str().unwrap_or(""),
         gap["reason"].as_str().unwrap_or(""),
         missing
+    );
+    if effects.has_effects() {
+        format!(
+            "{}; Formal AI did not confirm the task as done; start observed: {}",
+            head,
+            describe_effects(effects)
+        )
+    } else {
+        format!("{}; nothing was verified as done", head)
+    }
+}
+
+/// Keep the failed calls of a run until a later call meets their obligation
+/// (issue #261). A failed edit or write is resolved only by a verified edit or
+/// write of the same target (a write also resolves a failed read of the file
+/// it created); a failed read by a read of the same target; a failed write
+/// command only by the same command succeeding. A copy or move over the target
+/// never counts as the edit.
+pub fn track_failures(unresolved: &mut Vec<Value>, step: &Value) {
+    if step["kind"] != "tool" || step["decision"] != "allowed" {
+        return;
+    }
+    let tool = step["tool"].as_str();
+    let typed = tool.is_some();
+    let changed = typed && tool != Some("read");
+    let exit_code = step["exitCode"].as_i64();
+    if exit_code != Some(0) && (typed || step["effect"] == "write") {
+        let error = match (step["error"].as_str(), step["signal"].as_str()) {
+            (Some(error), _) if !error.is_empty() => error.to_string(),
+            (_, Some(signal)) => format!("stopped by {}", signal),
+            _ => format!(
+                "exited with {}",
+                exit_code.map_or("null".to_string(), |code| code.to_string())
+            ),
+        };
+        let mut failure = json!({ "command": step["command"] });
+        if typed {
+            failure["tool"] = step["tool"].clone();
+            failure["target"] = step["target"].clone();
+        }
+        failure["exitCode"] = json!(exit_code.unwrap_or(1));
+        failure["error"] = json!(error);
+        unresolved.push(failure);
+        return;
+    }
+    if exit_code != Some(0) {
+        return;
+    }
+    let verified = changed && step["verification"]["verified"] == true;
+    unresolved.retain(|failure| {
+        let resolved = if typed {
+            failure["target"] == step["target"]
+                && if failure["tool"] == "read" {
+                    tool == Some("read") || verified
+                } else {
+                    verified && (failure["tool"].as_str() == tool || tool == Some("edit"))
+                }
+        } else {
+            failure.get("tool").is_none() && failure["command"] == step["command"]
+        };
+        !resolved
+    });
+}
+
+fn failure_obligation(failure: &Value) -> String {
+    format!(
+        "`{}` failed: {}",
+        failure["command"].as_str().unwrap_or(""),
+        failure["error"].as_str().unwrap_or("")
     )
+}
+
+/// A final answer that is exactly one Links Notation record whose record_type
+/// names a gap, as Formal AI's task obligations answer (`obligation_gap`, e.g.
+/// reason `no_artifact_in_clause`): an id line, then `  key "value"` lines.
+/// Returned in the JSON gap shape (schema = record_type, never complete), so
+/// a gap Formal AI states in its own notation is never taken as success, even
+/// when start verified every change it made (#261).
+pub fn lino_gap_record(text: &str) -> Option<Value> {
+    let mut lines = text.split('\n');
+    let id = lines.next()?;
+    let lines: Vec<&str> = lines.collect();
+    let word = |c: char| c.is_ascii_alphanumeric() || c == '_';
+    if id.is_empty() || !id.chars().all(word) || lines.is_empty() {
+        return None;
+    }
+    let pattern = regex::Regex::new(r#"^ {2}([a-z_]+) (?:"([^"]*)"|'([^']*)'|(\S+))$"#)
+        .expect("valid pattern");
+    let mut fields = serde_json::Map::new();
+    for line in lines {
+        let found = pattern.captures(line)?;
+        let key = found[1].to_string();
+        if fields.contains_key(&key) {
+            return None;
+        }
+        let value = found
+            .get(2)
+            .or_else(|| found.get(3))
+            .or_else(|| found.get(4))
+            .map_or("", |m| m.as_str());
+        fields.insert(key, json!(value));
+    }
+    let schema = fields.get("record_type")?.as_str()?.to_string();
+    let mut out = json!({ "schema": schema });
+    for key in ["reason", "clause"] {
+        if let Some(value) = fields
+            .get(key)
+            .and_then(Value::as_str)
+            .filter(|v| !v.is_empty())
+        {
+            out[key] = json!(value);
+        }
+    }
+    out["complete"] = json!(false);
+    Some(out)
+}
+
+/// A final answer that is a JSON (or Links Notation) record of a gap start
+/// does not know: it is never taken as success, though its schema grants no
+/// recognized gap. A record echoed from a tool message is not Formal AI's.
+pub fn unrecognized_gap_record(content: &str, messages: &[Value]) -> Option<Value> {
+    let text = content.trim();
+    let value = serde_json::from_str::<Value>(text)
+        .ok()
+        .or_else(|| lino_gap_record(text))?;
+    let schema = value["schema"].as_str()?;
+    if !value.is_object()
+        || !schema.to_lowercase().contains("gap")
+        || !(value["verified"] == false
+            || value["complete"] == false
+            || value["completed"] == false)
+    {
+        return None;
+    }
+    let echoed = messages.iter().any(|message| {
+        message["role"] == "tool"
+            && message["content"]
+                .as_str()
+                .is_some_and(|c| c.contains(text))
+    });
+    if echoed {
+        return None;
+    }
+    let mut out = json!({ "schema": schema });
+    for key in ["target", "reason", "clause"] {
+        if let Some(field) = value[key].as_str() {
+            out[key] = json!(field);
+        }
+    }
+    Some(out)
 }
 
 /// What a capability gap leaves to do, and how to offer the change tools.
@@ -217,7 +385,15 @@ pub fn run_formal_ai_task(
     evidence["steps"] = json!([]);
     evidence["effects"] = EffectDiff::default().to_json();
     evidence["outcome"] = Value::Null;
-    let outcome = task_loop(options, client, evidence);
+    // Failed calls whose obligation no later verified call met (#261).
+    let mut unresolved = Vec::new();
+    let mut outcome = task_loop(options, client, evidence, &mut unresolved);
+    for obligation in unresolved.iter().map(failure_obligation) {
+        if !outcome.remaining.contains(&obligation) {
+            outcome.remaining.push(obligation);
+        }
+    }
+    outcome.failures = unresolved;
     evidence["outcome"] = outcome.to_json();
     outcome
 }
@@ -226,6 +402,7 @@ fn task_loop(
     options: &TaskOptions<'_>,
     client: &mut dyn CompletionClient,
     evidence: &mut Value,
+    unresolved: &mut Vec<Value>,
 ) -> Outcome {
     let bounds = options.bounds;
     let mut context = PolicyContext::new(options.cwd, &bounds.effects);
@@ -283,10 +460,61 @@ fn task_loop(
                 (options.note)(&response.content);
             }
             if let Some(gap) = recognize_capability_gap(&response.content, &messages) {
-                let mut outcome =
-                    Outcome::new("capability-gap", EXIT_UNSUPPORTED, describe_gap(&gap), &[]);
+                let mut outcome = Outcome::new(
+                    "capability-gap",
+                    EXIT_UNSUPPORTED,
+                    describe_gap(&gap, &total),
+                    &[],
+                );
                 outcome.remaining = gap_obligations(&gap, &bounds.effects);
                 outcome.gap = Some(gap);
+                return outcome;
+            }
+            if let Some(first) = unresolved.first() {
+                return Outcome::new(
+                    "incomplete",
+                    first["exitCode"]
+                        .as_i64()
+                        .filter(|code| *code != 0)
+                        .map_or(1, |code| code as i32),
+                    format!(
+                        "`{}` failed ({}) and no later call resolved it; {}",
+                        first["command"].as_str().unwrap_or(""),
+                        first["error"].as_str().unwrap_or(""),
+                        describe_effects(&total)
+                    ),
+                    &[],
+                );
+            }
+            if let Some(record) = unrecognized_gap_record(&response.content, &messages) {
+                let text = |key: &str| {
+                    record[key]
+                        .as_str()
+                        .filter(|value| !value.is_empty())
+                        .map(str::to_string)
+                };
+                let mut message =
+                    format!("Formal AI reported {}", text("schema").unwrap_or_default());
+                if let Some(reason) = text("reason") {
+                    message.push_str(&format!(" ({})", reason));
+                }
+                if let Some(target) = text("target") {
+                    message.push_str(&format!(" for {}", target));
+                }
+                if let Some(clause) = text("clause") {
+                    message.push_str(&format!(" for the clause {}", json!(clause)));
+                }
+                message.push_str(&format!(
+                    "; nothing was verified as done by Formal AI; {}",
+                    describe_effects(&total)
+                ));
+                let mut outcome = Outcome::new(
+                    "incomplete",
+                    EXIT_UNSUPPORTED,
+                    message,
+                    &["Formal AI did not confirm the requested change"],
+                );
+                outcome.gap_record = Some(record);
                 return outcome;
             }
             if response.handler.as_deref() == Some("unknown") && tool_calls == 0 {
@@ -356,6 +584,9 @@ fn task_loop(
                 );
             }
             let result = run_call(options, call, &mut context, &mut total, evidence);
+            if let Some(step) = evidence["steps"].as_array().and_then(|steps| steps.last()) {
+                track_failures(unresolved, step);
+            }
             if let Some(code) = (options.cancel)() {
                 return cancelled(code);
             }
@@ -578,10 +809,7 @@ fn run_file_tool_call(
             stop = Some(Outcome::new(
                 "unverified",
                 EXIT_PROTOCOL,
-                format!(
-                    "`{}` wrote the file but {}",
-                    call.command, verification.detail
-                ),
+                format!("`{}` ran but {}", call.command, verification.detail),
                 &["the change could not be confirmed by readback"],
             ));
         }
