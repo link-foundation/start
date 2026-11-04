@@ -441,8 +441,9 @@ const digest = (bytes) => ({ sha256: sha256(bytes), bytes: bytes.length });
  * @param {object} args - normalizeFileArgs() result
  * @param {object} decision - evaluateFileCall() result
  * @param {object} context - Loop context; `contents` maps paths to the sha256
- *   of the complete bytes start last read or verified; an optional
- *   `beforeReplace(file)` hook runs just before the guard (tests)
+ *   of the complete bytes start last read or verified; optional
+ *   `beforeReplace(file)` and `afterReplace(file)` hooks run just before the
+ *   guard and just before the readback (tests)
  * @param {object} bounds - {maxFileBytes}
  * @returns {object} Receipt {exitCode, result, error?, bytes?, sha256?,
  *   previousSha256?, replacements?, mutation?, verification?}
@@ -667,6 +668,9 @@ function runFileCall(tool, args, decision, context, bounds) {
   const receipt = publicMutation(mutation);
   let readback;
   try {
+    if (context.afterReplace) {
+      context.afterReplace(file);
+    }
     readback = readBytes(file, bounds.maxFileBytes).bytes;
   } catch (error) {
     context.contents.delete(target);
