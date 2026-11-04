@@ -12,6 +12,7 @@
  * Receipts of issue #258 (receipts-258.json) also record the tool names start
  * offered; they answer only a request offering exactly those tools, so the
  * released Bash-only contract and the structured file tools replay apart.
+ * The held-out edits of issue #261 (receipts-261.json) replay the same way.
  */
 
 const fs = require('fs');
@@ -22,6 +23,7 @@ const load = (name) =>
   JSON.parse(fs.readFileSync(path.join(__dirname, name), 'utf8'));
 const { receipts } = load('receipts.json');
 const edits = load('receipts-258.json');
+const heldOut = load('receipts-261.json');
 
 /**
  * The HTTP 500 body a released start discarded (issue #257), captured from a
@@ -113,7 +115,7 @@ function reply(body) {
   const offered = (Array.isArray(body.tools) ? body.tools : [])
     .map((tool) => tool && tool.function && tool.function.name)
     .join(',');
-  const edit = edits.receipts.find(
+  const edit = [...edits.receipts, ...heldOut.receipts].find(
     (r) => r.request === request && r.offered.join(',') === offered
   );
   if (edit && edit.responses[turns]) {
@@ -189,6 +191,7 @@ module.exports = {
   SYNTHETIC,
   createFakeServer,
   edits,
+  heldOut,
   receipts,
   reply,
 };

@@ -1,6 +1,6 @@
 {
-  "source": "captured from Formal AI 0.355.29 (982a7ffcb05d039292712ec9fe33bdbd645ed569) js agent mode by experiments/issue-258/capture-receipts.cjs",
-  "capturedAt": "2026-11-02",
+  "source": "captured from Formal AI 0.355.32 (08ca27d1ee0560fb56450ad798f3a79c684404ed) js agent mode by experiments/issue-258/capture-receipts.cjs",
+  "capturedAt": "2026-11-04",
   "fixture": {
     "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
   },
@@ -8,7 +8,9 @@
     {
       "request": "In snippet.mjs, replace the before label declaration with the after label declaration, preserving all other content.",
       "effects": "workspace-write",
-      "offered": ["bash"],
+      "offered": [
+        "bash"
+      ],
       "responses": [
         {
           "finish_reason": "stop",
@@ -30,7 +32,10 @@
           "schema": "workspace-edit-capability-gap/v1",
           "target": "snippet.mjs",
           "reason": "EditToolUnavailable",
-          "missingCapabilities": ["read", "edit"],
+          "missingCapabilities": [
+            "read",
+            "edit"
+          ],
           "complete": false,
           "verified": false
         }
@@ -42,7 +47,10 @@
     {
       "request": "In snippet.mjs, replace the before label declaration with the after label declaration, preserving all other content.",
       "effects": "read-only",
-      "offered": ["bash", "read"],
+      "offered": [
+        "bash",
+        "read"
+      ],
       "responses": [
         {
           "finish_reason": "stop",
@@ -65,7 +73,9 @@
           "schema": "workspace-edit-capability-gap/v1",
           "target": "snippet.mjs",
           "reason": "EditToolUnavailable",
-          "missingCapabilities": ["edit"],
+          "missingCapabilities": [
+            "edit"
+          ],
           "complete": false,
           "verified": false
         }
@@ -77,7 +87,12 @@
     {
       "request": "In snippet.mjs, replace the before label declaration with the after label declaration, preserving all other content.",
       "effects": "workspace-write",
-      "offered": ["bash", "read", "edit", "write"],
+      "offered": [
+        "bash",
+        "read",
+        "edit",
+        "write"
+      ],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -136,10 +151,21 @@
         }
       ],
       "outcome": {
-        "status": "completed",
+        "status": "incomplete",
         "exitCode": 1,
-        "message": "finished; the last tool call exited with 1; no file changed",
-        "remainingObligations": ["the last tool call failed"]
+        "message": "`edit snippet.mjs` failed (snippet.mjs: old_string was not found; nothing changed) and no later call resolved it; no file changed",
+        "remainingObligations": [
+          "`edit snippet.mjs` failed: snippet.mjs: old_string was not found; nothing changed"
+        ],
+        "failures": [
+          {
+            "command": "edit snippet.mjs",
+            "tool": "edit",
+            "target": "snippet.mjs",
+            "exitCode": 1,
+            "error": "snippet.mjs: old_string was not found; nothing changed"
+          }
+        ]
       },
       "after": {
         "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"before\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"
@@ -148,7 +174,9 @@
     {
       "request": "In snippet.mjs, replace «const label = \"before\";» with «const label = \"after\";». Preserve all other content.",
       "effects": "workspace-write",
-      "offered": ["bash"],
+      "offered": [
+        "bash"
+      ],
       "responses": [
         {
           "finish_reason": "stop",
@@ -170,7 +198,10 @@
           "schema": "workspace-edit-capability-gap/v1",
           "target": "snippet.mjs",
           "reason": "EditToolUnavailable",
-          "missingCapabilities": ["read", "edit"],
+          "missingCapabilities": [
+            "read",
+            "edit"
+          ],
           "complete": false,
           "verified": false
         }
@@ -182,7 +213,10 @@
     {
       "request": "In snippet.mjs, replace «const label = \"before\";» with «const label = \"after\";». Preserve all other content.",
       "effects": "read-only",
-      "offered": ["bash", "read"],
+      "offered": [
+        "bash",
+        "read"
+      ],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -229,7 +263,9 @@
           "schema": "workspace-edit-capability-gap/v1",
           "target": "snippet.mjs",
           "reason": "EditToolUnavailable",
-          "missingCapabilities": ["edit"],
+          "missingCapabilities": [
+            "edit"
+          ],
           "complete": false,
           "verified": false
         }
@@ -241,7 +277,12 @@
     {
       "request": "In snippet.mjs, replace «const label = \"before\";» with «const label = \"after\";». Preserve all other content.",
       "effects": "workspace-write",
-      "offered": ["bash", "read", "edit", "write"],
+      "offered": [
+        "bash",
+        "read",
+        "edit",
+        "write"
+      ],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -334,7 +375,10 @@
     {
       "request": "show contents of snippet.mjs",
       "effects": "read-only",
-      "offered": ["bash", "read"],
+      "offered": [
+        "bash",
+        "read"
+      ],
       "responses": [
         {
           "finish_reason": "tool_calls",
@@ -382,7 +426,10 @@
     {
       "request": "What is 2 + 2?",
       "effects": "read-only",
-      "offered": ["bash", "read"],
+      "offered": [
+        "bash",
+        "read"
+      ],
       "responses": [
         {
           "finish_reason": "stop",
@@ -406,7 +453,9 @@
     {
       "request": "What is 2 + 2?",
       "effects": "read-only",
-      "offered": ["bash"],
+      "offered": [
+        "bash"
+      ],
       "responses": [
         {
           "finish_reason": "stop",

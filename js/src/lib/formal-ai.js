@@ -9,6 +9,11 @@
  * protocol error or cancellation stops it, and the exit status says which.
  * A final answer that is a known capability gap (issue #258) is reported as
  * incomplete with its obligations, never as an answer.
+ *
+ * A failed change stays unresolved until the same typed tool changes the same
+ * target and its readback is verified (issue #261): a later read, a copy over
+ * the file or Formal AI's final answer does not resolve it, and the run then
+ * ends `incomplete` with the original failure and its exit status.
  */
 
 const policy = require('./formal-ai-policy');
@@ -74,12 +79,21 @@ async function runFormalAiTask(options) {
     observedDirs: new Set(),
     contents: new Map(),
   };
+  // Failed calls whose obligation no later verified call met (#261).
+  const unresolved = [];
   const finish = (status, exitCode, message, remaining = [], extra = {}) => {
+    const open = unresolved.map(failureObligation);
     evidence.outcome = {
       status,
       exitCode,
       message,
-      remainingObligations: remaining,
+      remainingObligations: [
+        ...remaining,
+        ...open.filter((item) => !remaining.includes(item)),
+      ],
+      ...(unresolved.length
+        ? { failures: unresolved.map((f) => ({ ...f })) }
+        : {}),
       ...extra,
     };
     return evidence;
@@ -152,9 +166,27 @@ async function runFormalAiTask(options) {
         return finish(
           'capability-gap',
           EXIT.UNSUPPORTED,
-          describeGap(gap),
+          describeGap(gap, evidence.effects),
           gapObligations(gap, bounds.effects),
           { gap }
+        );
+      }
+      if (unresolved.length) {
+        const [first] = unresolved;
+        return finish(
+          'incomplete',
+          first.exitCode || 1,
+          `\`${first.command}\` failed (${first.error}) and no later call resolved it; ${describeEffects(evidence.effects)}`
+        );
+      }
+      const record = unrecognizedGapRecord(response.content, messages);
+      if (record) {
+        return finish(
+          'incomplete',
+          EXIT.UNSUPPORTED,
+          `Formal AI reported ${record.schema}${record.reason ? ` (${record.reason})` : ''}${record.target ? ` for ${record.target}` : ''}; nothing was verified as done by Formal AI; ${describeEffects(evidence.effects)}`,
+          ['Formal AI did not confirm the requested change'],
+          { gapRecord: record }
         );
       }
       if (response.handler === 'unknown' && toolCalls === 0) {
@@ -218,6 +250,7 @@ async function runFormalAiTask(options) {
         note,
         evidence,
       });
+      trackFailures(unresolved, evidence.steps[evidence.steps.length - 1]);
       if (signal && signal.aborted) {
         return cancelled();
       }
@@ -240,12 +273,141 @@ async function runFormalAiTask(options) {
   );
 }
 
-/** Capability gap, in words. */
-function describeGap(gap) {
+/**
+ * Keep the failed calls of a run until a later call meets their obligation
+ * (issue #261). A failed edit or write is resolved only by a verified edit or
+ * write of the same target (a write also resolves a failed read of the file
+ * it created); a failed read by a read of the same target; a failed write
+ * command only by the same command succeeding. A copy or move over the target
+ * never counts as the edit.
+ */
+function trackFailures(unresolved, step) {
+  if (!step || step.kind !== 'tool' || step.decision !== 'allowed') {
+    return;
+  }
+  const typed = step.tool !== undefined;
+  const changed = typed && step.tool !== 'read';
+  if (step.exitCode !== 0 && (typed || step.effect === 'write')) {
+    unresolved.push({
+      command: step.command,
+      ...(typed ? { tool: step.tool, target: step.target } : {}),
+      exitCode: step.exitCode ?? 1,
+      error:
+        step.error ||
+        (step.signal
+          ? `stopped by ${step.signal}`
+          : `exited with ${step.exitCode}`),
+    });
+    return;
+  }
+  if (step.exitCode !== 0) {
+    return;
+  }
+  const verified = changed && step.verification && step.verification.verified;
+  for (let index = unresolved.length - 1; index >= 0; index--) {
+    const failure = unresolved[index];
+    const resolved = typed
+      ? failure.target === step.target &&
+        (failure.tool === 'read'
+          ? step.tool === 'read' || verified
+          : verified && (failure.tool === step.tool || step.tool === 'edit'))
+      : failure.tool === undefined && failure.command === step.command;
+    if (resolved) {
+      unresolved.splice(index, 1);
+    }
+  }
+}
+
+function failureObligation(failure) {
+  return `\`${failure.command}\` failed: ${failure.error}`;
+}
+
+/**
+ * A final answer that is exactly one Links Notation record whose record_type
+ * names a gap, as Formal AI's task obligations answer (`obligation_gap`, e.g.
+ * reason `no_artifact_in_clause`): an id line, then `  key "value"` lines.
+ * Returned in the JSON gap shape (schema = record_type, never complete).
+ * @param {string} text - Trimmed final answer
+ * @returns {object|null} {schema, reason?, clause?, complete: false}
+ */
+function linoGapRecord(text) {
+  const [id, ...lines] = text.split('\n');
+  if (!/^[A-Za-z0-9_]+$/.test(id) || !lines.length) {
+    return null;
+  }
+  const fields = {};
+  for (const line of lines) {
+    const match = /^ {2}([a-z_]+) (?:"([^"]*)"|'([^']*)'|(\S+))$/.exec(line);
+    if (!match || Object.hasOwn(fields, match[1])) {
+      return null;
+    }
+    fields[match[1]] = match[2] ?? match[3] ?? match[4];
+  }
+  if (typeof fields.record_type !== 'string') {
+    return null;
+  }
+  return {
+    schema: fields.record_type,
+    ...(fields.reason ? { reason: fields.reason } : {}),
+    complete: false,
+  };
+}
+
+/**
+ * A final answer that is a JSON record of a gap start does not know: it is
+ * never taken as success, though its schema grants no recognized gap.
+ */
+function unrecognizedGapRecord(content, messages) {
+  let value;
+  try {
+    value = JSON.parse(String(content || '').trim());
+  } catch {
+    value = linoGapRecord(String(content || '').trim());
+  }
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    typeof value.schema !== 'string' ||
+    !/gap/i.test(value.schema) ||
+    !(
+      value.verified === false ||
+      value.complete === false ||
+      value.completed === false
+    )
+  ) {
+    return null;
+  }
+  const text = String(content).trim();
+  const echoed = messages.some(
+    (m) =>
+      m.role === 'tool' &&
+      typeof m.content === 'string' &&
+      m.content.includes(text)
+  );
+  if (echoed) {
+    return null;
+  }
+  return {
+    schema: value.schema,
+    ...(typeof value.target === 'string' ? { target: value.target } : {}),
+    ...(typeof value.reason === 'string' ? { reason: value.reason } : {}),
+  };
+}
+
+/**
+ * Capability gap, in words. When tools changed the working directory, the
+ * message keeps what start observed: Formal AI's gap still means the task is
+ * not confirmed, whatever start verified on its own (#261).
+ */
+function describeGap(gap, effects) {
   const missing = gap.missingCapabilities.length
     ? `; missing ${gap.missingCapabilities.join(', ')}`
     : '';
-  return `Formal AI reported a capability gap for ${gap.target} (${gap.reason}${missing}); nothing was verified as done`;
+  const head = `Formal AI reported a capability gap for ${gap.target} (${gap.reason}${missing})`;
+  return effects && policy.hasEffects(effects)
+    ? `${head}; Formal AI did not confirm the task as done; start observed: ${describeEffects(effects)}`
+    : `${head}; nothing was verified as done`;
 }
 
 function gapObligations(gap, effects) {
@@ -331,6 +493,7 @@ function runFileToolCall({ call, context, cwd, bounds, io, note, evidence }) {
       ? { previousSha256: receipt.previousSha256 }
       : {}),
     ...(receipt.replacements ? { replacements: receipt.replacements } : {}),
+    ...(receipt.mutation ? { mutation: receipt.mutation } : {}),
   });
   recordEffects(step, diff, evidence);
   if (receipt.error) {
@@ -347,14 +510,17 @@ function runFileToolCall({ call, context, cwd, bounds, io, note, evidence }) {
         stop: [
           'unverified',
           EXIT.PROTOCOL,
-          `\`${call.command}\` wrote the file but ${receipt.verification.detail}`,
+          `\`${call.command}\` ran but ${receipt.verification.detail}`,
           ['the change could not be confirmed by readback'],
         ],
       };
     }
     note(receipt.verification.detail);
   }
-  return { exitCode: receipt.exitCode, result: receipt.result };
+  return {
+    exitCode: receipt.exitCode,
+    result: receipt.result,
+  };
 }
 
 /** Show what a read returned, like the stdout of `cat`, within the output cap. */

@@ -144,7 +144,12 @@ const GAP_SCHEMAS = Object.freeze({
     'EditToolUnavailable',
     'ReadToolUnavailable',
   ],
-  'workspace-change-verification-gap/v1': ['VerificationRunToolUnavailable'],
+  // SourcePreimageUnavailable: Formal AI could not bind the complete Read
+  // before its edit to the change (issue #261).
+  'workspace-change-verification-gap/v1': [
+    'VerificationRunToolUnavailable',
+    'SourcePreimageUnavailable',
+  ],
 });
 const CAPABILITIES = new Set([
   'read',
