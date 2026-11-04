@@ -5,7 +5,7 @@
     "": {
       "name": "start-command",
       "dependencies": {
-        "@link-foundation/sensitive-data-sanitizer": "^0.13.0",
+        "@link-foundation/sensitive-data-sanitizer": "^0.14.0",
         "command-stream": "^2.6.0",
         "lino-objects-codec": "^0.9.5",
       },
@@ -98,7 +98,7 @@
 
     "@keyv/serialize": ["@keyv/serialize@1.1.1", "", {}, "sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA=="],
 
-    "@link-foundation/sensitive-data-sanitizer": ["@link-foundation/sensitive-data-sanitizer@0.13.0", "", { "dependencies": { "@faker-js/faker": "^10.6.0", "@secretlint/core": "13.0.7", "@secretlint/profiler": "13.0.7", "@secretlint/secretlint-rule-preset-recommend": "13.0.7", "libphonenumber-js": "1.13.14", "links-notation": "0.30.0", "re2-wasm": "1.0.2", "re2js": "^2.9.0", "yaml": "^2.9.1" }, "bin": { "sensitive-data-sanitizer": "bin/sensitive-data-sanitizer.js", "sensitive-data-sanitizer-legacy": "bin/legacy-example-package-name.js" } }, "sha512-rG10J8f93VqHDcY5e3HZlqVDVPDl3SQBGR/6WkPfozrXvb+PIHM9Yv5qmMiPKsiEwkt6Ge4I0xXcu+5SyxQeRg=="],
+    "@link-foundation/sensitive-data-sanitizer": ["@link-foundation/sensitive-data-sanitizer@0.14.0", "", { "dependencies": { "@faker-js/faker": "^10.6.0", "@secretlint/core": "13.0.7", "@secretlint/profiler": "13.0.7", "@secretlint/secretlint-rule-preset-recommend": "13.0.7", "libphonenumber-js": "1.13.14", "links-notation": "0.30.0", "re2-wasm": "1.0.2", "re2js": "^2.9.0", "yaml": "^2.9.1" }, "bin": { "sensitive-data-sanitizer": "bin/sensitive-data-sanitizer.js", "sensitive-data-sanitizer-legacy": "bin/legacy-example-package-name.js" } }, "sha512-5OPO8z+ghhWEZcVPSx558ZCJgk0sH+yPk9VkF3UwMtfAnpI+f+Jey7wFM1ElRNEOF4rdxWpGVPeQkxEqk//FiA=="],
 
     "@manypkg/find-root": ["@manypkg/find-root@3.1.0", "", { "dependencies": { "@manypkg/tools": "^2.1.0" } }, "sha512-BcSqCyKhBVZ5YkSzOiheMCV41kqAFptW6xGqYSTjkVTl9XQpr+pqHhwgGCOHQtjDCv7Is6EFyA14Sm5GVbVABA=="],
 

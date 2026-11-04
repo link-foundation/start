@@ -12,7 +12,7 @@
 //! keeps the rest of its line (issue #249, sensitive-data-sanitizer#45); the
 //! pre-pass that did this here is gone (issue #253).
 //!
-//! The JavaScript package depends on ^0.13.0, the current release flagged by
+//! The JavaScript package depends on ^0.14.0, the current release flagged by
 //! the dependency freshness check; [`PACKAGE`] and [`MINIMUM_VERSION`] require
 //! the same release (js/src/lib/log-sanitizer.js).
 
@@ -28,9 +28,9 @@ pub const BLOCK_SIZE: usize = 64 * 1024;
 const MARKER: &[u8] = b"[REDACTED]";
 const COMMAND: &str = "sensitive-data-sanitizer";
 /// The library version the JavaScript package depends on.
-pub const PACKAGE: &str = "@link-foundation/sensitive-data-sanitizer@^0.13.0";
+pub const PACKAGE: &str = "@link-foundation/sensitive-data-sanitizer@^0.14.0";
 /// Requires control-byte preservation, placeholders and bounded dense scanning.
-pub const MINIMUM_VERSION: (u64, u64, u64) = (0, 13, 0);
+pub const MINIMUM_VERSION: (u64, u64, u64) = (0, 14, 0);
 /// Path of the library CLI to use instead of the one on PATH.
 pub const OVERRIDE: &str = "START_SENSITIVE_DATA_SANITIZER";
 const OPTIONS: [&str; 3] = ["--credentials-only", "--env-secrets", "--gh-config"];

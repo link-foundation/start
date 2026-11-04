@@ -9,3 +9,4 @@ bump: minor
   - Only the owned byte regions change. Each change keeps a mutation receipt (preimage, postimage, byte matches, readback) and is verified byte for byte against it by readback.
   - A failed file or `bash` change stays unresolved until a verified change of the same target resolves it, and the run then ends `incomplete` with the original failure.
   - `SourcePreimageUnavailable` gaps, other JSON gap records and Links Notation `obligation_gap` answers end `incomplete` with exit 65, unless they only repeat tool output.
+- Log sanitization now requires `@link-foundation/sensitive-data-sanitizer` 0.14.0 or later (the installer and version check ask for the same release as the JavaScript package).
