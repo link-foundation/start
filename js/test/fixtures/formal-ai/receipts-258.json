@@ -363,10 +363,17 @@
         }
       ],
       "outcome": {
-        "status": "completed",
-        "exitCode": 0,
-        "message": "finished after 3 tool call(s); changed snippet.mjs",
-        "remainingObligations": []
+        "status": "incomplete",
+        "exitCode": 65,
+        "message": "Formal AI reported obligation_gap (no_artifact_in_clause) for the clause \"Preserve all other content.\"; nothing was verified as done by Formal AI; changed snippet.mjs",
+        "remainingObligations": [
+          "Formal AI did not confirm the requested change"
+        ],
+        "gapRecord": {
+          "schema": "obligation_gap",
+          "reason": "no_artifact_in_clause",
+          "clause": "Preserve all other content."
+        }
       },
       "after": {
         "snippet.mjs": "// Synthetic snippet for issue #258: keep this comment.\nconst label = \"after\";\n\n\texport function show(name) {  \n  return `${label}: ${name}`; // trailing comment\n}\n/* label = \"before\" in a comment stays */\n"

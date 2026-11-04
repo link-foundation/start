@@ -609,13 +609,14 @@
       "outcome": {
         "status": "incomplete",
         "exitCode": 65,
-        "message": "Formal AI reported obligation_gap (no_artifact_in_clause); nothing was verified as done by Formal AI; no file changed",
+        "message": "Formal AI reported obligation_gap (no_artifact_in_clause) for the clause \"In .\"; nothing was verified as done by Formal AI; no file changed",
         "remainingObligations": [
           "Formal AI did not confirm the requested change"
         ],
         "gapRecord": {
           "schema": "obligation_gap",
-          "reason": "no_artifact_in_clause"
+          "reason": "no_artifact_in_clause",
+          "clause": "In ."
         }
       },
       "after": {

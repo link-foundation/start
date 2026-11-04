@@ -184,7 +184,7 @@ async function runFormalAiTask(options) {
         return finish(
           'incomplete',
           EXIT.UNSUPPORTED,
-          `Formal AI reported ${record.schema}${record.reason ? ` (${record.reason})` : ''}${record.target ? ` for ${record.target}` : ''}; nothing was verified as done by Formal AI; ${describeEffects(evidence.effects)}`,
+          `Formal AI reported ${record.schema}${record.reason ? ` (${record.reason})` : ''}${record.target ? ` for ${record.target}` : ''}${record.clause ? ` for the clause ${JSON.stringify(record.clause)}` : ''}; nothing was verified as done by Formal AI; ${describeEffects(evidence.effects)}`,
           ['Formal AI did not confirm the requested change'],
           { gapRecord: record }
         );
@@ -326,7 +326,9 @@ function failureObligation(failure) {
  * A final answer that is exactly one Links Notation record whose record_type
  * names a gap, as Formal AI's task obligations answer (`obligation_gap`, e.g.
  * reason `no_artifact_in_clause`): an id line, then `  key "value"` lines.
- * Returned in the JSON gap shape (schema = record_type, never complete).
+ * Returned in the JSON gap shape (schema = record_type, never complete), so
+ * a gap Formal AI states in its own notation is never taken as success, even
+ * when start verified every change it made (#261).
  * @param {string} text - Trimmed final answer
  * @returns {object|null} {schema, reason?, clause?, complete: false}
  */
@@ -349,6 +351,7 @@ function linoGapRecord(text) {
   return {
     schema: fields.record_type,
     ...(fields.reason ? { reason: fields.reason } : {}),
+    ...(fields.clause ? { clause: fields.clause } : {}),
     complete: false,
   };
 }
@@ -392,6 +395,7 @@ function unrecognizedGapRecord(content, messages) {
     schema: value.schema,
     ...(typeof value.target === 'string' ? { target: value.target } : {}),
     ...(typeof value.reason === 'string' ? { reason: value.reason } : {}),
+    ...(typeof value.clause === 'string' ? { clause: value.clause } : {}),
   };
 }
 
