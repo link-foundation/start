@@ -231,6 +231,11 @@ function readBytes(file, maxFileBytes) {
       'is a symbolic link that appeared after start resolved the path; nothing changed'
     );
   }
+  // Refused before opening, as the Rust port must on Windows (opening a
+  // directory as a file is denied there); the handle check covers a swap.
+  if (link && link.isDirectory()) {
+    throw new FileToolError('is a directory, not a file');
+  }
   let handle;
   try {
     handle = fs.openSync(file, fs.constants.O_RDONLY | NOFOLLOW);

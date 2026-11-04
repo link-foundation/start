@@ -296,8 +296,12 @@ fn open_no_follow(file: &Path) -> std::io::Result<fs::File> {
 /// The exact bytes of a regular workspace file, read through one handle
 /// opened without following a symbolic link.
 fn read_bytes(file: &Path, max_file_bytes: u64) -> Result<(Vec<u8>, Permissions), String> {
-    if lstat_or_none(file)?.is_some_and(|meta| meta.file_type().is_symlink()) {
-        return Err(LINK_APPEARED.to_string());
+    match lstat_or_none(file)? {
+        Some(meta) if meta.file_type().is_symlink() => return Err(LINK_APPEARED.to_string()),
+        // Refused before opening: Windows denies opening a directory as a
+        // file (os error 5); the handle check below still covers a swap.
+        Some(meta) if meta.is_dir() => return Err("is a directory, not a file".to_string()),
+        _ => {}
     }
     let mut handle = open_no_follow(file).map_err(|error| {
         #[cfg(unix)]
