@@ -15,6 +15,7 @@ use crate::formal_ai_files::{
     read_frame_text, run_file_call_with, sha256_hex, verify_mutation, FileHooks, FileReceipt,
     Match,
 };
+use crate::formal_ai_policy::formal_ai_policy_cases::populate;
 use crate::formal_ai_policy::{PolicyContext, EXIT_UNSUPPORTED};
 
 /// The issue's synthetic reproduction.
