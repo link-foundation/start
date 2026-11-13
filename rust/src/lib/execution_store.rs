@@ -56,6 +56,14 @@ pub struct ExecutionRecord {
     pub uuid: String,
     pub pid: Option<u32>,
     pub status: ExecutionStatus,
+    /// Live `docker`/`paused`/`pausedAt` view of a detached Docker execution
+    /// (issue #263): set by `--status`/`--list`, never read back from disk.
+    #[serde(default, skip_deserializing, skip_serializing_if = "Option::is_none")]
+    pub docker_state: Option<String>,
+    #[serde(default, skip_deserializing, skip_serializing_if = "Option::is_none")]
+    pub paused: Option<bool>,
+    #[serde(default, skip_deserializing, skip_serializing_if = "Option::is_none")]
+    pub paused_at: Option<String>,
     pub exit_code: Option<i32>,
     pub command: String,
     pub log_path: String,
@@ -130,6 +138,9 @@ impl ExecutionRecord {
             uuid: Uuid::new_v4().to_string(),
             pid: None,
             status: ExecutionStatus::Executing,
+            docker_state: None,
+            paused: None,
+            paused_at: None,
             exit_code: None,
             command: command.to_string(),
             log_path: String::new(),
@@ -681,7 +692,13 @@ impl ExecutionStore {
             .iter()
             .filter(|r| r.status == ExecutionStatus::Executing)
         {
-            if crate::launch_owner::has_active_launch(record) {
+            if crate::launch_owner::has_active_launch(record)
+                || crate::execution_pause::is_confirmed_paused(
+                    record,
+                    &crate::execution_control::SystemCommandRunner,
+                )
+            {
+                // A paused container is alive, just frozen (issue #263).
                 continue;
             }
             let mut is_stale = false;

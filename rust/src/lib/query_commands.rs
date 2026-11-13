@@ -2,7 +2,8 @@
 //!
 //! Every option in this module addresses an execution that already exists in
 //! the tracking store instead of launching a new one: `--status`, `--list`,
-//! `--upload-log`, `--stop`, `--terminate`, `--attach`, `--resume`,
+//! `--upload-log`, `--stop`, `--terminate`, `--pause`, `--unpause` (issue
+//! #263), `--attach`, `--resume`,
 //! `--resume-all` and `--cleanup`, plus `--alias` and `--rename` (issue #231).
 //! `dispatch_query_command` is the single entry point the CLI calls before it
 //! starts interpreting the command line as a command to run (issue #162).
@@ -10,6 +11,9 @@
 use crate::args_parser::WrapperOptions;
 use crate::execution_attach::{attach_execution, ExecutionAttachResult};
 use crate::execution_control::{control_execution, ControlAction, ExecutionControlResult};
+use crate::execution_pause::{
+    pause_execution, unpause_execution, ExecutionPauseResult, PauseRequest,
+};
 use crate::execution_resume::{resume_execution_with_options, ExecutionResumeResult};
 use crate::execution_resume_all::{resume_all_executions, ExecutionResumeAllResult};
 use crate::execution_store::{CleanupOptions, ExecutionStore};
@@ -37,6 +41,17 @@ impl From<StatusQueryResult> for QueryOutcome {
 
 impl From<ExecutionControlResult> for QueryOutcome {
     fn from(result: ExecutionControlResult) -> Self {
+        QueryOutcome {
+            success: result.success,
+            output: result.output,
+            error: result.error,
+            exit_code: None,
+        }
+    }
+}
+
+impl From<ExecutionPauseResult> for QueryOutcome {
+    fn from(result: ExecutionPauseResult) -> Self {
         QueryOutcome {
             success: result.success,
             output: result.output,
@@ -228,6 +243,21 @@ pub fn dispatch_query_command(
     if let Some(ref identifier) = options.terminate {
         return Some(report_result(
             control_execution(store, identifier, ControlAction::Terminate).into(),
+        ));
+    }
+    if let Some(ref identifier) = options.pause {
+        let request = PauseRequest {
+            reason: options.pause_reason.as_deref(),
+            by: options.paused_by.as_deref(),
+            output_format,
+        };
+        return Some(report_result(
+            pause_execution(store, identifier, request).into(),
+        ));
+    }
+    if let Some(ref identifier) = options.unpause {
+        return Some(report_result(
+            unpause_execution(store, identifier, output_format).into(),
         ));
     }
     if let Some(ref identifier) = options.attach {

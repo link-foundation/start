@@ -14,6 +14,10 @@ use crate::execution_store::ExecutionRecord;
 pub enum SessionState {
     /// The session/container is alive and can be attached to.
     Running,
+    /// The container is frozen by `docker pause` (issue #263): alive (its
+    /// process and memory are kept) but neither attachable nor resumable until
+    /// `$ --unpause` thaws it.
+    Paused,
     /// The container still exists but is not running (resumable).
     Stopped,
     /// No trace of the session/container remains.
@@ -26,6 +30,7 @@ impl SessionState {
     pub fn as_str(self) -> &'static str {
         match self {
             SessionState::Running => "running",
+            SessionState::Paused => "paused",
             SessionState::Stopped => "stopped",
             SessionState::Missing => "missing",
             SessionState::Unknown => "unknown",
@@ -63,6 +68,11 @@ pub fn map_docker_status_to_state(status: Option<&str>) -> SessionState {
     }
     if normalized == "running" || normalized == "restarting" {
         return SessionState::Running;
+    }
+    if normalized == "paused" {
+        // Paused is alive, not stopped: reading it as stopped made `--resume`
+        // plan a `docker start`/snapshot of a frozen container (issue #263).
+        return SessionState::Paused;
     }
     SessionState::Stopped
 }
@@ -144,8 +154,17 @@ pub fn probe_session<R: CommandRunner>(record: &ExecutionRecord, runner: &R) -> 
         _ => {}
     }
 
-    probe.alive = probe.state == SessionState::Running;
+    probe.alive = matches!(probe.state, SessionState::Running | SessionState::Paused);
     probe
+}
+
+/// Refusal for a control that cannot act on a paused container (issue #263).
+/// `action` is what was refused, e.g. "attach to" or "resume".
+pub fn paused_session_error(action: &str, uuid: &str, session_name: &str) -> String {
+    format!(
+        "Session \"{session_name}\" is paused (frozen by docker pause), so start cannot {action} it. \
+         Use `$ --unpause {uuid}` first to continue the same process, or `$ --stop {uuid}` to end it."
+    )
 }
 
 #[cfg(test)]

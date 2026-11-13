@@ -1057,7 +1057,7 @@
         {
           "construct": "regular expressions",
           "source": "js/src/lib/execution-store.js",
-          "line": 762,
+          "line": 766,
           "issue": "https://github.com/link-foundation/meta-language/issues/211"
         },
         {
@@ -1360,7 +1360,7 @@
         {
           "construct": "async/await scheduling",
           "source": "js/src/lib/query-commands.js",
-          "line": 58,
+          "line": 81,
           "issue": "https://github.com/link-foundation/meta-language/issues/223"
         },
         {
@@ -1584,37 +1584,37 @@
         {
           "construct": "async/await scheduling",
           "source": "js/src/lib/execution-resume.js",
-          "line": 447,
+          "line": 455,
           "issue": "https://github.com/link-foundation/meta-language/issues/223"
         },
         {
           "construct": "optional/nullish fields",
           "source": "js/src/lib/execution-resume.js",
-          "line": 110,
+          "line": 114,
           "issue": "https://github.com/link-foundation/meta-language/issues/204"
         },
         {
           "construct": "dynamic object/JSON records",
           "source": "js/src/lib/execution-resume.js",
-          "line": 105,
+          "line": 109,
           "issue": "https://github.com/link-foundation/meta-language/issues/206"
         },
         {
           "construct": "callbacks and closures",
           "source": "js/src/lib/execution-resume.js",
-          "line": 172,
+          "line": 176,
           "issue": "https://github.com/link-foundation/meta-language/issues/207"
         },
         {
           "construct": "array/list operations",
           "source": "js/src/lib/execution-resume.js",
-          "line": 172,
+          "line": 176,
           "issue": "https://github.com/link-foundation/meta-language/issues/208"
         },
         {
           "construct": "string operations",
           "source": "js/src/lib/execution-resume.js",
-          "line": 82,
+          "line": 86,
           "issue": "https://github.com/link-foundation/meta-language/issues/209"
         },
         {
@@ -1626,13 +1626,13 @@
         {
           "construct": "regular expressions",
           "source": "js/src/lib/execution-resume.js",
-          "line": 530,
+          "line": 545,
           "issue": "https://github.com/link-foundation/meta-language/issues/211"
         },
         {
           "construct": "try/catch, switch, destructuring",
           "source": "js/src/lib/execution-resume.js",
-          "line": 477,
+          "line": 485,
           "issue": "https://github.com/link-foundation/meta-language/issues/212"
         }
       ]
@@ -1747,7 +1747,7 @@
         {
           "construct": "regular expressions",
           "source": "js/src/lib/execution-recovery.js",
-          "line": 468,
+          "line": 474,
           "issue": "https://github.com/link-foundation/meta-language/issues/211"
         },
         {
@@ -2217,43 +2217,43 @@
         {
           "construct": "optional/nullish fields",
           "source": "js/src/lib/status-formatter.js",
-          "line": 100,
+          "line": 101,
           "issue": "https://github.com/link-foundation/meta-language/issues/204"
         },
         {
           "construct": "dynamic object/JSON records",
           "source": "js/src/lib/status-formatter.js",
-          "line": 73,
+          "line": 74,
           "issue": "https://github.com/link-foundation/meta-language/issues/206"
         },
         {
           "construct": "callbacks and closures",
           "source": "js/src/lib/status-formatter.js",
-          "line": 347,
+          "line": 348,
           "issue": "https://github.com/link-foundation/meta-language/issues/207"
         },
         {
           "construct": "array/list operations",
           "source": "js/src/lib/status-formatter.js",
-          "line": 167,
+          "line": 168,
           "issue": "https://github.com/link-foundation/meta-language/issues/208"
         },
         {
           "construct": "string operations",
           "source": "js/src/lib/status-formatter.js",
-          "line": 71,
+          "line": 72,
           "issue": "https://github.com/link-foundation/meta-language/issues/209"
         },
         {
           "construct": "regular expressions",
           "source": "js/src/lib/status-formatter.js",
-          "line": 236,
+          "line": 237,
           "issue": "https://github.com/link-foundation/meta-language/issues/211"
         },
         {
           "construct": "try/catch, switch, destructuring",
           "source": "js/src/lib/status-formatter.js",
-          "line": 160,
+          "line": 161,
           "issue": "https://github.com/link-foundation/meta-language/issues/212"
         }
       ],

@@ -152,11 +152,12 @@ mod fake_docker {
     use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
     use std::sync::{Mutex, OnceLock};
 
-    /// name, id, pid, running, exit code, OOMKilled, started, finished
+    /// name, id, pid, running, exit code, OOMKilled, started, finished,
+    /// status, paused
     const CONTAINERS: &str = "\
-run-a aaaa1111 4101 true 0 false 2026-10-20T10:00:00Z 0001-01-01T00:00:00Z
-run-b bbbb2222 0 false 0 false 2026-10-20T10:00:00Z 2026-10-20T10:05:00Z
-kept-c cccc3333 0 false 1 false 2026-10-20T09:00:00Z 2026-10-20T09:01:00Z
+run-a aaaa1111 4101 true 0 false 2026-10-20T10:00:00Z 0001-01-01T00:00:00Z running false
+run-b bbbb2222 0 false 0 false 2026-10-20T10:00:00Z 2026-10-20T10:05:00Z exited false
+kept-c cccc3333 0 false 1 false 2026-10-20T09:00:00Z 2026-10-20T09:01:00Z exited false
 ";
 
     /// Answers `inspect` like Docker 29: one rendered line per found target,
@@ -186,6 +187,7 @@ for target in "$@"; do
     gsub(/\{\{\.State\.Pid\}\}/, $3, f); gsub(/\{\{\.State\.Running\}\}/, $4, f)
     gsub(/\{\{\.State\.ExitCode\}\}/, $5, f); gsub(/\{\{\.State\.OOMKilled\}\}/, $6, f)
     gsub(/\{\{\.State\.StartedAt\}\}/, $7, f); gsub(/\{\{\.State\.FinishedAt\}\}/, $8, f)
+    gsub(/\{\{\.State\.Status\}\}/, $9, f); gsub(/\{\{\.State\.Paused\}\}/, $10, f)
     print f }'
 done
 exit $status
@@ -322,7 +324,7 @@ exit $status
 }
 
 fn row(name: &str, id: &str) -> String {
-    format!("/{name} {id} 7 true 0 false s f")
+    format!("/{name} {id} 7 true 0 false s f running false")
 }
 
 #[test]

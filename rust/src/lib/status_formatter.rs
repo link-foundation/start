@@ -37,8 +37,10 @@ pub fn read_exit_code_from_log(log_path: &str) -> Option<i32> {
 /// yields the `memoryExhausted` observation for consumers that key off
 /// `oomKilled` (issue #165).
 pub fn enrich_detached_status(record: &ExecutionRecord) -> ExecutionRecord {
-    let mut enriched =
-        crate::container_removal::attach_container_removal(resolve_detached_status(record));
+    // `dockerState`/`paused`/`pausedAt` follow Docker, not the record (#263).
+    let mut enriched = crate::execution_pause::attach_pause_state(
+        crate::container_removal::attach_container_removal(resolve_detached_status(record)),
+    );
     if let Some(state) = crate::cpu_penalty_monitor::read_state(record) {
         enriched.cpu_penalty = Some(state);
     }
@@ -435,6 +437,7 @@ fn format_record_as_text_with_enrichments(
     if let Some(ref detected) = record.stale_detected_at {
         lines.push(format!("Stale Detected At: {}", detected));
     }
+    lines.extend(crate::execution_pause::pause_text_lines(record));
     if let Some(ref state) = record.container_state {
         // The container no longer exists; `containerId` is history (issue #225).
         lines.push(format!("Container State:   {}", state));
@@ -742,7 +745,14 @@ pub fn list_executions_filtered(
     let all = store.get_all();
     // One docker inspect for every listed container (issue #243).
     let (records, current_times, process_ids) = with_docker_inspect_batch(&all, || {
-        let mut records: Vec<ExecutionRecord> = all.iter().map(enrich_detached_status).collect();
+        let mut records: Vec<ExecutionRecord> = all
+            .iter()
+            .map(|stored| {
+                let enriched = enrich_detached_status(stored);
+                crate::execution_pause::persist_pause_reconciliation(store, stored, &enriched);
+                enriched
+            })
+            .collect();
         if running_only {
             records.retain(|record| record.status == ExecutionStatus::Executing);
         }
@@ -803,6 +813,7 @@ pub fn query_status(
     let (enriched, process_ids) = with_docker_inspect_batch(std::slice::from_ref(&record), || {
         let enriched = enrich_detached_status(&record);
         crate::container_removal::persist_container_removal(store, &record, &enriched);
+        crate::execution_pause::persist_pause_reconciliation(store, &record, &enriched);
         let process_ids = collect_process_ids(&enriched);
         (enriched, process_ids)
     });

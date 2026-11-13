@@ -251,6 +251,25 @@ pub fn cleanup_execution<R: CommandRunner + ?Sized>(
             identifier
         ));
     }
+    if crate::execution_pause::is_confirmed_paused(&record, runner) {
+        // A paused container keeps its process; never remove it (issue #263).
+        return QueryOutcome {
+            success: false,
+            output: Some(format!(
+                "Retained container {} (paused)",
+                record
+                    .options
+                    .get("sessionName")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+            )),
+            error: Some(format!(
+                "{} is paused; nothing was removed. Use `$ --unpause {}` or `$ --stop {}` first.",
+                identifier, record.uuid, record.uuid
+            )),
+            exit_code: None,
+        };
+    }
     let (containers, images) = plan_execution_cleanup(&record, runner);
     let mut outcomes: Vec<CleanupOutcome> = containers
         .iter()

@@ -111,6 +111,19 @@ pub fn resume_execution_with_resources<R: CommandRunner, H: ResumeHooks>(
     }
     let previous = record.clone();
     let probe = probe_session(&record, runner);
+    if probe.state == SessionState::Paused {
+        // Refused before any snapshot or resource change (issue #263).
+        return ExecutionResumeResult {
+            success: false,
+            output: None,
+            error: Some(crate::session_probe::paused_session_error(
+                "resume",
+                &record.uuid,
+                probe.session_name.as_deref().unwrap_or(""),
+            )),
+            exit_code: None,
+        };
+    }
     let resources = crate::resume_resources::prepare(&record, &probe, overrides, runner);
     let (limits, resolved, old_memory) = match resources {
         Ok(result) => result,
