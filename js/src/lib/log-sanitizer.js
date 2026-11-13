@@ -13,9 +13,10 @@
  * keeps the rest of its line (issue #249, sensitive-data-sanitizer#45); the
  * pre-pass that did this here is gone (issue #253).
  *
- * The package depends on ^0.14.0, the current release flagged by the
- * dependency freshness check; the Rust installer and its version check
- * require the same release (rust/src/lib/log_sanitizer.rs).
+ * The package stays on ^0.14.0: 0.20.0 and later drop the bytes after a
+ * credential that is followed by a NUL byte (sensitive-data-sanitizer#180,
+ * the blocker in .github/dependency-blockers.json). The Rust installer and its
+ * version check require the same release (rust/src/lib/log_sanitizer.rs).
  */
 
 const fs = require('fs');
