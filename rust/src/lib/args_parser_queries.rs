@@ -119,7 +119,10 @@ fn parse_pause_detail_option(
         Some((name, value)) => (name, Some(value)),
         None => (arg, None),
     };
-    let Some((_, apply)) = PAUSE_DETAIL_OPTIONS.iter().find(|(option, _)| *option == name) else {
+    let Some((_, apply)) = PAUSE_DETAIL_OPTIONS
+        .iter()
+        .find(|(option, _)| *option == name)
+    else {
         return Ok(0);
     };
     let value = inline.or_else(|| {
@@ -309,7 +312,9 @@ pub fn validate_query_options(options: &WrapperOptions) -> Result<(), String> {
     }
 
     if (options.pause_reason.is_some() || options.paused_by.is_some()) && options.pause.is_none() {
-        return Err("--pause-reason and --paused-by options are only valid with --pause".to_string());
+        return Err(
+            "--pause-reason and --paused-by options are only valid with --pause".to_string(),
+        );
     }
 
     Ok(())

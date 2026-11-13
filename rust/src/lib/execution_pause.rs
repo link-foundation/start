@@ -151,7 +151,10 @@ pub fn parse_pause_state(stdout: &str) -> PauseState {
 /// Ask Docker for the real state of a container: `removed` when Docker answers
 /// "no such container", `unknown` when it cannot be asked. Answered by the
 /// query's batched inspect when there is one (issue #243).
-pub fn inspect_pause_state<R: CommandRunner + ?Sized>(container_name: &str, runner: &R) -> PauseState {
+pub fn inspect_pause_state<R: CommandRunner + ?Sized>(
+    container_name: &str,
+    runner: &R,
+) -> PauseState {
     let result =
         crate::docker_inspect_batch::prefetched_inspect(PAUSE_STATE_FORMAT, container_name)
             .unwrap_or_else(|| {
@@ -195,7 +198,10 @@ fn is_marked_removed(record: &ExecutionRecord) -> bool {
 
 /// Whether a record is a detached Docker execution that Docker confirms is
 /// paused right now. A stale `options.paused` alone never counts.
-pub fn is_confirmed_paused<R: CommandRunner + ?Sized>(record: &ExecutionRecord, runner: &R) -> bool {
+pub fn is_confirmed_paused<R: CommandRunner + ?Sized>(
+    record: &ExecutionRecord,
+    runner: &R,
+) -> bool {
     let Some(name) = option_str(&record.options, "sessionName") else {
         return false;
     };
@@ -232,10 +238,7 @@ pub fn paused_options(
     for field in ["unpausedAt", "pauseEndedBy", "pausedBy", "pauseReason"] {
         next.remove(field);
     }
-    let count = next
-        .get("pauseCount")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
+    let count = next.get("pauseCount").and_then(Value::as_u64).unwrap_or(0);
     next.insert("paused".to_string(), json!(true));
     next.insert(
         "pausedAt".to_string(),
@@ -301,9 +304,12 @@ fn resolve_pause_target<'s>(
     action: PauseAction,
 ) -> Result<(&'s ExecutionStore, ExecutionRecord), String> {
     let store = store.ok_or_else(|| "Execution tracking is disabled.".to_string())?;
-    let record = store
-        .get(identifier)
-        .ok_or_else(|| format!("No execution found with UUID or session name: {}", identifier))?;
+    let record = store.get(identifier).ok_or_else(|| {
+        format!(
+            "No execution found with UUID or session name: {}",
+            identifier
+        )
+    })?;
     let isolated = option_str(&record.options, "isolated");
     if isolated != Some("docker") {
         return Err(format!(
@@ -443,9 +449,7 @@ fn format_report_as_text(report: &[(String, Value)]) -> String {
     if paused {
         lines.push(format!("Paused At:     {}", text("pausedAt")));
         lines.push(format!("Pause Count:   {}", text("pauseCount")));
-        lines.push(
-            "Resources:     CPU released, memory retained, disk retained".to_string(),
-        );
+        lines.push("Resources:     CPU released, memory retained, disk retained".to_string());
     }
     if let Some(pid) = get("processIds").and_then(|ids| ids.get("containerPid")) {
         lines.push(format!("Container PID: {}", pid));
