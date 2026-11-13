@@ -272,15 +272,24 @@ function formatControlResultAsLinksNotation(result) {
 }
 
 /**
+ * Whether a deliberate stop must be recorded: with launch-time kill recovery
+ * (issue #176), and for a paused container, whose stop is never a crash
+ * (issue #263).
+ */
+function tracksStopIntent(options) {
+  return Boolean(options.onKillResume) || options.paused === true;
+}
+
+/**
  * Record that a stop was requested, for sessions with launch-time kill
- * recovery (issue #176).
+ * recovery (issue #176) or a recorded pause (issue #263).
  * @param {object} store - Execution store
  * @param {object} record - Execution record
  * @returns {string|undefined} The previous marker, to restore on failure
  */
 function markStopRequested(store, record) {
   const options = record.options || {};
-  if (!options.onKillResume) {
+  if (!tracksStopIntent(options)) {
     return undefined;
   }
   const previous = options.stopRequestedAt;
@@ -294,7 +303,7 @@ function markStopRequested(store, record) {
 }
 
 function restoreStopRequested(store, record, previous) {
-  if (!record.options || !record.options.onKillResume) {
+  if (!tracksStopIntent(record.options || {})) {
     return;
   }
   record.options = { ...record.options, stopRequestedAt: previous };
@@ -374,6 +383,8 @@ function controlExecution(store, identifier, action, runner = runCommand) {
     };
   }
 
+  // Stopping a paused container ends its pause (issue #263).
+  require('./execution-pause').clearPauseAfterControl(store, record, action);
   const output = formatControlResultAsLinksNotation({
     action,
     identifier,

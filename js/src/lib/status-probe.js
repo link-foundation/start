@@ -29,7 +29,8 @@ const {
  *
  * @param {string} sessionName - Container name
  * @param {Object|null} [probe] - Receives `sessionNotFound` (issue #225)
- * @returns {{running: boolean, exitCode: number|null, oomKilled: boolean|null}|null} State,
+ * @returns {{running: boolean, exitCode: number|null, oomKilled: boolean|null,
+ *   status: ?string, paused: boolean}|null} State,
  *   or null when the container cannot be inspected (not found yet, removed, or docker error)
  */
 function inspectDockerState(sessionName, probe = null) {
@@ -37,7 +38,8 @@ function inspectDockerState(sessionName, probe = null) {
     getDockerCommand(),
     dockerProbeSpawnOptions(),
     '{{.State.Running}} {{.State.ExitCode}} {{.State.OOMKilled}} ' +
-      '{{.State.StartedAt}} {{.State.FinishedAt}}',
+      '{{.State.StartedAt}} {{.State.FinishedAt}} ' +
+      '{{.State.Status}} {{.State.Paused}}',
     sessionName
   );
   if (probe) {
@@ -50,9 +52,15 @@ function inspectDockerState(sessionName, probe = null) {
   }
   // Parsed positionally and defensively: an older docker (or a stubbed one)
   // may answer with fewer fields than the template asks for.
-  const [runningRaw, exitRaw, oomKilledRaw, startedRaw, finishedRaw] = stdout
-    .trim()
-    .split(/\s+/);
+  const [
+    runningRaw,
+    exitRaw,
+    oomKilledRaw,
+    startedRaw,
+    finishedRaw,
+    statusRaw,
+    pausedRaw,
+  ] = stdout.trim().split(/\s+/);
   const exitCode = Number.parseInt(exitRaw, 10);
   return {
     running: runningRaw === 'true',
@@ -61,6 +69,9 @@ function inspectDockerState(sessionName, probe = null) {
       oomKilledRaw === 'true' ? true : oomKilledRaw === 'false' ? false : null,
     startedAt: normalizeDockerTimestamp(startedRaw),
     finishedAt: normalizeDockerTimestamp(finishedRaw),
+    // A paused container is still `.State.Running` (issue #263).
+    status: statusRaw || null,
+    paused: pausedRaw === 'true' || statusRaw === 'paused',
   };
 }
 
@@ -98,6 +109,9 @@ function readDockerState(record, probe = null) {
     Date.parse(state.startedAt) < Date.parse(record.attempt.startedAt)
   ) {
     return null;
+  }
+  if (probe) {
+    probe.dockerState = state;
   }
   return state;
 }

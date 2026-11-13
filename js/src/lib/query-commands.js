@@ -3,7 +3,8 @@
  *
  * Every option in this module addresses an execution that already exists in
  * the tracking store instead of launching a new one: --status, --list,
- * --upload-log, --stop, --terminate, --attach, --resume, --resume-all and
+ * --upload-log, --stop, --terminate, --pause, --unpause, --attach, --resume,
+ * --resume-all and
  * --cleanup, plus --alias and --rename. `dispatchQueryCommand` is the single
  * entry point the CLI calls before it starts interpreting the command line as
  * a command to run.
@@ -52,6 +53,28 @@ function handleUploadLogQuery(store, identifier, options = {}) {
 
 function handleControlQuery(store, identifier, action) {
   return reportResult(controlExecution(store, identifier, action));
+}
+
+/**
+ * Handle --pause / --unpause (issue #263).
+ * @param {?object} store - Execution store
+ * @param {string} identifier - UUID or session name
+ * @param {string} action - pause or unpause
+ * @param {object} [options] - {outputFormat, pauseReason, pausedBy}
+ * @returns {number} Exit code
+ */
+function handlePauseQuery(store, identifier, action, options = {}) {
+  const pause = require('./execution-pause');
+  const deps = {
+    outputFormat: options.outputFormat,
+    reason: options.pauseReason || null,
+    by: options.pausedBy || null,
+  };
+  return reportResult(
+    action === pause.PauseAction.PAUSE
+      ? pause.pauseExecution(store, identifier, deps)
+      : pause.unpauseExecution(store, identifier, deps)
+  );
 }
 
 function handleAttachQuery(store, identifier, readOnly) {
@@ -155,6 +178,8 @@ function hasQueryMode(options) {
     hasValue(options.uploadLog) ||
     hasValue(options.stop) ||
     hasValue(options.terminate) ||
+    hasValue(options.pause) ||
+    hasValue(options.unpause) ||
     hasValue(options.attach) ||
     hasValue(options.resume) ||
     options.resumeAll === true ||
@@ -192,6 +217,12 @@ async function dispatchQueryCommand(options, context = {}) {
       options.terminate,
       ControlAction.TERMINATE
     );
+  }
+  if (hasValue(options.pause)) {
+    return handlePauseQuery(store, options.pause, 'pause', options);
+  }
+  if (hasValue(options.unpause)) {
+    return handlePauseQuery(store, options.unpause, 'unpause', options);
   }
   if (hasValue(options.attach)) {
     return handleAttachQuery(store, options.attach, options.readOnly === true);
@@ -234,6 +265,7 @@ module.exports = {
   handleCleanup,
   handleControlQuery,
   handleListQuery,
+  handlePauseQuery,
   handleResumeAllQuery,
   handleResumeQuery,
   handleStatusQuery,

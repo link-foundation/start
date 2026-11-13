@@ -13,12 +13,16 @@ const { getDockerCommand } = require('./docker-cleanup');
 /**
  * States a tracked isolation session can be observed in.
  * - RUNNING: the session/container is alive and can be attached to
+ * - PAUSED: the container is frozen by `docker pause` (issue #263); it is
+ *   alive (its process and memory are kept) but can be neither attached to nor
+ *   resumed until `$ --unpause` thaws it
  * - STOPPED: the container still exists but is not running (resumable)
  * - MISSING: no trace of the session/container remains
  * - UNKNOWN: the backend cannot be probed locally (e.g. ssh)
  */
 const SessionState = {
   RUNNING: 'running',
+  PAUSED: 'paused',
   STOPPED: 'stopped',
   MISSING: 'missing',
   UNKNOWN: 'unknown',
@@ -38,6 +42,11 @@ function mapDockerStatusToState(status) {
   }
   if (normalized === 'running' || normalized === 'restarting') {
     return SessionState.RUNNING;
+  }
+  if (normalized === 'paused') {
+    // Paused is alive, not stopped: reading it as stopped made `--resume`
+    // plan a `docker start`/snapshot of a frozen container (issue #263).
+    return SessionState.PAUSED;
   }
   return SessionState.STOPPED;
 }
@@ -109,13 +118,30 @@ function probeSession(record, runner = runCommand) {
     probe.state = result.success ? SessionState.RUNNING : SessionState.MISSING;
   }
 
-  probe.alive = probe.state === SessionState.RUNNING;
+  probe.alive =
+    probe.state === SessionState.RUNNING || probe.state === SessionState.PAUSED;
   return probe;
+}
+
+/**
+ * Refusal for a control that cannot act on a paused container (issue #263).
+ * @param {string} action - What was refused, e.g. "attach to" or "resume"
+ * @param {string} uuid - Execution UUID, for the suggested command
+ * @param {string} sessionName - Container name
+ * @returns {{error: string}} Error result
+ */
+function pausedSessionError(action, uuid, sessionName) {
+  return {
+    error:
+      `Session "${sessionName}" is paused (frozen by docker pause), so start cannot ${action} it. ` +
+      `Use \`$ --unpause ${uuid}\` first to continue the same process, or \`$ --stop ${uuid}\` to end it.`,
+  };
 }
 
 module.exports = {
   SessionState,
   mapDockerStatusToState,
   parseScreenSessionState,
+  pausedSessionError,
   probeSession,
 };

@@ -27,6 +27,9 @@ const BATCH_FIELDS = [
   '.State.OOMKilled',
   '.State.StartedAt',
   '.State.FinishedAt',
+  // Paused state for --status/--list (issue #263).
+  '.State.Status',
+  '.State.Paused',
 ];
 const BATCH_FORMAT = BATCH_FIELDS.map((field) => `{{${field}}}`).join(' ');
 const NOT_FOUND_LINE = /no such (?:object|container):\s*(\S+)/gi;

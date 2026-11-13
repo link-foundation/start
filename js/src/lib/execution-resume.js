@@ -43,7 +43,11 @@ const {
   rollbackLaunch,
   failLaunchedPersistence,
 } = require('./launch-persistence');
-const { SessionState, probeSession } = require('./session-probe');
+const {
+  SessionState,
+  pausedSessionError,
+  probeSession,
+} = require('./session-probe');
 const { getDockerNetworks } = require('./docker-network-lifecycle');
 const {
   writeCommandHandoff,
@@ -215,6 +219,10 @@ function buildResumePlan(
 
   if (opts.isolationMode !== 'detached') {
     return { error: 'Only detached isolated executions can be resumed.' };
+  }
+
+  if (probe.state === SessionState.PAUSED) {
+    return pausedSessionError('resume', record.uuid, sessionName);
   }
 
   if (probe.alive) {
@@ -481,6 +489,13 @@ async function resumeExecution(store, identifier, deps = {}) {
   const runner = deps.runner || runCommand;
   const probeFn = deps.probe || ((r) => probeSession(r, runner));
   const probe = probeFn(record);
+  if (probe.state === SessionState.PAUSED) {
+    // Refused before any snapshot or resource change (issue #263).
+    return {
+      success: false,
+      ...pausedSessionError('resume', record.uuid, probe.sessionName),
+    };
+  }
   const opts = record.options || {};
   let resources;
   try {

@@ -153,6 +153,14 @@ function cleanupExecution(store, identifier, deps = {}) {
   }
   const runner = deps.runner || runCommand;
   const dryRun = deps.dryRun === true;
+  if (require('./execution-pause').isConfirmedPaused(record, runner)) {
+    // A paused container keeps its process; never remove it (issue #263).
+    return {
+      success: false,
+      output: `Retained container ${record.options.sessionName} (paused)`,
+      error: `${identifier} is paused; nothing was removed. Use \`$ --unpause ${record.uuid}\` or \`$ --stop ${record.uuid}\` first.`,
+    };
+  }
   const plan = planExecutionCleanup(record, runner);
   const outcomes = plan.containers.map((name) =>
     removeObject('container', name, runner, dryRun)
