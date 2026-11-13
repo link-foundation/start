@@ -1,6 +1,9 @@
 //! Regression tests for issue #263 that spawn Docker: `--status`, `--list`
 //! and `cleanup_stale` against a fake `docker` binary, the watcher snippet, and
 //! the real CLI against real Docker (same process across pause/unpause).
+//! Unix only: the fake binary is a shell script.
+
+#![cfg(unix)]
 
 #[path = "support/issue_263.rs"]
 mod support;
@@ -12,7 +15,6 @@ use tempfile::TempDir;
 
 /// Status, list and `cleanup_stale` spawn docker themselves: run them against
 /// a fake `docker` binary holding one container (or none: "removed").
-#[cfg(unix)]
 mod fake_docker_binary {
     use super::*;
     use start_command::status_formatter::{list_executions_filtered, query_status};
@@ -271,7 +273,6 @@ exit $status
 }
 
 /// End to end with the real CLI and Docker, when Linux images can run.
-#[cfg(unix)]
 mod real_docker {
     use super::*;
     use std::process::{Command, Output};
