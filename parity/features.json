@@ -1254,11 +1254,13 @@
           "js/src/lib/execution-control.js",
           "js/src/lib/execution-attach.js",
           "js/src/lib/query-commands.js",
-          "js/src/lib/execution-cleanup.js"
+          "js/src/lib/execution-cleanup.js",
+          "js/src/lib/execution-pause.js"
         ],
         "tests": [
           "js/test/execution-control.js",
-          "js/test/execution-attach.js"
+          "js/test/execution-attach.js",
+          "js/test/regression-263.js"
         ]
       },
       "rust": {
@@ -1267,10 +1269,13 @@
           "rust/src/lib/execution_attach.rs",
           "rust/src/lib/execution_attach_cases.rs",
           "rust/src/lib/query_commands.rs",
-          "rust/src/lib/execution_cleanup.rs"
+          "rust/src/lib/execution_cleanup.rs",
+          "rust/src/lib/execution_pause.rs"
         ],
         "tests": [
-          "rust/tests/execution_control.rs"
+          "rust/tests/execution_control.rs",
+          "rust/tests/regression_263.rs",
+          "rust/tests/regression_263_status.rs"
         ]
       },
       "manualRust": [
@@ -1336,6 +1341,21 @@
         },
         {
           "path": "rust/src/lib/execution_cleanup.rs",
+          "reason": "Native filesystem/process adapter for execution-control; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "blockers": [
+            "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
+            "https://github.com/link-foundation/meta-language/issues/206",
+            "https://github.com/link-foundation/meta-language/issues/207",
+            "https://github.com/link-foundation/meta-language/issues/208",
+            "https://github.com/link-foundation/meta-language/issues/209",
+            "https://github.com/link-foundation/meta-language/issues/210",
+            "https://github.com/link-foundation/meta-language/issues/211",
+            "https://github.com/link-foundation/meta-language/issues/212"
+          ]
+        },
+        {
+          "path": "rust/src/lib/execution_pause.rs",
           "reason": "Native filesystem/process adapter for execution-control; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
           "blockers": [
             "https://github.com/link-foundation/meta-language/issues/222",
