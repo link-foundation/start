@@ -67,7 +67,8 @@ else: sys.exit(1)
         if mode == 'supervise': child.stdin.close()
         else: child.send_signal(signal.SIGTERM)
         # 219: a 30 s tick must not delay the lift.
-        wait_for(lambda: float((root / 'limit').read_text()) == 4, 'cap lifted after the stop signal', 5)
+        # The fake docker truncates `limit` before writing it: '' is not yet.
+        wait_for(lambda: (root / 'limit').read_text().strip() in ('4', '4.0'), 'cap lifted after the stop signal', 5)
         lifted = time.monotonic() - stopped
         child.wait(timeout=5)
         after = state()
