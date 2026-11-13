@@ -27,6 +27,8 @@ $ --list
 $ --help
 $ -i docker -d --label task.tool=codex -- my-task
 $ --attach <id>
+$ --pause <id>
+$ --unpause <id>
 $ --resume <id> -- <command>
 $ --resume-all
 $ --session-id <uuid> --append-attempt -- <command>

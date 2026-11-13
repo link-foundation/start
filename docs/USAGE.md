@@ -24,6 +24,8 @@ $ --list
 $ --help
 $ --upload-log <id>
 $ --attach <id>
+$ --pause <id>
+$ --unpause <id>
 $ --resume <id> -- <command>
 $ --resume-all
 $ --session-id <uuid> --append-attempt -- <command>
@@ -91,6 +93,17 @@ with killed processes cannot distinguish a container, parent or host OOM.
 `--resume-all` re-attaches or reconciles every execution
 still marked running, which is what repairs records after a supervisor restart.
 See [Execution Tracking](../README.md#execution-tracking) for the full behavior.
+
+Use `--pause <id>` to freeze a detached Docker execution in place with
+`docker pause`, and `--unpause <id>` to let the same process continue. A paused
+container releases CPU but keeps its memory and disk; use `--stop` when the RAM
+must be freed. Add `--pause-reason <text>` and `--paused-by <name>` to record
+why and by whom. `--status` reports `dockerState`, `paused` and `pausedAt`, and
+`--list --running` keeps paused executions. A paused execution is never treated
+as finished, resumed, attached to, cleaned up or auto-recovered; `--stop` and
+`--terminate` thaw and stop it as an intentional stop. screen and tmux sessions
+cannot be paused. See
+[Pausing and unpausing Docker executions](../README.md#pausing-and-unpausing-docker-executions).
 
 After an explicit resume, `--status <id> --output-format json` and
 `--list --output-format json` include `attempt` and `attemptHistory`. Use
