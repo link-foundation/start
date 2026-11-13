@@ -355,7 +355,10 @@ function formatPauseReport(report, outputFormat) {
 
 function success(fields, deps) {
   const record = fields.record;
-  const processIds = collectProcessIds(record, deps.runner);
+  // Every docker call of --pause/--unpause is bounded, the PID lookup too.
+  const processIds = collectProcessIds(record, (command, args, extra) =>
+    deps.runner(command, args, { timeout: DOCKER_PAUSE_TIMEOUT_MS, ...extra })
+  );
   return {
     success: true,
     output: formatPauseReport(
