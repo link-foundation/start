@@ -551,8 +551,13 @@ const c = JSON.parse(fs.readFileSync(${JSON.stringify(stateFile)}, 'utf8'));
 if (args[0] !== 'inspect') process.exit(1);
 args = args.slice(1);
 if (args[0] === '--type') args = args.slice(2);
-const format = args[args.indexOf('-f') + 1];
-const targets = args.slice(args.indexOf('-f') + 2);
+// On Windows START_DOCKER_BIN runs through cmd.exe, which splits the format
+// at its spaces: its words are the ones holding a {{.Field}} placeholder.
+let next = args.indexOf('-f') + 1;
+const words = [];
+while (next < args.length && args[next].includes('}}')) words.push(args[next++]);
+const format = words.join(' ');
+const targets = args.slice(next);
 let missing = false;
 for (const t of targets) {
   if (c === 'removed' || (t !== c['.Name'].slice(1) && !c['.Id'].startsWith(t))) {
@@ -565,10 +570,13 @@ for (const t of targets) {
 process.exit(missing ? 1 : 0);
 `
   );
-  const bin = path.join(dir, 'docker');
+  const windows = process.platform === 'win32';
+  const bin = path.join(dir, windows ? 'docker.cmd' : 'docker');
   fs.writeFileSync(
     bin,
-    `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(script)} "$@"\n`
+    windows
+      ? `@echo off\r\n"${process.execPath}" "${script}" %*\r\nexit /b %errorlevel%\r\n`
+      : `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(script)} "$@"\n`
   );
   fs.chmodSync(bin, 0o755);
   const original = process.env.START_DOCKER_BIN;
