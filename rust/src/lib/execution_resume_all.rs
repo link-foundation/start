@@ -31,6 +31,8 @@ pub enum ResumeAllAction {
     Running,
     Reconciled,
     Unknown,
+    /// Frozen by `docker pause` (issue #263): neither restarted nor re-watched.
+    Paused,
 }
 
 impl ResumeAllAction {
@@ -40,6 +42,7 @@ impl ResumeAllAction {
             ResumeAllAction::Running => "running",
             ResumeAllAction::Reconciled => "reconciled",
             ResumeAllAction::Unknown => "unknown",
+            ResumeAllAction::Paused => "paused",
         }
     }
 }
@@ -234,6 +237,21 @@ pub fn resume_all_executions_with<R: CommandRunner, H: ResumeHooks>(
             continue;
         }
         let session_name = probe.session_name.clone().unwrap_or_default();
+
+        if probe.state == SessionState::Paused {
+            // Neither restarted nor re-watched while frozen (issue #263).
+            entries.push(describe_record(
+                &record,
+                &probe,
+                ResumeAllAction::Paused,
+                format!(
+                    "Skipped paused container: {}. Use `$ --unpause {}` to continue it.",
+                    session_name, record.uuid
+                ),
+                None,
+            ));
+            continue;
+        }
 
         if probe.alive && probe.backend.as_deref() == Some("docker") {
             hooks.start_watcher(&session_name, &record);

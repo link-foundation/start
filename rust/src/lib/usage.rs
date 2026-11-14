@@ -8,6 +8,8 @@ pub fn print_usage() {
        start --upload-log <uuid-or-session-name>
        start --stop <uuid-or-session-name>
        start --terminate <uuid-or-session-name>
+       start --pause <uuid-or-session-name> [--pause-reason <text>] [--paused-by <name>]
+       start --unpause <uuid-or-session-name>
        start --attach <uuid-or-session-name> [--read-only]
        start --resume <uuid-or-session-name> [-- <command>]
        start --resume-all [--output-format <format>]
@@ -66,6 +68,11 @@ Options:
   --no-sanitize        With --upload-log, explicitly upload without secret redaction
   --stop <id>           Ask a detached isolated execution to stop gracefully
   --terminate <id>      Terminate a detached isolated execution immediately
+  --pause <id>          Freeze a detached Docker execution (docker pause): CPU is
+                        released, memory stays allocated (--stop frees it)
+  --pause-reason <text> With --pause, record why the execution was frozen
+  --paused-by <name>    With --pause, record who froze the execution
+  --unpause <id>        Thaw a paused Docker execution; the same process continues
   --attach <id>         Attach to a running detached isolated execution
   --read-only           With --attach, follow output without sending input
   --resume <id>         Restart a stopped detached execution in the same environment
@@ -107,6 +114,8 @@ Examples:
   start --upload-log my-screen-session
   start --stop my-screen-session
   start --terminate my-screen-session
+  start --pause my-docker-session --pause-reason 'rate limit'  # Freeze, keep RAM
+  start --unpause my-docker-session            # Continue the same frozen process
   start --attach my-docker-session
   start --attach my-docker-session --read-only
   start --resume my-docker-session

@@ -23,7 +23,7 @@ use std::process::Command;
 use std::sync::OnceLock;
 
 /// Fields of the batched inspect, in output order.
-pub const BATCH_FIELDS: [&str; 8] = [
+pub const BATCH_FIELDS: [&str; 10] = [
     ".Name",
     ".Id",
     ".State.Pid",
@@ -32,6 +32,9 @@ pub const BATCH_FIELDS: [&str; 8] = [
     ".State.OOMKilled",
     ".State.StartedAt",
     ".State.FinishedAt",
+    // `--pause` state for `--status`/`--list` (issue #263).
+    ".State.Status",
+    ".State.Paused",
 ];
 
 /// Fields of one found container, keyed by template field.

@@ -453,6 +453,14 @@ pub fn build_resume_plan_with_limits(
         return Err("Only detached isolated executions can be resumed.".to_string());
     }
 
+    if probe.state == SessionState::Paused {
+        return Err(crate::session_probe::paused_session_error(
+            "resume",
+            &record.uuid,
+            &session_name,
+        ));
+    }
+
     if probe.alive {
         return Err(format!(
             "Session \"{}\" is still running. Use `$ --attach {}` to re-enter it, or `$ --stop {}` first.",

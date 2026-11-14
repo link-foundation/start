@@ -663,7 +663,11 @@ class ExecutionStore {
     const staleRecords = [];
 
     for (const record of executingRecords) {
-      if (require('./launch-owner').hasActiveLaunch(record)) {
+      if (
+        require('./launch-owner').hasActiveLaunch(record) ||
+        require('./execution-pause').isConfirmedPaused(record)
+      ) {
+        // A paused container is alive, just frozen (issue #263).
         continue;
       }
       let isStale = false;

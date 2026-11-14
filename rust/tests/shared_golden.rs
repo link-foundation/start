@@ -266,3 +266,188 @@ fn executes_generated_rust_parity_policy() {
         );
     }
 }
+
+/// In-memory docker of the `pause-control` contracts (issue #263); the rules
+/// are spelled out in `pause-control.docker` and mirrored by
+/// `goldenDocker` in js/test/fixtures/pause-golden.cjs.
+struct GoldenDocker {
+    name: String,
+    state: std::cell::RefCell<String>,
+    calls: std::cell::RefCell<Vec<(Vec<String>, bool)>>,
+}
+
+impl GoldenDocker {
+    fn answer(&self, args: &[String]) -> start_command::CommandRunOutput {
+        let ok = |stdout: String| start_command::CommandRunOutput {
+            success: true,
+            stdout,
+            status: Some(0),
+            ..Default::default()
+        };
+        let fail = |stderr: String| start_command::CommandRunOutput {
+            success: false,
+            stderr,
+            status: Some(1),
+            ..Default::default()
+        };
+        let name = &self.name;
+        let state = self.state.borrow().clone();
+        let verb = args.first().map(String::as_str).unwrap_or_default();
+        if state == "removed" && verb != "rm" {
+            return fail(format!(
+                "Error response from daemon: No such container: {name}"
+            ));
+        }
+        let alive = state == "running" || state == "paused";
+        let next = match verb {
+            "inspect" => {
+                let format = args
+                    .iter()
+                    .position(|arg| arg == "-f")
+                    .and_then(|i| args.get(i + 1))
+                    .map(String::as_str)
+                    .unwrap_or_default();
+                return ok(match format {
+                    "{{.State.Status}} {{.State.Paused}}" => {
+                        format!("{state} {}\n", state == "paused")
+                    }
+                    "{{.State.Status}}" => format!("{state}\n"),
+                    "{{.Id}} {{.State.Pid}}" => {
+                        format!("abc263def {}\n", if alive { 4242 } else { 0 })
+                    }
+                    _ => String::new(),
+                });
+            }
+            "pause" if state != "running" => {
+                return fail(format!("container {name} is not running"));
+            }
+            "unpause" if state != "paused" => {
+                return fail(format!("container {name} is not paused"));
+            }
+            "pause" => "paused",
+            "unpause" => "running",
+            _ => return ok(String::new()),
+        };
+        *self.state.borrow_mut() = next.to_string();
+        ok(format!("{name}\n"))
+    }
+}
+
+impl start_command::CommandRunner for GoldenDocker {
+    fn run(&self, _command: &str, args: &[String]) -> start_command::CommandRunOutput {
+        self.calls.borrow_mut().push((args.to_vec(), false));
+        self.answer(args)
+    }
+
+    fn run_with_timeout(
+        &self,
+        _command: &str,
+        args: &[String],
+        _timeout: std::time::Duration,
+    ) -> start_command::CommandRunOutput {
+        self.calls.borrow_mut().push((args.to_vec(), true));
+        self.answer(args)
+    }
+}
+
+/// Replace every ISO-8601 timestamp, which differs per run, with a marker.
+fn normalize_timestamps(value: Value) -> Value {
+    let timestamp =
+        regex::Regex::new(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})")
+            .unwrap();
+    match value {
+        Value::String(text) => Value::String(timestamp.replace_all(&text, "<timestamp>").into()),
+        Value::Array(items) => Value::Array(items.into_iter().map(normalize_timestamps).collect()),
+        Value::Object(map) => Value::Object(
+            map.into_iter()
+                .map(|(key, entry)| (key, normalize_timestamps(entry)))
+                .collect(),
+        ),
+        other => other,
+    }
+}
+
+#[test]
+fn pause_control_matches_shared_goldens() {
+    use start_command::execution_pause::{
+        pause_execution_with_runner, unpause_execution_with_runner, PauseRequest,
+    };
+    use start_command::{ExecutionStore, ExecutionStoreOptions};
+    let fixtures = fixtures();
+    let section = &fixtures["pause-control"];
+    let base = &section["record"];
+    let uuid = base["uuid"].as_str().unwrap();
+    for fixture in section["cases"].as_array().unwrap() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let store = ExecutionStore::with_options(ExecutionStoreOptions {
+            app_folder: Some(dir.path().to_path_buf()),
+            use_links: Some(false),
+            verbose: false,
+        });
+        let mut record = base.clone();
+        for key in ["status", "exitCode"] {
+            if let Some(value) = fixture.get(key) {
+                record[key] = value.clone();
+            }
+        }
+        if let Some(extra) = fixture["options"].as_object() {
+            for (key, value) in extra {
+                record["options"][key] = value.clone();
+            }
+        }
+        store
+            .save(&ExecutionRecord::from_json(&record).unwrap())
+            .unwrap();
+        let docker = GoldenDocker {
+            name: base["options"]["sessionName"].as_str().unwrap().to_string(),
+            state: std::cell::RefCell::new(fixture["docker"].as_str().unwrap().to_string()),
+            calls: Default::default(),
+        };
+        let identifier = fixture["identifier"].as_str().unwrap();
+        let output_format = fixture["outputFormat"].as_str();
+        let result = if fixture["action"] == "pause" {
+            let request = PauseRequest {
+                reason: fixture["reason"].as_str(),
+                by: fixture["by"].as_str(),
+                output_format,
+            };
+            pause_execution_with_runner(Some(&store), identifier, request, &docker)
+        } else {
+            unpause_execution_with_runner(Some(&store), identifier, output_format, &docker)
+        };
+        let output = match (result.output, output_format) {
+            (Some(text), Some("json")) => serde_json::from_str(&text).unwrap(),
+            (Some(text), _) => json!(text),
+            (None, _) => Value::Null,
+        };
+        let saved = store.get(uuid).unwrap().to_json();
+        let calls = docker.calls.borrow();
+        let observed = normalize_timestamps(json!({
+            "success": result.success,
+            "output": output,
+            "error": result.error,
+            "dockerCalls": calls.iter().map(|(args, _)| args.clone()).collect::<Vec<_>>(),
+            "unboundedDockerCalls": calls
+                .iter()
+                .filter(|(_, bounded)| !bounded)
+                .map(|(args, _)| args.clone())
+                .collect::<Vec<_>>(),
+            "dockerState": docker.state.borrow().clone(),
+            "record": {
+                "status": saved["status"],
+                "exitCode": saved["exitCode"],
+                "containerState": saved.get("containerState").cloned().unwrap_or(Value::Null),
+                "options": saved["options"],
+            },
+        }));
+        // The case name, not the observed value (which carries the execution
+        // UUID), labels a failure: CodeQL's rust/cleartext-logging (#168).
+        let name = fixture["name"].as_str().unwrap();
+        for key in fixture["expected"].as_object().unwrap().keys() {
+            assert!(
+                observed[key] == fixture["expected"][key],
+                "pause-control case {name:?} differs in {key}"
+            );
+        }
+    }
+}

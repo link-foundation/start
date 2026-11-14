@@ -12,7 +12,11 @@ const { spawnSync } = require('child_process');
 const { escapeForLinksNotation } = require('./output-blocks');
 const { getDockerCommand, getDockerSpawnOptions } = require('./docker-cleanup');
 const { runCommand } = require('./execution-control');
-const { SessionState, probeSession } = require('./session-probe');
+const {
+  SessionState,
+  pausedSessionError,
+  probeSession,
+} = require('./session-probe');
 
 /**
  * Run a command with the parent terminal attached (stdin included unless the
@@ -102,6 +106,11 @@ function buildAttachPlan(record, options = {}) {
   // only channel back into them.
   if (backend === 'ssh') {
     return logFollowPlan(record, backend, sessionName);
+  }
+
+  if (probe.state === SessionState.PAUSED) {
+    // `docker attach` to a frozen container would hang (issue #263).
+    return pausedSessionError('attach to', record.uuid, sessionName);
   }
 
   if (!probe.alive) {

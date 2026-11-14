@@ -189,6 +189,12 @@ $ --stop 29d6c026-b168-44a6-8a3f-c3919c7e5327
 # Terminate a detached isolated execution immediately
 $ --terminate 29d6c026-b168-44a6-8a3f-c3919c7e5327
 
+# Freeze a detached Docker execution in place (CPU released, memory kept)
+$ --pause my-docker-session --pause-reason "rate limit" --paused-by hive-mind
+
+# Let the same frozen process continue
+$ --unpause my-docker-session
+
 # Re-enter a running detached session
 $ --attach my-docker-session
 
@@ -383,6 +389,61 @@ reporting always sanitizes, and issue text is sanitized the same way.
 session/container name. `--stop` asks the backend to stop gracefully (CTRL+C for
 screen/tmux, `docker stop` for Docker). `--terminate` uses the backend's
 immediate termination command.
+
+#### Pausing and unpausing Docker executions
+
+`--pause <id>` freezes a detached Docker execution with `docker pause` (the
+cgroup freezer) and `--unpause <id>` lets the **same process** continue with
+`docker unpause`: same container, same PID, same execution UUID, record and log.
+No new execution, attempt or recovery is created. Both accept the execution
+UUID or the container name, like `--stop`, and call Docker with argument arrays
+and a 30 second timeout.
+
+| Resource | While paused                                                                 |
+| -------- | ---------------------------------------------------------------------------- |
+| CPU      | Released: the processes are frozen and get no CPU time.                      |
+| Memory   | Retained: the frozen processes keep their RAM. Use `--stop` to free it.      |
+| Disk     | Retained: the container and its writable layer stay, like for a running one. |
+
+Only detached Docker executions can be paused: screen and tmux sessions are
+refused (use `--stop` or `--terminate`). `--pause` on an already paused
+container and `--unpause` on a running one change nothing and say so. A stopped
+or removed container fails with a pointer to `--status <uuid>` and
+`--resume <uuid>`.
+
+The record keeps `paused`, `pausedAt`, `pauseCount`, `pausedBy` and
+`pauseReason` (`--pause-reason`/`--paused-by`); `--unpause` clears the pause
+and records `pauseEndedBy`. `--status` reports the container's `dockerState`
+(`running`, `paused`, `exited`, `removed`, ...), `paused` and `pausedAt`, and a
+paused execution stays `executing` with no exit code. `--list` and
+`--list --running` include it.
+
+While an execution is paused:
+
+- `--attach` and `--resume` are refused with a pointer to `--unpause`, and
+  `--resume` takes no snapshot.
+- `--resume-all` skips it with `Skipped paused container ...`.
+- `--cleanup` and stale-record cleanup never remove it.
+- The completion watcher keeps waiting: a frozen process is not finished.
+- `--stop`/`--terminate` thaw it as part of stopping, clear the pause and
+  count as an intentional stop, so `--on-kill-resume` does not restart it.
+  A paused container killed from outside is not auto-recovered either.
+
+The recorded pause is reconciled with `docker inspect` whenever the execution
+is inspected or controlled, so a stale `paused: true` (after a Docker daemon
+restart, a reboot or an external `docker unpause`/`docker rm`) never hides a
+running, exited or `removed` container; a pause made outside start-command is
+adopted. When Docker cannot be asked, the recorded pause is shown unchanged.
+
+A pause is not guaranteed to survive Docker's own lifecycle, so start-command
+never assumes it does and always reports what `docker inspect` says:
+
+| Event                                       | What `--status` then reports                                                                                                  |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Daemon restart with `live-restore` enabled  | The container keeps running through the restart, so it is normally still `paused` and `--unpause` continues the same process. |
+| Daemon restart with `live-restore` disabled | The daemon stops its containers, so the execution shows as `exited`; the pause is cleared and `--resume` restarts it.         |
+| Host reboot                                 | The frozen process is gone: `exited` (or `running` again, without the pause, if a restart policy started a new process).      |
+| Container removed (`docker rm`, prune)      | `removed`; `--unpause` fails with a pointer to `--status` and `--resume`, which launches the command again.                   |
 
 #### Execution identity, attempts and chains
 

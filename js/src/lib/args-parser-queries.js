@@ -7,6 +7,8 @@
  *
  * Query modes:   --status, --list [--running]
  * Control modes: --upload-log, --stop, --terminate, --attach [--read-only],
+ *                --pause [--pause-reason <text>] [--paused-by <name>],
+ *                --unpause (issue #263),
  *                --resume [-- <command>], --resume-all,
  *                --cleanup [<uuid-or-session-name>]
  * Naming modes:  --alias <id> <name>, --rename <id> <name> (issue #231)
@@ -33,6 +35,10 @@ function createQueryOptionDefaults() {
     outputFormat: null, // Output format (links-notation, json, text)
     stop: null, // UUID/session name to stop gracefully
     terminate: null, // UUID/session name to terminate immediately
+    pause: null, // UUID/session name of a docker execution to freeze
+    unpause: null, // UUID/session name of a paused docker execution to thaw
+    pauseReason: null, // Why --pause froze the execution (recorded)
+    pausedBy: null, // Who --pause froze the execution for (recorded)
     attach: null, // UUID/session name whose terminal should be attached
     readOnly: false, // Follow --attach output without forwarding stdin
     resume: null, // UUID/session name to resume (optionally with a new command)
@@ -55,6 +61,8 @@ const IDENTIFIER_OPTIONS = {
   '--upload-log': 'uploadLog',
   '--stop': 'stop',
   '--terminate': 'terminate',
+  '--pause': 'pause',
+  '--unpause': 'unpause',
   '--attach': 'attach',
   '--resume': 'resume',
 };
@@ -154,6 +162,32 @@ function parseNamingOption(args, index, options) {
 }
 
 /**
+ * `--pause-reason <text>` and `--paused-by <name>` (issue #263) annotate a
+ * `--pause`; their values may contain spaces but not start with `-`.
+ */
+const PAUSE_DETAIL_OPTIONS = {
+  '--pause-reason': 'pauseReason',
+  '--paused-by': 'pausedBy',
+};
+
+function parsePauseDetailOption(args, index, options) {
+  const arg = args[index];
+  const equals = arg.indexOf('=');
+  const name = equals === -1 ? arg : arg.slice(0, equals);
+  const key = PAUSE_DETAIL_OPTIONS[name];
+  if (!key) {
+    return 0;
+  }
+  const inline = equals !== -1;
+  const value = inline ? arg.slice(equals + 1) : args[index + 1];
+  if (!value || (!inline && value.startsWith('-'))) {
+    throw new Error(`Option ${name} requires a value`);
+  }
+  options[key] = value;
+  return inline ? 1 : 2;
+}
+
+/**
  * Parse a single query/control option.
  * @param {string[]} args - Arguments array
  * @param {number} index - Current index
@@ -202,6 +236,11 @@ function parseQueryOption(args, index, options) {
     }
   }
 
+  const pauseDetailConsumed = parsePauseDetailOption(args, index, options);
+  if (pauseDetailConsumed > 0) {
+    return pauseDetailConsumed;
+  }
+
   // --output-format <format>
   if (arg === '--output-format') {
     if (index + 1 < args.length && !args[index + 1].startsWith('-')) {
@@ -242,6 +281,12 @@ function activeQueryModes(options) {
   if (hasValue(options.terminate)) {
     modes.push('--terminate');
   }
+  if (hasValue(options.pause)) {
+    modes.push('--pause');
+  }
+  if (hasValue(options.unpause)) {
+    modes.push('--unpause');
+  }
   if (hasValue(options.attach)) {
     modes.push('--attach');
   }
@@ -266,7 +311,14 @@ function activeQueryModes(options) {
 /**
  * Formats are only meaningful for modes that print a machine-readable report.
  */
-const OUTPUT_FORMAT_MODES = ['--status', '--list', '--resume', '--resume-all'];
+const OUTPUT_FORMAT_MODES = [
+  '--status',
+  '--list',
+  '--resume',
+  '--resume-all',
+  '--pause',
+  '--unpause',
+];
 
 /**
  * Validate query/control options.
@@ -292,7 +344,7 @@ function validateQueryOptions(options) {
 
   if (modes.length > 1) {
     throw new Error(
-      'Cannot combine --status, --list, --upload-log, --stop, --terminate, --attach, --resume, --resume-all, --cleanup, --alias, or --rename in the same invocation'
+      'Cannot combine --status, --list, --upload-log, --stop, --terminate, --pause, --unpause, --attach, --resume, --resume-all, --cleanup, --alias, or --rename in the same invocation'
     );
   }
 
@@ -301,7 +353,7 @@ function validateQueryOptions(options) {
     !modes.some((mode) => OUTPUT_FORMAT_MODES.includes(mode))
   ) {
     throw new Error(
-      '--output-format option is only valid with --status, --list, --resume, or --resume-all'
+      '--output-format option is only valid with --status, --list, --resume, --resume-all, --pause, or --unpause'
     );
   }
 
@@ -311,6 +363,15 @@ function validateQueryOptions(options) {
 
   if (options.readOnly && !hasValue(options.attach)) {
     throw new Error('--read-only option is only valid with --attach');
+  }
+
+  if (
+    (hasValue(options.pauseReason) || hasValue(options.pausedBy)) &&
+    !hasValue(options.pause)
+  ) {
+    throw new Error(
+      '--pause-reason and --paused-by options are only valid with --pause'
+    );
   }
 }
 

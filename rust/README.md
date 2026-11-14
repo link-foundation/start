@@ -30,6 +30,8 @@ start --list
 start --help
 start -i docker -d --label task.tool=codex -- my-task
 start --attach <id>
+start --pause <id>
+start --unpause <id>
 start --resume <id> -- <command>
 start --resume-all
 start --session-id <uuid> --append-attempt -- <command>

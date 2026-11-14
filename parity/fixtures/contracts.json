@@ -1019,5 +1019,780 @@
       "finishedAt": "1970-01-01T00:01:40.592Z",
       "recent": false
     }
-  ]
+  ],
+  "pause-control": {
+    "issue": 263,
+    "description": "--pause/--unpause control paths (issue #263). Each case saves `record` (with the case's `options`, `status` and `exitCode` merged in), runs the action against the in-memory docker and compares the normalized result: output (parsed when json), error, docker argv in call order, the calls made without a timeout, the final docker state and the saved record. ISO-8601 timestamps are replaced by <timestamp>. Regenerate the expectations with `node experiments/issue-263/pause-golden.js --write`.",
+    "docker": "In-memory docker in state running|paused|exited|removed. removed: every call except rm fails with 'Error response from daemon: No such container: <name>'. inspect -f '{{.State.Status}} {{.State.Paused}}' prints '<state> <state==paused>'; -f '{{.State.Status}}' prints '<state>'; -f '{{.Id}} {{.State.Pid}}' prints 'abc263def 4242' while running or paused, else 'abc263def 0'. pause succeeds only when running (-> paused), else fails 'container <name> is not running'; unpause succeeds only when paused (-> running), else fails 'container <name> is not paused'. Anything else succeeds with no output.",
+    "record": {
+      "uuid": "26300000-0000-4000-8000-000000000263",
+      "pid": 999999,
+      "status": "executing",
+      "exitCode": null,
+      "command": "sleep 300",
+      "logPath": "/tmp/start-263-golden.log",
+      "startTime": "2026-11-13T08:00:00Z",
+      "endTime": null,
+      "workingDirectory": "/workspace",
+      "shell": "/bin/sh",
+      "platform": "linux",
+      "options": {
+        "isolated": "docker",
+        "isolationMode": "detached",
+        "sessionName": "paused-263",
+        "image": "alpine:3.23"
+      }
+    },
+    "cases": [
+      {
+        "name": "pause a running container (json)",
+        "action": "pause",
+        "identifier": "paused-263",
+        "outputFormat": "json",
+        "reason": "rate limit",
+        "by": "hive-mind",
+        "docker": "running",
+        "expected": {
+          "success": true,
+          "output": {
+            "action": "pause",
+            "identifier": "paused-263",
+            "uuid": "26300000-0000-4000-8000-000000000263",
+            "status": "paused",
+            "backend": "docker",
+            "sessionName": "paused-263",
+            "method": "DOCKER_PAUSE",
+            "dockerState": "paused",
+            "paused": true,
+            "pausedAt": "<timestamp>",
+            "pauseCount": 1,
+            "pausedBy": "hive-mind",
+            "pauseReason": "rate limit",
+            "resources": {
+              "cpu": "released",
+              "memory": "retained",
+              "disk": "retained"
+            },
+            "processIds": {
+              "wrapperPid": 999999,
+              "containerId": "abc263def",
+              "containerPid": 4242
+            },
+            "message": "Paused detached docker container: paused-263. CPU is released; memory stays allocated (use `$ --stop 26300000-0000-4000-8000-000000000263` to free it). `$ --unpause 26300000-0000-4000-8000-000000000263` continues the same process."
+          },
+          "error": null,
+          "dockerCalls": [
+            [
+              "inspect",
+              "-f",
+              "{{.State.Status}} {{.State.Paused}}",
+              "paused-263"
+            ],
+            [
+              "pause",
+              "paused-263"
+            ],
+            [
+              "inspect",
+              "-f",
+              "{{.Id}} {{.State.Pid}}",
+              "paused-263"
+            ]
+          ],
+          "unboundedDockerCalls": [],
+          "dockerState": "paused",
+          "record": {
+            "status": "executing",
+            "exitCode": null,
+            "containerState": null,
+            "options": {
+              "isolated": "docker",
+              "isolationMode": "detached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23",
+              "paused": true,
+              "pausedAt": "<timestamp>",
+              "pauseCount": 1,
+              "pausedBy": "hive-mind",
+              "pauseReason": "rate limit"
+            }
+          }
+        }
+      },
+      {
+        "name": "pause a running container by UUID (text)",
+        "action": "pause",
+        "identifier": "26300000-0000-4000-8000-000000000263",
+        "outputFormat": "text",
+        "docker": "running",
+        "options": {
+          "pauseCount": 2
+        },
+        "expected": {
+          "success": true,
+          "output": "Paused detached docker container: paused-263. CPU is released; memory stays allocated (use `$ --stop 26300000-0000-4000-8000-000000000263` to free it). `$ --unpause 26300000-0000-4000-8000-000000000263` continues the same process.\nUUID:          26300000-0000-4000-8000-000000000263\nContainer:     paused-263\nDocker State:  paused\nPaused:        true\nPaused At:     <timestamp>\nPause Count:   3\nResources:     CPU released, memory retained, disk retained\nContainer PID: 4242",
+          "error": null,
+          "dockerCalls": [
+            [
+              "inspect",
+              "-f",
+              "{{.State.Status}} {{.State.Paused}}",
+              "paused-263"
+            ],
+            [
+              "pause",
+              "paused-263"
+            ],
+            [
+              "inspect",
+              "-f",
+              "{{.Id}} {{.State.Pid}}",
+              "paused-263"
+            ]
+          ],
+          "unboundedDockerCalls": [],
+          "dockerState": "paused",
+          "record": {
+            "status": "executing",
+            "exitCode": null,
+            "containerState": null,
+            "options": {
+              "isolated": "docker",
+              "isolationMode": "detached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23",
+              "pauseCount": 3,
+              "paused": true,
+              "pausedAt": "<timestamp>"
+            }
+          }
+        }
+      },
+      {
+        "name": "pause a running container (links notation)",
+        "action": "pause",
+        "identifier": "paused-263",
+        "docker": "running",
+        "expected": {
+          "success": true,
+          "output": "executionControl\n  action pause\n  identifier paused-263\n  uuid 26300000-0000-4000-8000-000000000263\n  status paused\n  backend docker\n  sessionName paused-263\n  method DOCKER_PAUSE\n  dockerState paused\n  paused true\n  pausedAt \"<timestamp>\"\n  pauseCount 1\n  resources\n      cpu released\n      memory retained\n      disk retained\n  processIds\n      wrapperPid 999999\n      containerId abc263def\n      containerPid 4242\n  message \"Paused detached docker container: paused-263. CPU is released; memory stays allocated (use `$ --stop 26300000-0000-4000-8000-000000000263` to free it). `$ --unpause 26300000-0000-4000-8000-000000000263` continues the same process.\"",
+          "error": null,
+          "dockerCalls": [
+            [
+              "inspect",
+              "-f",
+              "{{.State.Status}} {{.State.Paused}}",
+              "paused-263"
+            ],
+            [
+              "pause",
+              "paused-263"
+            ],
+            [
+              "inspect",
+              "-f",
+              "{{.Id}} {{.State.Pid}}",
+              "paused-263"
+            ]
+          ],
+          "unboundedDockerCalls": [],
+          "dockerState": "paused",
+          "record": {
+            "status": "executing",
+            "exitCode": null,
+            "containerState": null,
+            "options": {
+              "isolated": "docker",
+              "isolationMode": "detached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23",
+              "paused": true,
+              "pausedAt": "<timestamp>",
+              "pauseCount": 1
+            }
+          }
+        }
+      },
+      {
+        "name": "pause an already paused container is idempotent",
+        "action": "pause",
+        "identifier": "paused-263",
+        "outputFormat": "json",
+        "docker": "paused",
+        "options": {
+          "paused": true,
+          "pausedAt": "2026-11-13T08:01:00Z",
+          "pauseCount": 1
+        },
+        "expected": {
+          "success": true,
+          "output": {
+            "action": "pause",
+            "identifier": "paused-263",
+            "uuid": "26300000-0000-4000-8000-000000000263",
+            "status": "already-paused",
+            "backend": "docker",
+            "sessionName": "paused-263",
+            "method": "NONE",
+            "dockerState": "paused",
+            "paused": true,
+            "pausedAt": "<timestamp>",
+            "pauseCount": 1,
+            "resources": {
+              "cpu": "released",
+              "memory": "retained",
+              "disk": "retained"
+            },
+            "processIds": {
+              "wrapperPid": 999999,
+              "containerId": "abc263def",
+              "containerPid": 4242
+            },
+            "message": "Container paused-263 is already paused; nothing changed."
+          },
+          "error": null,
+          "dockerCalls": [
+            [
+              "inspect",
+              "-f",
+              "{{.State.Status}} {{.State.Paused}}",
+              "paused-263"
+            ],
+            [
+              "inspect",
+              "-f",
+              "{{.Id}} {{.State.Pid}}",
+              "paused-263"
+            ]
+          ],
+          "unboundedDockerCalls": [],
+          "dockerState": "paused",
+          "record": {
+            "status": "executing",
+            "exitCode": null,
+            "containerState": null,
+            "options": {
+              "isolated": "docker",
+              "isolationMode": "detached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23",
+              "paused": true,
+              "pausedAt": "<timestamp>",
+              "pauseCount": 1
+            }
+          }
+        }
+      },
+      {
+        "name": "pause adopts a pause made outside start-command",
+        "action": "pause",
+        "identifier": "paused-263",
+        "outputFormat": "json",
+        "by": "operator",
+        "docker": "paused",
+        "expected": {
+          "success": true,
+          "output": {
+            "action": "pause",
+            "identifier": "paused-263",
+            "uuid": "26300000-0000-4000-8000-000000000263",
+            "status": "already-paused",
+            "backend": "docker",
+            "sessionName": "paused-263",
+            "method": "NONE",
+            "dockerState": "paused",
+            "paused": true,
+            "pausedAt": "<timestamp>",
+            "pauseCount": 1,
+            "pausedBy": "operator",
+            "resources": {
+              "cpu": "released",
+              "memory": "retained",
+              "disk": "retained"
+            },
+            "processIds": {
+              "wrapperPid": 999999,
+              "containerId": "abc263def",
+              "containerPid": 4242
+            },
+            "message": "Container paused-263 is already paused; nothing changed."
+          },
+          "error": null,
+          "dockerCalls": [
+            [
+              "inspect",
+              "-f",
+              "{{.State.Status}} {{.State.Paused}}",
+              "paused-263"
+            ],
+            [
+              "inspect",
+              "-f",
+              "{{.Id}} {{.State.Pid}}",
+              "paused-263"
+            ]
+          ],
+          "unboundedDockerCalls": [],
+          "dockerState": "paused",
+          "record": {
+            "status": "executing",
+            "exitCode": null,
+            "containerState": null,
+            "options": {
+              "isolated": "docker",
+              "isolationMode": "detached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23",
+              "paused": true,
+              "pausedAt": "<timestamp>",
+              "pauseCount": 1,
+              "pausedBy": "operator"
+            }
+          }
+        }
+      },
+      {
+        "name": "pause an exited container fails and clears a stale pause",
+        "action": "pause",
+        "identifier": "paused-263",
+        "outputFormat": "json",
+        "docker": "exited",
+        "options": {
+          "paused": true,
+          "pausedAt": "2026-11-13T08:01:00Z",
+          "pauseCount": 1
+        },
+        "expected": {
+          "success": false,
+          "output": null,
+          "error": "Cannot pause paused-263: container \"paused-263\" is exited, not running. Use `$ --status 26300000-0000-4000-8000-000000000263` to inspect it, or `$ --resume 26300000-0000-4000-8000-000000000263` to continue it.",
+          "dockerCalls": [
+            [
+              "inspect",
+              "-f",
+              "{{.State.Status}} {{.State.Paused}}",
+              "paused-263"
+            ]
+          ],
+          "unboundedDockerCalls": [],
+          "dockerState": "exited",
+          "record": {
+            "status": "executing",
+            "exitCode": null,
+            "containerState": null,
+            "options": {
+              "isolated": "docker",
+              "isolationMode": "detached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23",
+              "paused": false,
+              "pauseCount": 1,
+              "unpausedAt": "<timestamp>",
+              "pauseEndedBy": "reconcile"
+            }
+          }
+        }
+      },
+      {
+        "name": "pause a removed container fails and records the removal",
+        "action": "pause",
+        "identifier": "paused-263",
+        "outputFormat": "json",
+        "docker": "removed",
+        "options": {
+          "paused": true,
+          "pausedAt": "2026-11-13T08:01:00Z",
+          "pauseCount": 1
+        },
+        "status": "executed",
+        "exitCode": 137,
+        "expected": {
+          "success": false,
+          "output": null,
+          "error": "Cannot pause paused-263: container \"paused-263\" no longer exists (removed). Use `$ --status 26300000-0000-4000-8000-000000000263` to inspect it, or `$ --resume 26300000-0000-4000-8000-000000000263` to continue it.",
+          "dockerCalls": [
+            [
+              "inspect",
+              "-f",
+              "{{.State.Status}} {{.State.Paused}}",
+              "paused-263"
+            ]
+          ],
+          "unboundedDockerCalls": [],
+          "dockerState": "removed",
+          "record": {
+            "status": "executed",
+            "exitCode": 137,
+            "containerState": "removed",
+            "options": {
+              "isolated": "docker",
+              "isolationMode": "detached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23",
+              "paused": false,
+              "pauseCount": 1,
+              "unpausedAt": "<timestamp>",
+              "pauseEndedBy": "reconcile"
+            }
+          }
+        }
+      },
+      {
+        "name": "pause refuses a screen session",
+        "action": "pause",
+        "identifier": "paused-263",
+        "docker": "running",
+        "options": {
+          "isolated": "screen"
+        },
+        "expected": {
+          "success": false,
+          "output": null,
+          "error": "--pause only supports Docker isolation: paused-263 uses screen. screen and tmux sessions cannot be frozen; use --stop or --terminate instead.",
+          "dockerCalls": [],
+          "unboundedDockerCalls": [],
+          "dockerState": "running",
+          "record": {
+            "status": "executing",
+            "exitCode": null,
+            "containerState": null,
+            "options": {
+              "isolated": "screen",
+              "isolationMode": "detached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23"
+            }
+          }
+        }
+      },
+      {
+        "name": "pause refuses an attached docker execution",
+        "action": "pause",
+        "identifier": "paused-263",
+        "docker": "running",
+        "options": {
+          "isolationMode": "attached"
+        },
+        "expected": {
+          "success": false,
+          "output": null,
+          "error": "Only detached Docker executions can be paused.",
+          "dockerCalls": [],
+          "unboundedDockerCalls": [],
+          "dockerState": "running",
+          "record": {
+            "status": "executing",
+            "exitCode": null,
+            "containerState": null,
+            "options": {
+              "isolated": "docker",
+              "isolationMode": "attached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23"
+            }
+          }
+        }
+      },
+      {
+        "name": "unpause a paused container (json)",
+        "action": "unpause",
+        "identifier": "paused-263",
+        "outputFormat": "json",
+        "docker": "paused",
+        "options": {
+          "paused": true,
+          "pausedAt": "2026-11-13T08:01:00Z",
+          "pauseCount": 1,
+          "pausedBy": "hive-mind",
+          "pauseReason": "rate limit"
+        },
+        "expected": {
+          "success": true,
+          "output": {
+            "action": "unpause",
+            "identifier": "paused-263",
+            "uuid": "26300000-0000-4000-8000-000000000263",
+            "status": "unpaused",
+            "backend": "docker",
+            "sessionName": "paused-263",
+            "method": "DOCKER_UNPAUSE",
+            "dockerState": "running",
+            "paused": false,
+            "unpausedAt": "<timestamp>",
+            "processIds": {
+              "wrapperPid": 999999,
+              "containerId": "abc263def",
+              "containerPid": 4242
+            },
+            "message": "Unpaused detached docker container: paused-263. The same process continues."
+          },
+          "error": null,
+          "dockerCalls": [
+            [
+              "inspect",
+              "-f",
+              "{{.State.Status}} {{.State.Paused}}",
+              "paused-263"
+            ],
+            [
+              "unpause",
+              "paused-263"
+            ],
+            [
+              "inspect",
+              "-f",
+              "{{.Id}} {{.State.Pid}}",
+              "paused-263"
+            ]
+          ],
+          "unboundedDockerCalls": [],
+          "dockerState": "running",
+          "record": {
+            "status": "executing",
+            "exitCode": null,
+            "containerState": null,
+            "options": {
+              "isolated": "docker",
+              "isolationMode": "detached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23",
+              "paused": false,
+              "pauseCount": 1,
+              "unpausedAt": "<timestamp>",
+              "pauseEndedBy": "unpause"
+            }
+          }
+        }
+      },
+      {
+        "name": "unpause a paused container (text)",
+        "action": "unpause",
+        "identifier": "26300000-0000-4000-8000-000000000263",
+        "outputFormat": "text",
+        "docker": "paused",
+        "options": {
+          "paused": true,
+          "pausedAt": "2026-11-13T08:01:00Z",
+          "pauseCount": 1
+        },
+        "expected": {
+          "success": true,
+          "output": "Unpaused detached docker container: paused-263. The same process continues.\nUUID:          26300000-0000-4000-8000-000000000263\nContainer:     paused-263\nDocker State:  running\nPaused:        false\nContainer PID: 4242",
+          "error": null,
+          "dockerCalls": [
+            [
+              "inspect",
+              "-f",
+              "{{.State.Status}} {{.State.Paused}}",
+              "paused-263"
+            ],
+            [
+              "unpause",
+              "paused-263"
+            ],
+            [
+              "inspect",
+              "-f",
+              "{{.Id}} {{.State.Pid}}",
+              "paused-263"
+            ]
+          ],
+          "unboundedDockerCalls": [],
+          "dockerState": "running",
+          "record": {
+            "status": "executing",
+            "exitCode": null,
+            "containerState": null,
+            "options": {
+              "isolated": "docker",
+              "isolationMode": "detached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23",
+              "paused": false,
+              "pauseCount": 1,
+              "unpausedAt": "<timestamp>",
+              "pauseEndedBy": "unpause"
+            }
+          }
+        }
+      },
+      {
+        "name": "unpause a running container is idempotent and clears a stale pause",
+        "action": "unpause",
+        "identifier": "paused-263",
+        "outputFormat": "json",
+        "docker": "running",
+        "options": {
+          "paused": true,
+          "pausedAt": "2026-11-13T08:01:00Z",
+          "pauseCount": 1
+        },
+        "expected": {
+          "success": true,
+          "output": {
+            "action": "unpause",
+            "identifier": "paused-263",
+            "uuid": "26300000-0000-4000-8000-000000000263",
+            "status": "not-paused",
+            "backend": "docker",
+            "sessionName": "paused-263",
+            "method": "NONE",
+            "dockerState": "running",
+            "paused": false,
+            "unpausedAt": "<timestamp>",
+            "processIds": {
+              "wrapperPid": 999999,
+              "containerId": "abc263def",
+              "containerPid": 4242
+            },
+            "message": "Container paused-263 is running and not paused; nothing changed."
+          },
+          "error": null,
+          "dockerCalls": [
+            [
+              "inspect",
+              "-f",
+              "{{.State.Status}} {{.State.Paused}}",
+              "paused-263"
+            ],
+            [
+              "inspect",
+              "-f",
+              "{{.Id}} {{.State.Pid}}",
+              "paused-263"
+            ]
+          ],
+          "unboundedDockerCalls": [],
+          "dockerState": "running",
+          "record": {
+            "status": "executing",
+            "exitCode": null,
+            "containerState": null,
+            "options": {
+              "isolated": "docker",
+              "isolationMode": "detached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23",
+              "paused": false,
+              "pauseCount": 1,
+              "unpausedAt": "<timestamp>",
+              "pauseEndedBy": "reconcile"
+            }
+          }
+        }
+      },
+      {
+        "name": "unpause an exited container fails with a recovery path",
+        "action": "unpause",
+        "identifier": "paused-263",
+        "outputFormat": "json",
+        "docker": "exited",
+        "options": {
+          "paused": true,
+          "pausedAt": "2026-11-13T08:01:00Z",
+          "pauseCount": 1
+        },
+        "expected": {
+          "success": false,
+          "output": null,
+          "error": "Cannot unpause paused-263: container \"paused-263\" is exited, not paused. Use `$ --status 26300000-0000-4000-8000-000000000263` to inspect it, or `$ --resume 26300000-0000-4000-8000-000000000263` to continue it.",
+          "dockerCalls": [
+            [
+              "inspect",
+              "-f",
+              "{{.State.Status}} {{.State.Paused}}",
+              "paused-263"
+            ]
+          ],
+          "unboundedDockerCalls": [],
+          "dockerState": "exited",
+          "record": {
+            "status": "executing",
+            "exitCode": null,
+            "containerState": null,
+            "options": {
+              "isolated": "docker",
+              "isolationMode": "detached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23",
+              "paused": false,
+              "pauseCount": 1,
+              "unpausedAt": "<timestamp>",
+              "pauseEndedBy": "reconcile"
+            }
+          }
+        }
+      },
+      {
+        "name": "unpause a removed container fails with a recovery path",
+        "action": "unpause",
+        "identifier": "paused-263",
+        "outputFormat": "json",
+        "docker": "removed",
+        "options": {
+          "paused": true,
+          "pausedAt": "2026-11-13T08:01:00Z",
+          "pauseCount": 1
+        },
+        "expected": {
+          "success": false,
+          "output": null,
+          "error": "Cannot unpause paused-263: container \"paused-263\" no longer exists (removed). Use `$ --status 26300000-0000-4000-8000-000000000263` to inspect it, or `$ --resume 26300000-0000-4000-8000-000000000263` to continue it.",
+          "dockerCalls": [
+            [
+              "inspect",
+              "-f",
+              "{{.State.Status}} {{.State.Paused}}",
+              "paused-263"
+            ]
+          ],
+          "unboundedDockerCalls": [],
+          "dockerState": "removed",
+          "record": {
+            "status": "executing",
+            "exitCode": null,
+            "containerState": null,
+            "options": {
+              "isolated": "docker",
+              "isolationMode": "detached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23",
+              "paused": false,
+              "pauseCount": 1,
+              "unpausedAt": "<timestamp>",
+              "pauseEndedBy": "reconcile"
+            }
+          }
+        }
+      },
+      {
+        "name": "unpause refuses a tmux session",
+        "action": "unpause",
+        "identifier": "paused-263",
+        "docker": "running",
+        "options": {
+          "isolated": "tmux"
+        },
+        "expected": {
+          "success": false,
+          "output": null,
+          "error": "--unpause only supports Docker isolation: paused-263 uses tmux. screen and tmux sessions cannot be frozen; use --stop or --terminate instead.",
+          "dockerCalls": [],
+          "unboundedDockerCalls": [],
+          "dockerState": "running",
+          "record": {
+            "status": "executing",
+            "exitCode": null,
+            "containerState": null,
+            "options": {
+              "isolated": "tmux",
+              "isolationMode": "detached",
+              "sessionName": "paused-263",
+              "image": "alpine:3.23"
+            }
+          }
+        }
+      }
+    ]
+  }
 }

@@ -366,6 +366,12 @@ pub fn recover_killed_execution_with_delay<R: CommandRunner + ?Sized>(
         log("\n[Recovery] Not resuming: the session was stopped on request.\n");
         return RecoveryOutcome::not("stop-requested");
     }
+    if record.options.get("paused").and_then(Value::as_bool) == Some(true) {
+        // A paused container only exits when it is stopped or killed on
+        // purpose; a pause is never a crash to recover from (issue #263).
+        log("\n[Recovery] Not resuming: the session was paused when it exited.\n");
+        return RecoveryOutcome::not("paused");
+    }
     let used = option_u64(&record, "recoveryAttempts");
     if used >= max_attempts {
         log(&format!(

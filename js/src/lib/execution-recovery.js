@@ -239,6 +239,12 @@ function recoverKilledExecution(params = {}) {
     log('\n[Recovery] Not resuming: the session was stopped on request.\n');
     return { recovered: false, reason: 'stop-requested' };
   }
+  if (opts.paused === true) {
+    // A paused container only exits when it is stopped or killed on purpose;
+    // a pause is never a crash to recover from (issue #263).
+    log('\n[Recovery] Not resuming: the session was paused when it exited.\n');
+    return { recovered: false, reason: 'paused' };
+  }
   const used = Number(opts.recoveryAttempts) || 0;
   if (used >= maxAttempts) {
     log(

@@ -67,6 +67,7 @@ pub mod execution_cleanup;
 pub mod execution_control;
 pub mod execution_env;
 pub mod execution_identity;
+pub mod execution_pause;
 pub mod execution_recovery;
 pub mod execution_resume;
 pub mod execution_resume_all;

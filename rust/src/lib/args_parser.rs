@@ -31,6 +31,7 @@
 //! --upload-log <uuid-or-session>   Upload the stored log for a tracked execution
 //! --stop <uuid-or-session-name>    Ask a detached execution to stop gracefully
 //! --terminate <uuid-or-session-name> Terminate a detached execution immediately
+//! --pause / --unpause <uuid-or-session-name> Freeze / thaw a detached docker execution
 //! --list [--running]               Optionally restrict the listing to running executions
 //! --attach <uuid-or-session-name>  Attach to a running detached execution
 //! --read-only                      With --attach, follow output without sending input
@@ -158,6 +159,13 @@ pub struct WrapperOptions {
     pub stop: Option<String>,
     /// UUID/session name to terminate immediately
     pub terminate: Option<String>,
+    /// UUID/session name of a detached docker execution to freeze (issue #263)
+    pub pause: Option<String>,
+    /// UUID/session name of a paused docker execution to thaw (issue #263)
+    pub unpause: Option<String>,
+    /// With --pause, why / for whom the execution was frozen (recorded)
+    pub pause_reason: Option<String>,
+    pub paused_by: Option<String>,
     /// UUID/session name to attach to
     pub attach: Option<String>,
     /// With --attach, follow output without forwarding stdin
@@ -238,6 +246,10 @@ impl Default for WrapperOptions {
             output_format: None,
             stop: None,
             terminate: None,
+            pause: None,
+            unpause: None,
+            pause_reason: None,
+            paused_by: None,
             attach: None,
             read_only: false,
             resume: None,

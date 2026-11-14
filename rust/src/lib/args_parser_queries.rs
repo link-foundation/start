@@ -2,7 +2,8 @@
 //!
 //! These options address an execution that already exists instead of starting
 //! a new one: `--status`, `--list [--running]`, `--upload-log`, `--stop`,
-//! `--terminate`, `--attach [--read-only]`, `--resume [-- <command>]`,
+//! `--terminate`, `--pause [--pause-reason <text>] [--paused-by <name>]`,
+//! `--unpause` (issue #263), `--attach [--read-only]`, `--resume [-- <command>]`,
 //! `--resume-all` and `--cleanup [<uuid-or-session-name>]`, plus the naming
 //! modes `--alias <id> <name>` and `--rename <id> <name>` (issue #231). They are parsed here so `args_parser` stays
 //! focused on the options that shape a new execution (issue #162).
@@ -16,11 +17,13 @@ type IdentifierSetter = fn(&mut WrapperOptions, String);
 type FlagSetter = fn(&mut WrapperOptions);
 
 /// Options that take a UUID or session name argument.
-const IDENTIFIER_OPTIONS: [(&str, IdentifierSetter); 6] = [
+const IDENTIFIER_OPTIONS: [(&str, IdentifierSetter); 8] = [
     ("--status", |o, v| o.status = Some(v)),
     ("--upload-log", |o, v| o.upload_log = Some(v)),
     ("--stop", |o, v| o.stop = Some(v)),
     ("--terminate", |o, v| o.terminate = Some(v)),
+    ("--pause", |o, v| o.pause = Some(v)),
+    ("--unpause", |o, v| o.unpause = Some(v)),
     ("--attach", |o, v| o.attach = Some(v)),
     ("--resume", |o, v| o.resume = Some(v)),
 ];
@@ -99,8 +102,52 @@ fn parse_naming_option(
     }
 }
 
+/// `--pause-reason <text>` and `--paused-by <name>` (issue #263) annotate a
+/// `--pause`; their values may contain spaces but not start with `-`.
+const PAUSE_DETAIL_OPTIONS: [(&str, IdentifierSetter); 2] = [
+    ("--pause-reason", |o, v| o.pause_reason = Some(v)),
+    ("--paused-by", |o, v| o.paused_by = Some(v)),
+];
+
+fn parse_pause_detail_option(
+    args: &[String],
+    index: usize,
+    options: &mut WrapperOptions,
+) -> Result<usize, String> {
+    let arg = args[index].as_str();
+    let (name, inline) = match arg.split_once('=') {
+        Some((name, value)) => (name, Some(value)),
+        None => (arg, None),
+    };
+    let Some((_, apply)) = PAUSE_DETAIL_OPTIONS
+        .iter()
+        .find(|(option, _)| *option == name)
+    else {
+        return Ok(0);
+    };
+    let value = inline.or_else(|| {
+        args.get(index + 1)
+            .map(String::as_str)
+            .filter(|next| !next.starts_with('-'))
+    });
+    match value.filter(|value| !value.is_empty()) {
+        Some(value) => {
+            apply(options, value.to_string());
+            Ok(if inline.is_some() { 1 } else { 2 })
+        }
+        None => Err(format!("Option {} requires a value", name)),
+    }
+}
+
 /// Query modes that may be combined with `--output-format`.
-const OUTPUT_FORMAT_MODES: [&str; 4] = ["--status", "--list", "--resume", "--resume-all"];
+const OUTPUT_FORMAT_MODES: [&str; 6] = [
+    "--status",
+    "--list",
+    "--resume",
+    "--resume-all",
+    "--pause",
+    "--unpause",
+];
 
 /// Parse one query/control option.
 ///
@@ -155,6 +202,11 @@ pub fn parse_query_option(
         }
     }
 
+    let pause_detail_consumed = parse_pause_detail_option(args, index, options)?;
+    if pause_detail_consumed > 0 {
+        return Ok(pause_detail_consumed);
+    }
+
     if arg == "--output-format" {
         if index + 1 < args.len() && !args[index + 1].starts_with('-') {
             options.output_format = Some(args[index + 1].to_lowercase());
@@ -188,6 +240,12 @@ pub fn active_query_modes(options: &WrapperOptions) -> Vec<&'static str> {
     }
     if options.terminate.is_some() {
         modes.push("--terminate");
+    }
+    if options.pause.is_some() {
+        modes.push("--pause");
+    }
+    if options.unpause.is_some() {
+        modes.push("--unpause");
     }
     if options.attach.is_some() {
         modes.push("--attach");
@@ -231,7 +289,7 @@ pub fn validate_query_options(options: &WrapperOptions) -> Result<(), String> {
 
     if modes.len() > 1 {
         return Err(
-            "Cannot combine --status, --list, --upload-log, --stop, --terminate, --attach, --resume, --resume-all, --cleanup, --alias, or --rename in the same invocation"
+            "Cannot combine --status, --list, --upload-log, --stop, --terminate, --pause, --unpause, --attach, --resume, --resume-all, --cleanup, --alias, or --rename in the same invocation"
                 .to_string(),
         );
     }
@@ -240,7 +298,7 @@ pub fn validate_query_options(options: &WrapperOptions) -> Result<(), String> {
         && !modes.iter().any(|mode| OUTPUT_FORMAT_MODES.contains(mode))
     {
         return Err(
-            "--output-format option is only valid with --status, --list, --resume, or --resume-all"
+            "--output-format option is only valid with --status, --list, --resume, --resume-all, --pause, or --unpause"
                 .to_string(),
         );
     }
@@ -251,6 +309,12 @@ pub fn validate_query_options(options: &WrapperOptions) -> Result<(), String> {
 
     if options.read_only && options.attach.is_none() {
         return Err("--read-only option is only valid with --attach".to_string());
+    }
+
+    if (options.pause_reason.is_some() || options.paused_by.is_some()) && options.pause.is_none() {
+        return Err(
+            "--pause-reason and --paused-by options are only valid with --pause".to_string(),
+        );
     }
 
     Ok(())

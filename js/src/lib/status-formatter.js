@@ -33,6 +33,7 @@ const {
   persistContainerRemoval,
 } = require('./container-removal');
 const { withDockerInspectBatch } = require('./docker-inspect-batch');
+const pause = require('./execution-pause');
 const {
   backendExitCode,
   dockerProbeSpawnOptions,
@@ -460,8 +461,11 @@ function enrichDetachedStatus(record) {
     ? readAttemptLogTail(record, FATAL_MARKER_TAIL_BYTES)
     : null;
   const probe = dockerProbe();
-  const resolved = attachContainerRemoval(
-    resolveDetachedStatus(record, logTail, probe),
+  const resolved = pause.attachPauseState(
+    attachContainerRemoval(
+      resolveDetachedStatus(record, logTail, probe),
+      probe
+    ),
     probe
   );
   const enriched = attachMemoryExhaustion(
@@ -664,6 +668,7 @@ function formatRecordAsText(record) {
   if (obj.staleDetectedAt) {
     lines.push(`Stale Detected At: ${obj.staleDetectedAt}`);
   }
+  lines.push(...pause.pauseTextLines(obj));
   if (obj.containerState) {
     // The container no longer exists; `containerId` is history (issue #225).
     lines.push(`Container State:   ${obj.containerState}`);
@@ -821,6 +826,7 @@ function queryStatus(store, identifier, outputFormat) {
       () => {
         const enrichedRecord = enrichDetachedStatus(record);
         persistContainerRemoval(store, record, enrichedRecord);
+        pause.persistPauseReconciliation(store, enrichedRecord);
         return attachProcessIds(enrichedRecord);
       }
     );
@@ -856,7 +862,11 @@ function listExecutions(store, outputFormat, options = {}) {
     // One docker inspect for every listed container (issue #243).
     const enriched = sortRecordsByStartTimeDesc(
       withDockerInspectBatch(all, dockerProbe(), () =>
-        all.map(prepareRecordForList)
+        all.map((record) => {
+          const prepared = prepareRecordForList(record);
+          pause.persistPauseReconciliation(store, prepared);
+          return prepared;
+        })
       )
     );
     // --running reports the reconciled status, not the stored one: a record

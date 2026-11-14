@@ -34,6 +34,7 @@ const ResumeAllAction = {
   RUNNING: 'running',
   RECONCILED: 'reconciled',
   UNKNOWN: 'unknown',
+  PAUSED: 'paused',
 };
 
 function formatResumeAllAsLinksNotation(summary) {
@@ -132,6 +133,19 @@ function resumeAllExecutions(store, deps = {}) {
           probe,
           ResumeAllAction.RUNNING,
           'Launch is reserved; no watcher or duplicate launch was started.'
+        )
+      );
+      continue;
+    }
+
+    if (probe.state === SessionState.PAUSED) {
+      // Neither restarted nor re-watched while frozen (issue #263).
+      executions.push(
+        describeRecord(
+          record,
+          probe,
+          ResumeAllAction.PAUSED,
+          `Skipped paused container: ${sessionName}. Use \`$ --unpause ${record.uuid}\` to continue it.`
         )
       );
       continue;

@@ -152,6 +152,15 @@ pub fn build_attach_plan(
         return log_follow_plan(record, &backend, &session_name);
     }
 
+    if probe.state == SessionState::Paused {
+        // `docker attach` to a frozen container would hang (issue #263).
+        return Err(crate::session_probe::paused_session_error(
+            "attach to",
+            &record.uuid,
+            &session_name,
+        ));
+    }
+
     if !probe.alive {
         return Err(not_running_error(record, probe, &session_name));
     }

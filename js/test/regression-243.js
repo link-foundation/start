@@ -82,6 +82,9 @@ const CONTAINERS = [
   '.State.OOMKilled': String(oom),
   '.State.StartedAt': startedAt || '0001-01-01T00:00:00Z',
   '.State.FinishedAt': finishedAt || '0001-01-01T00:00:00Z',
+  // Paused state for --status/--list (issue #263).
+  '.State.Status': running ? 'running' : 'exited',
+  '.State.Paused': 'false',
 }));
 
 /**
@@ -290,7 +293,7 @@ posix('issue #243: one docker inspect per query, same output', () => {
 });
 
 describe('issue #243: batched inspect answers', () => {
-  const row = (name, id) => `/${name} ${id} 7 true 0 false s f`;
+  const row = (name, id) => `/${name} ${id} 7 true 0 false s f running false`;
 
   it('matches lines by name or ID prefix, not by order', () => {
     const answers = parseBatchInspect(
