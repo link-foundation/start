@@ -400,11 +400,11 @@ grace period, `SIGKILL` (exit code 137). Docker's default grace period is 10
 seconds, which is too short for a task that must commit work, flush a log or
 post a final comment on the way out. Configure it in any of three ways:
 
-| Setting                                           | Effect                                                                                     |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `$ --stop <id> --stop-timeout <s>`                | `docker stop -t <s>` for this stop only                                                    |
-| `$ -i docker --stop-timeout <s> -- <command>`     | `docker run --stop-timeout <s>`: recorded with the execution, reused by `--stop`, `--resume` and a plain `docker stop` |
-| `START_DOCKER_STOP_TIMEOUT=<s>`                   | Default for both of the above                                                              |
+| Setting                                       | Effect                                                                                                                 |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `$ --stop <id> --stop-timeout <s>`            | `docker stop -t <s>` for this stop only                                                                                |
+| `$ -i docker --stop-timeout <s> -- <command>` | `docker run --stop-timeout <s>`: recorded with the execution, reused by `--stop`, `--resume` and a plain `docker stop` |
+| `START_DOCKER_STOP_TIMEOUT=<s>`               | Default for both of the above                                                                                          |
 
 `--stop` uses the first of: its own `--stop-timeout`, the value recorded at
 launch, `START_DOCKER_STOP_TIMEOUT`, and Docker's 10 seconds. The value is a
