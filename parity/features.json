@@ -1425,7 +1425,13 @@
           "line": 188,
           "issue": "https://github.com/link-foundation/meta-language/issues/212"
         }
-      ]
+      ],
+      "golden": {
+        "fixture": "parity/fixtures/contracts.json",
+        "section": "pause-control",
+        "javascriptTest": "js/test/shared-golden.js",
+        "rustTest": "rust/tests/shared_golden.rs"
+      }
     },
     {
       "id": "execution-resume",

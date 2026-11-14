@@ -1,10 +1,16 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
-const { resolve } = require('node:path');
+const { mkdtempSync, readFileSync, rmSync } = require('node:fs');
+const { tmpdir } = require('node:os');
+const { join, resolve } = require('node:path');
 const { parseArgs } = require('../src/lib/args-parser');
 const { buildDockerRuntimeArgs } = require('../src/lib/docker-runtime-args');
-const { ExecutionRecord } = require('../src/lib/execution-store');
+const {
+  ExecutionRecord,
+  ExecutionStore,
+} = require('../src/lib/execution-store');
+const pause = require('../src/lib/execution-pause');
+const { runPauseCase } = require('./fixtures/pause-golden.cjs');
 const {
   formatRecord,
   enrichDetachedStatus,
@@ -125,6 +131,25 @@ describe('shared JavaScript and Rust golden contracts', () => {
       fixture.text
     );
   });
+  for (const fixture of fixtures['pause-control'].cases) {
+    it(`pause control (issue #263): ${fixture.name}`, () => {
+      const appFolder = mkdtempSync(join(tmpdir(), 'start-263-golden-'));
+      try {
+        const store = new ExecutionStore({ appFolder, useLinks: false });
+        assert.deepEqual(
+          runPauseCase(
+            { ExecutionRecord, pause },
+            store,
+            fixtures['pause-control'],
+            fixture
+          ),
+          fixture.expected
+        );
+      } finally {
+        rmSync(appFolder, { recursive: true, force: true });
+      }
+    });
+  }
   for (const fixture of fixtures['execution-record-format']) {
     it(`preserves the complete execution record format (exit ${fixture.exitCode})`, () => {
       assert.deepEqual(ExecutionRecord.fromObject(fixture).toObject(), fixture);
