@@ -470,7 +470,7 @@ pub fn get_control_command(
 
 /// The order the JavaScript edition builds report objects in (`processIds`
 /// in `collectProcessIds`, `resources` of a pause report). `serde_json::Map`
-/// sorts its keys, so Links Notation and text renderers walk objects through
+/// sorts its keys, so the Links Notation renderers walk objects through
 /// [`js_ordered_entries`] to print the same lines as JavaScript (issue #263).
 const JS_KEY_ORDER: [&str; 11] = [
     "wrapperPid",
@@ -488,7 +488,7 @@ const JS_KEY_ORDER: [&str; 11] = [
 
 /// Entries of `map` in JavaScript insertion order: known keys first in
 /// [`JS_KEY_ORDER`], any other key after them in sorted order.
-pub fn js_ordered_entries(map: &Map<String, Value>) -> Vec<(&String, &Value)> {
+pub(crate) fn js_ordered_entries(map: &Map<String, Value>) -> Vec<(&String, &Value)> {
     let rank = |key: &str| {
         JS_KEY_ORDER
             .iter()
