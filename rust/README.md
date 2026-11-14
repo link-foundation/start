@@ -48,10 +48,14 @@ checked examples.
 containers support copy-free command handoff; legacy snapshots require capacity
 preflight. Log uploads are private and sanitized; manual `--no-sanitize` opts out.
 Sanitization runs the `sensitive-data-sanitizer` CLI of
-`@link-foundation/sensitive-data-sanitizer` 0.14.0 or later (Node.js 22.13 or
+`@link-foundation/sensitive-data-sanitizer` 0.22.5 or later (Node.js 22.13 or
 later) from `PATH` or `START_SENSITIVE_DATA_SANITIZER`; `--upload-log` installs
 it with Bun or npm when it is missing or older, and automatic uploads without a
-current one are blocked.
+current one are blocked. Published logs and issue text keep Authorization
+schemes and URL usernames, masking the secret as in
+`Authorization: Bearer [REDACTED]` and `https://user:[REDACTED]@example.test`.
+Both paths pass `--allow-binary` to preserve NUL bytes and their following
+text; streamed logs also preserve invalid UTF-8 bytes (#267).
 
 Snapshot resumes take `--snapshot-wait`, `--snapshot-disk-wait`,
 `--remove-original-after`, `--snapshot-size-hint` and `--snapshot-prepare`, and

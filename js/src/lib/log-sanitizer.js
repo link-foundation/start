@@ -7,17 +7,14 @@
  * credential-named environment variables (--env-secrets) and the tokens in the
  * local gh hosts.yml (--gh-config). It streams the log from stdin, keeps
  * invalid UTF-8 bytes and writes a new private file atomically (--output).
+ * Both logs and issue text allow NUL bytes (--allow-binary).
  *
- * Since 0.12.1 the library masks only the scheme and token of an
- * `Authorization: <scheme> <value>` header, so a logged one-line JSON prompt
- * keeps the rest of its line (issue #249, sensitive-data-sanitizer#45); the
- * pre-pass that did this here is gone (issue #253).
- *
- * The package stays on ^0.14.0: 0.20.0 through 0.22.3 drop the bytes after a
- * credential that is followed by a NUL byte (sensitive-data-sanitizer#180),
- * and 0.22.4 changes the redacted output (start#267, the blocker in
- * .github/dependency-blockers.json). The Rust installer and its
- * version check require the same release (rust/src/lib/log_sanitizer.rs).
+ * The 0.22.x output keeps Authorization schemes and URL usernames while
+ * masking their secrets and preserving the rest of each line (#249, #267).
+ * Version 0.22.4 fixes bytes lost after credentials followed by NUL
+ * (sensitive-data-sanitizer#180); 0.22.5 also fixes Markdown placeholders.
+ * The Rust installer and version check require the same release
+ * (rust/src/lib/log_sanitizer.rs).
  */
 
 const fs = require('fs');
@@ -30,7 +27,12 @@ const MARKER = '[REDACTED]';
 const PACKAGE = '@link-foundation/sensitive-data-sanitizer';
 const COMMAND = 'sensitive-data-sanitizer';
 const OVERRIDE = 'START_SENSITIVE_DATA_SANITIZER';
-const OPTIONS = ['--credentials-only', '--env-secrets', '--gh-config'];
+const OPTIONS = [
+  '--credentials-only',
+  '--env-secrets',
+  '--gh-config',
+  '--allow-binary',
+];
 
 /** Value-free failure: `code` is a fixed ERR_* name, never log content. */
 class SanitizationError extends Error {
@@ -186,8 +188,6 @@ function sanitizeLogToTemp(sourcePath, options = {}) {
           'redact',
           '-',
           '--stream',
-          // A NUL byte in a terminal transcript must not block the upload.
-          '--allow-binary',
           ...OPTIONS,
           '--max-bytes',
           String(size),

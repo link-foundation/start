@@ -377,11 +377,16 @@ the library gh-upload-log and hive-mind share, in `--credentials-only` mode:
 tokens and keys, Authorization values, URL passwords, the values of
 credential-named environment variables and the tokens in the local `gh`
 configuration become `[REDACTED]`. Paths, endpoints, ports and the rest of each
-line stay as they were (#249). The JavaScript package bundles the library; the
-Rust binary runs `sensitive-data-sanitizer` 0.14.0 or later from `PATH`,
+line stay as they were (#249). Authorization schemes and URL usernames are
+public context: `Authorization: Bearer secret` becomes
+`Authorization: Bearer [REDACTED]`, and `https://user:password@example.test`
+becomes `https://user:[REDACTED]@example.test` (#267). This format applies to
+published logs and issue text. The JavaScript package bundles the library; the
+Rust binary runs `sensitive-data-sanitizer` 0.22.5 or later from `PATH`,
 installing or upgrading it with Bun or npm for `--upload-log`.
 `START_SENSITIVE_DATA_SANITIZER` selects another CLI path. The original log
-stays local. NUL bytes and invalid UTF-8 are kept as they are. Sanitization
+stays local. `--allow-binary` keeps NUL bytes in both logs and issue text;
+invalid UTF-8 log bytes and bytes after a NUL are kept as they are. Sanitization
 failure, including a missing or outdated sanitizer, stops the upload with a
 value-free code such as `Log sanitization failed (ERR_UNAVAILABLE); upload
 blocked.` Manual
