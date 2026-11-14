@@ -6,7 +6,7 @@ pub fn print_usage() {
        start --status <uuid> [--output-format <format>]
        start --list [--running] [--output-format <format>]
        start --upload-log <uuid-or-session-name>
-       start --stop <uuid-or-session-name>
+       start --stop <uuid-or-session-name> [--stop-timeout <seconds>]
        start --terminate <uuid-or-session-name>
        start --pause <uuid-or-session-name> [--pause-reason <text>] [--paused-by <name>]
        start --unpause <uuid-or-session-name>
@@ -33,6 +33,8 @@ Options:
   --label <KEY=VALUE>   Container attribution (repeatable, docker only; start-command.* reserved)
   --privileged          Run docker container in privileged mode (docker only)
   --init, --no-init     Run tini as PID 1 to reap orphaned processes (docker only; default START_COMMAND_DOCKER_INIT=1)
+  --stop-timeout <s>    Seconds between SIGTERM and SIGKILL when stopped (docker run --stop-timeout;
+                        with --stop: docker stop -t; default START_DOCKER_STOP_TIMEOUT, else 10)
   --network <name>      Connect to a named network (repeatable, docker only)
   --network-alias <alias> Add alias to the first network (repeatable, docker only)
   --on-kill-resume <N>  Resume a killed (exit 137 / OOM) detached docker session up to N times
@@ -113,6 +115,7 @@ Examples:
   start --list --running
   start --upload-log my-screen-session
   start --stop my-screen-session
+  start --stop my-docker-session --stop-timeout 120  # SIGKILL only after 120s
   start --terminate my-screen-session
   start --pause my-docker-session --pause-reason 'rate limit'  # Freeze, keep RAM
   start --unpause my-docker-session            # Continue the same frozen process

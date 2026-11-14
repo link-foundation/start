@@ -60,6 +60,9 @@ pub struct IsolationOptions {
     pub privileged: bool,
     /// `docker run --init`: tini as PID 1 reaps orphans (issue #244)
     pub init: bool,
+    /// `docker run --stop-timeout`: seconds `docker stop` waits before
+    /// SIGKILL (issue #265)
+    pub stop_timeout: Option<u64>,
     /// First Docker network name (compatibility accessor)
     pub network: Option<String>,
     /// Ordered Docker network names
@@ -116,6 +119,7 @@ impl Default for IsolationOptions {
             resume_count: 0,
             privileged: false,
             init: false,
+            stop_timeout: None,
             network: None,
             networks: Vec::new(),
             network_aliases: Vec::new(),

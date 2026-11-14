@@ -242,6 +242,83 @@
       "error": "--init option is only valid"
     },
     {
+      "name": "docker --stop-timeout (issue #265)",
+      "argv": [
+        "--isolated",
+        "docker",
+        "--stop-timeout",
+        "30",
+        "--",
+        "echo",
+        "hi"
+      ],
+      "command": "echo hi",
+      "rawCommand": [
+        "echo",
+        "hi"
+      ],
+      "options": {
+        "isolated": "docker",
+        "stopTimeout": 30
+      }
+    },
+    {
+      "name": "docker launch without --stop-timeout (issue #265)",
+      "argv": [
+        "--isolated",
+        "docker",
+        "--",
+        "echo",
+        "hi"
+      ],
+      "command": "echo hi",
+      "rawCommand": [
+        "echo",
+        "hi"
+      ],
+      "options": {
+        "isolated": "docker",
+        "stopTimeout": null
+      }
+    },
+    {
+      "name": "--stop with --stop-timeout (issue #265)",
+      "argv": [
+        "--stop",
+        "fixture-session",
+        "--stop-timeout=120"
+      ],
+      "command": "",
+      "rawCommand": [],
+      "options": {
+        "stop": "fixture-session",
+        "stopTimeout": 120
+      }
+    },
+    {
+      "name": "--stop-timeout without --stop or docker (issue #265)",
+      "argv": [
+        "--isolated",
+        "screen",
+        "--stop-timeout",
+        "30",
+        "--",
+        "echo",
+        "hi"
+      ],
+      "error": "--stop-timeout option is only valid"
+    },
+    {
+      "name": "fractional --stop-timeout (issue #265)",
+      "argv": [
+        "--stop",
+        "fixture-session",
+        "--stop-timeout",
+        "1.5"
+      ],
+      "error": "non-negative whole number of seconds"
+    },
+    {
       "name": "Docker soft memory --memory-reservation=25% (issue #236)",
       "argv": [
         "--isolated",
@@ -429,6 +506,33 @@
         "--init",
         "-e",
         "A=1"
+      ]
+    },
+    {
+      "name": "stop grace period after init (issue #265)",
+      "options": {
+        "init": true,
+        "stopTimeout": 30,
+        "env": [
+          "A=1"
+        ]
+      },
+      "argv": [
+        "--init",
+        "--stop-timeout",
+        "30",
+        "-e",
+        "A=1"
+      ]
+    },
+    {
+      "name": "zero stop grace period (issue #265)",
+      "options": {
+        "stopTimeout": 0
+      },
+      "argv": [
+        "--stop-timeout",
+        "0"
       ]
     }
   ],

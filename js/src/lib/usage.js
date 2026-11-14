@@ -1,6 +1,6 @@
 /** Print usage information */
 function printUsage() {
-  console.log(`Usage: $ [options] [--] <command> | $ --status <uuid> [--output-format <fmt>] | $ --list [--running] [--output-format <fmt>] | $ --upload-log <id> | $ --stop <id> | $ --terminate <id> | $ --pause <id> | $ --unpause <id> | $ --attach <id> [--read-only] | $ --resume <id> [-- <command>] | $ --resume-all | $ --alias <id> <name> | $ --rename <id> <name>
+  console.log(`Usage: $ [options] [--] <command> | $ --status <uuid> [--output-format <fmt>] | $ --list [--running] [--output-format <fmt>] | $ --upload-log <id> | $ --stop <id> [--stop-timeout <s>] | $ --terminate <id> | $ --pause <id> | $ --unpause <id> | $ --attach <id> [--read-only] | $ --resume <id> [-- <command>] | $ --resume-all | $ --alias <id> <name> | $ --rename <id> <name>
 
 Options:
   --help, -h           Show this usage and exit successfully
@@ -19,6 +19,8 @@ Options:
   --label <KEY=VALUE>   Container attribution (repeatable, docker only; start-command.* reserved)
   --privileged          Run docker container in privileged mode (docker only)
   --init, --no-init     Run tini as PID 1 to reap orphaned processes (docker only; default START_COMMAND_DOCKER_INIT=1)
+  --stop-timeout <s>    Seconds between SIGTERM and SIGKILL when stopped (docker run --stop-timeout;
+                        with --stop: docker stop -t; default START_DOCKER_STOP_TIMEOUT, else 10)
   --network <name>      Connect to a named network (repeatable, docker only)
   --network-alias <alias> Add alias to the first network (repeatable, docker only)
   --on-kill-resume <N>  Resume a killed (exit 137 / OOM) detached docker session up to N times
@@ -97,6 +99,7 @@ Examples:
   $ --list --output-format json            # List stored records as JSON
   $ --upload-log my-screen-session         # Upload stored execution log
   $ --stop my-screen-session               # Ask detached execution to stop gracefully
+  $ --stop my-docker-session --stop-timeout 120  # SIGKILL only after 120s
   $ --terminate my-screen-session          # Terminate detached execution immediately
   $ --pause my-docker-session --pause-reason 'rate limit'  # Freeze, keep RAM
   $ --unpause my-docker-session            # Continue the same frozen process

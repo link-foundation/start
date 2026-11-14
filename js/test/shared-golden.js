@@ -44,15 +44,23 @@ describe('shared JavaScript and Rust golden contracts', () => {
     });
   }
   // The fixtures describe the defaults, so a host-wide docker init default
-  // (issue #244) must not leak into them.
+  // (issue #244) or stop grace period (issue #265) must not leak into them.
+  const HOST_DEFAULTS = [
+    'START_COMMAND_DOCKER_INIT',
+    'START_DOCKER_STOP_TIMEOUT',
+  ];
   function parseWithoutHostDefaults(argv) {
-    const saved = process.env.START_COMMAND_DOCKER_INIT;
-    delete process.env.START_COMMAND_DOCKER_INIT;
+    const saved = HOST_DEFAULTS.map((name) => [name, process.env[name]]);
+    for (const name of HOST_DEFAULTS) {
+      delete process.env[name];
+    }
     try {
       return parseArgs(argv);
     } finally {
-      if (saved !== undefined) {
-        process.env.START_COMMAND_DOCKER_INIT = saved;
+      for (const [name, value] of saved) {
+        if (value !== undefined) {
+          process.env[name] = value;
+        }
       }
     }
   }

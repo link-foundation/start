@@ -51,8 +51,10 @@ function handleUploadLogQuery(store, identifier, options = {}) {
   return result.exitCode || 1;
 }
 
-function handleControlQuery(store, identifier, action) {
-  return reportResult(controlExecution(store, identifier, action));
+function handleControlQuery(store, identifier, action, controlOptions = {}) {
+  return reportResult(
+    controlExecution(store, identifier, action, undefined, controlOptions)
+  );
 }
 
 /**
@@ -209,7 +211,9 @@ async function dispatchQueryCommand(options, context = {}) {
     return handleUploadLogQuery(store, options.uploadLog, options);
   }
   if (hasValue(options.stop)) {
-    return handleControlQuery(store, options.stop, ControlAction.STOP);
+    return handleControlQuery(store, options.stop, ControlAction.STOP, {
+      stopTimeout: options.stopTimeout,
+    });
   }
   if (hasValue(options.terminate)) {
     return handleControlQuery(

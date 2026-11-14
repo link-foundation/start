@@ -186,6 +186,9 @@ $ --upload-log 29d6c026-b168-44a6-8a3f-c3919c7e5327
 # Ask a detached isolated execution to stop gracefully
 $ --stop 29d6c026-b168-44a6-8a3f-c3919c7e5327
 
+# Give a Docker execution 120 seconds to shut down before SIGKILL
+$ --stop 29d6c026-b168-44a6-8a3f-c3919c7e5327 --stop-timeout 120
+
 # Terminate a detached isolated execution immediately
 $ --terminate 29d6c026-b168-44a6-8a3f-c3919c7e5327
 
@@ -389,6 +392,33 @@ reporting always sanitizes, and issue text is sanitized the same way.
 session/container name. `--stop` asks the backend to stop gracefully (CTRL+C for
 screen/tmux, `docker stop` for Docker). `--terminate` uses the backend's
 immediate termination command.
+
+#### Docker stop grace period
+
+`docker stop` sends `SIGTERM` and, if the container is still running after a
+grace period, `SIGKILL` (exit code 137). Docker's default grace period is 10
+seconds, which is too short for a task that must commit work, flush a log or
+post a final comment on the way out. Configure it in any of three ways:
+
+| Setting                                       | Effect                                                                                                                 |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `$ --stop <id> --stop-timeout <s>`            | `docker stop -t <s>` for this stop only                                                                                |
+| `$ -i docker --stop-timeout <s> -- <command>` | `docker run --stop-timeout <s>`: recorded with the execution, reused by `--stop`, `--resume` and a plain `docker stop` |
+| `START_DOCKER_STOP_TIMEOUT=<s>`               | Default for both of the above                                                                                          |
+
+`--stop` uses the first of: its own `--stop-timeout`, the value recorded at
+launch, `START_DOCKER_STOP_TIMEOUT`, and Docker's 10 seconds. The value is a
+whole number of seconds; `0` kills at once. The stop result names the grace
+period, for example `stopTimeout 120` and
+`Requested graceful stop for detached docker container: <name> (SIGTERM, SIGKILL after 120s)`.
+`--stop-timeout` is rejected for screen and tmux sessions, which `--stop`
+interrupts with CTRL+C instead.
+
+```bash
+$ -i docker -d --stop-timeout 120 -- my-task-with-cleanup
+docker inspect -f '{{.Config.StopTimeout}}' <session>   # 120
+$ --stop <session>   # docker stop -t 120 <session>
+```
 
 #### Pausing and unpausing Docker executions
 
@@ -878,6 +908,7 @@ This is useful for:
 | `--label KEY=VALUE`              | Task attribution label (repeatable, Docker only; persisted on resume)        |
 | `--privileged`                   | Run docker container in privileged mode (docker only)                        |
 | `--init`, `--no-init`            | Run tini as PID 1 to reap orphans (docker only; default off, see below)      |
+| `--stop-timeout <s>`             | Seconds between `SIGTERM` and `SIGKILL` on stop (docker only; see below)     |
 | `--network`                      | Connect to a named network (repeatable, docker only)                         |
 | `--network-alias`                | Add an alias on the first network (repeatable, docker only)                  |
 | `--endpoint`                     | SSH endpoint (required for ssh, e.g., user@host)                             |
@@ -1016,6 +1047,7 @@ The following environment variables can be used to customize behavior:
 | `START_SUBSTITUTIONS_PATH`                     | Custom path to substitutions.lino file                                                         |
 | `START_COMMAND_CGROUP_SAMPLE_INTERVAL_SECONDS` | Docker cgroup sample interval in positive whole seconds (default `5`); `off` disables sampling |
 | `START_COMMAND_DOCKER_INIT`                    | Set to `1` or `true` to launch every docker task with `--init` (`--no-init` overrides it)      |
+| `START_DOCKER_STOP_TIMEOUT`                    | Default docker stop grace period in whole seconds (`--stop-timeout` overrides it)              |
 
 Example:
 

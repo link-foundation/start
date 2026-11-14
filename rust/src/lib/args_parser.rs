@@ -100,6 +100,9 @@ pub struct WrapperOptions {
     pub privileged: bool,
     /// `docker run --init`; `None` until resolved from START_COMMAND_DOCKER_INIT (issue #244)
     pub init: Option<bool>,
+    /// Docker stop grace period in seconds: `docker run --stop-timeout` at
+    /// launch, `docker stop -t` with `--stop` (issue #265)
+    pub stop_timeout: Option<u64>,
     /// First Docker network name (compatibility accessor)
     pub network: Option<String>,
     /// Ordered Docker network names
@@ -212,6 +215,7 @@ impl Default for WrapperOptions {
             remove_original: false,
             privileged: false,
             init: None,
+            stop_timeout: None,
             network: None,
             networks: Vec::new(),
             network_aliases: Vec::new(),
@@ -518,6 +522,11 @@ fn parse_option(
     let init_consumed = crate::docker_init_option::parse(args, index, options);
     if init_consumed > 0 {
         return Ok(init_consumed);
+    }
+    // --stop-timeout <seconds> (for docker and --stop, issue #265)
+    let stop_timeout_consumed = crate::docker_stop_timeout::parse(args, index, options)?;
+    if stop_timeout_consumed > 0 {
+        return Ok(stop_timeout_consumed);
     }
 
     // --network (for docker)
@@ -880,6 +889,7 @@ pub fn validate_options(options: &mut WrapperOptions) -> Result<(), String> {
     crate::formal_ai_cli::validate_options(options)?;
     crate::docker_resource_options::validate(options)?;
     crate::docker_init_option::validate(options)?;
+    crate::docker_stop_timeout::validate(options)?;
     crate::cpu_penalty::validate(options)?;
 
     // Validate shell option

@@ -1,8 +1,8 @@
 /**
  * Docker runtime options shared by `docker run`, `[Isolation]` status lines
  * and execution-record metadata: privileged mode, the init process
- * (issue #244), environment, volumes, mounts, networks (issue #150) and
- * resource limits (issue #176).
+ * (issue #244), the stop grace period (issue #265), environment, volumes,
+ * mounts, networks (issue #150) and resource limits (issue #176).
  */
 
 const { getDockerNetworks } = require('./docker-network-lifecycle');
@@ -27,12 +27,21 @@ function getOnKillResume(options = {}) {
 }
 
 /**
+ * Whether a stop grace period was chosen (issue #265); 0 is a valid choice.
+ * @param {object} options - Options (stopTimeout)
+ * @returns {boolean}
+ */
+function hasStopTimeout(options = {}) {
+  return options.stopTimeout !== null && options.stopTimeout !== undefined;
+}
+
+/**
  * Build the docker run runtime argument list contributed by configurable
  * container options: privileged mode, environment variables, volumes/bind
  * mounts, --mount specs, network configuration and resource limits. Returned
  * in a stable order so they can be spliced into the `docker run` argv before
  * the image name.
- * @param {object} options - Options (privileged, init, env, volumes, mounts, network, networkAliases, resourceLimits)
+ * @param {object} options - Options (privileged, init, stopTimeout, env, volumes, mounts, network, networkAliases, resourceLimits)
  * @returns {string[]} Docker CLI arguments
  */
 function buildDockerRuntimeArgs(options = {}) {
@@ -43,6 +52,10 @@ function buildDockerRuntimeArgs(options = {}) {
   // tini as PID 1 reaps orphaned processes (issue #244).
   if (options.init) {
     args.push('--init');
+  }
+  // A plain `docker stop` then waits this long before SIGKILL (issue #265).
+  if (hasStopTimeout(options)) {
+    args.push('--stop-timeout', String(options.stopTimeout));
   }
   for (const envVar of options.env || []) {
     args.push('-e', envVar);
@@ -102,6 +115,9 @@ function buildDockerRuntimeStatusLines(options = {}) {
   if (options.init) {
     lines.push(`[Isolation] Init: true`);
   }
+  if (hasStopTimeout(options)) {
+    lines.push(`[Isolation] Stop timeout: ${options.stopTimeout}s`);
+  }
   const networks = getDockerNetworks(options);
   if (networks.length > 0) {
     lines.push(`[Isolation] Network: ${networks[0]}`);
@@ -154,6 +170,7 @@ function buildDockerRuntimeMetadata(options = {}) {
     commandHandoff: options.detached ? true : null,
     privileged: options.privileged || null,
     init: options.init || null,
+    stopTimeout: hasStopTimeout(options) ? options.stopTimeout : null,
     network: networks[0] || null,
     networks: networks.length > 0 ? networks : null,
     networkAliases:

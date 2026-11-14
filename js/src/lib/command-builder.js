@@ -116,6 +116,9 @@ function buildNextLevelCommand(options, command) {
     if (options.init) {
       parts.push('--init');
     }
+    if (options.stopTimeout !== null && options.stopTimeout !== undefined) {
+      parts.push(`--stop-timeout ${options.stopTimeout}`);
+    }
   }
 
   // Pass through global flags

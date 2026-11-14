@@ -15,6 +15,7 @@
  * --env, -e <KEY=VALUE>            Environment variable for docker container (repeatable, docker only)
  * --privileged                     Run docker container in privileged mode (docker only)
  * --init, --no-init                Run an init process (tini) as PID 1 to reap orphans (docker only; default START_COMMAND_DOCKER_INIT)
+ * --stop-timeout <seconds>         Grace period before SIGKILL: docker run --stop-timeout, or docker stop -t with --stop (default START_DOCKER_STOP_TIMEOUT)
  * --network <name>                 Connect docker container to a named network (repeatable, docker only)
  * --network-alias <alias>          Add an alias to the first network (repeatable, docker only)
  * --endpoint <endpoint>            SSH endpoint (required for ssh isolation, e.g., user@host)
@@ -50,6 +51,7 @@ const dockerRecoveryOptions = require('./docker-recovery-options');
 const cpuPenalty = require('./cpu-penalty');
 const dockerResourceOptions = require('./docker-resource-options');
 const dockerInitOption = require('./docker-init-option');
+const dockerStopTimeout = require('./docker-stop-timeout');
 const snapshotResumeOptions = require('./snapshot-resume-options');
 const launchIdentityOptions = require('./launch-identity-options');
 const { parseSequence, isSequence } = require('./sequence-parser');
@@ -204,6 +206,7 @@ function parseArgs(args) {
     help: false,
     privileged: false, // Run docker container in privileged mode
     init: null, // docker run --init; null until resolved from START_COMMAND_DOCKER_INIT (issue #244)
+    stopTimeout: null, // Seconds before SIGKILL: docker run --stop-timeout / docker stop -t (issue #265)
     network: null, // First Docker network name (compatibility accessor)
     networks: [], // Ordered Docker network names
     networkAliases: [], // Docker network-scoped aliases
@@ -439,6 +442,12 @@ function parseOption(args, index, options) {
   // --init / --no-init (for docker, issue #244)
   if (dockerInitOption.parse(args, index, options)) {
     return 1;
+  }
+
+  // --stop-timeout <seconds> (docker launches and --stop, issue #265)
+  const stopTimeoutConsumed = dockerStopTimeout.parse(args, index, options);
+  if (stopTimeoutConsumed > 0) {
+    return stopTimeoutConsumed;
   }
 
   const networkOption = dockerNetworkOptions.parse(args, index, options);
@@ -820,6 +829,7 @@ function validateOptions(options) {
   dockerRecoveryOptions.validate(options);
   dockerResourceOptions.validate(options);
   dockerInitOption.validate(options);
+  dockerStopTimeout.validate(options);
   cpuPenalty.validate(options);
 
   // Session name is only valid with isolation
