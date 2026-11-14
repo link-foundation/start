@@ -487,6 +487,7 @@ fn run_with_isolation(
             resume_count: 0,
             privileged: wrapper_options.privileged,
             init: wrapper_options.init.unwrap_or(false),
+            stop_timeout: wrapper_options.stop_timeout,
             network: wrapper_options.network.clone(),
             networks: wrapper_options.networks.clone(),
             network_aliases: wrapper_options.network_aliases.clone(),

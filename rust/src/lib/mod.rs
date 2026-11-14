@@ -60,6 +60,7 @@ pub mod docker_resource_limits;
 pub mod docker_resource_options;
 pub mod docker_snapshot_resume;
 pub mod docker_snapshot_safety;
+pub mod docker_stop_timeout;
 pub mod execution_attach;
 pub mod execution_attempt;
 pub mod execution_chain;
@@ -142,10 +143,11 @@ pub use execution_attach::{
 };
 pub use execution_control::{
     collect_descendant_pids, collect_descendant_pids_with_runner, collect_process_ids,
-    collect_process_ids_with_runner, control_execution, control_execution_with_runner,
-    format_control_result_as_links_notation, get_control_command, parse_screen_pid,
-    CommandRunOutput, CommandRunner, ControlAction, ControlCommand, ExecutionControlResult,
-    SystemCommandRunner,
+    collect_process_ids_with_runner, control_execution, control_execution_with_options,
+    control_execution_with_runner, control_execution_with_runner_and_options,
+    format_control_result_as_links_notation, get_control_command, get_control_command_with_options,
+    parse_screen_pid, CommandRunOutput, CommandRunner, ControlAction, ControlCommand,
+    ControlOptions, ExecutionControlResult, SystemCommandRunner,
 };
 pub use execution_resume::{
     build_resume_plan, build_resumed_session_name, build_snapshot_image_name, resume_execution,

@@ -88,6 +88,12 @@ pub fn build_docker_runtime_args(options: &IsolationOptions) -> Vec<String> {
     if options.init {
         args.insert(usize::from(options.privileged), "--init".into());
     }
+    // A plain `docker stop` then waits this long before SIGKILL (issue #265).
+    if let Some(seconds) = options.stop_timeout {
+        let at = usize::from(options.privileged) + usize::from(options.init);
+        args.insert(at, "--stop-timeout".into());
+        args.insert(at + 1, seconds.to_string());
+    }
     // Already in `--flag=value` form (issue #176).
     args.extend(options.resource_limits.iter().cloned());
     args

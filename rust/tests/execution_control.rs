@@ -201,11 +201,12 @@ fn stop_report_lists_process_ids_in_javascript_order() {
                 "  backend docker",
                 "  sessionName docker-session",
                 "  method DOCKER_STOP",
+                "  stopTimeout 10",
                 "  processIds",
                 "      wrapperPid 12345",
                 "      containerId abcdef",
                 "      containerPid 4242",
-                "  message \"Requested graceful stop for detached docker container: docker-session\"",
+                "  message \"Requested graceful stop for detached docker container: docker-session (SIGTERM, SIGKILL after 10s)\"",
             ]
             .join("\n")
             .as_str()

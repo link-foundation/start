@@ -159,6 +159,48 @@ pub struct ControlCommand {
     pub args: Vec<String>,
     pub method: String,
     pub message: String,
+    /// Seconds `docker stop` waits before SIGKILL, for docker stops (#265)
+    pub stop_timeout: Option<u64>,
+}
+
+/// Caller choices for a control action (issue #265).
+#[derive(Default)]
+pub struct ControlOptions<'a> {
+    /// `--stop-timeout`: the docker stop grace period for this stop
+    pub stop_timeout: Option<u64>,
+    /// Environment lookup; `None` reads the process environment
+    pub env: Option<&'a crate::docker_stop_timeout::EnvLookup>,
+}
+
+/// `docker stop` for a detached container, with the grace period before
+/// SIGKILL spelled out in the message (issue #265).
+fn docker_stop_command(
+    record: &ExecutionRecord,
+    session_name: &str,
+    control_options: &ControlOptions,
+) -> Result<ControlCommand, String> {
+    let process_env = |name: &str| std::env::var(name).ok();
+    let env: &dyn Fn(&str) -> Option<String> = control_options.env.unwrap_or(&process_env);
+    let timeout = crate::docker_stop_timeout::resolve_stop_timeout(
+        record,
+        control_options.stop_timeout,
+        env,
+    )?;
+    let mut args = vec!["stop".to_string()];
+    if timeout.explicit {
+        args.extend(["-t".to_string(), timeout.seconds.to_string()]);
+    }
+    args.push(session_name.to_string());
+    Ok(ControlCommand {
+        command: "docker".to_string(),
+        args,
+        method: "DOCKER_STOP".to_string(),
+        message: format!(
+            "Requested graceful stop for detached docker container: {} (SIGTERM, SIGKILL after {}s)",
+            session_name, timeout.seconds
+        ),
+        stop_timeout: Some(timeout.seconds),
+    })
 }
 
 pub struct ExecutionControlResult {
@@ -369,6 +411,15 @@ pub fn get_control_command(
     record: &ExecutionRecord,
     action: ControlAction,
 ) -> Result<ControlCommand, String> {
+    get_control_command_with_options(record, action, &ControlOptions::default())
+}
+
+/// [`get_control_command`] with `--stop-timeout` and an environment (#265).
+pub fn get_control_command_with_options(
+    record: &ExecutionRecord,
+    action: ControlAction,
+    control_options: &ControlOptions,
+) -> Result<ControlCommand, String> {
     let session_name = record
         .options
         .get("sessionName")
@@ -391,6 +442,13 @@ pub fn get_control_command(
         .and_then(|value| value.as_str())
         .unwrap_or("unknown");
 
+    if control_options.stop_timeout.is_some() && backend != "docker" {
+        return Err(format!(
+            "--stop-timeout is only supported for detached docker executions, not {}.",
+            backend
+        ));
+    }
+
     let command = match (action, backend) {
         (ControlAction::Stop, "screen") => ControlCommand {
             command: "screen".to_string(),
@@ -403,6 +461,7 @@ pub fn get_control_command(
             ],
             method: "CTRL_C".to_string(),
             message: format!("Sent CTRL+C to detached screen session: {}", session_name),
+            stop_timeout: None,
         },
         (ControlAction::Stop, "tmux") => ControlCommand {
             command: "tmux".to_string(),
@@ -414,16 +473,11 @@ pub fn get_control_command(
             ],
             method: "CTRL_C".to_string(),
             message: format!("Sent CTRL+C to detached tmux session: {}", session_name),
+            stop_timeout: None,
         },
-        (ControlAction::Stop, "docker") => ControlCommand {
-            command: "docker".to_string(),
-            args: vec!["stop".to_string(), session_name.to_string()],
-            method: "DOCKER_STOP".to_string(),
-            message: format!(
-                "Requested graceful stop for detached docker container: {}",
-                session_name
-            ),
-        },
+        (ControlAction::Stop, "docker") => {
+            docker_stop_command(record, session_name, control_options)?
+        }
         (ControlAction::Terminate, "screen") => ControlCommand {
             command: "screen".to_string(),
             args: vec![
@@ -434,6 +488,7 @@ pub fn get_control_command(
             ],
             method: "SCREEN_QUIT".to_string(),
             message: format!("Terminated detached screen session: {}", session_name),
+            stop_timeout: None,
         },
         (ControlAction::Terminate, "tmux") => ControlCommand {
             command: "tmux".to_string(),
@@ -444,12 +499,14 @@ pub fn get_control_command(
             ],
             method: "KILL_SESSION".to_string(),
             message: format!("Terminated detached tmux session: {}", session_name),
+            stop_timeout: None,
         },
         (ControlAction::Terminate, "docker") => ControlCommand {
             command: "docker".to_string(),
             args: vec!["kill".to_string(), session_name.to_string()],
             method: "SIGKILL".to_string(),
             message: format!("Terminated detached docker container: {}", session_name),
+            stop_timeout: None,
         },
         (ControlAction::Stop, other) => {
             return Err(format!(
@@ -570,22 +627,39 @@ pub fn format_control_result_as_links_notation(
         action,
         identifier,
         record,
-        status,
-        method,
-        process_ids,
-        message,
+        ControlReport {
+            status,
+            method,
+            stop_timeout: None,
+            process_ids,
+            message,
+        },
     )
+}
+
+/// The parts of a control report that depend on the outcome.
+struct ControlReport<'a> {
+    status: &'a str,
+    method: &'a str,
+    /// Docker stop grace period, printed after `method` (issue #265)
+    stop_timeout: Option<u64>,
+    process_ids: Option<&'a Value>,
+    message: &'a str,
 }
 
 fn format_control_result_with_status(
     action: ControlAction,
     identifier: &str,
     record: &ExecutionRecord,
-    status: &str,
-    method: &str,
-    process_ids: Option<&Value>,
-    message: &str,
+    report: ControlReport,
 ) -> String {
+    let ControlReport {
+        status,
+        method,
+        stop_timeout,
+        process_ids,
+        message,
+    } = report;
     let backend = record
         .options
         .get("isolated")
@@ -607,6 +681,9 @@ fn format_control_result_with_status(
         format!("  sessionName {}", escape_for_links_notation(session_name)),
         format!("  method {}", escape_for_links_notation(method)),
     ];
+    if let Some(seconds) = stop_timeout {
+        lines.push(format!("  stopTimeout {}", seconds));
+    }
 
     if let Some(process_ids) = process_ids {
         append_links_value(&mut lines, "processIds", process_ids, 2);
@@ -622,6 +699,22 @@ pub fn control_execution(
     action: ControlAction,
 ) -> ExecutionControlResult {
     control_execution_with_runner(store, identifier, action, &SystemCommandRunner)
+}
+
+/// [`control_execution`] with `--stop-timeout` (issue #265).
+pub fn control_execution_with_options(
+    store: Option<&ExecutionStore>,
+    identifier: &str,
+    action: ControlAction,
+    control_options: &ControlOptions,
+) -> ExecutionControlResult {
+    control_execution_with_runner_and_options(
+        store,
+        identifier,
+        action,
+        &SystemCommandRunner,
+        control_options,
+    )
 }
 
 fn has_kill_recovery(record: &ExecutionRecord) -> bool {
@@ -693,6 +786,22 @@ pub fn control_execution_with_runner<R: CommandRunner>(
     action: ControlAction,
     runner: &R,
 ) -> ExecutionControlResult {
+    control_execution_with_runner_and_options(
+        store,
+        identifier,
+        action,
+        runner,
+        &ControlOptions::default(),
+    )
+}
+
+pub fn control_execution_with_runner_and_options<R: CommandRunner>(
+    store: Option<&ExecutionStore>,
+    identifier: &str,
+    action: ControlAction,
+    runner: &R,
+    control_options: &ControlOptions,
+) -> ExecutionControlResult {
     let Some(store) = store else {
         return ExecutionControlResult {
             success: false,
@@ -712,7 +821,7 @@ pub fn control_execution_with_runner<R: CommandRunner>(
         };
     };
 
-    let control = match get_control_command(&record, action) {
+    let control = match get_control_command_with_options(&record, action, control_options) {
         Ok(command) => command,
         Err(error) => {
             return ExecutionControlResult {
@@ -742,13 +851,16 @@ pub fn control_execution_with_runner<R: CommandRunner>(
             action,
             identifier,
             &record,
-            "recovery-cancelled",
-            &control.method,
-            None,
-            &format!(
-                "Cancelled the pending recovery of detached docker container: {}",
-                session_name
-            ),
+            ControlReport {
+                status: "recovery-cancelled",
+                method: &control.method,
+                stop_timeout: None,
+                process_ids: None,
+                message: &format!(
+                    "Cancelled the pending recovery of detached docker container: {}",
+                    session_name
+                ),
+            },
         );
         return ExecutionControlResult {
             success: true,
@@ -792,13 +904,21 @@ pub fn control_execution_with_runner<R: CommandRunner>(
     // Stopping a paused container ends its pause (issue #263).
     crate::execution_pause::clear_pause_after_control(store, &record, action.as_str());
     let process_ids = collect_process_ids_with_runner(&record, runner);
-    let output = format_control_result_as_links_notation(
+    let status = match action {
+        ControlAction::Stop => "signal-sent",
+        ControlAction::Terminate => "terminated",
+    };
+    let output = format_control_result_with_status(
         action,
         identifier,
         &record,
-        &control.method,
-        process_ids.as_ref(),
-        &control.message,
+        ControlReport {
+            status,
+            method: &control.method,
+            stop_timeout: control.stop_timeout,
+            process_ids: process_ids.as_ref(),
+            message: &control.message,
+        },
     );
 
     ExecutionControlResult {

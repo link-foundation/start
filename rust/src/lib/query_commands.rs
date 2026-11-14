@@ -10,7 +10,10 @@
 
 use crate::args_parser::WrapperOptions;
 use crate::execution_attach::{attach_execution, ExecutionAttachResult};
-use crate::execution_control::{control_execution, ControlAction, ExecutionControlResult};
+use crate::execution_control::{
+    control_execution, control_execution_with_options, ControlAction, ControlOptions,
+    ExecutionControlResult,
+};
 use crate::execution_pause::{
     pause_execution, unpause_execution, ExecutionPauseResult, PauseRequest,
 };
@@ -237,7 +240,16 @@ pub fn dispatch_query_command(
     }
     if let Some(ref identifier) = options.stop {
         return Some(report_result(
-            control_execution(store, identifier, ControlAction::Stop).into(),
+            control_execution_with_options(
+                store,
+                identifier,
+                ControlAction::Stop,
+                &ControlOptions {
+                    stop_timeout: options.stop_timeout,
+                    env: None,
+                },
+            )
+            .into(),
         ));
     }
     if let Some(ref identifier) = options.terminate {

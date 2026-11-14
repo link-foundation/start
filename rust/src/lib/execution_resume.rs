@@ -261,6 +261,8 @@ pub fn build_launch_options(record: &ExecutionRecord) -> IsolationOptions {
         env: record_strings(record, "env"),
         privileged: record_flag(record, "privileged"),
         init: record_flag(record, "init"),
+        // The launch grace period survives a resume (issue #265).
+        stop_timeout: record.options.get("stopTimeout").and_then(Value::as_u64),
         network: networks.first().cloned(),
         networks,
         network_aliases: record_strings(record, "networkAliases"),

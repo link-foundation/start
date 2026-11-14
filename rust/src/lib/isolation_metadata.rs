@@ -109,6 +109,14 @@ pub fn docker_runtime_status_lines_for_options(options: &WrapperOptions) -> Vec<
             .unwrap_or(lines.len());
         lines.insert(at, "[Isolation] Init: true".to_string());
     }
+    if let Some(seconds) = options.stop_timeout {
+        // Right after Init, before the network lines (issue #265).
+        let at = lines
+            .iter()
+            .position(|line| line.starts_with("[Isolation] Network"))
+            .unwrap_or(lines.len());
+        lines.insert(at, format!("[Isolation] Stop timeout: {}s", seconds));
+    }
     if !options.labels.is_empty() {
         lines.push(format!("[Isolation] Labels: {}", options.labels.join(", ")));
     }
@@ -300,6 +308,9 @@ pub fn build_isolation_options_map(
     }
     if options.init == Some(true) {
         opts_map.insert("init".into(), serde_json::Value::Bool(true));
+    }
+    if let Some(seconds) = options.stop_timeout {
+        opts_map.insert("stopTimeout".into(), serde_json::json!(seconds));
     }
     if let Some(config) = &options.cpu_penalty_config {
         opts_map.insert("cpuPenaltyConfig".into(), serde_json::json!(config));
