@@ -5,18 +5,15 @@
 //! The library CLI runs with `--credentials-only`, `--env-secrets` and
 //! `--gh-config`; it streams the log from stdin, keeps invalid UTF-8 bytes and
 //! writes a new private file atomically (`--output`). Its error messages are
-//! value-free and only their `ERR_*` code is kept here.
+//! value-free and only their `ERR_*` code is kept here. Both logs and issue
+//! text allow NUL bytes (`--allow-binary`).
 //!
-//! Since 0.12.1 the library masks only the scheme and token of an
-//! `Authorization: <scheme> <value>` header, so a logged one-line JSON prompt
-//! keeps the rest of its line (issue #249, sensitive-data-sanitizer#45); the
-//! pre-pass that did this here is gone (issue #253).
-//!
-//! The JavaScript package stays on ^0.14.0: 0.20.0 through 0.22.3 drop the
-//! bytes after a credential that is followed by a NUL byte
-//! (sensitive-data-sanitizer#180), and 0.22.4 changes the redacted output
-//! (start#267, the blocker in .github/dependency-blockers.json). [`PACKAGE`] and [`MINIMUM_VERSION`]
-//! require the same release (js/src/lib/log-sanitizer.js).
+//! The 0.22.x output keeps Authorization schemes and URL usernames while
+//! masking their secrets and preserving the rest of each line (#249, #267).
+//! Version 0.22.4 fixes bytes lost after credentials followed by NUL
+//! (sensitive-data-sanitizer#180); 0.22.5 also fixes Markdown placeholders.
+//! [`PACKAGE`] and [`MINIMUM_VERSION`] require the same release as JavaScript
+//! (js/src/lib/log-sanitizer.js).
 
 use regex::bytes::Regex;
 use std::ffi::OsString;
@@ -30,12 +27,17 @@ pub const BLOCK_SIZE: usize = 64 * 1024;
 const MARKER: &[u8] = b"[REDACTED]";
 const COMMAND: &str = "sensitive-data-sanitizer";
 /// The library version the JavaScript package depends on.
-pub const PACKAGE: &str = "@link-foundation/sensitive-data-sanitizer@^0.14.0";
+pub const PACKAGE: &str = "@link-foundation/sensitive-data-sanitizer@^0.22.5";
 /// Requires control-byte preservation, placeholders and bounded dense scanning.
-pub const MINIMUM_VERSION: (u64, u64, u64) = (0, 14, 0);
+pub const MINIMUM_VERSION: (u64, u64, u64) = (0, 22, 5);
 /// Path of the library CLI to use instead of the one on PATH.
 pub const OVERRIDE: &str = "START_SENSITIVE_DATA_SANITIZER";
-const OPTIONS: [&str; 3] = ["--credentials-only", "--env-secrets", "--gh-config"];
+const OPTIONS: [&str; 4] = [
+    "--credentials-only",
+    "--env-secrets",
+    "--gh-config",
+    "--allow-binary",
+];
 
 /// Value-free failure message: `code` is a fixed ERR_* name, never content.
 fn blocked(code: &str, subject: &str) -> String {
@@ -319,8 +321,6 @@ fn log_with(source_path: &Path, env: &Environment, verbose: bool) -> Result<Prep
     let bytes = metadata.len();
     let output = sanitizer_command(env, "Log")?
         .arg("--stream")
-        // A NUL byte in a terminal transcript must not block the upload.
-        .arg("--allow-binary")
         .args(OPTIONS)
         .arg("--max-bytes")
         .arg(bytes.max(1).to_string())

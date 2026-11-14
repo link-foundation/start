@@ -92,19 +92,35 @@ const ISSUE_249_LINES: &[&str] = &[
 const AUTHORIZATION_CASES: &[(&str, &str)] = &[
     (
         "curl -H 'Authorization: Basic dXNlcjpwYXNz' -o out.txt url",
-        "curl -H 'Authorization: [REDACTED]' -o out.txt url",
+        "curl -H 'Authorization: Basic [REDACTED]' -o out.txt url",
     ),
     (
         "Authorization: Bearer abc rest of line",
-        "Authorization: [REDACTED] rest of line",
+        "Authorization: Bearer [REDACTED] rest of line",
     ),
     (
         "Authorization: token abc, other: keep",
-        "Authorization: [REDACTED], other: keep",
+        "Authorization: token [REDACTED], other: keep",
     ),
     (
         r#"{"h":"Authorization: Bearer abc\" tail","next":"keep"}"#,
-        r#"{"h":"Authorization: [REDACTED]\" tail","next":"keep"}"#,
+        r#"{"h":"Authorization: Bearer [REDACTED]\" tail","next":"keep"}"#,
+    ),
+    (
+        "Authorization: Bearer arbitrary-credential",
+        "Authorization: Bearer [REDACTED]",
+    ),
+    (
+        "Proxy-Authorization: Basic encoded-credential",
+        "Proxy-Authorization: Basic [REDACTED]",
+    ),
+    (
+        "clone https://user:password@example.test/repo.git",
+        "clone https://user:[REDACTED]@example.test/repo.git",
+    ),
+    (
+        r#"{"headers":{"Authorization":"Bearer abc123def456"},"x":1}"#,
+        r#"{"headers":{"Authorization":"Bearer [REDACTED]"},"x":1}"#,
     ),
     (
         "Authorization: token $(gh auth token) and ${GITHUB_TOKEN}",
@@ -118,7 +134,7 @@ const AUTHORIZATION_CASES: &[(&str, &str)] = &[
 ];
 
 #[test]
-fn masks_only_the_authorization_scheme_and_token() {
+fn masks_secrets_keeping_schemes_url_usernames_and_json_structure() {
     let Some(env) = test_env(&[]) else { return };
     let input = AUTHORIZATION_CASES
         .iter()
@@ -130,8 +146,7 @@ fn masks_only_the_authorization_scheme_and_token() {
         .map(|(_, line)| *line)
         .collect::<Vec<_>>()
         .join("\n");
-    // sensitive-data-sanitizer 0.12.1 does this itself (#45), without the
-    // pre-pass start used to run (#253).
+    // Exercise every #267 example through both publication paths.
     assert_eq!(
         String::from_utf8(sanitize_file(input.as_bytes(), env.clone())).unwrap(),
         expected
@@ -146,7 +161,7 @@ fn masks_long_authorization_tokens_across_stream_blocks() {
         "Authorization: Bearer {} tail\nordinary\n",
         "a".repeat(200_000)
     );
-    let expected = "Authorization: [REDACTED] tail\nordinary\n";
+    let expected = "Authorization: Bearer [REDACTED] tail\nordinary\n";
     assert_eq!(sanitize_file(input.as_bytes(), env), expected.as_bytes());
 }
 
@@ -166,17 +181,21 @@ fn preserves_authorization_placeholders_and_control_bytes_when_sanitizing_twice(
     let expected = [
         "Authorization: Bearer [REDACTED] already",
         // Arbitrary bracketed credentials are removed in full (#50).
-        "Authorization: [REDACTED] x",
+        "Authorization: Bearer [REDACTED] x",
         "Authorization: Bearer <token> x",
         "Authorization: Bearer $GITHUB_TOKEN x",
-        "Authorization: [REDACTED]\0 tail",
-        "Authorization: [REDACTED]\x1b[0m tail",
-        r#"{"header":"Authorization: [REDACTED]","next":"keep"}"#,
+        "Authorization: Bearer [REDACTED]\0 tail",
+        "Authorization: Bearer [REDACTED]\x1b[0m tail",
+        r#"{"header":"Authorization: Bearer [REDACTED]","next":"keep"}"#,
     ]
     .join("\n");
     let output = sanitize_file(input.as_bytes(), env.clone());
     assert_eq!(output, expected.as_bytes());
-    assert_eq!(sanitize_file(&output, env), output);
+    assert_eq!(sanitize_file(&output, env.clone()), output);
+    // 0.20+ rejects NUL in issue text unless --allow-binary is passed too.
+    let text = sanitize_text_with_env(&input, env.clone()).unwrap();
+    assert_eq!(text, expected);
+    assert_eq!(sanitize_text_with_env(&text, env).unwrap(), text);
 }
 
 #[test]
@@ -274,9 +293,9 @@ fn redacts_credentials_and_credential_named_environment_values() {
         );
     }
     for kept in [
-        "Authorization: [REDACTED]\n",
-        "Proxy-Authorization: [REDACTED]\n",
-        "clone https://[REDACTED]@example.test/repo.git\n",
+        "Authorization: Bearer [REDACTED]\n",
+        "Proxy-Authorization: Basic [REDACTED]\n",
+        "clone https://user:[REDACTED]@example.test/repo.git\n",
         "value [REDACTED] end\n",
         "ordinary utf8: café 😀\n",
     ] {
@@ -313,7 +332,7 @@ fn sanitizes_issue_text_with_the_same_rules() {
             env.clone()
         )
         .unwrap(),
-        "echo [REDACTED] 😀 'Authorization: [REDACTED]' -o x"
+        "echo [REDACTED] 😀 'Authorization: token [REDACTED]' -o x"
     );
     assert_eq!(
         sanitize_text_with_env("echo \"quoted\" $(id) `hostname`", env).unwrap(),

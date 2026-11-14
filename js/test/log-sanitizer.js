@@ -135,9 +135,9 @@ describe('log sanitization', () => {
       assert.ok(!output.includes(secret), `leaked secret #${index}`);
     }
     for (const kept of [
-      'Authorization: [REDACTED]\n',
-      'Proxy-Authorization: [REDACTED]\n',
-      'clone https://[REDACTED]@example.test/repo.git\n',
+      'Authorization: Bearer [REDACTED]\n',
+      'Proxy-Authorization: Basic [REDACTED]\n',
+      'clone https://user:[REDACTED]@example.test/repo.git\n',
       'value [REDACTED] end\n',
       'ordinary utf8: café 😀\n',
     ]) {
@@ -145,23 +145,39 @@ describe('log sanitization', () => {
     }
   });
 
-  it('masks only the Authorization scheme and token, keeping the rest of the line (#249)', () => {
+  it('masks secrets while keeping schemes, URL usernames and JSON structure (#249, #267)', () => {
     const cases = [
       [
         `curl -H 'Authorization: Basic dXNlcjpwYXNz' -o out.txt url`,
-        `curl -H 'Authorization: [REDACTED]' -o out.txt url`,
+        `curl -H 'Authorization: Basic [REDACTED]' -o out.txt url`,
       ],
       [
         'Authorization: Bearer abc rest of line',
-        'Authorization: [REDACTED] rest of line',
+        'Authorization: Bearer [REDACTED] rest of line',
       ],
       [
         'Authorization: token abc, other: keep',
-        'Authorization: [REDACTED], other: keep',
+        'Authorization: token [REDACTED], other: keep',
       ],
       [
         '{"h":"Authorization: Bearer abc\\" tail","next":"keep"}',
-        '{"h":"Authorization: [REDACTED]\\" tail","next":"keep"}',
+        '{"h":"Authorization: Bearer [REDACTED]\\" tail","next":"keep"}',
+      ],
+      [
+        'Authorization: Bearer arbitrary-credential',
+        'Authorization: Bearer [REDACTED]',
+      ],
+      [
+        'Proxy-Authorization: Basic encoded-credential',
+        'Proxy-Authorization: Basic [REDACTED]',
+      ],
+      [
+        'clone https://user:password@example.test/repo.git',
+        'clone https://user:[REDACTED]@example.test/repo.git',
+      ],
+      [
+        '{"headers":{"Authorization":"Bearer abc123def456"},"x":1}',
+        '{"headers":{"Authorization":"Bearer [REDACTED]"},"x":1}',
       ],
       [
         'Authorization: token $(gh auth token) and ${GITHUB_TOKEN}',
@@ -170,8 +186,7 @@ describe('log sanitization', () => {
       // Since 0.12.2, placeholders and their scheme remain unchanged.
       ['Authorization: Bearer <token>', 'Authorization: Bearer <token>'],
     ];
-    // sensitive-data-sanitizer 0.12.1 does this itself (#45), without the
-    // pre-pass start used to run (#253).
+    // Exercise every #267 example through both publication paths.
     const input = cases.map(([line]) => line).join('\n');
     const expected = cases.map(([, line]) => line).join('\n');
     assert.strictEqual(sanitizeFile(input).toString(), expected);
@@ -184,7 +199,7 @@ describe('log sanitization', () => {
     );
     assert.strictEqual(
       sanitizeFile(input).toString(),
-      'Authorization: [REDACTED] tail\nordinary\n'
+      'Authorization: Bearer [REDACTED] tail\nordinary\n'
     );
   });
 
@@ -202,16 +217,20 @@ describe('log sanitization', () => {
       'Authorization: Bearer [REDACTED] already',
       // Arbitrary bracketed values are credentials; known references above
       // stay intact, but every bracket of this value must be removed (#50).
-      'Authorization: [REDACTED] x',
+      'Authorization: Bearer [REDACTED] x',
       'Authorization: Bearer <token> x',
       'Authorization: Bearer $GITHUB_TOKEN x',
-      'Authorization: [REDACTED]\0 tail',
-      'Authorization: [REDACTED]\x1b[0m tail',
-      '{"header":"Authorization: [REDACTED]","next":"keep"}',
+      'Authorization: Bearer [REDACTED]\0 tail',
+      'Authorization: Bearer [REDACTED]\x1b[0m tail',
+      '{"header":"Authorization: Bearer [REDACTED]","next":"keep"}',
     ].join('\n');
     const output = sanitizeFile(input);
     assert.strictEqual(output.toString(), expected);
     assert.deepStrictEqual(sanitizeFile(output), output);
+    // 0.20+ rejects NUL in issue text unless --allow-binary is passed too.
+    const text = sanitizeText(input, { env: testEnv() });
+    assert.strictEqual(text, expected);
+    assert.strictEqual(sanitizeText(text, { env: testEnv() }), text);
   });
 
   it(
@@ -274,7 +293,7 @@ describe('log sanitization', () => {
       sanitizeText(`echo ${token} 😀 'Authorization: token abc' -o x`, {
         env: testEnv(),
       }),
-      `echo [REDACTED] 😀 'Authorization: [REDACTED]' -o x`
+      `echo [REDACTED] 😀 'Authorization: token [REDACTED]' -o x`
     );
     assert.strictEqual(
       sanitizeText('echo "quoted" $(id) `hostname`', { env: testEnv() }),
