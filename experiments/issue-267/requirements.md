@@ -9,12 +9,12 @@ contains additional comments or required sub-issues.
 | Decide whether schemes and URL usernames may remain public | Accept 0.22.4 output: schemes and usernames provide context; credentials, environment secrets and gh tokens remain masked. Document in both READMEs and release notes. | Decided |
 | Upgrade JavaScript and both lockfiles | `js/package.json`, `js/bun.lock`, `js/package-lock.json`, latest published 0.22.5 | Implemented |
 | Upgrade Rust installer and minimum | `rust/src/lib/log_sanitizer.rs`, minimum 0.22.5 | Implemented |
-| Preserve NUL and invalid UTF-8 bytes | Shared `--allow-binary` options for logs and issue text. Exact-byte regression coverage in both editions. | JS verified; Rust CI pending |
-| Adopt new output without losing surrounding data | JS/Rust sanitizer tests: Authorization, Proxy-Authorization, URL passwords, JSON, long tokens, placeholders, idempotence, dense credentials and issue text. | 54 focused JS tests pass; Rust CI pending |
+| Preserve NUL and invalid UTF-8 bytes | Shared `--allow-binary` options for logs and issue text. Exact-byte regression coverage in both editions. | JS verified locally; Rust verification mapped to gated PR CI |
+| Adopt new output without losing surrounding data | JS/Rust sanitizer tests: Authorization, Proxy-Authorization, URL passwords, JSON, long tokens, placeholders, idempotence, dense credentials and issue text. | 54 focused JS tests pass; Rust verification mapped to gated PR CI |
 | Remove obsolete dependency blocker | Delete `.github/dependency-blockers.json`; freshness check covers 190 dependencies with zero stale/unverifiable entries and zero blockers. | Verified |
 | Prepare releases | JS changeset and Rust changelog fragment; versions remain CI-managed. | Implemented |
 | Verify locally | JS check/test; focused sanitizer/integration, parity, workflow and generated-policy checks. Avoid local Rust compilation unless needed. | Passed; 1760 full-suite passes, 8 optional-service skips, zero failures |
-| Finalize PR | Preserve all failed CI logs; wait for older runs before push; review complete diff, main ancestry, clean worktree, all checks; update PR and mark ready. | Pending |
+| Finalize PR | Preserve all failed CI logs; wait for older runs before push; review complete diff, main ancestry, clean worktree, all checks; update PR and mark ready. | Final results maintained in [PR #268](https://github.com/link-foundation/start/pull/268) and its checks |
 
 No public CLI parsing, isolation, status or record format changes are needed;
 the existing failure-reporting feature already inventories both sanitizer
@@ -34,3 +34,11 @@ The registry and upstream release metadata show 0.22.5 was published on
 fix, so both editions require this latest patch. The initial freshness probe
 also found `taiki-e/install-action` v2.90.4 newly published; its sole pin is
 updated without changing the existing JavaScript gate for Rust jobs.
+
+Initial CI run `43575807167` on prepared commit `9ef35b2` completed before the
+solution push. All tests, coverage, lint and parity passed. The complete raw log
+is preserved in `ci-logs/issue-267/javascript-43575807167.log.gz` (repository
+root). Line 1492 reports the stale action pin; line 16681 reports the resulting
+JavaScript Stage failure. These are the complete failures from that run.
+Security run `43575807257` passed. The default branch is already an ancestor
+of the solution branch; no history was rewritten.
