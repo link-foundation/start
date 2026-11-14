@@ -190,3 +190,19 @@ pub fn json_output(output: Option<String>) -> Value {
 pub fn saved_options(store: &ExecutionStore) -> HashMap<String, Value> {
     store.get(UUID).expect("record").options
 }
+
+/// Asserts that a pause/unpause/attach/resume message mentions `needle`.
+///
+/// Those messages carry the execution UUID (they point at
+/// `--status <uuid>`, `--resume <uuid>` or `--unpause <uuid>`), so the message
+/// itself never reaches the failure text: CodeQL's rust/cleartext-logging
+/// treats an identifier flowing into a panic (which the test harness writes to
+/// its log) as a leak, the same convention as `utils.rs` and
+/// `user_manager.rs` (issue #168). The static `what` label says which
+/// expectation failed instead.
+pub fn assert_mentions(message: &str, needle: &str, what: &'static str) {
+    assert!(
+        message.contains(needle),
+        "expected the message to mention {what}"
+    );
+}

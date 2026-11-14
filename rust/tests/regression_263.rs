@@ -123,8 +123,16 @@ mod pause {
             assert_eq!(report[key], value, "{key}");
         }
         let message = report["message"].as_str().unwrap();
-        assert!(message.contains("memory stays allocated"), "{message}");
-        assert!(message.contains(&format!("--unpause {UUID}")), "{message}");
+        assert_mentions(
+            message,
+            "memory stays allocated",
+            "\"memory stays allocated\"",
+        );
+        assert_mentions(
+            message,
+            &format!("--unpause {UUID}"),
+            "the --unpause <uuid> hint",
+        );
         assert_eq!(report["processIds"]["containerPid"], json!(4242));
         assert_eq!(docker.ran("pause"), vec![vec!["pause", NAME]]);
         // Every docker call is bounded, the process-ID lookup included.
@@ -196,9 +204,21 @@ mod pause {
         let result = pause_execution_with_runner(Some(&store), NAME, request(None), &docker);
         assert!(!result.success);
         let error = result.error.unwrap();
-        assert!(error.contains("is exited, not running"), "{error}");
-        assert!(error.contains(&format!("--status {UUID}")), "{error}");
-        assert!(error.contains(&format!("--resume {UUID}")), "{error}");
+        assert_mentions(
+            &error,
+            "is exited, not running",
+            "\"is exited, not running\"",
+        );
+        assert_mentions(
+            &error,
+            &format!("--status {UUID}"),
+            "the --status <uuid> hint",
+        );
+        assert_mentions(
+            &error,
+            &format!("--resume {UUID}"),
+            "the --resume <uuid> hint",
+        );
         assert!(docker.ran("pause").is_empty());
         let options = saved_options(&store);
         assert_eq!(options["paused"], json!(false));
@@ -223,8 +243,16 @@ mod pause {
         );
         assert!(!result.success);
         let error = result.error.unwrap();
-        assert!(error.contains("no longer exists (removed)"), "{error}");
-        assert!(error.contains(&format!("--resume {UUID}")), "{error}");
+        assert_mentions(
+            &error,
+            "no longer exists (removed)",
+            "\"no longer exists (removed)\"",
+        );
+        assert_mentions(
+            &error,
+            &format!("--resume {UUID}"),
+            "the --resume <uuid> hint",
+        );
         let saved = store.get(UUID).unwrap();
         assert_eq!(saved.container_state.as_deref(), Some("removed"));
         assert_eq!(saved.options["paused"], json!(false));
@@ -241,11 +269,10 @@ mod pause {
             let result = pause_execution_with_runner(Some(&store), NAME, request(None), &docker);
             assert!(!result.success);
             let error = result.error.unwrap();
-            assert!(
-                error.contains(&format!(
-                    "--pause only supports Docker isolation: {NAME} uses {isolated}"
-                )),
-                "{error}"
+            assert_mentions(
+                &error,
+                &format!("--pause only supports Docker isolation: {NAME} uses {isolated}"),
+                "the Docker-only refusal",
             );
             assert!(docker.calls.borrow().is_empty());
         }
@@ -358,14 +385,26 @@ mod unpause {
             unpause_execution_with_runner(Some(&store), NAME, None, &FakeDocker::new("exited"));
         assert!(!exited.success);
         let error = exited.error.unwrap();
-        assert!(error.contains("is exited, not paused"), "{error}");
-        assert!(error.contains(&format!("--resume {UUID}")), "{error}");
+        assert_mentions(&error, "is exited, not paused", "\"is exited, not paused\"");
+        assert_mentions(
+            &error,
+            &format!("--resume {UUID}"),
+            "the --resume <uuid> hint",
+        );
         let removed =
             unpause_execution_with_runner(Some(&store), NAME, None, &FakeDocker::new("removed"));
         assert!(!removed.success);
         let error = removed.error.unwrap();
-        assert!(error.contains("no longer exists (removed)"), "{error}");
-        assert!(error.contains(&format!("--status {UUID}")), "{error}");
+        assert_mentions(
+            &error,
+            "no longer exists (removed)",
+            "\"no longer exists (removed)\"",
+        );
+        assert_mentions(
+            &error,
+            &format!("--status {UUID}"),
+            "the --status <uuid> hint",
+        );
     }
 
     #[test]
@@ -436,8 +475,12 @@ mod paused_guards {
         );
         assert!(!result.success);
         let error = result.error.unwrap();
-        assert!(error.contains("is paused"), "{error}");
-        assert!(error.contains(&format!("--unpause {UUID}")), "{error}");
+        assert_mentions(&error, "is paused", "\"is paused\"");
+        assert_mentions(
+            &error,
+            &format!("--unpause {UUID}"),
+            "the --unpause <uuid> hint",
+        );
         assert_eq!(interactive.0.get(), 0);
     }
 
@@ -451,7 +494,11 @@ mod paused_guards {
         let result = resume_execution_with(Some(&store), NAME, None, None, &docker, &NoLaunch);
         assert!(!result.success);
         let error = result.error.unwrap();
-        assert!(error.contains(&format!("--unpause {UUID}")), "{error}");
+        assert_mentions(
+            &error,
+            &format!("--unpause {UUID}"),
+            "the --unpause <uuid> hint",
+        );
         assert!(docker.ran("commit").is_empty());
         assert!(docker.ran("start").is_empty());
         assert_eq!(docker.state(), "paused");
@@ -477,8 +524,16 @@ mod paused_guards {
         assert_eq!(entry["state"], json!("paused"));
         assert_eq!(entry["action"], json!("paused"));
         let message = entry["message"].as_str().unwrap();
-        assert!(message.contains("Skipped paused container"), "{message}");
-        assert!(message.contains(&format!("--unpause {UUID}")), "{message}");
+        assert_mentions(
+            message,
+            "Skipped paused container",
+            "\"Skipped paused container\"",
+        );
+        assert_mentions(
+            message,
+            &format!("--unpause {UUID}"),
+            "the --unpause <uuid> hint",
+        );
     }
 
     #[test]
