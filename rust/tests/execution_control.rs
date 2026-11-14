@@ -166,6 +166,53 @@ fn stop_sends_docker_stop() {
     );
 }
 
+/// Issue #263: `processIds` keeps the JavaScript order (wrapper, container
+/// id, container PID) instead of `serde_json::Map`'s sorted order, so both
+/// editions print the same lines (experiments/issue-263/stop-links-order.js).
+#[test]
+fn stop_report_lists_process_ids_in_javascript_order() {
+    let record = detached_record(Some(HashMap::from([
+        ("isolated".to_string(), json!("docker")),
+        ("sessionName".to_string(), json!("docker-session")),
+        ("containerId".to_string(), json!("abc123")),
+    ])));
+    let (_temp_dir, store) = store_with_record(&record);
+    let runner = FakeRunner::default().with_response(
+        "docker inspect -f {{.Id}} {{.State.Pid}} docker-session",
+        success("abcdef 4242\n"),
+    );
+
+    let result = control_execution_with_runner(
+        Some(&store),
+        "control-test-uuid",
+        ControlAction::Stop,
+        &runner,
+    );
+
+    assert_eq!(
+        result.output.as_deref(),
+        Some(
+            [
+                "executionControl",
+                "  action stop",
+                "  identifier control-test-uuid",
+                "  uuid control-test-uuid",
+                "  status signal-sent",
+                "  backend docker",
+                "  sessionName docker-session",
+                "  method DOCKER_STOP",
+                "  processIds",
+                "      wrapperPid 12345",
+                "      containerId abcdef",
+                "      containerPid 4242",
+                "  message \"Requested graceful stop for detached docker container: docker-session\"",
+            ]
+            .join("\n")
+            .as_str()
+        )
+    );
+}
+
 #[test]
 fn terminate_sends_docker_kill() {
     let record = detached_record(Some(HashMap::from([

@@ -17,7 +17,8 @@
 
 use crate::docker_cleanup::docker_command;
 use crate::execution_control::{
-    collect_process_ids_with_runner, CommandRunOutput, CommandRunner, SystemCommandRunner,
+    collect_process_ids_with_runner, js_ordered_entries, CommandRunOutput, CommandRunner,
+    SystemCommandRunner,
 };
 use crate::execution_store::{ExecutionRecord, ExecutionStore};
 use crate::output_blocks::{escape_for_links_notation, format_value_for_links_notation};
@@ -421,7 +422,7 @@ fn format_report_as_links_notation(report: &[(String, Value)]) -> String {
         match value {
             Value::Object(map) => {
                 lines.push(format!("  {}", key));
-                for (child, child_value) in map {
+                for (child, child_value) in js_ordered_entries(map) {
                     lines.push(format!("      {} {}", child, links_scalar(child_value)));
                 }
             }

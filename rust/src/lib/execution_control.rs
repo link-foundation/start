@@ -468,6 +468,38 @@ pub fn get_control_command(
     Ok(command)
 }
 
+/// The order the JavaScript edition builds report objects in (`processIds`
+/// in `collectProcessIds`, `resources` of a pause report). `serde_json::Map`
+/// sorts its keys, so Links Notation and text renderers walk objects through
+/// [`js_ordered_entries`] to print the same lines as JavaScript (issue #263).
+const JS_KEY_ORDER: [&str; 11] = [
+    "wrapperPid",
+    "screenPid",
+    "tmuxPid",
+    "panePids",
+    "commandPids",
+    "containerId",
+    "containerPid",
+    "remotePid",
+    "cpu",
+    "memory",
+    "disk",
+];
+
+/// Entries of `map` in JavaScript insertion order: known keys first in
+/// [`JS_KEY_ORDER`], any other key after them in sorted order.
+pub fn js_ordered_entries(map: &Map<String, Value>) -> Vec<(&String, &Value)> {
+    let rank = |key: &str| {
+        JS_KEY_ORDER
+            .iter()
+            .position(|known| *known == key)
+            .unwrap_or(JS_KEY_ORDER.len())
+    };
+    let mut entries: Vec<_> = map.iter().collect();
+    entries.sort_by_key(|(key, _)| rank(key));
+    entries
+}
+
 fn append_links_array(lines: &mut Vec<String>, values: &[Value], indent: usize) {
     let prefix = " ".repeat(indent);
     if values.is_empty() {
@@ -480,7 +512,7 @@ fn append_links_array(lines: &mut Vec<String>, values: &[Value], indent: usize) 
         match value {
             Value::Array(nested) => append_links_array(lines, nested, indent + 2),
             Value::Object(map) => {
-                for (child_key, child_value) in map {
+                for (child_key, child_value) in js_ordered_entries(map) {
                     if !child_value.is_null() {
                         append_links_value(lines, child_key, child_value, indent + 2);
                     }
@@ -501,7 +533,7 @@ fn append_links_value(lines: &mut Vec<String>, key: &str, value: &Value, indent:
     match value {
         Value::Object(map) => {
             lines.push(format!("{}{}", prefix, key));
-            for (child_key, child_value) in map {
+            for (child_key, child_value) in js_ordered_entries(map) {
                 if !child_value.is_null() {
                     append_links_value(lines, child_key, child_value, indent + 4);
                 }
