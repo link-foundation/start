@@ -12,10 +12,10 @@
 //! keeps the rest of its line (issue #249, sensitive-data-sanitizer#45); the
 //! pre-pass that did this here is gone (issue #253).
 //!
-//! The JavaScript package stays on ^0.14.0: 0.20.0 and later drop the bytes
-//! after a credential that is followed by a NUL byte
-//! (sensitive-data-sanitizer#180, the blocker in
-//! .github/dependency-blockers.json). [`PACKAGE`] and [`MINIMUM_VERSION`]
+//! The JavaScript package stays on ^0.14.0: 0.20.0 through 0.22.3 drop the
+//! bytes after a credential that is followed by a NUL byte
+//! (sensitive-data-sanitizer#180), and 0.22.4 changes the redacted output
+//! (start#267, the blocker in .github/dependency-blockers.json). [`PACKAGE`] and [`MINIMUM_VERSION`]
 //! require the same release (js/src/lib/log-sanitizer.js).
 
 use regex::bytes::Regex;

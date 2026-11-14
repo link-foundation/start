@@ -1,3 +1,3 @@
 {
-  "npm:@link-foundation/sensitive-data-sanitizer": "0.20.0 and later drop the bytes after a credential followed by a NUL byte: https://github.com/link-foundation/sensitive-data-sanitizer/issues/180"
+  "npm:@link-foundation/sensitive-data-sanitizer": "0.22.4 fixes the NUL-byte regression (sensitive-data-sanitizer#180) but changes the redacted output (keeps the Authorization scheme and URL user name); upgrade and test changes are tracked in https://github.com/link-foundation/start/issues/267"
 }
