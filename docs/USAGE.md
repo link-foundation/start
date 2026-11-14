@@ -102,7 +102,9 @@ why and by whom. `--status` reports `dockerState`, `paused` and `pausedAt`, and
 `--list --running` keeps paused executions. A paused execution is never treated
 as finished, resumed, attached to, cleaned up or auto-recovered; `--stop` and
 `--terminate` thaw and stop it as an intentional stop. screen and tmux sessions
-cannot be paused. See
+cannot be paused. The recorded pause is always reconciled with `docker inspect`,
+so a daemon restart (with or without `live-restore`), a reboot or a removed
+container is reported as Docker sees it. See
 [Pausing and unpausing Docker executions](../README.md#pausing-and-unpausing-docker-executions).
 
 After an explicit resume, `--status <id> --output-format json` and

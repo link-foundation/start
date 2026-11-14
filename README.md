@@ -435,6 +435,16 @@ restart, a reboot or an external `docker unpause`/`docker rm`) never hides a
 running, exited or `removed` container; a pause made outside start-command is
 adopted. When Docker cannot be asked, the recorded pause is shown unchanged.
 
+A pause is not guaranteed to survive Docker's own lifecycle, so start-command
+never assumes it does and always reports what `docker inspect` says:
+
+| Event                                       | What `--status` then reports                                                                                                  |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Daemon restart with `live-restore` enabled  | The container keeps running through the restart, so it is normally still `paused` and `--unpause` continues the same process. |
+| Daemon restart with `live-restore` disabled | The daemon stops its containers, so the execution shows as `exited`; the pause is cleared and `--resume` restarts it.         |
+| Host reboot                                 | The frozen process is gone: `exited` (or `running` again, without the pause, if a restart policy started a new process).      |
+| Container removed (`docker rm`, prune)      | `removed`; `--unpause` fails with a pointer to `--status` and `--resume`, which launches the command again.                   |
+
 #### Execution identity, attempts and chains
 
 An execution UUID names one logical execution. Launching again with an explicit
