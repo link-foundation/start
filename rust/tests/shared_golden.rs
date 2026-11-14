@@ -104,7 +104,8 @@ fn cli_parsing_matches_shared_goldens() {
             "snapshotSizeHint": options.snapshot.size_hint, "snapshotPrepare": options.snapshot.prepare,
             "removeOriginal": options.remove_original, "cleanup": options.cleanup,
             "cleanupDryRun": options.cleanup_dry_run, "cleanupTarget": options.cleanup_target,
-            "init": options.init, "useFormalAi": options.use_formal_ai});
+            "init": options.init, "useFormalAi": options.use_formal_ai,
+            "stop": options.stop, "stopTimeout": options.stop_timeout});
         for (key, expected) in fixture["options"].as_object().unwrap() {
             assert_eq!(&observed[key], expected, "{}: {}", fixture["name"], key);
         }
@@ -118,6 +119,7 @@ fn isolation_arguments_match_shared_goldens() {
         let options = IsolationOptions {
             privileged: input["privileged"].as_bool().unwrap_or(false),
             init: input["init"].as_bool().unwrap_or(false),
+            stop_timeout: input["stopTimeout"].as_u64(),
             env: strings(&input["env"]),
             labels: strings(&input["labels"]),
             volumes: strings(&input["volumes"]),
