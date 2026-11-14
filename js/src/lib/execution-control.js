@@ -12,6 +12,7 @@ const {
 } = require('./output-blocks');
 const { getDockerCommand, getDockerSpawnOptions } = require('./docker-cleanup');
 const { prefetchedInspect } = require('./docker-inspect-batch');
+const { resolveStopTimeout } = require('./docker-stop-timeout');
 
 const ControlAction = {
   STOP: 'stop',
@@ -170,7 +171,46 @@ function collectProcessIds(record, runner = runCommand) {
   return Object.keys(processIds).length > 0 ? processIds : null;
 }
 
-function getControlCommand(record, action) {
+/**
+ * `docker stop` for a detached container, with the grace period before
+ * SIGKILL spelled out in the message (issue #265).
+ * @param {object} record - Execution record
+ * @param {object} controlOptions - {stopTimeout, env}
+ * @returns {object} Control command, or {error}
+ */
+function getDockerStopCommand(record, controlOptions) {
+  const sessionName = record.options.sessionName;
+  let timeout;
+  try {
+    timeout = resolveStopTimeout(
+      record,
+      controlOptions.stopTimeout ?? null,
+      controlOptions.env || process.env
+    );
+  } catch (error) {
+    return { error: error.message };
+  }
+  const grace = `SIGTERM, SIGKILL after ${timeout.seconds}s`;
+  return {
+    command: 'docker',
+    args: timeout.explicit
+      ? ['stop', '-t', String(timeout.seconds), sessionName]
+      : ['stop', sessionName],
+    method: 'DOCKER_STOP',
+    stopTimeout: timeout.seconds,
+    message: `Requested graceful stop for detached docker container: ${sessionName} (${grace})`,
+  };
+}
+
+/**
+ * Build the native command for a control action.
+ * @param {object} record - Execution record
+ * @param {string} action - ControlAction
+ * @param {object} [controlOptions] - {stopTimeout, env}: `--stop-timeout`
+ *   and the environment, for docker stops (issue #265)
+ * @returns {object} {command, args, method, message[, stopTimeout]} or {error}
+ */
+function getControlCommand(record, action, controlOptions = {}) {
   const opts = record.options || {};
   const backend = opts.isolated;
   const sessionName = opts.sessionName;
@@ -184,6 +224,13 @@ function getControlCommand(record, action) {
   if (opts.isolationMode !== 'detached') {
     return {
       error: 'Only detached isolated executions can be stopped or terminated.',
+    };
+  }
+
+  const requestedTimeout = controlOptions.stopTimeout ?? null;
+  if (requestedTimeout !== null && backend !== 'docker') {
+    return {
+      error: `--stop-timeout is only supported for detached docker executions, not ${backend || 'unknown'}.`,
     };
   }
 
@@ -204,12 +251,7 @@ function getControlCommand(record, action) {
           message: `Sent CTRL+C to detached tmux session: ${sessionName}`,
         };
       case 'docker':
-        return {
-          command: 'docker',
-          args: ['stop', sessionName],
-          method: 'DOCKER_STOP',
-          message: `Requested graceful stop for detached docker container: ${sessionName}`,
-        };
+        return getDockerStopCommand(record, controlOptions);
       default:
         return {
           error: `Stopping detached ${backend || 'unknown'} executions is not supported.`,
@@ -261,6 +303,11 @@ function formatControlResultAsLinksNotation(result) {
     `  sessionName ${escapeForLinksNotation(result.sessionName)}`,
     `  method ${escapeForLinksNotation(result.method)}`,
   ];
+
+  // Seconds `docker stop` waits before SIGKILL (issue #265).
+  if (result.stopTimeout !== null && result.stopTimeout !== undefined) {
+    lines.push(`  stopTimeout ${result.stopTimeout}`);
+  }
 
   if (result.processIds) {
     lines.push('  processIds');
@@ -331,7 +378,22 @@ function isPendingRecoveryStop(record, result) {
   return /is not running/i.test(detail);
 }
 
-function controlExecution(store, identifier, action, runner = runCommand) {
+/**
+ * Stop or terminate a detached execution.
+ * @param {?object} store - Execution store
+ * @param {string} identifier - UUID or session name
+ * @param {string} action - ControlAction
+ * @param {Function} [runner] - Command runner
+ * @param {object} [controlOptions] - {stopTimeout, env} (issue #265)
+ * @returns {{success: boolean, output?: string, error?: string}}
+ */
+function controlExecution(
+  store,
+  identifier,
+  action,
+  runner = runCommand,
+  controlOptions = {}
+) {
   if (!store) {
     return { success: false, error: 'Execution tracking is disabled.' };
   }
@@ -344,7 +406,7 @@ function controlExecution(store, identifier, action, runner = runCommand) {
     };
   }
 
-  const control = getControlCommand(record, action);
+  const control = getControlCommand(record, action, controlOptions);
   if (control.error) {
     return { success: false, error: control.error };
   }
@@ -393,6 +455,7 @@ function controlExecution(store, identifier, action, runner = runCommand) {
     backend: record.options.isolated,
     sessionName: record.options.sessionName,
     method: control.method,
+    stopTimeout: control.stopTimeout,
     processIds: collectProcessIds(record, runner),
     message: control.message,
   });
