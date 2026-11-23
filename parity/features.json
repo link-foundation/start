@@ -1864,9 +1864,10 @@
         },
         {
           "path": "rust/src/lib/execution_chain.rs",
-          "reason": "Native filesystem adapter for continuation chains (--continues, chain --upload-log) in execution-identity; its JavaScript contract uses CommonJS and native Node/Bun adapters, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "reason": "Native filesystem adapter for continuation chains (--continues, chain --upload-log) in execution-identity; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, optional/nullish fields, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
           "blockers": [
             "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
             "https://github.com/link-foundation/meta-language/issues/204",
             "https://github.com/link-foundation/meta-language/issues/206",
             "https://github.com/link-foundation/meta-language/issues/207",
@@ -1907,6 +1908,12 @@
           "source": "js/src/lib/launch-identity.js",
           "line": 16,
           "issue": "https://github.com/link-foundation/meta-language/issues/222"
+        },
+        {
+          "construct": "async/await scheduling",
+          "source": "js/src/lib/execution-chain.js",
+          "line": 123,
+          "issue": "https://github.com/link-foundation/meta-language/issues/223"
         },
         {
           "construct": "optional/nullish fields",
@@ -2111,6 +2118,7 @@
           "rust/tests/regression_209.rs",
           "rust/tests/regression_225.rs",
           "rust/tests/regression_226.rs",
+          "rust/tests/regression_231.rs",
           "rust/tests/regression_241.rs",
           "rust/tests/regression_243.rs"
         ]
@@ -2625,11 +2633,13 @@
         "implementation": [
           "js/src/lib/failure-handler.js",
           "js/src/lib/log-uploader.js",
+          "js/src/lib/log-upload-parts.js",
           "js/src/lib/log-sanitizer.js"
         ],
         "tests": [
           "js/test/failure-handler.js",
-          "js/test/log-sanitizer.js"
+          "js/test/log-sanitizer.js",
+          "js/test/status-query.js"
         ]
       },
       "rust": {
@@ -2640,7 +2650,8 @@
         ],
         "tests": [
           "rust/tests/failure_handler.rs",
-          "rust/tests/log_sanitizer.rs"
+          "rust/tests/log_sanitizer.rs",
+          "rust/tests/regression_231.rs"
         ]
       },
       "manualRust": [
@@ -2660,9 +2671,10 @@
         },
         {
           "path": "rust/src/lib/log_uploader.rs",
-          "reason": "Typed native representation and control flow for failure-reporting; its JavaScript contract uses CommonJS and native Node/Bun adapters, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "reason": "Typed native representation and control flow for failure-reporting; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
           "blockers": [
             "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
             "https://github.com/link-foundation/meta-language/issues/206",
             "https://github.com/link-foundation/meta-language/issues/207",
             "https://github.com/link-foundation/meta-language/issues/208",
@@ -2674,9 +2686,10 @@
         },
         {
           "path": "rust/src/lib/log_sanitizer.rs",
-          "reason": "Native filesystem/process adapter for failure-reporting; its JavaScript contract uses CommonJS and native Node/Bun adapters, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
+          "reason": "Native filesystem/process adapter for failure-reporting; its JavaScript contract uses CommonJS and native Node/Bun adapters, async/await scheduling, dynamic object/JSON records, callbacks and closures, array/list operations, string operations, classes, Map/Set, regular expressions, try/catch, switch, destructuring. See the feature's anchored translationBlockers; carried code is not executable Rust.",
           "blockers": [
             "https://github.com/link-foundation/meta-language/issues/222",
+            "https://github.com/link-foundation/meta-language/issues/223",
             "https://github.com/link-foundation/meta-language/issues/206",
             "https://github.com/link-foundation/meta-language/issues/207",
             "https://github.com/link-foundation/meta-language/issues/208",
@@ -2695,6 +2708,12 @@
           "issue": "https://github.com/link-foundation/meta-language/issues/222"
         },
         {
+          "construct": "async/await scheduling",
+          "source": "js/src/lib/log-upload-parts.js",
+          "line": 97,
+          "issue": "https://github.com/link-foundation/meta-language/issues/223"
+        },
+        {
           "construct": "dynamic object/JSON records",
           "source": "js/src/lib/failure-handler.js",
           "line": 232,
@@ -2702,8 +2721,8 @@
         },
         {
           "construct": "callbacks and closures",
-          "source": "js/src/lib/log-uploader.js",
-          "line": 37,
+          "source": "js/src/lib/log-upload-parts.js",
+          "line": 43,
           "issue": "https://github.com/link-foundation/meta-language/issues/207"
         },
         {

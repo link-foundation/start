@@ -66,8 +66,8 @@ Options:
   --status <id>         Show status of execution by UUID or session name (--output-format: links-notation|json|text)
   --list                List all tracked executions (--output-format: links-notation|json|text)
   --running             With --list, only report executions that are still running
-  --upload-log <id>     Upload a sanitized copy of the stored log privately
-  --no-sanitize        With --upload-log, explicitly upload without secret redaction
+  --upload-log <id>     Upload the stored log privately in verified parts
+  --no-sanitize        With --upload-log, legacy flag. Credential verification still runs.
   --stop <id>           Ask a detached isolated execution to stop gracefully
   --terminate <id>      Terminate a detached isolated execution immediately
   --pause <id>          Freeze a detached Docker execution (docker pause): CPU is

@@ -7,7 +7,7 @@ use std::fs;
 use std::process::Command;
 
 use crate::isolation::get_timestamp;
-use crate::log_sanitizer::{ensure_sanitizer_available, sanitize_log_to_temp, sanitize_text};
+use crate::log_sanitizer::{sanitize_log_to_temp, sanitize_text};
 
 /// Configuration for the failure handler
 #[derive(Debug, Default)]
@@ -298,39 +298,18 @@ pub fn ensure_gh_upload_log_available() -> Result<(), String> {
     )
 }
 
-/// Upload a log file with gh-upload-log and stream its output to the terminal.
+/// Upload a stored log to a private repository and report its URL.
 pub fn upload_log_interactive(log_path: &str) -> Result<i32, String> {
     upload_log_interactive_with_options(log_path, false, false)
 }
 
-/// Upload privately; unsanitized source access requires an explicit opt-out.
+/// Publish through the same bounded path used by the stored-execution query.
 pub fn upload_log_interactive_with_options(
     log_path: &str,
     no_sanitize: bool,
     verbose: bool,
 ) -> Result<i32, String> {
-    let prepared = if no_sanitize {
-        None
-    } else {
-        ensure_sanitizer_available()?;
-        Some(sanitize_log_to_temp(
-            std::path::Path::new(log_path),
-            verbose,
-        )?)
-    };
-    let upload_path = prepared
-        .as_ref()
-        .map(|copy| copy.path.as_path())
-        .unwrap_or_else(|| std::path::Path::new(log_path));
-    ensure_gh_upload_log_available()?;
-
-    let status = Command::new("gh-upload-log")
-        .arg(upload_path)
-        .arg("--private")
-        .status()
-        .map_err(|_| "Failed to run gh-upload-log.".to_string())?;
-
-    Ok(status.code().unwrap_or(1))
+    crate::log_uploader::upload_log_path(log_path, no_sanitize, verbose)
 }
 
 /// Upload log file using gh-upload-log

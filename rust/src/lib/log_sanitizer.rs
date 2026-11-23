@@ -8,28 +8,24 @@
 //! value-free and only their `ERR_*` code is kept here. Both logs and issue
 //! text allow NUL bytes (`--allow-binary`).
 //!
-//! The 0.22.x output keeps Authorization schemes and URL usernames while
-//! masking their secrets and preserving the rest of each line (#249, #267).
-//! Version 0.22.4 fixes bytes lost after credentials followed by NUL
-//! (sensitive-data-sanitizer#180); 0.22.5 also fixes Markdown placeholders.
-//! [`PACKAGE`] and [`MINIMUM_VERSION`] require the same release as JavaScript
-//! (js/src/lib/log-sanitizer.js).
+//! Both runtimes preserve Authorization schemes, URL usernames and log bytes
+//! outside redacted credentials. See js/src/lib/log-sanitizer.js.
 
 use regex::bytes::Regex;
 use std::ffi::OsString;
 use std::fs::{self, DirBuilder, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::sync::OnceLock;
 
 pub const BLOCK_SIZE: usize = 64 * 1024;
 const MARKER: &[u8] = b"[REDACTED]";
 const COMMAND: &str = "sensitive-data-sanitizer";
 /// The library version the JavaScript package depends on.
-pub const PACKAGE: &str = "@link-foundation/sensitive-data-sanitizer@^0.22.5";
-/// Requires control-byte preservation, placeholders and bounded dense scanning.
-pub const MINIMUM_VERSION: (u64, u64, u64) = (0, 22, 5);
+pub const PACKAGE: &str = "@link-foundation/sensitive-data-sanitizer@^2.1.0";
+/// Requires the same verification engine as the JavaScript package.
+pub const MINIMUM_VERSION: (u64, u64, u64) = (2, 1, 0);
 /// Path of the library CLI to use instead of the one on PATH.
 pub const OVERRIDE: &str = "START_SENSITIVE_DATA_SANITIZER";
 const OPTIONS: [&str; 4] = [
@@ -40,7 +36,7 @@ const OPTIONS: [&str; 4] = [
 ];
 
 /// Value-free failure message: `code` is a fixed ERR_* name, never content.
-fn blocked(code: &str, subject: &str) -> String {
+pub(crate) fn blocked(code: &str, subject: &str) -> String {
     let action = if subject == "Log" {
         "upload"
     } else {
@@ -199,7 +195,7 @@ pub fn ensure_sanitizer_available() -> Result<(), String> {
     ))
 }
 
-fn error_code(stderr: &[u8]) -> String {
+pub(crate) fn error_code(stderr: &[u8]) -> String {
     static CODE: OnceLock<Regex> = OnceLock::new();
     CODE.get_or_init(|| Regex::new(r"\bERR_[A-Z_]+\b").expect("static code rule"))
         .find(stderr)
@@ -250,6 +246,131 @@ pub fn sanitize_text_with_env(
     env: impl IntoIterator<Item = (String, String)>,
 ) -> Result<String, String> {
     text_with(text, &Environment::Explicit(env.into_iter().collect()))
+}
+
+#[derive(serde::Serialize)]
+pub(crate) struct LogSource {
+    pub path: String,
+    pub header: Option<String>,
+}
+
+fn library_entry(program: &Path) -> Option<PathBuf> {
+    let installed = fs::canonicalize(program).ok();
+    let cli_package = installed
+        .as_deref()
+        .filter(|file| {
+            file.file_name()
+                .is_some_and(|name| name == "sensitive-data-sanitizer.js")
+        })
+        .and_then(Path::parent)
+        .and_then(Path::parent)
+        .map(Path::to_path_buf);
+    let directory = program.parent()?;
+    // npm's Windows shim is next to node_modules. Local .bin shims are
+    // one level below it. Bun's global packages live under install/global.
+    let package = "@link-foundation/sensitive-data-sanitizer";
+    let bun = std::env::var_os("BUN_INSTALL")
+        .map(PathBuf::from)
+        .or_else(|| dirs::home_dir().map(|home| home.join(".bun")))
+        .map(|root| root.join("install/global/node_modules").join(package));
+    [
+        cli_package,
+        Some(directory.join("node_modules").join(package)),
+        directory.parent().map(|parent| parent.join(package)),
+        bun,
+    ]
+    .into_iter()
+    .flatten()
+    .find_map(|root| {
+        let manifest: serde_json::Value =
+            serde_json::from_slice(&fs::read(root.join("package.json")).ok()?).ok()?;
+        let entry = root.join("src/index.js");
+        (manifest["name"] == package
+            && parse_version(manifest["version"].as_str()?)? >= MINIMUM_VERSION
+            && entry.is_file())
+        .then_some(entry)
+    })
+}
+
+// Read source descriptors first, then open logs on demand. The same credential
+// policy and record limit are used by sanitizeLogStream in JavaScript.
+const STREAM_DRIVER: &str = r#"
+const { once } = require('node:events');
+const { pathToFileURL } = require('node:url');
+const { open, stat } = require('node:fs/promises');
+async function* readSources(sources) {
+  for (const { path, header } of sources) {
+    if (header !== null) yield Buffer.from(header);
+    let handle;
+    try {
+      if (!path || !(await stat(path)).isFile()) throw new Error();
+      handle = await open(path, 'r');
+      yield* handle.createReadStream({ autoClose: false });
+    } catch (error) {
+      if (header !== null && (!path || error.code === 'ENOENT')) {
+        yield Buffer.from(`Log file not found: ${path}\n`);
+      } else {
+        throw Object.assign(new Error(), { code: 'ERR_SOURCE' });
+      }
+    } finally {
+      await handle?.close();
+    }
+  }
+}
+async function main() {
+  const library = await import(pathToFileURL(process.argv[1]).href);
+  const chunks = [];
+  for await (const chunk of process.stdin) chunks.push(chunk);
+  const sources = JSON.parse(Buffer.concat(chunks).toString());
+  const sanitizerOptions = {
+    profile: 'publication',
+    credentialsOnly: true,
+    knownSecrets: [
+      ...library.knownSecretsFromEnv(),
+      ...await library.knownSecretsFromGitHubConfig(),
+    ],
+  };
+  for await (const text of library.sanitizeStream(readSources(sources), {
+    sanitizerOptions,
+    allowBinary: true,
+    maxTotalBytes: Number.MAX_SAFE_INTEGER,
+    maxRecordBytes: 8 * 1024 * 1024,
+  })) {
+    if (!process.stdout.write(library.encodeLogText(text))) {
+      await once(process.stdout, 'drain');
+    }
+  }
+}
+main().catch(error => {
+  const code = error?.code;
+  process.stderr.write(/^ERR_[A-Z_]+$/.test(code) ? code : 'ERR_SANITIZER');
+  process.exitCode = 1;
+});
+"#;
+
+pub(crate) fn spawn_log_sanitizer(sources: &[LogSource]) -> Result<Child, String> {
+    let unavailable = || blocked("ERR_UNAVAILABLE", "Log");
+    let program = find_sanitizer().ok_or_else(unavailable)?;
+    let entry = library_entry(&program).ok_or_else(unavailable)?;
+    let input = serde_json::to_vec(sources).map_err(|_| blocked("ERR_SOURCE", "Log"))?;
+    let launch = |runtime: &str| {
+        Command::new(runtime)
+            .args(["-e", STREAM_DRIVER])
+            .arg(&entry)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+    };
+    let mut child = launch("node")
+        .or_else(|_| launch("bun"))
+        .map_err(|_| unavailable())?;
+    if child.stdin.take().unwrap().write_all(&input).is_err() {
+        let _ = child.kill();
+        let _ = child.wait();
+        return Err(unavailable());
+    }
+    Ok(child)
 }
 
 /// Private temporary copy; dropping it removes its file and directory.

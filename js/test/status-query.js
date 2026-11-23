@@ -7,6 +7,7 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { TextDecoder } = require('util');
 
 const {
   ExecutionStore,
@@ -48,40 +49,38 @@ function runCli(args, env = {}) {
   };
 }
 
-function createExecutable(filePath, content) {
-  fs.writeFileSync(filePath, content, 'utf8');
-  fs.chmodSync(filePath, 0o755);
-}
-
-function fakeUploaderScript(fakeBin, outputPrefix) {
-  const fixturePath = path.join(fakeBin, 'capture-upload.js');
-  fs.writeFileSync(
-    fixturePath,
-    [
-      "const fs = require('fs');",
-      'const args = process.argv.slice(2);',
-      'fs.writeFileSync(process.env.UPLOAD_CAPTURE, JSON.stringify({',
-      '  args, content: fs.readFileSync(args[0], "utf8"),',
-      '  mode: fs.statSync(args[0]).mode & 0o777,',
-      '}));',
-      `console.log(${JSON.stringify(outputPrefix)} + ': ' + args[0]);`,
-      '',
-    ].join('\n')
+function fakeGitHub(root) {
+  const fixture = path.resolve(
+    __dirname,
+    '../../experiments/issue-269/fake-gh.cjs'
   );
-  if (process.platform === 'win32') {
-    return `@echo off\r\n"${process.execPath}" "${fixturePath}" %*\r\n`;
-  }
-  return `#!/bin/sh\n"${process.execPath}" "${fixturePath}" "$@"\n`;
-}
-
-function createFakeUploader(fakeBin, outputPrefix) {
-  const content = fakeUploaderScript(fakeBin, outputPrefix);
-  if (process.platform === 'win32') {
-    createExecutable(path.join(fakeBin, 'gh-upload-log.cmd'), content);
-    return;
-  }
-
-  createExecutable(path.join(fakeBin, 'gh-upload-log'), content);
+  const capture = path.join(root, 'parts');
+  fs.mkdirSync(capture);
+  fs.writeFileSync(
+    path.join(root, 'gh'),
+    `#!/bin/sh\nexec "${process.execPath}" "${fixture}" "$@"\n`,
+    { mode: 0o755 }
+  );
+  const scratch = path.join(root, 'full-scratch');
+  // A scratch directory with zero usable capacity, even when run as root.
+  fs.writeFileSync(scratch, '');
+  return {
+    capture,
+    env: {
+      PATH: root,
+      TMPDIR: scratch,
+      TMP: scratch,
+      TEMP: scratch,
+      HOME: root,
+      GH_CONFIG_DIR: root,
+      GH_UPLOAD_REPOSITORY: '',
+      GH_UPLOAD_BRANCH: '',
+      GH_UPLOAD_DRY_MODE: 'false',
+      GH_UPLOAD_PUBLIC: 'true',
+      START_LOG_UPLOAD_PART_BYTES: '64',
+      UPLOAD_CAPTURE: capture,
+    },
+  };
 }
 
 describe('--status query functionality', () => {
@@ -278,139 +277,146 @@ describe('--status query functionality', () => {
   });
 
   describe('--upload-log functionality', () => {
-    it('should upload a private sanitized copy and preserve the stored log', () => {
-      const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'upload-log-bin-'));
-      const logPath = path.join(TEST_APP_FOLDER, 'command.log');
-      const capturePath = path.join(fakeBin, 'capture.json');
-      const token = ['gh', 'p_', 'a'.repeat(36)].join('');
-      const customSecret = 'fake-custom-credential';
-      const original = `captured command output\n${token}\n${customSecret}\n`;
-      fs.writeFileSync(logPath, original, 'utf8');
-      createFakeUploader(fakeBin, 'fake uploader received');
-
-      testRecord.logPath = logPath;
-      store.save(testRecord);
-
-      const result = runCli(['--upload-log', testRecord.uuid], {
-        PATH: fakeBin,
-        HOME: fakeBin,
-        UPLOAD_CAPTURE: capturePath,
-        EXAMPLE_API_KEY: customSecret,
-        GH_UPLOAD_PUBLIC: 'true',
-      });
-
-      expect(result.exitCode).toBe(0);
-      const captured = JSON.parse(fs.readFileSync(capturePath, 'utf8'));
-      expect(captured.args[0]).not.toBe(logPath);
-      expect(captured.args[1]).toBe('--private');
-      expect(captured.content).toContain('captured command output');
-      expect(captured.content).toContain('[REDACTED]');
-      expect(captured.content).not.toContain(token);
-      expect(captured.content).not.toContain(customSecret);
-      if (process.platform !== 'win32') {
-        expect(captured.mode).toBe(0o600);
-      }
-      expect(result.stdout).toContain(
-        `fake uploader received: ${captured.args[0]}`
-      );
-      expect(result.stderr).toBe('');
-      expect(fs.readFileSync(logPath, 'utf8')).toBe(original);
-      expect(fs.existsSync(captured.args[0])).toBe(false);
-
-      fs.rmSync(fakeBin, { recursive: true, force: true });
-    });
-
-    it('should install gh-upload-log when it is missing before uploading', () => {
+    it('publishes verified UTF-8-safe parts with an exhausted scratch directory', () => {
       if (process.platform === 'win32') {
-        console.log('  Skipping: shell fixture uses POSIX scripts');
         return;
       }
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'upload-log-bin-'));
+      try {
+        const { env, capture } = fakeGitHub(root);
+        const logPath = path.join(TEST_APP_FOLDER, 'command.log');
+        const token = ['gh', 'p_', 'a'.repeat(36)].join('');
+        const customSecret = 'fake-custom-credential';
+        const localToken = 'fake-local-gh-credential';
+        fs.writeFileSync(
+          path.join(root, 'hosts.yml'),
+          `github.com:\n  oauth_token: ${localToken}\n`
+        );
+        // The first emoji crosses the nominal 64-byte boundary.
+        const text = `${'x'.repeat(62)}😀\n`;
+        const original = `${text}${token}\n${customSecret}\n${localToken}\n${text}`;
+        fs.writeFileSync(logPath, original);
+        testRecord.logPath = logPath;
+        store.save(testRecord);
 
-      const fakeBin = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'upload-log-install-bin-')
-      );
-      const installMarker = path.join(fakeBin, 'install.log');
-      const capturePath = path.join(fakeBin, 'capture.json');
-      const logPath = path.join(TEST_APP_FOLDER, 'install-command.log');
-      const token = ['gh', 'p_', 'b'.repeat(36)].join('');
-      const original = `captured command output\n${token}\n`;
-      fs.writeFileSync(logPath, original, 'utf8');
-      const uploaderScript = fakeUploaderScript(
-        fakeBin,
-        'installed uploader received'
-      );
+        const result = runCli(['--upload-log', testRecord.uuid], {
+          ...env,
+          EXAMPLE_API_KEY: customSecret,
+          UPLOAD_TEST_MODE: 'lost-response',
+        });
 
-      createExecutable(
-        path.join(fakeBin, 'bun'),
-        [
-          '#!/bin/sh',
-          `echo "$@" > "${installMarker}"`,
-          `cat > "${path.join(fakeBin, 'gh-upload-log')}" <<'SCRIPT'`,
-          uploaderScript,
-          'SCRIPT',
-          `chmod +x "${path.join(fakeBin, 'gh-upload-log')}"`,
-          'exit 0',
-          '',
-        ].join('\n')
-      );
-
-      testRecord.logPath = logPath;
-      store.save(testRecord);
-
-      const result = runCli(['--upload-log', testRecord.uuid], {
-        PATH: `${fakeBin}${path.delimiter}/usr/bin${path.delimiter}/bin`,
-        HOME: fakeBin,
-        UPLOAD_CAPTURE: capturePath,
-      });
-
-      expect(result.exitCode).toBe(0);
-      expect(fs.readFileSync(installMarker, 'utf8').trim()).toBe(
-        'install -g gh-upload-log'
-      );
-      expect(result.stdout).toContain('gh-upload-log not found');
-      const captured = JSON.parse(fs.readFileSync(capturePath, 'utf8'));
-      expect(captured.args[0]).not.toBe(logPath);
-      expect(captured.args[1]).toBe('--private');
-      expect(captured.content).toContain('captured command output');
-      expect(captured.content).toContain('[REDACTED]');
-      expect(captured.content).not.toContain(token);
-      expect(captured.mode).toBe(0o600);
-      expect(result.stdout).toContain(
-        `installed uploader received: ${captured.args[0]}`
-      );
-      expect(fs.readFileSync(logPath, 'utf8')).toBe(original);
-      expect(fs.existsSync(captured.args[0])).toBe(false);
-
-      fs.rmSync(fakeBin, { recursive: true, force: true });
+        expect(result.stderr).toBe('');
+        expect(result.exitCode).toBe(0);
+        const parts = fs
+          .readdirSync(capture)
+          .filter((name) => name.endsWith('.log'))
+          .sort()
+          .map((name) => fs.readFileSync(path.join(capture, name)));
+        expect(parts.length).toBeGreaterThan(2);
+        expect(parts[0].length).toBe(62);
+        for (const part of parts) {
+          expect(part.length).toBeLessThanOrEqual(64);
+          expect(() =>
+            new TextDecoder('utf-8', { fatal: true }).decode(part)
+          ).not.toThrow();
+        }
+        expect(Buffer.concat(parts).toString()).toBe(
+          `${text}[REDACTED]\n[REDACTED]\n[REDACTED]\n${text}`
+        );
+        expect(
+          fs.readFileSync(path.join(capture, 'README.md'), 'utf8')
+        ).toContain(`This upload contains ${parts.length} part(s)`);
+        expect(result.stdout).toContain(
+          'Uploaded log: https://github.com/octocat/private-logs/'
+        );
+        expect(fs.readFileSync(logPath, 'utf8')).toBe(original);
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
     });
 
-    it('should upload the original privately only with explicit --no-sanitize', () => {
-      const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), 'upload-raw-bin-'));
-      const capturePath = path.join(fakeBin, 'capture.json');
-      const logPath = path.join(TEST_APP_FOLDER, 'raw-command.log');
-      const token = ['gh', 'p_', 'c'.repeat(36)].join('');
-      const original = `captured command output\n${token}\n`;
-      fs.writeFileSync(logPath, original, 'utf8');
-      createFakeUploader(fakeBin, 'raw uploader received');
-      testRecord.logPath = logPath;
-      store.save(testRecord);
+    it('keeps confirmed parts and withholds the index on interruption', () => {
+      if (process.platform === 'win32') {
+        return;
+      }
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'upload-log-bin-'));
+      try {
+        const { env, capture } = fakeGitHub(root);
+        testRecord.logPath = path.join(TEST_APP_FOLDER, 'interrupted.log');
+        fs.writeFileSync(testRecord.logPath, '😀 log line\n'.repeat(20));
+        store.save(testRecord);
+        const result = runCli(['--upload-log', testRecord.uuid], {
+          ...env,
+          UPLOAD_TEST_MODE: 'interrupt',
+        });
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain('Partial log available');
+        expect(result.stdout).not.toContain('Uploaded log:');
+        expect(fs.readdirSync(capture)).toEqual(['part-000000000001.log']);
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    });
 
-      const result = runCli(
-        ['--upload-log', testRecord.uuid, '--no-sanitize'],
-        {
-          PATH: fakeBin,
-          HOME: fakeBin,
-          UPLOAD_CAPTURE: capturePath,
-          GH_UPLOAD_PUBLIC: 'true',
-        }
-      );
+    it('publishes verified parts before opening the next chain log', () => {
+      if (process.platform === 'win32') {
+        return;
+      }
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'upload-log-bin-'));
+      try {
+        const { env, capture } = fakeGitHub(root);
+        testRecord.logPath = path.join(TEST_APP_FOLDER, 'first.log');
+        fs.writeFileSync(
+          testRecord.logPath,
+          'ordinary log line with spaces\n'.repeat(20000)
+        );
+        store.save(testRecord);
+        const next = new ExecutionRecord({
+          command: 'echo next',
+          logPath: root,
+        });
+        next.continues = testRecord.uuid;
+        next.complete(0);
+        store.save(next);
+        const result = runCli(['--upload-log', next.uuid], {
+          ...env,
+          START_LOG_UPLOAD_PART_BYTES: '131072',
+        });
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toContain('ERR_SOURCE');
+        expect(result.stderr).toContain('Partial log available');
+        expect(fs.readdirSync(capture)).toContain('part-000000000001.log');
+        expect(fs.existsSync(path.join(capture, 'README.md'))).toBe(false);
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    });
 
-      expect(result.exitCode).toBe(0);
-      const captured = JSON.parse(fs.readFileSync(capturePath, 'utf8'));
-      expect(captured.args).toEqual([logPath, '--private']);
-      expect(captured.content).toBe(original);
-      expect(fs.readFileSync(logPath, 'utf8')).toBe(original);
-      fs.rmSync(fakeBin, { recursive: true, force: true });
+    it('retains credential verification with the legacy opt-out flag', () => {
+      if (process.platform === 'win32') {
+        return;
+      }
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'upload-log-bin-'));
+      try {
+        const { env, capture } = fakeGitHub(root);
+        testRecord.logPath = path.join(TEST_APP_FOLDER, 'legacy.log');
+        fs.writeFileSync(testRecord.logPath, `gh${'p_'}${'c'.repeat(36)}\n`);
+        store.save(testRecord);
+        const result = runCli(
+          ['--upload-log', testRecord.uuid, '--no-sanitize'],
+          {
+            ...env,
+            UPLOAD_TEST_MODE: 'missing',
+          }
+        );
+        expect(result.exitCode).toBe(0);
+        expect(fs.existsSync(path.join(capture, 'repo-created'))).toBe(true);
+        expect(
+          fs.readFileSync(path.join(capture, 'part-000000000001.log'), 'utf8')
+        ).toBe('[REDACTED]\n');
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
     });
 
     it('should show an error when the stored log file is missing', () => {

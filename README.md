@@ -369,29 +369,32 @@ not establish exit-time OOM evidence; the existing Docker OOM event query still
 provides independent evidence for exit 137 (#209). Older kernels may not expose
 peak usage.
 
-`--upload-log` accepts either an execution UUID or an isolation session name. It
-looks up the stored `logPath`, installs `gh-upload-log` with Bun or npm if the
-uploader is missing, and uploads a private sanitized copy. Sanitization uses
-[`@link-foundation/sensitive-data-sanitizer`](https://github.com/link-foundation/sensitive-data-sanitizer),
-the library gh-upload-log and hive-mind share, in `--credentials-only` mode:
-tokens and keys, Authorization values, URL passwords, the values of
-credential-named environment variables and the tokens in the local `gh`
-configuration become `[REDACTED]`. Paths, endpoints, ports and the rest of each
-line stay as they were (#249). Authorization schemes and URL usernames are
-public context: `Authorization: Bearer secret` becomes
-`Authorization: Bearer [REDACTED]`, and `https://user:password@example.test`
-becomes `https://user:[REDACTED]@example.test` (#267). This format applies to
-published logs and issue text. The JavaScript package bundles the library; the
-Rust binary runs `sensitive-data-sanitizer` 0.22.5 or later from `PATH`,
-installing or upgrading it with Bun or npm for `--upload-log`.
-`START_SENSITIVE_DATA_SANITIZER` selects another CLI path. The original log
-stays local. `--allow-binary` keeps NUL bytes in both logs and issue text;
-invalid UTF-8 log bytes and bytes after a NUL are kept as they are. Sanitization
-failure, including a missing or outdated sanitizer, stops the upload with a
-value-free code such as `Log sanitization failed (ERR_UNAVAILABLE); upload
-blocked.` Manual
-`--upload-log <id> --no-sanitize` explicitly uploads the original log; automatic
-reporting always sanitizes, and issue text is sanitized the same way.
+`--upload-log` accepts an execution UUID or an isolation session name. It
+streams the stored log through credential verification and uses the
+authenticated GitHub CLI (`gh auth login`) to publish numbered parts to a
+private repository. The default destination is `<your-github-login>/private-logs`,
+created on demand. Set `GH_UPLOAD_REPOSITORY=OWNER/REPO` to use an existing
+private repository, and `GH_UPLOAD_BRANCH` to select its branch.
+
+Each part is at most 8 MiB and preserves UTF-8 character boundaries. Set
+`START_LOG_UPLOAD_PART_BYTES` to a smaller byte count, with a minimum of 4.
+The command confirms each part before staging the next and prints a link to
+the index after all parts are confirmed. Concatenate the numbered parts to
+recover the verified log. If publication is interrupted, the reported folder
+contains the parts GitHub confirmed. No local copy or checkout is needed.
+
+The shared
+[`@link-foundation/sensitive-data-sanitizer`](https://github.com/link-foundation/sensitive-data-sanitizer)
+library masks credentials, including Authorization values, URL passwords,
+credential-named environment variables and tokens from the local `gh`
+configuration. It preserves Authorization schemes, URL usernames, NUL and
+invalid UTF-8 bytes. To preserve multiline credential detection within a
+fixed memory budget, a logical record exceeding 8 MiB blocks verification
+with `ERR_LIMIT`. The JavaScript package bundles the library. The Rust
+command runs the installed 2.1.0 or newer package with Node.js or Bun and can
+install it with Bun or npm. `START_SENSITIVE_DATA_SANITIZER` can point Rust
+to the installed package's CLI. The legacy `--no-sanitize` option still
+requires the uploader's credential verification.
 
 `--stop` and `--terminate` accept either the execution UUID or the isolation
 session/container name. `--stop` asks the backend to stop gracefully (CTRL+C for
@@ -520,7 +523,7 @@ an alias). A name must not be empty, start with `-`, or already refer to another
 execution. A fresh launch can record the execution it continues with
 `--continues <id>`. `--status` then reports `aliases` (UUID, session names and
 names) and the `chain` of continued executions, oldest first, and
-`--upload-log <id>` uploads the logs of the whole chain as one file, each log
+`--upload-log <id>` streams the logs of the whole chain in order, each log
 preceded by a `[Start Command Lifecycle]` `continuation` line:
 
 ```bash
@@ -1001,7 +1004,7 @@ The tool works in any environment:
 
 - **No `gh` CLI?** - Logs are still saved locally, auto-reporting is skipped
 - **No `gh-upload-log` during auto-reporting?** - Issue can still be created with local log reference
-- **No `gh-upload-log` during manual `--upload-log`?** - The uploader is installed on demand
+- **Manual `--upload-log` requires `gh`** - Authenticate with `gh auth login` and use a private repository
 - **Repository not detected?** - Command runs normally with logging
 - **No permission to create issue?** - Skipped with a clear message
 - **Isolation environment not installed?** - Clear error message with installation instructions

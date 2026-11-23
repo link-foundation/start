@@ -1,12 +1,12 @@
 /**
- * Helpers for uploading stored execution logs with gh-upload-log.
+ * Helpers for uploading stored execution logs as bounded, verified parts.
  */
 
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { SanitizationError, sanitizeLogToTemp } = require('./log-sanitizer');
+const { SanitizationError, sanitizeLogStream } = require('./log-sanitizer');
+const { publishLogParts } = require('./log-upload-parts');
 
 function isExecutable(filePath) {
   try {
@@ -76,121 +76,62 @@ function resolveCommand(commandName) {
     // Fall through to common locations.
   }
 
-  if (!isWindows && commandName === 'gh-upload-log') {
-    const bunGlobalPath = path.join(os.homedir(), '.bun', 'bin', commandName);
-    if (isExecutable(bunGlobalPath)) {
-      return bunGlobalPath;
-    }
-  }
-
   return null;
 }
 
-function shouldRunThroughShell(command) {
-  return process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
-}
-
-function runCommand(command, args, options = {}) {
-  return spawnSync(command, args, {
-    ...options,
-    shell: shouldRunThroughShell(command),
-  });
-}
-
-function runInstall(command, displayName, args) {
-  console.log(
-    `gh-upload-log not found; installing with: ${displayName} ${args.join(' ')}`
-  );
-  const result = runCommand(command, args, { stdio: 'inherit' });
-  return result.status === 0;
-}
-
-function ensureGhUploadLogAvailable() {
-  const existing = resolveCommand('gh-upload-log');
-  if (existing) {
-    return { success: true, command: existing };
+async function uploadSource(source, options) {
+  try {
+    const url = await publishLogParts(sanitizeLogStream(source), options);
+    return { success: true, exitCode: 0, url };
+  } catch (error) {
+    return {
+      success: false,
+      exitCode: 1,
+      error:
+        error instanceof SanitizationError || error.code === 'ERR_LOG_UPLOAD'
+          ? error.message
+          : 'Log preparation or upload failed; upload blocked.',
+    };
   }
-
-  const installers = [
-    ['bun', ['install', '-g', 'gh-upload-log']],
-    ['npm', ['install', '-g', 'gh-upload-log']],
-  ];
-
-  for (const [command, args] of installers) {
-    const installer = resolveCommand(command);
-    if (!installer) {
-      continue;
-    }
-    if (runInstall(installer, command, args)) {
-      const installed = resolveCommand('gh-upload-log');
-      if (installed) {
-        return { success: true, command: installed };
-      }
-    }
-  }
-
-  return {
-    success: false,
-    error:
-      'gh-upload-log is not installed and automatic installation did not make it available on PATH.',
-  };
 }
 
-function uploadLogPath(logPath, options = {}) {
+async function* openLog(logPath) {
+  let handle;
+  try {
+    if (!(await fs.promises.stat(logPath)).isFile()) {
+      throw new Error('Expected a regular file');
+    }
+    handle = await fs.promises.open(logPath, 'r');
+    yield* handle.createReadStream({ autoClose: false });
+  } catch {
+    throw new SanitizationError('ERR_SOURCE');
+  } finally {
+    await handle?.close();
+  }
+}
+
+async function uploadLogPath(logPath, options = {}) {
   if (!logPath) {
     return {
       success: false,
       error: 'Execution record does not have a log path.',
     };
   }
-  if (!fs.existsSync(logPath)) {
-    return { success: false, error: `Log file not found: ${logPath}` };
-  }
-
-  let prepared;
   try {
-    if (!options.noSanitize) {
-      // Wrapper options.env holds Docker arguments, not the process secrets.
-      prepared = sanitizeLogToTemp(logPath, { verbose: options.verbose });
-    }
-    const availability = ensureGhUploadLogAvailable();
-    if (!availability.success) {
-      return availability;
-    }
-    const result = runCommand(
-      availability.command,
-      [prepared ? prepared.path : logPath, '--private'],
-      {
-        stdio: 'inherit',
-      }
-    );
-    const exitCode =
-      result.status !== null && result.status !== undefined ? result.status : 1;
-    if (exitCode !== 0) {
-      return {
-        success: false,
-        exitCode,
-        error: `gh-upload-log exited with code ${exitCode}`,
-      };
-    }
-    return { success: true, exitCode: 0 };
+    await fs.promises.access(logPath, fs.constants.F_OK);
   } catch (error) {
     return {
       success: false,
-      exitCode: 1,
       error:
-        error instanceof SanitizationError
-          ? error.message
-          : 'Log preparation or upload failed; upload blocked.',
+        error.code === 'ENOENT'
+          ? `Log file not found: ${logPath}`
+          : new SanitizationError('ERR_SOURCE').message,
     };
-  } finally {
-    if (prepared) {
-      prepared.cleanup();
-    }
   }
+  return uploadSource(openLog(logPath), options);
 }
 
-function uploadExecutionLog(store, identifier, options = {}) {
+async function uploadExecutionLog(store, identifier, options = {}) {
   if (!store) {
     return { success: false, error: 'Execution tracking is disabled.' };
   }
@@ -204,24 +145,14 @@ function uploadExecutionLog(store, identifier, options = {}) {
   }
 
   // A continuation chain uploads every execution, oldest first (#231).
-  let prepared;
-  try {
-    prepared = require('./execution-chain').prepareUploadLog(store, record);
-  } catch (error) {
-    return {
-      success: false,
-      error: `Could not join chain logs: ${error.message}`,
-    };
-  }
-  try {
-    return uploadLogPath(prepared.path, options);
-  } finally {
-    prepared.cleanup();
-  }
+  const { buildChain, streamChainLog } = require('./execution-chain');
+  const chain = buildChain(store.getAll(), record);
+  return await (chain.length > 1
+    ? uploadSource(streamChainLog(chain), options)
+    : uploadLogPath(record.logPath, options));
 }
 
 module.exports = {
-  ensureGhUploadLogAvailable,
   resolveCommand,
   uploadExecutionLog,
   uploadLogPath,

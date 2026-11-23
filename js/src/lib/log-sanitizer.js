@@ -9,12 +9,9 @@
  * invalid UTF-8 bytes and writes a new private file atomically (--output).
  * Both logs and issue text allow NUL bytes (--allow-binary).
  *
- * The 0.22.x output keeps Authorization schemes and URL usernames while
- * masking their secrets and preserving the rest of each line (#249, #267).
- * Version 0.22.4 fixes bytes lost after credentials followed by NUL
- * (sensitive-data-sanitizer#180); 0.22.5 also fixes Markdown placeholders.
- * The Rust installer and version check require the same release
- * (rust/src/lib/log_sanitizer.rs).
+ * Verified publication preserves Authorization schemes, URL usernames and
+ * bytes outside the detected credentials. The Rust adapter uses the same
+ * sanitizer dependency and publication policy (rust/src/lib/log_sanitizer.rs).
  */
 
 const fs = require('fs');
@@ -127,6 +124,42 @@ function sanitizeText(text, options = {}) {
   return result.stdout.toString();
 }
 
+/**
+ * Yield the shared engine's verified batches directly to the uploader.
+ * The engine holds a logical record whole so it can recognize multiline secrets.
+ */
+async function* sanitizeLogStream(source) {
+  try {
+    const {
+      encodeLogText,
+      knownSecretsFromEnv,
+      knownSecretsFromGitHubConfig,
+      sanitizeStream,
+    } = await import('@link-foundation/sensitive-data-sanitizer');
+    const sanitizerOptions = {
+      profile: 'publication',
+      credentialsOnly: true,
+      knownSecrets: [
+        ...knownSecretsFromEnv(),
+        ...(await knownSecretsFromGitHubConfig()),
+      ],
+    };
+    for await (const text of sanitizeStream(source, {
+      sanitizerOptions,
+      allowBinary: true,
+      maxTotalBytes: Number.MAX_SAFE_INTEGER,
+      maxRecordBytes: 8 * 1024 * 1024,
+    })) {
+      yield encodeLogText(text);
+    }
+  } catch (error) {
+    const code = error?.code;
+    throw new SanitizationError(
+      /^ERR_[A-Z_]+$/.test(code) ? code : 'ERR_SANITIZER'
+    );
+  }
+}
+
 function countMarkers(filePath) {
   const descriptor = fs.openSync(filePath, 'r');
   const buffer = Buffer.alloc(BLOCK_SIZE);
@@ -230,6 +263,7 @@ module.exports = {
   BLOCK_SIZE,
   SanitizationError,
   resolveSanitizerCommand,
+  sanitizeLogStream,
   sanitizeLogToTemp,
   sanitizeText,
 };
