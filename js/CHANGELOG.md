@@ -1,5 +1,29 @@
 # start-command
 
+## 0.45.0
+
+### Minor Changes
+
+- Configurable grace period between SIGTERM and SIGKILL for Docker executions (#265). Previously `--stop` always used Docker's default of 10 seconds, so a graceful-shutdown handler that needed longer was killed with exit 137.
+
+  - **`--stop <id> --stop-timeout <s>`** runs `docker stop -t <s>` for that stop.
+  - **`--isolated docker --stop-timeout <s>`** runs `docker run --stop-timeout <s>` (the container's own `StopTimeout`, so a plain `docker stop` and daemon shutdown honour it too). The value is recorded with the execution, shown as `[Isolation] Stop timeout: <s>s`, reused by `--resume` and forwarded to nested docker levels of an isolation stack.
+  - **`START_DOCKER_STOP_TIMEOUT=<s>`** sets the default for both.
+  - `--stop` uses the flag, then the value recorded at launch, then the environment, then Docker's 10 seconds; without any of them the docker call is unchanged (`docker stop <name>`).
+  - The stop report says how long the container has: `Requested graceful stop for detached docker container: <name> (SIGTERM, SIGKILL after <s>s)`, and Links Notation output adds `stopTimeout <s>`.
+  - Values are whole seconds (`0` stops immediately). Invalid values, `--stop-timeout` without `--stop` or a docker launch, and `--stop-timeout` on screen/tmux executions are rejected with a clear error. `--terminate` is unchanged.
+
+  Upgrade sensitive-data-sanitizer to ^0.22.5, adopting the 0.22.x output for
+  published logs and issue text: Authorization schemes and URL usernames remain
+  visible while their secrets become [REDACTED]. Preserve NUL bytes and following
+  text in both paths with --allow-binary, including the upstream 0.22.4 fix for
+  truncated logs. Remove the obsolete dependency freshness blocker (#267).
+
+  Stream verified stored execution logs and continuation chains directly to a
+  private GitHub repository in bounded UTF-8-safe parts. Publish the index after
+  all parts are confirmed. This removes local upload staging and upgrades the
+  shared credential sanitizer to 2.1.0 (#269).
+
 ## 0.44.0
 
 ### Minor Changes
