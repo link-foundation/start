@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- changelog-insert-here -->
+## [0.39.0] - 2026-11-23
+
+### Added
+
+- Configurable grace period between SIGTERM and SIGKILL for Docker executions (#265), mirroring the JavaScript implementation. Previously `--stop` always used Docker's default of 10 seconds, so a graceful-shutdown handler that needed longer was killed with exit 137.
+  - `--stop <id> --stop-timeout <s>` runs `docker stop -t <s>` for that stop.
+  - `--isolated docker --stop-timeout <s>` runs `docker run --stop-timeout <s>`; the value is recorded with the execution, shown as `[Isolation] Stop timeout: <s>s` and reused by `--resume`.
+  - `START_DOCKER_STOP_TIMEOUT=<s>` sets the default for both.
+  - `--stop` uses the flag, then the value recorded at launch, then the environment, then Docker's 10 seconds; without any of them the docker call is unchanged (`docker stop <name>`).
+  - The stop report says `Requested graceful stop for detached docker container: <name> (SIGTERM, SIGKILL after <s>s)`, and Links Notation output adds `stopTimeout <s>`.
+  - Invalid values, `--stop-timeout` without `--stop` or a docker launch, and `--stop-timeout` on screen/tmux executions are rejected. `--terminate` is unchanged.
+  - New public API: `docker_stop_timeout`, `get_control_command_with_options`, `control_execution_with_options`, `control_execution_with_runner_and_options` and `ControlOptions`.
+
+Require and install sensitive-data-sanitizer ^0.22.5, adopting the 0.22.x output
+for published logs and issue text: Authorization schemes and URL usernames
+remain visible while their secrets become [REDACTED]. Preserve NUL bytes and
+following text in both paths with --allow-binary, including the upstream 0.22.4
+fix for truncated logs (#267).
+
+Stream verified stored execution logs and continuation chains directly to a
+private GitHub repository in bounded UTF-8-safe parts. Publish the index after
+all parts are confirmed. Use the same credential sanitizer as JavaScript,
+upgraded to 2.1.0, without staging the logs locally (#269).
+
 ## [0.38.0] - 2026-11-14
 
 ### Changed
