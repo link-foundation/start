@@ -20,7 +20,7 @@ use crate::execution_pause::{
 use crate::execution_resume::{resume_execution_with_options, ExecutionResumeResult};
 use crate::execution_resume_all::{resume_all_executions, ExecutionResumeAllResult};
 use crate::execution_store::{CleanupOptions, ExecutionStore};
-use crate::log_uploader::upload_execution_log;
+use crate::log_uploader::upload_execution_log_with_options;
 use crate::status_formatter::{list_executions_filtered, query_status, StatusQueryResult};
 
 /// Uniform shape every query handler reports back.
@@ -113,7 +113,16 @@ pub fn report_result(result: QueryOutcome) -> i32 {
 
 /// Handle `--upload-log`, which reports its own exit code.
 pub fn handle_upload_log_query(store: Option<&ExecutionStore>, identifier: &str) -> i32 {
-    match upload_execution_log(store, identifier) {
+    handle_upload_log_query_with_options(store, identifier, false, false)
+}
+
+fn handle_upload_log_query_with_options(
+    store: Option<&ExecutionStore>,
+    identifier: &str,
+    no_sanitize: bool,
+    verbose: bool,
+) -> i32 {
+    match upload_execution_log_with_options(store, identifier, no_sanitize, verbose) {
         Ok(code) => code,
         Err(error) => {
             eprintln!("Error: {}", error);
@@ -223,20 +232,14 @@ pub fn dispatch_query_command(
         ));
     }
     if let Some(ref identifier) = options.upload_log {
-        return Some(
-            match crate::log_uploader::upload_execution_log_with_options(
-                store,
-                identifier,
-                options.no_sanitize,
-                std::env::var("START_VERBOSE").is_ok_and(|value| value == "1" || value == "true"),
-            ) {
-                Ok(code) => code,
-                Err(error) => {
-                    eprintln!("Error: {}", error);
-                    1
-                }
-            },
-        );
+        let verbose =
+            std::env::var("START_VERBOSE").is_ok_and(|value| value == "1" || value == "true");
+        return Some(handle_upload_log_query_with_options(
+            store,
+            identifier,
+            options.no_sanitize,
+            verbose,
+        ));
     }
     if let Some(ref identifier) = options.stop {
         return Some(report_result(

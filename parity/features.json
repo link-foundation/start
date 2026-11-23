@@ -2118,6 +2118,7 @@
           "rust/tests/regression_209.rs",
           "rust/tests/regression_225.rs",
           "rust/tests/regression_226.rs",
+          "rust/tests/regression_231.rs",
           "rust/tests/regression_241.rs",
           "rust/tests/regression_243.rs"
         ]
