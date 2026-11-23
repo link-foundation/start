@@ -7,7 +7,7 @@
 use serde_json::{json, Value};
 use start_command::args_parser::parse_args;
 use start_command::execution_chain::{
-    build_chain, identity_text_lines, prepare_chain_upload, resolve_continues, status_identity,
+    build_chain, identity_text_lines, resolve_continues, status_identity,
 };
 use start_command::execution_identity::{execution_aliases, find_record, name_execution};
 use start_command::execution_store::{
@@ -16,6 +16,8 @@ use start_command::execution_store::{
 };
 use std::collections::HashMap;
 use std::fs;
+use std::os::unix::fs::PermissionsExt;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
 const A: &str = "23100000-0000-4000-8000-00000000000a";
@@ -309,33 +311,162 @@ fn status_reports_aliases_and_the_chain() {
     assert!(status_identity(&plain, None).is_empty());
 }
 
+fn test_uploader(
+    sandbox: &Sandbox,
+    id: &str,
+    mode: &str,
+    part_bytes: usize,
+) -> Option<(Output, PathBuf)> {
+    let root = sandbox.root.path();
+    let fixture =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../experiments/issue-269/fake-gh.cjs");
+    let sanitizer = start_command::log_sanitizer::find_sanitizer().or_else(|| {
+        let local = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../js/node_modules/.bin/sensitive-data-sanitizer");
+        local.is_file().then_some(local)
+    });
+    let Some(sanitizer) = sanitizer else {
+        assert!(
+            std::env::var_os("CI").is_none(),
+            "sanitizer is required in CI"
+        );
+        return None;
+    };
+    let gh = root.join("gh");
+    fs::write(
+        &gh,
+        format!("#!/bin/sh\nexec node '{}' \"$@\"\n", fixture.display()),
+    )
+    .unwrap();
+    fs::set_permissions(&gh, fs::Permissions::from_mode(0o755)).unwrap();
+    let scratch = root.join("scratch");
+    fs::write(&scratch, "").unwrap();
+    let capture = root.join("parts");
+    fs::create_dir(&capture).unwrap();
+    fs::write(
+        root.join("hosts.yml"),
+        "github.com:\n  oauth_token: fake-local-gh-credential\n",
+    )
+    .unwrap();
+    let mut dirs = vec![root.to_path_buf()];
+    dirs.extend(std::env::split_paths(
+        &std::env::var_os("PATH").unwrap_or_default(),
+    ));
+    let output = Command::new(env!("CARGO_BIN_EXE_start"))
+        .args(["--upload-log", id])
+        .env("START_APP_FOLDER", root.join("app"))
+        .env("START_LOG_DIR", root.join("logs"))
+        .env("PATH", std::env::join_paths(dirs).unwrap())
+        .env("TMPDIR", &scratch)
+        .env("TMP", &scratch)
+        .env("TEMP", &scratch)
+        .env("GH_CONFIG_DIR", root)
+        .env("GH_UPLOAD_BRANCH", "")
+        .env("GH_UPLOAD_REPOSITORY", "")
+        .env("GH_UPLOAD_DRY_MODE", "false")
+        .env("GH_UPLOAD_PUBLIC", "true")
+        .env("START_SENSITIVE_DATA_SANITIZER", sanitizer)
+        .env("START_LOG_UPLOAD_PART_BYTES", part_bytes.to_string())
+        .env("UPLOAD_TEST_MODE", mode)
+        .env("UPLOAD_CAPTURE", &capture)
+        .env("EXAMPLE_API_KEY", "fake-custom-credential")
+        .output()
+        .unwrap();
+    Some((output, capture))
+}
+
+fn uploaded_parts(capture: &Path) -> Vec<Vec<u8>> {
+    let mut files = fs::read_dir(capture)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "log"))
+        .collect::<Vec<_>>();
+    files.sort();
+    files
+        .into_iter()
+        .map(|path| fs::read(path).unwrap())
+        .collect()
+}
+
 #[test]
-fn upload_log_joins_the_chain_logs_oldest_first() {
-    let box_ = Sandbox::new();
-    let store = box_.store();
+fn upload_log_streams_the_chain_oldest_first_with_exhausted_scratch() {
+    let sandbox = Sandbox::new();
+    let store = sandbox.store();
+    let token = format!("gh{}{}", "p_", "a".repeat(36));
     for (i, mut r) in chain_records().into_iter().enumerate() {
-        let log_path = box_.root.path().join(format!("{}.log", i));
-        fs::write(&log_path, format!("log-{}\n", i)).unwrap();
+        let log_path = sandbox.root.path().join(format!("{i}.log"));
+        fs::write(
+            &log_path,
+            format!("log-{i} 😀\n{token}\nfake-custom-credential\nfake-local-gh-credential\n"),
+        )
+        .unwrap();
         r.log_path = log_path.to_string_lossy().to_string();
         store.save(&r).unwrap();
     }
-    let mut single = record("23100000-0000-4000-8000-0000000000dd", json!({}));
-    single.log_path = "/x.log".into();
-    store.save(&single).unwrap();
-    assert!(prepare_chain_upload(&store, &single).unwrap().is_none());
-
-    let prepared = prepare_chain_upload(&store, &store.get(B).unwrap())
-        .unwrap()
-        .unwrap();
-    let path = prepared.path.clone();
-    let log = fs::read_to_string(&path).unwrap();
+    let Some((output, capture)) = test_uploader(&sandbox, B, "lost-response", 64) else {
+        return;
+    };
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    assert!(text(&output.stdout).contains("Uploaded log: https://github.com/octocat/private-logs/"));
+    let parts = uploaded_parts(&capture);
+    assert!(parts.len() > 3);
+    assert!(parts
+        .iter()
+        .all(|part| part.len() <= 64 && std::str::from_utf8(part).is_ok()));
+    let log = String::from_utf8(parts.concat()).unwrap();
     assert!(log.find("log-0").unwrap() < log.find("log-1").unwrap());
     assert!(log.find("log-1").unwrap() < log.find("log-2").unwrap());
     assert_eq!(log.matches("\"event\":\"continuation\"").count(), 3);
     assert!(log.contains("\"chainIndex\":3,\"chainLength\":3"));
     assert!(log.contains(&format!("\"uuid\":\"{}\"", C)));
-    drop(prepared);
-    assert!(!path.exists());
+    assert_eq!(log.matches("😀").count(), 3);
+    assert_eq!(log.matches("[REDACTED]").count(), 9);
+    assert!(!log.contains(&token));
+    let index = fs::read_to_string(capture.join("README.md")).unwrap();
+    assert!(index.contains(&format!("This upload contains {} part(s)", parts.len())));
+}
+
+#[test]
+fn interrupted_upload_preserves_confirmed_parts_without_an_index() {
+    let sandbox = Sandbox::new();
+    let mut record = record(A, json!({}));
+    let path = sandbox.root.path().join("source.log");
+    fs::write(&path, "😀 log line\n".repeat(20)).unwrap();
+    record.log_path = path.display().to_string();
+    sandbox.store().save(&record).unwrap();
+    let Some((output, capture)) = test_uploader(&sandbox, A, "interrupt", 64) else {
+        return;
+    };
+    assert!(!output.status.success(), "{}", text(&output.stdout));
+    assert!(text(&output.stderr).contains("Partial log available"));
+    assert!(!text(&output.stdout).contains("Uploaded log:"));
+    assert_eq!(uploaded_parts(&capture).len(), 1);
+    assert!(!capture.join("README.md").exists());
+}
+
+#[test]
+fn publishes_verified_parts_before_opening_the_next_chain_log() {
+    let sandbox = Sandbox::new();
+    let store = sandbox.store();
+    let path = sandbox.root.path().join("first.log");
+    fs::write(&path, "ordinary log line with spaces\n".repeat(20000)).unwrap();
+    let mut first = record(A, json!({}));
+    first.log_path = path.display().to_string();
+    store.save(&first).unwrap();
+    let mut next = record(B, json!({}));
+    next.log_path = sandbox.root.path().display().to_string();
+    next.continues = Some(A.into());
+    store.save(&next).unwrap();
+
+    let Some((output, capture)) = test_uploader(&sandbox, B, "", 131_072) else {
+        return;
+    };
+    let stderr = text(&output.stderr);
+    assert!(!output.status.success(), "{}", text(&output.stdout));
+    assert!(stderr.contains("ERR_SOURCE"), "{stderr}");
+    assert!(stderr.contains("Partial log available"), "{stderr}");
+    assert!(capture.join("part-000000000001.log").exists());
+    assert!(!capture.join("README.md").exists());
 }
 
 #[test]

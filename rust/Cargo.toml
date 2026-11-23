@@ -19,6 +19,8 @@ name = "start_command"
 path = "src/lib/mod.rs"
 
 [dependencies]
+base64 = "0.23.1"
+sha1 = "0.11.0"
 chrono = "0.4.45"
 dirs = "7.0.0"
 regex = "1.13.1"

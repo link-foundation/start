@@ -447,7 +447,7 @@ describe('log sanitization', () => {
     assert.ok(after <= before);
   });
 
-  it('blocks both upload paths on read or write failure and does not expose exception text', () => {
+  it('blocks automatic upload on read or write failure and keeps errors value-free', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sanitize-errors-'));
     const source = path.join(dir, 'source.log');
     fs.writeFileSync(source, 'ordinary log');
@@ -460,7 +460,6 @@ describe('log sanitization', () => {
     );
     const originalPath = process.env.PATH;
     process.env.PATH = `${dir}${path.delimiter}${originalPath}`;
-    const { uploadLogPath } = require('../src/lib/log-uploader');
     const { uploadLog } = require('../src/lib/failure-handler');
     const messages = [];
     const originalLog = console.log;
@@ -474,12 +473,6 @@ describe('log sanitization', () => {
           throw new Error('sensitive error details');
         };
         try {
-          const result = uploadLogPath(source);
-          assert.strictEqual(result.success, false);
-          assert.strictEqual(
-            result.error,
-            'Log sanitization failed (ERR_SOURCE); upload blocked.'
-          );
           assert.strictEqual(uploadLog(source), null);
         } finally {
           fs[method] = original;
@@ -503,7 +496,7 @@ describe('log sanitization', () => {
     }
   });
 
-  it('sanitizes manual and automatic uploads, explicitly requests private visibility, and cleans copies', () => {
+  it('sanitizes automatic uploads, requests private visibility, and cleans copies', () => {
     if (process.platform === 'win32') {
       return;
     }
@@ -518,42 +511,33 @@ describe('log sanitization', () => {
       { mode: 0o755 }
     );
     try {
-      for (const kind of ['manual', 'automatic', 'optout']) {
-        const script =
-          kind === 'automatic'
-            ? `require(${JSON.stringify(require.resolve('../src/lib/failure-handler'))}).uploadLog(process.env.SOURCE_LOG)`
-            : `require(${JSON.stringify(require.resolve('../src/lib/log-uploader'))}).uploadLogPath(process.env.SOURCE_LOG, { noSanitize: ${kind === 'optout'} })`;
-        execFileSync(process.execPath, ['-e', script], {
-          env: testEnv({
-            PATH: `${dir}${path.delimiter}${process.env.PATH}`,
-            SOURCE_LOG: log,
-            CAPTURE_ARGS: path.join(dir, 'args'),
-            CAPTURE_LOG: path.join(dir, 'uploaded'),
-            CAPTURE_MODE: path.join(dir, 'mode'),
-            GH_UPLOAD_PUBLIC: 'true',
-          }),
-          stdio: 'pipe',
-        });
-        const args = fs
-          .readFileSync(path.join(dir, 'args'), 'utf8')
-          .trim()
-          .split('\n');
-        assert.strictEqual(args[1], '--private');
-        assert.strictEqual(
-          fs.readFileSync(path.join(dir, 'uploaded'), 'utf8'),
-          kind === 'optout'
-            ? fs.readFileSync(log, 'utf8')
-            : `${line} [REDACTED]`
-        );
-        if (kind !== 'optout') {
-          assert.notStrictEqual(args[0], log);
-          assert.ok(!fs.existsSync(args[0]));
-          assert.strictEqual(
-            fs.readFileSync(path.join(dir, 'mode'), 'utf8').trim(),
-            '-rw-------'
-          );
-        }
-      }
+      const script = `require(${JSON.stringify(require.resolve('../src/lib/failure-handler'))}).uploadLog(process.env.SOURCE_LOG)`;
+      execFileSync(process.execPath, ['-e', script], {
+        env: testEnv({
+          PATH: `${dir}${path.delimiter}${process.env.PATH}`,
+          SOURCE_LOG: log,
+          CAPTURE_ARGS: path.join(dir, 'args'),
+          CAPTURE_LOG: path.join(dir, 'uploaded'),
+          CAPTURE_MODE: path.join(dir, 'mode'),
+          GH_UPLOAD_PUBLIC: 'true',
+        }),
+        stdio: 'pipe',
+      });
+      const args = fs
+        .readFileSync(path.join(dir, 'args'), 'utf8')
+        .trim()
+        .split('\n');
+      assert.strictEqual(args[1], '--private');
+      assert.strictEqual(
+        fs.readFileSync(path.join(dir, 'uploaded'), 'utf8'),
+        `${line} [REDACTED]`
+      );
+      assert.notStrictEqual(args[0], log);
+      assert.ok(!fs.existsSync(args[0]));
+      assert.strictEqual(
+        fs.readFileSync(path.join(dir, 'mode'), 'utf8').trim(),
+        '-rw-------'
+      );
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }

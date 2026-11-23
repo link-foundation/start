@@ -428,31 +428,23 @@ fn upload_child() {
     let Ok(kind) = std::env::var("SANITIZER_UPLOAD_KIND") else {
         return;
     };
-    let source = std::env::var("SANITIZER_SOURCE_LOG").unwrap();
     match kind.as_str() {
         "automatic" => {
+            let source = std::env::var("SANITIZER_SOURCE_LOG").unwrap();
             assert!(start_command::failure_handler::upload_log(&source).is_some());
         }
         "invalid" => {
+            let source = std::env::var("SANITIZER_SOURCE_LOG").unwrap();
             assert!(start_command::failure_handler::upload_log(&source).is_none());
         }
-        _ => {
-            assert_eq!(
-                start_command::failure_handler::upload_log_interactive_with_options(
-                    &source,
-                    kind == "optout",
-                    false
-                )
-                .unwrap(),
-                0
-            );
-        }
+        "installer" => start_command::log_sanitizer::ensure_sanitizer_available().unwrap(),
+        _ => unreachable!(),
     }
 }
 
 #[cfg(unix)]
 #[test]
-fn both_upload_paths_use_private_sanitized_copies_and_manual_optout_is_explicit() {
+fn automatic_upload_uses_a_private_sanitized_copy() {
     use std::os::unix::fs::PermissionsExt;
     use std::process::Command;
     let dir = tempfile::tempdir().unwrap();
@@ -471,7 +463,7 @@ fn both_upload_paths_use_private_sanitized_copies_and_manual_optout_is_explicit(
     let uploader = dir.path().join("gh-upload-log");
     fs::write(&uploader, "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$CAPTURE_ARGS\"\ncat \"$1\" > \"$CAPTURE_LOG\"\nls -ld \"$1\" | cut -c1-10 > \"$CAPTURE_MODE\"\necho https://gist.github.com/test/id\n").unwrap();
     fs::set_permissions(&uploader, fs::Permissions::from_mode(0o755)).unwrap();
-    for kind in ["manual", "automatic", "optout", "invalid"] {
+    for kind in ["automatic", "invalid"] {
         let _ = fs::remove_file(dir.path().join("args"));
         let output = Command::new(std::env::current_exe().unwrap())
             .args(["--exact", "upload_child", "--nocapture"])
@@ -508,49 +500,35 @@ fn both_upload_paths_use_private_sanitized_copies_and_manual_optout_is_explicit(
         assert_eq!(args[1], "--private");
         assert_eq!(
             fs::read_to_string(dir.path().join("uploaded")).unwrap(),
-            if kind == "optout" {
-                input.clone()
-            } else {
-                format!("{} [REDACTED]", line)
-            }
+            format!("{} [REDACTED]", line)
         );
-        if kind != "optout" {
-            assert_ne!(args[0], source.to_str().unwrap());
-            assert!(!std::path::Path::new(args[0]).exists());
-            assert_eq!(
-                fs::read_to_string(dir.path().join("mode")).unwrap().trim(),
-                "-rw-------"
-            );
-        }
+        assert_ne!(args[0], source.to_str().unwrap());
+        assert!(!std::path::Path::new(args[0]).exists());
+        assert_eq!(
+            fs::read_to_string(dir.path().join("mode")).unwrap().trim(),
+            "-rw-------"
+        );
     }
 }
 
 #[cfg(unix)]
 #[test]
-fn manual_upload_replaces_a_sanitizer_older_than_the_minimum_version() {
+fn replaces_a_sanitizer_older_than_the_minimum_version() {
     use std::os::unix::fs::PermissionsExt;
     use std::process::Command;
     let Some(real) = sanitizer() else { return };
     let dir = tempfile::tempdir().unwrap();
-    let write = |name: &str, script: &str| {
-        let file = dir.path().join(name);
-        fs::write(&file, script).unwrap();
-        fs::set_permissions(&file, fs::Permissions::from_mode(0o755)).unwrap();
-    };
-    // 0.12.0 rejects --allow-binary with ERR_ARGUMENT.
-    write(
-        "sensitive-data-sanitizer",
-        "#!/bin/sh\n[ \"$1\" = --version ] && echo 0.12.0 && exit 0\necho 'Sanitization failed (ERR_ARGUMENT).' >&2\nexit 2\n",
-    );
-    // A fake bun "installs" the current release over the old one.
-    write(
-        "bun",
-        "#!/bin/sh\n[ \"$1\" = --version ] && echo 1.0.0 && exit 0\nprintf '%s\\n' \"$@\" > \"$CAPTURE_INSTALL\"\nprintf '#!/bin/sh\\nexec \"%s\" \"$@\"\\n' \"$REAL_SANITIZER\" > \"$(dirname \"$0\")/sensitive-data-sanitizer\"\n",
-    );
-    write(
-        "gh-upload-log",
-        "#!/bin/sh\ncat \"$1\" > \"$CAPTURE_LOG\"\necho https://gist.github.com/test/id\n",
-    );
+    let cli = dir.path().join("sensitive-data-sanitizer");
+    let bun = dir.path().join("bun");
+    fs::write(&cli, "#!/bin/sh\necho 0.12.0\n").unwrap();
+    fs::write(
+        &bun,
+        "#!/bin/sh\n[ \"$1\" = --version ] && exit 0\nprintf '%s\\n' \"$@\" > \"$CAPTURE_INSTALL\"\nln -sf \"$REAL_SANITIZER\" \"$FAKE_SANITIZER\"\n",
+    )
+    .unwrap();
+    for path in [&cli, &bun] {
+        fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+    }
     let path = format!(
         "{}:{}",
         dir.path().display(),
@@ -558,32 +536,21 @@ fn manual_upload_replaces_a_sanitizer_older_than_the_minimum_version() {
     );
     let mut env = test_env(&[("PATH", &path)]).unwrap();
     env.retain(|(name, _)| name != OVERRIDE);
-    let source = dir.path().join("source.log");
-    fs::write(&source, format!("line\0gh{}{}\n", "p_", "x".repeat(36))).unwrap();
+    let capture = dir.path().join("install");
     let output = Command::new(std::env::current_exe().unwrap())
         .args(["--exact", "upload_child", "--nocapture"])
         .env_clear()
         .envs(env)
-        .env("SANITIZER_UPLOAD_KIND", "manual")
-        .env("SANITIZER_SOURCE_LOG", &source)
+        .env("SANITIZER_UPLOAD_KIND", "installer")
         .env("REAL_SANITIZER", real)
-        .env("CAPTURE_INSTALL", dir.path().join("install"))
-        .env("CAPTURE_LOG", dir.path().join("uploaded"))
+        .env("FAKE_SANITIZER", cli)
+        .env("CAPTURE_INSTALL", &capture)
         .output()
         .unwrap();
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(output.status.success(), "{}", stdout);
-    assert!(stdout.contains(&format!(
-        "sensitive-data-sanitizer is older than the required version; installing with: bun install -g {}",
-        PACKAGE
-    )));
+    assert!(output.status.success(), "{output:?}");
     assert_eq!(
-        fs::read_to_string(dir.path().join("install")).unwrap(),
-        format!("install\n-g\n{}\n", PACKAGE)
-    );
-    assert_eq!(
-        fs::read_to_string(dir.path().join("uploaded")).unwrap(),
-        "line\0[REDACTED]\n"
+        fs::read_to_string(capture).unwrap(),
+        format!("install\n-g\n{PACKAGE}\n")
     );
 }
 

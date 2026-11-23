@@ -23,7 +23,7 @@ const {
   attachIdentity,
   buildChain,
   identityTextLines,
-  prepareUploadLog,
+  streamChainLog,
   resolveContinues,
 } = require('../src/lib/execution-chain');
 
@@ -230,26 +230,24 @@ describe('issue #231: continuation chains', () => {
     expect(attachIdentity(plain, null)).toBe(plain);
   });
 
-  it('--upload-log joins the chain logs, oldest first', () => {
+  it('--upload-log streams the chain logs, oldest first', async () => {
     const { store, root } = sandbox();
     chainRecords().forEach((r, i) => {
       r.logPath = path.join(root, `${i}.log`);
       fs.writeFileSync(r.logPath, `log-${i}\n`);
       store.save(r);
     });
-    const single = record('23100000-0000-4000-8000-0000000000dd');
-    single.logPath = '/x.log';
-    store.save(single);
-    expect(prepareUploadLog(store, single).path).toBe('/x.log');
-
-    const prepared = prepareUploadLog(store, store.get(B));
-    const text = fs.readFileSync(prepared.path, 'utf8');
+    const parts = [];
+    for await (const part of streamChainLog(
+      buildChain(store.getAll(), store.get(B))
+    )) {
+      parts.push(part);
+    }
+    const text = Buffer.concat(parts).toString();
     expect(text.indexOf('log-0')).toBeLessThan(text.indexOf('log-1'));
     expect(text.indexOf('log-1')).toBeLessThan(text.indexOf('log-2'));
     expect(text.split('"event":"continuation"').length - 1).toBe(3);
     expect(text).toContain(`"uuid":"${C}","chainIndex":3,"chainLength":3`);
-    prepared.cleanup();
-    expect(fs.existsSync(prepared.path)).toBe(false);
   });
 
   it('parses --continues and keeps it to launches', () => {

@@ -42,8 +42,8 @@ function handleListQuery(store, outputFormat, options = {}) {
   return reportResult(listExecutions(store, outputFormat, options));
 }
 
-function handleUploadLogQuery(store, identifier, options = {}) {
-  const result = uploadExecutionLog(store, identifier, options);
+async function handleUploadLogQuery(store, identifier, options = {}) {
+  const result = await uploadExecutionLog(store, identifier, options);
   if (result.success) {
     return result.exitCode || 0;
   }

@@ -1,13 +1,14 @@
 //! Continuation chains (issue #231): a launch with `--continues <id>` stores
 //! the UUID it continues, so a supervisor that relaunches fresh instead of
 //! `--resume`-ing in place can still treat every execution of one task as a
-//! whole. `--status` prints the chain and `--upload-log` uploads one file with
+//! whole. `--status` prints the chain and `--upload-log` uploads one stream with
 //! every execution of it, oldest first.
 use crate::execution_identity::{execution_aliases, has_user_names};
 use crate::execution_store::{ExecutionRecord, ExecutionStore};
+use crate::log_sanitizer::LogSource;
 use serde_json::{json, Value};
 use std::fs;
-use std::io::Write;
+use std::io::{self, Write};
 use std::path::PathBuf;
 
 fn start_millis(record: &ExecutionRecord) -> i64 {
@@ -120,7 +121,33 @@ pub fn identity_text_lines(record: &ExecutionRecord, fields: &[(String, Value)])
     lines
 }
 
-/// A temporary combined log, removed when dropped.
+/// Describe continuation logs in order. The sanitizer opens each log when it
+/// reaches that record, so no combined copy or collection of open files is needed.
+pub(crate) fn chain_log_sources(chain: &[ExecutionRecord]) -> Vec<LogSource> {
+    chain
+        .iter()
+        .enumerate()
+        .map(|(index, record)| {
+            let log_path = (!record.log_path.is_empty()).then_some(&record.log_path);
+            let header = json!({
+                "event": "continuation",
+                "uuid": record.uuid,
+                "chainIndex": index + 1,
+                "chainLength": chain.len(),
+                "continues": record.continues,
+                "command": record.command,
+                "startTime": record.start_time,
+                "logPath": log_path,
+            });
+            LogSource {
+                path: record.log_path.clone(),
+                header: Some(format!("\n[Start Command Lifecycle] {}\n", header)),
+            }
+        })
+        .collect()
+}
+
+/// A materialized chain log for callers that need a filesystem path.
 pub struct ChainLog {
     dir: PathBuf,
     pub path: PathBuf,
@@ -132,40 +159,29 @@ impl Drop for ChainLog {
     }
 }
 
-/// Concatenate the logs of a chain into one temporary file, oldest first,
-/// each preceded by a lifecycle header in the format `--resume` writes.
-pub fn write_chain_log(chain: &[ExecutionRecord]) -> std::io::Result<ChainLog> {
+/// Materialize a chain in a temporary file, oldest execution first.
+pub fn write_chain_log(chain: &[ExecutionRecord]) -> io::Result<ChainLog> {
     let dir = std::env::temp_dir().join(format!("start-chain-log-{}", uuid::Uuid::new_v4()));
     fs::create_dir(&dir)?;
     let last = chain.last().map(|r| r.uuid.as_str()).unwrap_or("chain");
     let log = ChainLog {
-        path: dir.join(format!("{}.chain.log", last)),
+        path: dir.join(format!("{last}.chain.log")),
         dir,
     };
     let mut file = fs::File::create(&log.path)?;
-    for (index, record) in chain.iter().enumerate() {
-        let log_path = (!record.log_path.is_empty()).then_some(&record.log_path);
-        let header = json!({
-            "event": "continuation",
-            "uuid": record.uuid,
-            "chainIndex": index + 1,
-            "chainLength": chain.len(),
-            "continues": record.continues,
-            "command": record.command,
-            "startTime": record.start_time,
-            "logPath": log_path,
-        });
-        write!(file, "\n[Start Command Lifecycle] {}\n", header)?;
-        match log_path.map(fs::read) {
-            Some(Ok(content)) => file.write_all(&content)?,
-            _ => writeln!(file, "Log file not found: {}", record.log_path)?,
+    for LogSource { path, header } in chain_log_sources(chain) {
+        file.write_all(header.as_deref().unwrap_or_default().as_bytes())?;
+        match fs::File::open(&path) {
+            Ok(mut source) if source.metadata().is_ok_and(|metadata| metadata.is_file()) => {
+                io::copy(&mut source, &mut file)?;
+            }
+            _ => writeln!(file, "Log file not found: {path}")?,
         }
     }
     Ok(log)
 }
 
-/// Combined log `--upload-log` uploads for `record` when it belongs to a
-/// chain of more than one execution; `None` for a single execution.
+/// Materialize a multi-execution chain for callers that need a combined path.
 pub fn prepare_chain_upload(
     store: &ExecutionStore,
     record: &ExecutionRecord,
@@ -176,5 +192,5 @@ pub fn prepare_chain_upload(
     }
     write_chain_log(&chain)
         .map(Some)
-        .map_err(|e| format!("Could not join chain logs: {}", e))
+        .map_err(|error| format!("Could not join chain logs: {error}"))
 }

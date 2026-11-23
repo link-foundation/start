@@ -2,12 +2,10 @@
  * Continuation chains (issue #231): a launch with `--continues <id>` stores
  * the UUID it continues, so a supervisor that relaunches fresh instead of
  * `--resume`-ing in place can still treat every execution of one task as a
- * whole. `--status` prints the chain and `--upload-log` uploads one file with
+ * whole. `--status` prints the chain and `--upload-log` uploads one stream with
  * every execution of it, oldest first.
  */
 const fs = require('fs');
-const os = require('os');
-const path = require('path');
 const { executionAliases, hasUserNames } = require('./execution-identity');
 
 /**
@@ -121,16 +119,9 @@ function identityTextLines(obj) {
   ];
 }
 
-/**
- * Concatenate the logs of a chain into one temporary file, oldest first,
- * each preceded by a lifecycle header in the format `--resume` writes.
- * @param {object[]} chain - Records, oldest first
- * @returns {{path: string, cleanup: Function}} Combined log
- */
-function writeChainLog(chain) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'start-chain-log-'));
-  const file = path.join(dir, `${chain[chain.length - 1].uuid}.chain.log`);
-  chain.forEach((record, index) => {
+/** Stream the continuation logs, oldest first, with their lifecycle headers. */
+async function* streamChainLog(chain) {
+  for (const [index, record] of chain.entries()) {
     const header = {
       event: 'continuation',
       uuid: record.uuid,
@@ -141,42 +132,32 @@ function writeChainLog(chain) {
       startTime: record.startTime,
       logPath: record.logPath || null,
     };
-    fs.appendFileSync(
-      file,
+    yield Buffer.from(
       `\n[Start Command Lifecycle] ${JSON.stringify(header)}\n`
     );
-    if (record.logPath && fs.existsSync(record.logPath)) {
-      fs.appendFileSync(file, fs.readFileSync(record.logPath));
-    } else {
-      fs.appendFileSync(file, `Log file not found: ${record.logPath}\n`);
+    try {
+      if (!record.logPath) {
+        yield Buffer.from(`Log file not found: ${record.logPath}\n`);
+        continue;
+      }
+      if (!(await fs.promises.stat(record.logPath)).isFile()) {
+        throw new Error('Expected a regular file');
+      }
+      yield* fs.createReadStream(record.logPath);
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        const { SanitizationError } = require('./log-sanitizer');
+        throw new SanitizationError('ERR_SOURCE');
+      }
+      yield Buffer.from(`Log file not found: ${record.logPath}\n`);
     }
-  });
-  return {
-    path: file,
-    cleanup: () => fs.rmSync(dir, { recursive: true, force: true }),
-  };
-}
-
-/**
- * Log path `--upload-log` should upload for `record`: its own log, or a
- * combined log when it belongs to a chain of more than one execution.
- * @param {object} store - ExecutionStore
- * @param {object} record - Resolved record
- * @returns {{path: string, cleanup: Function}} Log to upload
- */
-function prepareUploadLog(store, record) {
-  const chain = buildChain(store.getAll(), record);
-  if (chain.length < 2) {
-    return { path: record.logPath, cleanup: () => {} };
   }
-  return writeChainLog(chain);
 }
 
 module.exports = {
   attachIdentity,
   buildChain,
   identityTextLines,
-  prepareUploadLog,
   resolveContinues,
-  writeChainLog,
+  streamChainLog,
 };
